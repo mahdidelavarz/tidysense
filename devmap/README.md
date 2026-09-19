@@ -2,9 +2,9 @@
 
 ## Purpose
 
-The DevMap is the implementation operating manual for TidySense/Adaptive Planner. The Mind Map owns product behavior (`WHAT` and `WHY`); the DevMap owns recurring implementation decisions (`HOW`); code is the implementation.
+The DevMap is the implementation operating manual for TidySense. “Adaptive Planner” is historical terminology. The Mind Map owns product behavior (`WHAT` and `WHY`); the DevMap owns recurring implementation decisions (`HOW`); code is the implementation.
 
-This version is a review candidate. Once accepted, ordinary feature work follows it without reopening `LOCKED` decisions. A developer may diverge only through an explicit DevMap or ADR change.
+This version incorporates the approved 2026-09-19 decision consolidation. Ordinary feature work follows it without reopening accepted decisions. A developer may diverge only through an explicit DevMap/product decision or justified ADR change.
 
 ## Decision labels
 

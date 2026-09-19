@@ -1,12 +1,19 @@
 # Design System, RTL, and Accessibility
 
-## Language and direction
+TidySense UI is Persian, RTL, calm, low-noise and semantic-token driven. Set `lang="fa"` and `dir="rtl"`; use logical CSS and do not mirror non-directional icons.
 
-`LOCKED`: product UI is Persian and primary direction is RTL. The root document/app shell must set Persian language and RTL direction. Verify logical spacing/alignment, form labels, tables, dialogs, dropdowns, navigation, text truncation, mixed Latin/numeric content, and directional icons. Prefer CSS logical properties and Tailwind logical utilities when available; do not mirror icons whose meaning is not directional.
+## Compact foundation
 
-## Color authority
+- Typography: one Persian-capable UI family; sizes `12, 14, 16, 20, 24, 32px`; weights `400, 500, 700`; body line height `1.75`, heading `1.35`.
+- Spacing: `4, 8, 12, 16, 24, 32, 48, 64px`.
+- Radius: `8px` controls, `12px` cards, `16px` dialogs/sheets, pill `999px`.
+- Shadows: `sm` subtle card; `md` raised menu; `lg` modal/sheet. Prefer borders/surface contrast over shadow.
+- Breakpoints: `640, 768, 1024, 1280px`; design mobile-first.
+- Z-index: base `0`, sticky `10`, dropdown `30`, overlay `40`, modal/sheet `50`, toast `60`.
+- Motion: `120ms` immediate, `200ms` standard, `280ms` emphasized; standard easing `cubic-bezier(.2,0,0,1)`; respect reduced motion.
+- Icons: one consistent outline set, normally 20/24px; icons supplement labels and never carry sole meaning.
 
-The palette is locked. Tailwind 4 semantic tokens belong in `frontend/src/index.css`, the current global stylesheet entry (`INFERRED`). Feature code consumes semantic utilities; it does not use arbitrary palette utilities or raw hex.
+The accepted palette remains in semantic Tailwind tokens. Feature code avoids raw hex/arbitrary palette colors and large saturated entity backgrounds.
 
 ```css
 @theme {
@@ -34,21 +41,4 @@ The palette is locked. Tailwind 4 semantic tokens belong in `frontend/src/index.
 }
 ```
 
-Entity colors identify entity type through small icons, badges, indicators, borders or accents. They are separate semantic names from state colors even when values match. Avoid large saturated entity backgrounds.
-
-## Open foundation
-
-Typography/font, spacing scale, radii, shadows, widths, breakpoints, z-index layers, motion durations/easing, icon set, and precise Button/Input/Card/Badge/Dialog variants are `OPEN DECISION DEC-009`. Do not manufacture a competing scale per feature. Until resolved, browser/scaffold defaults may support infrastructure screens only, not accepted product UI.
-
-## Accessibility contract
-
-- semantic HTML and visible labels before ARIA workarounds;
-- full keyboard operation and visible focus;
-- minimum 44x44px touch targets on mobile where product specs require;
-- status/severity/entity meaning never communicated by color alone;
-- errors and async result changes announced appropriately;
-- focus trapped/restored in modal surfaces;
-- sticky controls do not cover focused content;
-- reduced-motion preference respected;
-- responsive reflow preserves reading/action order in RTL;
-- test contrast against semantic foreground/background pairings before acceptance.
+Use semantic HTML, visible labels, keyboard operation, visible focus, ≥44px mobile targets where applicable, non-color status cues, announced errors/async results, modal focus management, accessible contrast and RTL responsive reflow.

@@ -4,7 +4,7 @@
 
 Stack amendment (2026-09-19): the repository owner's implementation choice replaces the earlier Java/Spring direction with the existing .NET 10/ASP.NET Core/EF Core foundation. Product behavior and architecture boundaries are unchanged.
 
-`REWRITTEN — PROVISIONAL UNTIL M1 SLICE LOCK`
+`AMENDED — STACK RETAINED; TECHNICAL DETAILS DEFER TO /devmap`
 
 ## Decision
 
@@ -18,7 +18,7 @@ The implementation foundation uses:
 - secure phone OTP and JWT cookie authentication;
 - optimistic concurrency by default and scoped locks for cross-row invariants;
 - idempotent commands and atomic transactional outbox intent;
-- Docker and Nginx for the retained deployment baseline.
+- deployment/orchestration details are deferred under DevMap `DEC-011`; no Docker/Nginx topology is locked here.
 
 These choices are retained through `LEG-02`–`LEG-08` in [[01-Closed-Discussions/001-008-legacy-surviving-decisions]] and constrained by Discussions 019A–020C.
 
@@ -37,7 +37,7 @@ These choices are retained through `LEG-02`–`LEG-08` in [[01-Closed-Discussion
 - Ownership-safe not-found behavior prevents existence leakage.
 - Authentication, authorization, CSRF, cookie, revocation, retention, restricted-event access, and deletion rules are first-slice requirements.
 - Imported/user content is data, never runtime instruction.
-- Crisis and AI failure paths fail closed for mutation while preserving manual/deterministic use.
+- General provider/AI failure paths cannot mutate state and preserve manual/deterministic use; there is no dedicated crisis UX or gate.
 
 ## Explicit exclusions
 

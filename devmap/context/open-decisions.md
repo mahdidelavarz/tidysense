@@ -1,29 +1,7 @@
 # Open Decisions
 
-Authoritative detail is in [`../decisions/README.md`](../decisions/README.md).
+Only `DEC-011` remains intentionally deferred: Docker Compose/local orchestration, CI provider, full deployment pipeline and broader orchestration strategy. Resolve it when concrete implementation/release automation requires a choice; it does not block the first canonical foundation slice.
 
-## Blocking conflicts
+Secrets must never be committed. Existing tracked provider/database/OTP secrets require removal and rotation regardless of `DEC-011`.
 
-- Product consolidation: Discussions 023–026 and `FOR_CODEX.md` versus the 001–022 baseline/canvas.
-- Authentication contract: JWT + `sessionEpoch` versus opaque database sessions.
-- SMS provider: Kavenegar versus IPPanel.
-- Canonical UUID/versioned model versus current integer User/Project prototype.
-- `/api/v1` versus current unversioned routes.
-- prototype Project permission without ownership scoping.
-- milestone documents that say implementation has not started despite existing scaffolds.
-
-## Technical choices needed before systematic modules
-
-- canonical backend module/repository boundary;
-- canonical/auth ID type and migration strategy;
-- CLR temporal types and PostgreSQL identifier naming;
-- backend and frontend test stacks;
-- frontend feature folder structure and router bootstrap;
-- generated OpenAPI/frontend schema approach;
-- Problem Details exception mechanism/error-code catalog;
-- list pagination/filter/sort contract;
-- user timezone/calendar-source policy;
-- remaining design-system scales;
-- local/CI orchestration and secret mechanism.
-
-Do not convert an item here into a de facto decision inside feature code.
+Operational values (exact package versions, configured pilot timezone, JWT lifetimes/keys, provider/model budgets, retention schedule and readiness owners) are configuration work, not open product/architecture decisions.

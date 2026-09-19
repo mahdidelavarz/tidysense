@@ -1,15 +1,9 @@
 # Domain Summary
 
-Use this only for orientation; linked Mind Map sources own behavior.
-
-- Goal: desired real-world outcome; achievement/abandonment is user-authorized and never inferred from activity.
-- Project: bounded effort, optionally under a Goal; terminal transitions explicitly resolve active children.
-- Task: one-time executable item; ownership/temporal semantics are affected by later Discussion 026 and must be consolidated before implementation.
-- Routine: recurring intent; `ACTIVE -> STOPPED` is terminal; continuing creates a new Routine linked with `continuationOfRoutineId`.
-- RoutineOccurrence: execution fact tied to a Routine and local scheduled identity; multi-time identity is amended by Discussion 024.
-- Today: derived execution view, never a canonical container and never blocked by Reconcile.
-- PlanningDraft: temporary validated proposal, not canonical state and not mutation permission.
-- Reconcile: deterministic facts/rules/severity first; optional bounded AI explanation/recommendation; preview and confirmation precede deterministic mutation.
-- PlanningFact, dependency sequence, and CaptureItem are accepted later concepts pending consolidation.
-
-Primary orientation: `mindmap/00-START-HERE.md`, `04-Specs/ai-native-mvp-baseline.md`, Discussions 012–020, then later 023–026 where affected.
+- Goal/Project are user-owned parents with system-managed review-date snapshots.
+- Task is Goal-owned, Project-owned or standalone; standalone active requires plannedDate, parent-owned may be undated. No Backlog/placement/Task review date. Optional sequenceId/order forms a same-scope hard linear dependency.
+- Routine has local timezone/effective dates and zero or more unique timesOfDay. Occurrence identity is date+slot when timed and date when untimed.
+- PlanningFact belongs to exactly one Goal or standalone Project and is separately user-approved.
+- CaptureItem is unresolved input; resolution creates a separate Task/Routine identity.
+- Today is a derived local-date view. Reconcile groups Project → Sequence → Task and keeps Capture separate from execution severity.
+- AI output is non-canonical; preview, confirmation, current validation and atomic deterministic application are required.

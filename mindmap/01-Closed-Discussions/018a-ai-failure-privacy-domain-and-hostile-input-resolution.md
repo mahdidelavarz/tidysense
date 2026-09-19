@@ -1,5 +1,7 @@
 # Discussion 018A — Final AI Failure, Privacy, Domain, and Hostile Input Resolution
 
+> **Canonical amendment (2026-09-19):** Dedicated crisis UX, routing, records and crisis-specific gates in this historical body are superseded by the 2026-09-19 consolidation. General safeguards remain as listed in the canonical baseline.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

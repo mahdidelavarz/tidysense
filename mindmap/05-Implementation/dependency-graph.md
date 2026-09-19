@@ -46,7 +46,7 @@ Routine domain design may begin after M1, but the integrated M3 milestone depend
 - Frontend may use mocks only against the same versioned contract backend will implement.
 - Database constraints and command invariants must exist before UI success paths are accepted.
 - Manual paths precede or accompany every AI-dependent path.
-- Crisis resources, restricted-event rules, and zero-leakage behavior block real-user AI exposure.
+- Provider-safeguard, hostile-input, minimized-context, privacy and manual-fallback evidence block real-user AI exposure when applicable.
 
 ## Blocking external/configuration dependencies
 
@@ -56,7 +56,7 @@ Routine domain design may begin after M1, but the integrated M3 milestone depend
 | OTP/JWT/SMS values and provider | production auth gate |
 | schema/migration numbering and rollback | M1 exit |
 | provider/model/artifact and spend limits | M5 real-provider enablement |
-| localized crisis resources/corpus/sign-offs | M5 real-user testing and M9 |
+| provider safeguards/moderation review and adversarial corpus | M5 real-user testing and M8 |
 | retention/legal/access schedule | data collection and M9 |
 | pilot cohort/consent/threshold lock | M9 |
 

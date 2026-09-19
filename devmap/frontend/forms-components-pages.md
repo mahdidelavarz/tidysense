@@ -3,7 +3,7 @@
 ## Forms
 
 - `LOCKED`: Task, Goal, Project, and Routine use entity-specific create/edit flows, not one conditional universal form.
-- React Hook Form owns form state; Zod provides client-side shape/cross-field feedback after `DEC-005` confirms transport-schema ownership.
+- React Hook Form owns form state; Zod provides form/client shape and cross-field feedback. Generated OpenAPI remains transport authority.
 - Server/domain validation remains authoritative. Map field errors to controls and non-field errors to a visible summary.
 - Preserve user input across validation, conflict, temporary network failure, and recoverable auth refresh.
 - Disable duplicate submit, show submitting state, focus the first actionable error, and announce result changes.

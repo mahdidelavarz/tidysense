@@ -14,4 +14,4 @@ Environment intent:
 - Fail startup/readiness when required secure configuration is missing; never fall back to tracked secrets.
 - Log selected environment and safe feature/artifact versions, never credentials or full provider configuration.
 - `appsettings.json` currently contains an SMS key, database password and OTP secret. Treat them as exposed: rotate and remove before further auth/provider work.
-- `OPEN DECISION DEC-011`: pin .NET SDK (`global.json`), Node/package-manager version, Compose topology, and CI workflow.
+- `DEFERRED DEC-011`: do not yet lock Compose topology, CI provider, full deployment pipeline or broader orchestration. Pin concrete SDK/package versions when the affected implementation needs them. This deferral does not excuse tracked secrets or unclear environment boundaries.

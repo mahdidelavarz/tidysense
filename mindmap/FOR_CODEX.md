@@ -1,6 +1,8 @@
 # For Codex
 
-This file is a handoff queue for accepted product decisions that must later be reflected in the Adaptive Planner mind map and formal documentation.
+This file is a handoff queue for accepted product decisions that must later be reflected in the TidySense mind map and formal documentation.
+
+> Consolidation note (2026-09-19): item 1 (dedicated crisis UX removal) has been applied to the canonical inventory, baseline, canvas, guardrails, implementation/readiness projections and DevMap. Items 2–9 remain in this queue and are not silently promoted by that consolidation.
 
 ## How Codex should use this file
 
@@ -20,14 +22,16 @@ When asked to update the repository from this file:
 
 ---
 
-# Pending accepted decisions
+# Accepted decision queue
 
 ## 1. Remove dedicated Crisis Safety UX from product scope
+
+**Status: APPLIED 2026-09-19.** This section remains as decision history; canonical guidance is in [[04-Specs/ai-native-mvp-baseline]] and `/devmap`.
 
 Update the product model and UX documentation so that the MVP does **not** include a dedicated Crisis Safety page, crisis fallback flow, crisis-specific emergency-resource screen, or crisis-specific release gate.
 
 Rationale:
-- Adaptive Planner is not a mental-health product.
+- TidySense is not a mental-health product.
 - The AI layer will use an external model provider such as GPT API.
 - We do not want to build an independent crisis-detection and crisis-response UX system for the MVP.
 
@@ -290,4 +294,4 @@ Do not turn this into a heavyweight full-product specification before design. Th
 
 # Status
 
-These decisions are **pending repository consolidation**. Do not assume the existing mind map or formal documents already reflect them until Codex has explicitly applied this file.
+Item 1 is consolidated. Items 2–9 remain **pending repository consolidation** and must not be assumed canonical until explicitly applied.

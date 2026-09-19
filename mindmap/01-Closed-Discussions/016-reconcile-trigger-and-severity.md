@@ -1,5 +1,7 @@
 # Discussion 016 — Reconcile Trigger and Severity
 
+> **Canonical amendment (2026-09-19):** Discussions 025–026 add sequence hierarchy, exclude blocked descendants from actionable severity and add a separate Capture lane; Backlog is removed.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

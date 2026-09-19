@@ -1,5 +1,7 @@
 # Discussion 015 — Task and Routine Execution Model
 
+> **Canonical amendment (2026-09-19):** Discussions 024–026 supersede Backlog, Task review dates, single-daily Routine identity and dependency deferral.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

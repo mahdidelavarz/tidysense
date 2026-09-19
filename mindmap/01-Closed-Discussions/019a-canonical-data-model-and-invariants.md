@@ -1,5 +1,7 @@
 # Discussion 019A — Canonical Data Model and Invariants
 
+> **Canonical amendment (2026-09-19):** Discussions 023–026 supersede the older Task/Routine model: no Backlog/Task review date, multi-slot occurrences, Task sequences, PlanningFact and CaptureItem.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

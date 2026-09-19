@@ -1,5 +1,7 @@
 # Discussion 017 — Final Reconcile Intelligence and Actions Resolution
 
+> **Canonical amendment (2026-09-19):** Discussions 025–026 supersede Backlog actions with sequence-aware and parent-owned-undated behavior.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

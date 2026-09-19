@@ -9,7 +9,7 @@ STATUS = CLOSED
 CLAUDE_REVIEW = COMPLETED
 BLOCKING_FINDINGS = 0
 IMPORTANT_FINDINGS = 0
-MIND_MAP = NOT_APPLIED
+MIND_MAP = APPLIED_2026-09-19
 FORMAL_DOC_RECONCILIATION = PENDING
 IMPLEMENTATION = NOT_AUTHORIZED_FROM_THIS_FILE_ALONE
 ```
@@ -956,7 +956,7 @@ IMPORTANT_FINDINGS = 0
 
 ---
 
-## 23. Mind Map Impact — NOT YET APPLIED
+## 23. Mind Map Impact — APPLIED 2026-09-19
 
 Later reconciliation should update at least:
 
@@ -1006,7 +1006,7 @@ Capture
 - add CaptureItem status/lifecycle/audit linkage,
 - amend sequence unscheduled classification.
 
-`MIND_MAP = NOT_APPLIED`
+`MIND_MAP = APPLIED_2026-09-19`
 
 ---
 
@@ -1046,4 +1046,4 @@ Goal و Project همچنان review checkpoint دارند، ولی `reviewDate` 
 
 Quick Capture با یک `CaptureItem` durable حل می‌شود. CaptureItem یک work entity جدید نیست و وضعیت `UNRESOLVED | RESOLVED | DISCARDED` دارد. تا قبل از resolve شدن commitment محسوب نمی‌شود، وارد Today/overdue/severity/failure evidence نمی‌شود و در Reconcile در بخش جداگانه برای تعیین تکلیف ظاهر می‌شود. تبدیل آن به Task یا Routine یک identity جدید canonical می‌سازد و ارتباط audit از طریق event correlation حفظ می‌شود.
 
-Discussion 025 نیز amend می‌شود: تمام semantics مربوط به Backlog حذف و با parent-owned undated Task جایگزین می‌شود. Mind Map و formal specifications هنوز در این مرحله اعمال نشده‌اند.
+Discussion 025 نیز amend می‌شود: تمام semantics مربوط به Backlog حذف و با parent-owned undated Task جایگزین می‌شود. Mind Map و formal specifications در consolidation تاریخ 2026-09-19 اعمال شده‌اند.

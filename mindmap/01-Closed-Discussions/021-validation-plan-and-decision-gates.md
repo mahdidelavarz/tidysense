@@ -1,5 +1,7 @@
 # Discussion 021 — Validation Plan and Decision Gates
 
+> **Canonical amendment (2026-09-19):** The dedicated crisis readiness gate in this historical body is superseded. General AI safety, privacy, authorization, reliability and operational gates remain.
+
 ## Status
 
 Accepted and closed.

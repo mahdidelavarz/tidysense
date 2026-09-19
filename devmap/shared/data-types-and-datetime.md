@@ -1,25 +1,15 @@
 # Data Types and Date/Time Rules
 
-## Types
+| Meaning | .NET | PostgreSQL | API |
+|---|---|---|---|
+| canonical entity/FK ID | `Guid` | `uuid` | opaque UUID string |
+| instant | `DateTimeOffset` | `timestamptz` | ISO 8601 with `Z`/offset |
+| local date | `DateOnly` | `date` | `YYYY-MM-DD` |
+| local wall time | `TimeOnly` | `time` | `HH:mm[:ss]` |
+| optimistic version | `long` | `bigint` | opaque numeric token |
 
-| Meaning | Backend | Database | API | Frontend |
-|---|---|---|---|---|
-| canonical ID | `OPEN` (`Guid` or numeric) | `OPEN` (`uuid` or numeric) | opaque stable scalar | branded/feature ID type after `DEC-012` |
-| instant | `OPEN` (`DateTimeOffset` or strict UTC `DateTime`) | `timestamptz` | ISO 8601 with offset/`Z` | string parsed only when needed |
-| local date | `DateOnly` | `date` | `YYYY-MM-DD` | calendar-date string/value |
-| local time | `TimeOnly` | `time` | `HH:mm[:ss]` | local-time string/value |
-| version | `long` | `bigint` | integer/string per locked contract | opaque comparison value |
-| money/cost | explicit decimal/minor units | numeric/bigint | explicit unit | never binary float for authority |
+Do not use ambiguous local `DateTime` for canonical fields or store a planner date as midnight UTC. The server derives Today/day/week/review/routine boundaries from an explicit clock plus the pilot-wide configured IANA timezone. Instants persist with Npgsql UTC-compatible semantics.
 
-## Temporal rules
+Goal/Project `reviewDate`, Task `plannedDate`/`deadline` and target dates are different local-date concepts. Task has no review date. Routine occurrence identity uses local date plus an optional slot.
 
-- Never use `DateTime.Now` or browser-local `new Date()` as canonical Today.
-- Resolve `DEC-013` once and use the selected CLR instant type consistently.
-- The server derives current local date from an explicit authoritative timezone and clock.
-- Store instants as UTC/offset-aware; do not store a local date as midnight UTC.
-- `plannedDate`, `reviewDate`, `deadline`, and `targetDate` are distinct concepts and are not interchangeable.
-- Routine identity uses recurrence timezone and local scheduled identity; Discussion 024 changes multi-time occurrence identity and must be consolidated before implementation.
-- Today includes only items satisfying the accepted date/state rules; it is a derived view.
-- Week boundaries and calendar display depend on `DEC-008`.
-
-Persian/Jalali is a presentation concern unless an accepted product decision states otherwise. Persist/API local dates remain ISO/Gregorian date values; conversion must not change the represented local day.
+Persian/Jalali is presentation; persisted/API dates remain ISO Gregorian values representing the same local day. A later per-user IANA zone changes zone selection, not these types or meanings. Prototype `DateTime` data requires an explicit interpretation/conversion migration.

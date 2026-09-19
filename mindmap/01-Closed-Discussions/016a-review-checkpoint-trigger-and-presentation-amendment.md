@@ -1,5 +1,7 @@
 # Discussion 016A — Review Checkpoint Trigger and Presentation Amendment
 
+> **Canonical amendment (2026-09-19):** Discussion 026 limits reviewDate to Goal/Project system-managed snapshots and removes Task review due.
+
 ## Status
 
 Accepted and closed as a required amendment following Discussion 012A and Discussion 015A.

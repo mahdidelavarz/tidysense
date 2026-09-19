@@ -1,27 +1,14 @@
 # Frontend Stack, Architecture, and Folders
 
-## Stack
-
-`LOCKED`: React 19, strict TypeScript, Vite 8, Tailwind 4. Selected dependencies are TanStack Router/Query, React Hook Form, Zod, Zustand, Axios, and `date-fns-jalali`.
-
-## Dependency direction
+Stack: React 19, strict TypeScript, Vite 8, Tailwind 4, TanStack Router/Query, React Hook Form, Zod, Zustand only when justified, Axios and `date-fns-jalali` for presentation.
 
 ```text
-route/page
-  -> feature components/forms
-  -> feature hooks (queries/mutations)
-  -> typed API service
-  -> shared HTTP client
-
-shared UI/utilities do not import features.
+frontend/src/
+  routes/                 # TanStack file routes and route composition
+  features/<feature>/     # feature components, hooks, services, schemas, types, utils
+  shared/                 # UI primitives, HTTP/client generation, cross-feature utilities
 ```
 
-Business authority remains on the backend. Frontend modules may mirror safe rules for immediate UX but must render server conflict/validation results and may not manufacture successful canonical state.
+Keep feature-specific code together. Do not create global type-based dumping grounds. Shared code must not import features. Prefer an existing pattern/component/hook/service, then extend it, then write a small feature-specific implementation; extract a reusable abstraction only after real repetition. Avoid universal forms, query hooks, deep configuration components and generic service layers.
 
-## Current evidence
-
-`src/routes/__root.tsx` suggests TanStack file routing, but `main.tsx` renders `App` directly and no router/query provider is wired. `App.tsx` is placeholder UI. There are no stable feature/component conventions yet.
-
-## Folder choice
-
-`OPEN DECISION DEC-003` selects the detailed feature layout. Until resolved, do not create competing `services/`, `api/`, `hooks/`, and `features/` trees. Whichever option wins must keep feature-specific code together and a small, dependency-safe shared layer.
+Server resources live in TanStack Query, forms in React Hook Form, shareable navigation state in typed URL search, ephemeral UI in component state, and only genuinely cross-feature client-only state in Zustand. The backend remains authoritative.

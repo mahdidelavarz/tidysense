@@ -9,12 +9,12 @@ STATUS = CLOSED
 CLAUDE_REVIEW = COMPLETE
 BLOCKING_FINDINGS = 0
 IMPORTANT_FINDINGS = 0
-MIND_MAP = NOT_APPLIED
+MIND_MAP = APPLIED_2026-09-19
 FORMAL_DOC_RECONCILIATION = PENDING
 IMPLEMENTATION_REQUIRES_RECONCILIATION = TRUE
 ```
 
-This discussion is now authoritative for the product direction it explicitly owns, but its Mind Map and formal-document impact has **not yet been applied**.
+This discussion is authoritative for the product direction it explicitly owns. Its Mind Map and formal-document impact was **applied on 2026-09-19**.
 
 Primary related accepted discussions:
 
@@ -538,9 +538,9 @@ Resolution:
 
 ---
 
-## 16. Mind Map Impact — NOT YET APPLIED
+## 16. Mind Map Impact — APPLIED 2026-09-19
 
-When separately applied, likely Mind Map changes include:
+Applied Mind Map changes include:
 
 ### Product Model
 
@@ -578,7 +578,7 @@ Routine definition
 - generation/catch-up per slot,
 - distinct multi-occurrence history.
 
-**Mind Map remains NOT APPLIED by this closure.**
+**Mind Map application completed in the 2026-09-19 consolidation.**
 
 ---
 
@@ -635,4 +635,4 @@ Discussion 024 بسته شد. Routine می‌تواند در یک روز چند 
 
 برای occurrenceهای timed و untimed دو invariant هویتی جدا داریم تا مشکل nullable uniqueness ایجاد نشود. در Reconcile نیز چند missed slot در یک روز برای یک Routine نباید به‌صورت خام severity را چند برابر کند؛ `affectedRoutineDays` یک summary برای مشتق‌کردن pattern است و جای `actionableBacklogCount` را نمی‌گیرد.
 
-Mind Map و formal docs هنوز اعمال/اصلاح نشده‌اند و باید در مرحلهٔ reconciliation جداگانه به‌روزرسانی شوند.
+Mind Map و formal docs در reconciliation تاریخ 2026-09-19 اعمال/اصلاح شده‌اند.

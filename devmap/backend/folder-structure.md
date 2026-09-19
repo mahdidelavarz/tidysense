@@ -19,7 +19,7 @@ This type-based scaffold is `INFERRED`, but it has only one product entity and I
 
 ## Open choice
 
-Resolve `DEC-001` before the first canonical module. The smallest candidates are:
+The persistence policy is resolved: feature/application code may use `AppDbContext` directly for simple work; add only justified narrow repositories/ports. The smallest candidate structures are:
 
 ```text
 Features/Goals/{Domain,Application,Contracts,Infrastructure}

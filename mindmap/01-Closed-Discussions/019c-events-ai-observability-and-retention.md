@@ -1,5 +1,7 @@
 # Discussion 019C — Events, AI Observability, and Retention
 
+> **Canonical amendment (2026-09-19):** Discussions 023–026 amend events/retention for PlanningFact, sequence and CaptureItem and retire Backlog events. Dedicated crisis-product records are removed.
+
 ## Status
 
 Accepted and closed after GPT × Claude review and incorporation of the accepted AI context-scope observability amendment.

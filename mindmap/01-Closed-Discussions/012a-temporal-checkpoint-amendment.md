@@ -1,5 +1,7 @@
 # Discussion 012A — Temporal Checkpoint Amendment
 
+> **Canonical amendment (2026-09-19):** Discussion 026 removes Backlog and Task review dates. Only Goal/Project system-managed review snapshots and the responsibility-based reachability rules remain canonical.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

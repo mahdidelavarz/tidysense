@@ -1,5 +1,7 @@
 # Discussion 013 — AI Planning Entry and Conversation Flow
 
+> **Canonical amendment (2026-09-19):** The 2026-09-19 consolidation removes every dedicated crisis UX/routing requirement. General AI/provider safeguards and manual/degraded paths remain.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

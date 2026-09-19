@@ -2,9 +2,9 @@
 
 ## Status
 
-Prepared for Discussion 022 Workstream D review. **Not yet applied.**
+`HISTORICAL MIGRATION RECORD — APPLIED AND SUPERSEDED BY THE 2026-09-19 CONSOLIDATION.`
 
-This ledger defines the complete migration from the stale legacy Canvas to the accepted AI-native MVP baseline. Creating this file does not modify the Canvas and does not complete Workstream D.
+This ledger records the earlier migration into the pre-023 baseline. Its embedded node text is historical and is not current product guidance. The live Canvas, consolidated inventory and baseline now include Discussions 023–026 and remove dedicated crisis UX/gates.
 
 ---
 

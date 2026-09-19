@@ -25,7 +25,7 @@
 | runtime context/artifact manifest | Backend owner | Backend | Safety, Security/Privacy, Product | M5/M7 | evaluation-version lock; M9 `PILOT_LOCKED` | pinned bundle/context tests | `DRAFT` |
 | Reconcile facts/severity/reasons | Backend owner | Backend + Product | Design, Safety, Research | M6/M7/M8 | M6 `SLICE_LOCKED`; M9 `PILOT_LOCKED` | classifier/rule tests/version | `DRAFT` |
 | H1/H2 metric dictionary | Pilot Research owner | Research + Backend | Product, Safety, Security/Privacy | M8/M9 | before collection `PILOT_LOCKED` | denominator queries/test fixtures | `DRAFT` |
-| crisis policy/resources/copy | Safety/Policy owner | Safety + Product + Backend | Security/Privacy, Research | M5/M9 | before exposure `PILOT_LOCKED` | corpus, resources, signatures | `DRAFT` |
+| provider safeguards, hostile-input policy and degraded/manual behavior | AI/Safety owner | Product + Backend | Security/Privacy, Research | M6/M8 | before real-user AI exposure | adversarial tests, provider review, signatures | `DRAFT` |
 
 ## Change procedure
 

@@ -13,7 +13,7 @@ No milestone starts merely because a date arrives. Entry dependencies, accountab
 | M2 | manual Task → Today → Complete | M1 contracts locked | end-to-end authenticated slice with idempotency, conflict, events and accessibility | E2E + event/CommandResult evidence |
 | M3 | Routine generation/execution | M2 complete; Today contract available | deterministic local-date occurrence generation, Done/Missed, stop/continuation invariants | timezone/DST/uniqueness/property tests |
 | M4 | PlanningDraft with mock provider | M2 | complete Attempt/Draft/revision/edit/preview/confirm/apply/failure flow; invalid output unusable | deterministic valid/invalid/race fixtures |
-| M5 | real AI Planning runtime | M4 | pinned bounded runtime, strict gates, safety/reliability/cost controls; manual Planning available | architecture, adversarial, crisis, spend/kill tests |
+| M6 | real AI Planning runtime | M5 | pinned bounded runtime, strict gates, provider-safety/reliability/cost controls; manual Planning available | architecture, adversarial, context-isolation, spend/kill tests |
 | M6 | deterministic Reconcile | M2+M3; M4 contract compatible | facts, cleanup, severity, separate lanes, rules, preview/confirmation and Today access | classifier, rule, bulk, accessibility tests |
 | M7 | AI-assisted Reconcile | M5+M6 | structured bounded explanation/recommendation with no authority leakage and manual escape | H2 contract/adversarial/application tests |
 | M8 | evidence and operational readiness | instrumentation since M1; M5+M7 | metric dictionary/queries, dashboards, retention, runbooks, support, rollback and drills complete | reproducibility and drill records |

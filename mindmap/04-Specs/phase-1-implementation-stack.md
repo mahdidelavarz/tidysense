@@ -26,9 +26,8 @@
 
 ### Infrastructure
 
-- Dockerized services
-- Nginx retained as the edge/deployment baseline
-- health/ready checks, external monitoring, structured logs, traces, alerts, backups, rollback, and incident procedures
+- Local/CI/deployment orchestration, Docker Compose topology, CI provider and edge/proxy choice remain deferred under `DEC-011`.
+- Health/readiness, monitoring, structured logs, backups, rollback and incident procedures remain required outcomes when deployment is designed.
 
 ## AI runtime requirements
 
@@ -51,6 +50,6 @@
 
 ## Values required before scaffold lock
 
-The proposed release lines, repository layout, named owners, environment boundary, migration convention, and Kavenegar boundary are recorded in [[05-Implementation/m1-entry-package]] and [[05-Implementation/m1-configuration-register]]. They remain proposals until the required owners approve that register. Exact patch versions belong in generated manifests and lockfiles and must be reviewed before scaffold commit.
+The canonical root repository layout, architecture and Kavenegar boundary are recorded in [[05-Implementation/m1-entry-package]] and [[05-Implementation/m1-configuration-register]]. Operational values still require owner review. Exact patch versions belong in manifests/lockfiles and must be reviewed before the affected slice is locked.
 
 Authority: `LEG-02`, `LEG-07`, Discussions 019A–020C, and the authoritative M1–M8 sequencing in closed Discussion 022.

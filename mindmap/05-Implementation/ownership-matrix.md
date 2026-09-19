@@ -16,7 +16,7 @@ M1 roles are instantiated in [[05-Implementation/m1-entry-package]]: Reza owns B
 | events/observability/retention | Backend owner | Backend + Research | Security/Privacy, Research | schema lock/M8 |
 | AI runtime/reliability/cost | Backend owner | Backend + Frontend | Safety, Security/Privacy, Product | M5/M7 exits |
 | AI UX and manual escape | Product owner | Design + Frontend + Backend | Safety | M4/M5/M7 exits |
-| crisis/high-risk boundary | Safety/Policy owner | Safety + Product + Backend | Security/Privacy, Research | any real-user AI exposure/M9 |
+| provider safeguards/high-risk boundary | AI/Safety owner | Product + Backend | Security/Privacy, Research | any real-user AI exposure/M8 |
 | metrics and pilot analysis | Pilot Research owner | Research + Backend/Product | Safety, Security/Privacy | M8/M9 |
 | operations/support/incident/rollback | Backend owner | Backend + Product | Safety, Security/Privacy | M8/M9 |
 

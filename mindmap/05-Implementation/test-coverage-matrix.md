@@ -35,7 +35,7 @@ Legend: `R` required for milestone exit; `C` continuously required after introdu
 | rate/circuit/token/spend limits | fixtures | R | R | R |
 | provider unavailable/manual escape | R | R | R | R |
 | stale/unauthorized confirmation | R | R | R | R |
-| crisis fixed fallback and zero leakage | fixture | R | R | R corpus |
+| provider safeguards, hostile-input isolation and zero unauthorized mutation | fixture | R | R | R adversarial corpus |
 | artifact version/pinning/reproducibility | R | R | R | R |
 
 ## Domain scenario suites
@@ -57,7 +57,7 @@ Legend: `R` required for milestone exit; `C` continuously required after introdu
 - Edited versus unchanged acceptance.
 - Regret/reversal attribution and trust/behavior mismatch.
 - Manual Escape Success.
-- Crisis and other hard gates overriding positive funnels.
+- Safety, privacy, authorization and other hard gates overriding positive funnels.
 
 ## Evidence format
 

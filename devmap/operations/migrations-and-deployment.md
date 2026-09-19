@@ -8,6 +8,6 @@ Use expand/migrate/contract for changes that cannot be safely deployed atomicall
 
 ## Deployment direction
 
-`LOCKED`: Dockerized services with Nginx serving/proxying the same-origin frontend/API boundary. Health/readiness, structured logs, backups, rollback and incident procedures are required. The repository currently contains none of this infrastructure.
+`DEFERRED DEC-011`: Docker Compose topology, CI provider, full deployment pipeline, ingress/proxy choice and broader orchestration are not locked. Health/readiness, structured logs, backups, rollback and incident procedures remain required outcomes when deployment is designed.
 
 Deployment order must preserve schema/application compatibility, validate readiness, smoke-test authentication and a critical owned-resource operation, and support rollback without corrupting newer data. Pilot/release authorization remains governed by Mind Map readiness gates, not a successful deployment alone.

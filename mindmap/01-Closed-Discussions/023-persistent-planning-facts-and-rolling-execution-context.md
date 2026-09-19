@@ -13,11 +13,11 @@ ROUND_1_FINDINGS = RESOLVED
 CLAUDE_FINAL_REVIEW = COMPLETED
 BLOCKING_FINDINGS = 0
 IMPORTANT_FINDINGS = 0
-MIND_MAP = NOT_APPLIED
+MIND_MAP = APPLIED_2026-09-19
 IMPLEMENTATION = NOT_YET_RECONCILED_IN_FORMAL_SPECS
 ```
 
-**Mind Map status: NOT APPLIED.**
+**Mind Map status: APPLIED in the 2026-09-19 canonical consolidation.**
 
 Closing this discussion does not itself modify `00-Canvas/Planner-Mindmap.canvas`, the formal specs, or the implementation plan. Those changes require a separate reconciliation/application step.
 
@@ -1010,7 +1010,7 @@ No unresolved Blocking or Important finding remains.
 
 ---
 
-## 26. Mind Map Impact — NOT APPLIED
+## 26. Mind Map Impact — APPLIED 2026-09-19
 
 The following impacts are accepted but have **not** yet been written into `00-Canvas/Planner-Mindmap.canvas`.
 
@@ -1075,7 +1075,7 @@ Add conceptually:
 
 ---
 
-## 27. Affected Formal Documents — NOT YET APPLIED
+## 27. Affected Formal Documents — APPLIED 2026-09-19
 
 This accepted discussion requires later reconciliation of:
 
@@ -1106,7 +1106,7 @@ STATUS = CLOSED
 CLAUDE_REVIEW = COMPLETE
 BLOCKING_FINDINGS = 0
 IMPORTANT_FINDINGS = 0
-MIND_MAP = NOT_APPLIED
+MIND_MAP = APPLIED_2026-09-19
 FORMAL_DOC_RECONCILIATION = PENDING
 ```
 
@@ -1122,4 +1122,4 @@ AI فقط Fact پیشنهاد می‌دهد؛ کاربر Factها را مستق�
 
 Factهای تأییدشده و eventهای مادی آن‌ها در retention family `R1 — CANONICAL_AUDIT` قرار می‌گیرند؛ Factهای تأییدنشده داخل Draft در `R3` می‌مانند؛ operational metadata در `R4` و raw AI content در `R6` باقی می‌ماند. این assignment PlanningFact را به canonical work entity تبدیل نمی‌کند.
 
-Discussion بسته شده ولی تغییرات Mind Map و formal specs هنوز اعمال نشده‌اند و باید در مرحلهٔ جداگانه reconcile شوند.
+Discussion بسته شده و تغییرات Mind Map و formal specs در consolidation تاریخ 2026-09-19 اعمال شده‌اند.

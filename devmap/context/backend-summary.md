@@ -1,11 +1,5 @@
 # Backend Summary
 
-- Stack: .NET 10, ASP.NET Core controllers, EF Core 10/Npgsql/PostgreSQL, AutoMapper, Swagger.
-- Current flow: controller -> scoped service -> `AppDbContext`; async EF operations; DTO mapping with AutoMapper; DataAnnotations on some request DTOs.
-- Canonical rule: domain/application services own lifecycle and authority; persistence enforces IDs, ownership, constraints, versions, and indexes.
-- APIs must be `/api/v1`, camelCase JSON, direct success bodies, RFC 9457 Problem Details, ownership-safe not-found, UTC instants and explicit local dates.
-- Writes that can be retried or have consequences require transaction, idempotency, expected version, event/outbox, and authoritative result.
-- Auth, ID migration, repository policy, error middleware, and test framework contain conflicts/open decisions.
-- Never extend the prototype Project model as the canonical Project without resolving `CON-005`.
+.NET 10, ASP.NET Core, EF Core/Npgsql/PostgreSQL. Auth is JWT in HttpOnly cookie with `sessionEpoch`; no refresh/per-device/session inventory. OTP uses normalized mobile identities and Kavenegar. Central `IExceptionHandler` produces RFC 9457 with stable codes.
 
-Read `backend/README.md` before backend work.
+IDs are Guid/uuid; instants DateTimeOffset/timestamptz; local dates DateOnly/date. User-owned resources enforce server ownership; shared/system records do not gain artificial owners. Use xUnit + Testcontainers + WebApplicationFactory and real PostgreSQL. Prototype opaque sessions, integer IDs, IPPanel, unversioned routes and Project permission-only access require migration.

@@ -1,5 +1,7 @@
 # Discussion 015B — Routine Local-Date and Daily Occurrence Amendment
 
+> **Canonical amendment (2026-09-19):** Discussion 024 supersedes one-occurrence-per-day identity with timed date+slot and untimed date identity.
+
 ## Status
 
 Accepted and closed as an amendment required by the final Discussion 019A data-model resolution.

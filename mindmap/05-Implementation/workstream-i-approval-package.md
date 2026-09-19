@@ -21,7 +21,7 @@ Review these artifacts together:
 - Is one accountable role identifiable for every area and milestone?
 - Are contract locks early enough for frontend/backend/research consumers?
 - Do required tests cover domain, concurrency, API, UI, accessibility, events, observability, privacy, AI safety, E2E, and rollback?
-- Do scope cuts preserve `Plan → Execute → Adapt`, manual escape, confirmation, crisis safety, and evidence integrity?
+- Do scope cuts preserve `Plan → Execute → Adapt`, manual escape, confirmation, general AI safeguards, and evidence integrity?
 - Does every material risk have prevention, contingency, owner, and stop gate?
 
 Approval makes the M1–M8 sequence and implementation gates authoritative for planning. It approves the structure of M9 but does not pass M9, resolve milestone-specific configuration, authorize pilot exposure, or finalize Discussion 022. Workstream J and the final Discussion 022 resolution remain required.

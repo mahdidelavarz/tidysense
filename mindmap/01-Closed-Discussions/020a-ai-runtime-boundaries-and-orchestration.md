@@ -1,5 +1,7 @@
 # Discussion 020A — AI Runtime Boundaries and Orchestration
 
+> **Canonical amendment (2026-09-19):** The 2026-09-19 consolidation removes a dedicated crisis classifier/flow while retaining provider safeguards, hostile-input isolation and bounded context.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

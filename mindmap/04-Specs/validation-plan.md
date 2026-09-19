@@ -1,17 +1,9 @@
-# Validation Plan — Redirect
+# Validation Plan
 
-## Status
+Status: **Canonical index**.
 
-`SUPERSEDED — DO NOT RUN THE OLD SEQUENTIAL PILOT`
+H1 evaluates whether bounded AI-assisted creation reaches a useful, credible, reviewable first plan. H2 evaluates whether deterministic-first Reconcile reduces unresolved work into understandable user-approved decisions. Keep exposure, valid output, reviewable resource, user disposition, command and applied CommandResult distinct.
 
-The former “manual Reconcile first, AI later” validation sequence contradicts the accepted AI-native baseline.
+Authorization/ownership, privacy/retention, provider safeguards, hostile-input isolation, structured-output reliability, manual escape, event completeness, cost controls and operational rollback are hard evidence gates. There is no dedicated crisis corpus/resource/release gate.
 
-Current authority is [[01-Closed-Discussions/021-validation-plan-and-decision-gates]]. Before pilot lock, instantiate a signed protocol covering:
-
-- H1 AI-assisted Planning and H2 AI-assisted Reconcile;
-- cohort, consent, locale, observation window, exposures, exclusions, and thresholds;
-- crisis resources, corpus, zero-leakage evidence, and human sign-offs;
-- privacy, retention, authorization, reliability, support, rollback, and incident gates;
-- immutable classifier/artifact versions and the final analysis package.
-
-No real-user pilot is authorized merely by this redirect.
+Before analysis, lock cohort/consent/locale/window, denominators/exclusions, thresholds and immutable artifact versions. Positive conversion cannot override a failed security, safety, privacy, reliability or evidence gate.

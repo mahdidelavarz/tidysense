@@ -1,54 +1,42 @@
 # Required Database Invariant Tests
 
-Use Testcontainers for .NET with a real PostgreSQL container. EF Core's in-memory provider or another compatibility database is not sufficient evidence for these constraints.
+Run with xUnit + Testcontainers for .NET against real PostgreSQL. EF InMemory or a compatibility database is not evidence for these semantics.
 
-## Ownership
+## Identity and ownership
 
-1. Project referencing a Goal with another `user_id` fails.
-2. Task referencing a Goal with another `user_id` fails.
-3. Task referencing a Project with another `user_id` fails.
-4. RoutineOccurrence with a different `user_id` than its Routine fails.
+1. All canonical PK/FK values round-trip as Guid/uuid.
+2. Cross-user Goal/Project/Task/Routine/PlanningFact references are rejected by the use case and cannot leak through API reads.
+3. Project endpoints require authenticated `UserId`, not permission alone.
+4. RoutineOccurrence ownership resolves through Routine; no artificial owner column is required.
 
-## Exclusive parent
+## Task scope and sequence
 
-5. Task with both `goal_id` and `project_id` fails.
-6. Routine with both `goal_id` and `project_id` fails.
-7. Standalone Task and Routine with both null succeed.
+5. Task cannot have both direct Goal and Project.
+6. Active standalone Task without `PlannedDate` fails; active direct Goal/Project Task without it succeeds.
+7. `SequenceId` and `SequenceOrder` are both null or both present.
+8. Duplicate order in one sequence fails under concurrency.
+9. Cross-scope sequence membership and invalid predecessor/drop transitions fail atomically.
+10. No Task `Placement`, `ReviewDate` or `ReviewDateSource` columns exist.
 
-## Temporal and lifecycle
+## Routine and occurrences
 
-8. Active Goal without `review_date` fails.
-9. Active Project without target/review fails.
-10. Scheduled Task without `planned_date` fails.
-11. Backlog Task with `planned_date` fails.
-12. Backlog Task without `review_date` fails.
-13. Terminal Task without `terminal_at` fails.
-14. Active Task with `terminal_at` fails.
-15. Stopped Routine without `stopped_at` or effective-until date fails.
-16. Invalid Routine effective range fails.
+11. Routine effective range and unique local `TimesOfDay` are validated.
+12. Duplicate timed `(RoutineId, ScheduledLocalDate, ScheduledLocalTime)` fails.
+13. Duplicate untimed `(RoutineId, ScheduledLocalDate)` fails, while different timed slots on one date succeed.
+14. Pending/resolved timestamps and next-slot/day-end missed transitions obey the accepted contract.
+15. Concurrent bounded generation yields one row per accepted identity.
 
-## Occurrence
+## PlanningFact and CaptureItem
 
-17. Duplicate `(routine_id, scheduled_local_date)` fails.
-18. Pending occurrence with `resolved_at` fails.
-19. Done/Missed occurrence without `resolved_at` fails.
+16. PlanningFact has exactly one accepted owner and valid lifecycle timestamps.
+17. Capture terminal state/resolution correlation is consistent.
+18. Capture resolution atomically creates a distinct Task/Routine identity and correlated event; it never reuses the CaptureItem ID.
 
-## Continuation
+## Time, concurrency and atomicity
 
-20. Routine continuing itself fails.
-21. Second direct continuation of the same source fails.
-22. Application transaction rejects continuation of an ACTIVE source.
-23. Application transaction rejects a lineage cycle.
+19. `DateOnly` values round-trip without UTC day shift; `DateTimeOffset` instants persist with UTC-compatible `timestamptz` semantics.
+20. Stale `Version` updates return the concurrency contract.
+21. Today excludes terminal/wrong-date Tasks and selects due timed/untimed occurrences in the configured pilot timezone.
+22. Sequence/bulk commands roll back every row and event intent when one item fails.
 
-## Concurrency and query contracts
-
-24. Concurrent occurrence creation returns one identity.
-25. Stale `@Version` update fails.
-26. Today query excludes terminal Tasks with historical planned dates.
-27. Overdue query excludes terminal Tasks.
-28. Project terminal transaction blocks concurrent child attachment.
-29. Bulk command rolls back all rows when one version is stale.
-
-## Lock evidence
-
-The contract must remain `DRAFT` until these tests run against the exact PostgreSQL, Npgsql, and EF Core migration configuration intended for M1. Passing unit tests over mocked repositories is useful, but it is not database invariant evidence. Humans have already invented enough ways to mistake mocks for reality.
+Keep the schema gate unverified until these tests run against the exact EF migration/Npgsql/PostgreSQL configuration.

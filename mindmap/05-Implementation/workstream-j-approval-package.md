@@ -30,7 +30,7 @@ Those outcomes require implementation evidence and the final approvers recorded 
 
 - Does every Discussion 021 hard gate have a blocking checklist row?
 - Can positive H1/H2 results ever bypass safety, privacy, reliability, authorization, evidence, or manual-escape failures? The required answer is no.
-- Are crisis resources, zero leakage, classifier failure, restricted observability, and human sign-off explicit?
+- Are provider safeguards, hostile-input isolation, minimized context, zero unauthorized mutation, restricted observability and human sign-off explicit?
 - Are consent, retention, provider caps, rollback, support, accessibility, and evidence reproducibility explicit?
 - Is public release clearly separated from pilot approval?
 - Does each row require one accountable owner and durable evidence?

@@ -1,5 +1,7 @@
 # Discussion 014A — Temporal Checkpoint PlanningDraft Amendment
 
+> **Canonical amendment (2026-09-19):** Discussions 023 and 026 supersede Backlog/Task-review-date draft fields and add separately approved PlanningFacts plus owner-sensitive Task date validation.
+
 ## Status
 
 Accepted and closed as a required amendment following Discussion 012A.

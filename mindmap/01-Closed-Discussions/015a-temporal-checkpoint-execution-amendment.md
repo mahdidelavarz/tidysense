@@ -1,5 +1,7 @@
 # Discussion 015A — Temporal Checkpoint Execution Amendment
 
+> **Canonical amendment (2026-09-19):** Discussion 026 supersedes Backlog and Task review-date behavior; parent-owned undated Tasks resurface through their parent.
+
 ## Status
 
 Accepted and closed as a required amendment following Discussion 012A.

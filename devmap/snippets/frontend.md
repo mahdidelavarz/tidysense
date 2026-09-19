@@ -51,4 +51,4 @@ const form = useForm<z.infer<typeof schema>>({
 });
 ```
 
-An entity-specific form maps server field errors, preserves input, exposes submitting/error/success states, and uses Persian labels in an RTL container. Transport-schema ownership remains subject to `DEC-005`.
+An entity-specific form maps server field errors, preserves input, exposes submitting/error/success states, and uses Persian labels in an RTL container. Generated OpenAPI owns transport types; Zod owns form/client validation.

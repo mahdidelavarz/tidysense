@@ -31,7 +31,7 @@ It does not own deployment secrets. The selected SMS provider and proposed M1 pa
 
 - Authentication and exclusive ownership apply to every canonical and temporary AI workflow resource.
 - Ownership-safe 404 behavior applies to PlanningAttempt, PlanningDraft, ReconcileSession, ActionConfirmation, and CommandResult as well as canonical entities.
-- Restricted crisis/safety events and raw-content access require the privacy/access rules in [[01-Closed-Discussions/019c-events-ai-observability-and-retention]].
+- Restricted safety/provider events and raw-content access require the privacy/access rules in [[01-Closed-Discussions/019c-events-ai-observability-and-retention]] as amended by the canonical guardrails; no dedicated crisis product record is required.
 - Authentication success never authorizes an AI proposal or bypasses confirmation, version, or commit-time revalidation rules.
 - Kavenegar is the confirmed SMS provider. Exact OTP/session limits and provider behavior remain proposed in [[05-Implementation/m1-configuration-register]] and block scaffold lock until approved; production secrets never belong in this repository.
 
@@ -378,10 +378,10 @@ Recommended deployment:
 
 ```txt
 https://app-domain/
-https://app-domain/api/
+https://app-domain/api/v1/
 ```
 
-Nginx serves the frontend and proxies `/api` to ASP.NET Core.
+The eventual edge/proxy technology is deferred under `DEC-011`; it must preserve this same-origin boundary and `/api/v1` contract.
 
 Required controls:
 

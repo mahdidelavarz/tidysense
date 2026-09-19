@@ -22,7 +22,7 @@ public sealed class GoalsController(GoalApplicationService service) : Controller
 }
 ```
 
-Controller binds HTTP and delegates. The application service owns user context, domain creation, persistence/event transaction and mapping. The `id` route representation must follow `DEC-012`; do not copy product fields from this illustrative shape without the owning domain contract.
+Controller binds HTTP and delegates. The application service owns user context, domain creation, persistence/event transaction and mapping. Route IDs are UUID strings backed by `Guid`; do not copy product fields from this illustrative shape without the owning domain contract.
 
 ## Owned read query
 

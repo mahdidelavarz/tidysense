@@ -72,7 +72,7 @@ Superseded behavioral material:    YES, now redirected/archived
 |---|---|---|---|---|---|---|
 | `REPLACE-001` | Reconcile-first MVP | `REPLACE` | Complete `Plan → Execute → Adapt` loop | Do not make Reconcile the first-value engine or block Today | D010–D011; B-01 | M0–M7 |
 | `REPLACE-002` | Goal/Task-only domain | `REPLACE` | Goal, Project, Task, Routine, RoutineOccurrence; no canonical Plan | Old tables/classes cannot define current ownership or lifecycle | D012–D012A; D019A | M1–M3 |
-| `REPLACE-003` | Planned-for-day-only temporal model | `REPLACE` | explicit Backlog, planned/review/deadline/target meanings, provenance, future checkpoint | Do not conflate review due with execution overdue | D012A; D014A; D015A | M1–M6 |
+| `REPLACE-003` | Planned-for-day-only temporal model | `REPLACE` | Goal/Project review snapshots; standalone scheduled and parent-owned undated Tasks; distinct planned/deadline/target meanings | No Backlog or Task review date; do not conflate parent review with execution overdue | D012A; D014A; D015A; D026 | M1–M5 |
 | `REPLACE-004` | Done/Carry/Drop-only execution | `REPLACE` | complete/drop/carry/restore/correction/history plus RoutineOccurrence semantics | Occurrences never carry; terminal parent actions resolve children explicitly | D015–D015B | M2–M3 |
 | `REPLACE-005` | old Reconcile eligibility and blocking flow | `REPLACE` | deterministic cleanup, facts, severity, separate review lane, Today access | Skip is not resolution; absence/raw counts do not imply Recovery | D016–D017A | M6 |
 | `REPLACE-006` | direct/generated plan application assumptions | `REPLACE` | PlanningAttempt → validated PlanningDraft → preview → confirmation → command | Draft is never canonical or mutation authority | D013–D014A; D018; D020B | M4–M5 |
@@ -95,7 +95,7 @@ No reusable implementation exists for these areas. They require new implementati
 | `NEW-002` | Reconcile runtime | `UNKNOWN_UNTIL_AUDIT` | deterministic facts/rules plus optional bounded explanation adapter | D016–D017A; D020A–D020C | M6–M7 |
 | `NEW-003` | confirmation/command boundary | `UNKNOWN_UNTIL_AUDIT` | preview, acknowledgement, versions, expiry, revalidation, CommandResult | D018; D019B; D020B | M2 onward |
 | `NEW-004` | outbox and semantic evidence | `UNKNOWN_UNTIL_AUDIT` | atomic intent, publisher, deduplication, retention/access, metric reproducibility | D019B–D019C; D021 | M1 onward |
-| `NEW-005` | crisis safety | `UNKNOWN_UNTIL_AUDIT` | classifier/detection path, fixed localized fallback, zero leakage, restricted events, corpus | D018A; D021 | M5/M9 hard gate |
+| `NEW-005` | general AI safety boundary | `NEW` | provider safeguards/moderation, hostile-input isolation, minimized context, explicit degraded/manual paths; no dedicated crisis UX/gate | 2026-09-19 consolidation | M6/M8 |
 | `NEW-006` | reliability and cost controls | `UNKNOWN_UNTIL_AUDIT` | retry/timeout/rate/circuit/token/spend limits, kill switches, pinned artifacts | D020C | M5/M7/M9 |
 | `NEW-007` | pilot analytics and operations | `UNKNOWN_UNTIL_AUDIT` | metric dictionary, queries, dashboards, analysis package, support/incident/rollback drills | D019C; D021; B-27 | M8–M9 |
 
@@ -130,7 +130,7 @@ API/error contract
 atomic event/outbox evidence
 AI authority and structured-output boundaries
 privacy, retention, and restricted access
-safety and crisis zero leakage
+safety, hostile-input isolation, minimized context, and no unauthorized mutation
 testability and migration/rollback evidence
 adaptation cost lower than replacement cost
 ```

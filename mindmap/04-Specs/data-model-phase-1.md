@@ -17,4 +17,4 @@ Current canonical model authority:
 - [[01-Closed-Discussions/019b-transactions-concurrency-and-idempotency]]
 - [[01-Closed-Discussions/019c-events-ai-observability-and-retention]]
 
-The canonical entities are Goal, Project, Task, Routine, and RoutineOccurrence. There is no canonical Plan. Use Discussion 019A for implementation detail until a post-M1 schema and migration specification is approved. Historical content remains in Git history.
+Canonical work entities are Goal, Project, Task, Routine and RoutineOccurrence; durable supporting records include PlanningFact and CaptureItem, and Task sequences are metadata. There is no Plan or Backlog. Use Discussions 019A and 023–026 plus the backend domain package for implementation detail. Historical content remains in Git history.

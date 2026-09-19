@@ -8,7 +8,7 @@
 
 - Base path: `/api/v1`.
 - JSON fields use camelCase.
-- Instants use UTC; semantic local dates remain local dates.
+- Instants use ISO 8601 `DateTimeOffset`/UTC-compatible semantics; semantic local dates remain `DateOnly` values.
 - Success returns the resource/result body directly.
 - Errors use RFC 9457 Problem Details with stable application codes and trace identity.
 - Validation errors use HTTP 400; ownership-safe lookup uses HTTP 404.
@@ -21,7 +21,7 @@ These conventions are retained by [[01-Closed-Discussions/001-008-legacy-survivi
 
 ### Canonical resources
 
-Goal, Project, Task, Routine, and RoutineOccurrence are canonical resources. There is no canonical Plan resource. Their fields and invariants are owned by Discussions 012, 012A, 015–015B, and 019A.
+Goal, Project, Task, Routine, and RoutineOccurrence are canonical work resources. PlanningFact and CaptureItem are durable supporting resources; Task sequence is metadata. There is no Plan or Backlog resource. Fields and invariants are owned by Discussions 012, 019A and 023–026.
 
 ### AI workflow resources
 

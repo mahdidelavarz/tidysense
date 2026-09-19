@@ -10,7 +10,7 @@ No cut is approved by this register. It classifies the maximum safe response to 
 |---|---|---:|---|---|
 | `CUT-01` | visual polish/animation beyond accessible clarity | 1 | `SAFE_TO_CUT` | preserve warnings, hierarchy, state visibility and accessibility |
 | `CUT-02` | convenience filters/sorts and nonessential dashboards | 1 | `SAFE_TO_CUT` | retain operational and pilot-required views |
-| `CUT-03` | broader onboarding copy variants | 1 | `SAFE_TO_CUT` | fixed crisis copy and required consent remain |
+| `CUT-03` | broader onboarding copy variants | 1 | `SAFE_TO_CUT` | required consent and safe degraded-state copy remain |
 | `CUT-04` | multiple Routine slots/broader recurrence | 2 | `ALREADY_POST_PILOT` | separate named Routines and accepted daily semantics remain |
 | `CUT-05` | provider fallback | 2 | `ALREADY_POST_PILOT` | manual path and provider failure state remain |
 | `CUT-06` | calendar/time blocks/reminders/dependencies | 2 | `ALREADY_POST_PILOT` | no accepted MVP dependency |
@@ -22,7 +22,7 @@ No cut is approved by this register. It classifies the maximum safe response to 
 | `CUT-12` | Today execution | 4 | `FORBIDDEN` | Execute/evidence loop disappears |
 | `CUT-13` | deterministic Reconcile | 4 | `FORBIDDEN` | Adapt facts/authority boundary disappears |
 | `CUT-14` | explicit preview/confirmation/revalidation | 4 | `FORBIDDEN` | unauthorized/stale mutation risk |
-| `CUT-15` | crisis fail-closed/manual escape | 4 | `FORBIDDEN` | hard gate failure |
+| `CUT-15` | provider safeguards, hostile-input isolation or manual escape | 4 | `FORBIDDEN` | safety/reliability gate failure |
 | `CUT-16` | required events/observability/privacy evidence | 4 | `FORBIDDEN` | pilot and safety claims become unauditable |
 | `CUT-17` | idempotency/concurrency/atomic outbox | 4 | `FORBIDDEN` | correctness and evidence integrity fail |
 
