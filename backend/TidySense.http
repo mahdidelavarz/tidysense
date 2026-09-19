@@ -1,0 +1,6 @@
+@TidySense_HostAddress = http://localhost:5082
+
+GET {{TidySense_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
