@@ -13,3 +13,8 @@ ASP.NET Core uses a central `IExceptionHandler` to produce RFC 9457 Problem Deta
 | unexpected | 500 | `UNEXPECTED_ERROR` |
 
 Every response includes safe `type`, `title`, `status`, stable `code` and `traceId`; `detail` is safe and `errors` appears only for field-addressable validation. Never expose stack traces, SQL/provider messages, secrets, other-user existence or raw prompts. Frontend localizes known codes and makes conflicts actionable.
+
+## Related Mind Map
+
+- [API contract index](../../mindmap/04-Specs/api-contracts-phase-1.md) — global Problem Details contract.
+- [API/frontend state contracts](../../mindmap/01-Closed-Discussions/020b-api-and-frontend-state-contracts.md) — client-visible conflict/failure distinctions.

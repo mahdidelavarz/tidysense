@@ -17,3 +17,8 @@ A feature is done only when applicable items are evidenced:
 - secrets/sensitive data are absent from code, logs and client errors;
 - DevMap was updated only if a reusable convention changed;
 - product acceptance scenarios were rechecked against the owning source.
+
+## Related Mind Map
+
+- [Updated MVP implementation plan](../../mindmap/01-Closed-Discussions/022-updated-mvp-implementation-plan.md) — cross-cutting slice evidence.
+- [Milestone and exit-gate plan](../../mindmap/05-Implementation/milestone-exit-gate-plan.md) — required product-slice evidence and gate failure rule.

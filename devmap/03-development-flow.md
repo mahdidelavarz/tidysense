@@ -18,3 +18,8 @@ The normal path is sequential where contracts depend on earlier work; safe front
 | 12. documentation | reusable change only | update one DevMap authority and summaries if material | no drift |
 
 Stop at the first unresolved `CONFLICT` or `OPEN DECISION` that materially changes downstream work. Do not hide it in an implementation choice.
+
+## Related Mind Map
+
+- [Updated MVP implementation plan](../mindmap/01-Closed-Discussions/022-updated-mvp-implementation-plan.md) — milestone sequence and cross-cutting completion evidence.
+- [MVP core loop](../mindmap/05-Flows/mvp-core-loop.md) — Plan → Execute → Adapt product flow.

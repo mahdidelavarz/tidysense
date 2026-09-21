@@ -44,3 +44,9 @@ A page composes route state, query state, feature actions, and layout. It does n
 | offline | keep safe readable state; disable canonical mutation; no invented queue |
 
 A feature is incomplete when an applicable row is absent.
+
+## Related Mind Map
+
+- [MVP core loop](../../mindmap/05-Flows/mvp-core-loop.md) — manual/AI review, confirmation and deterministic apply flow.
+- [API/frontend state contracts](../../mindmap/01-Closed-Discussions/020b-api-and-frontend-state-contracts.md) — explicit client state distinctions.
+- [Reconcile UI specification](../../mindmap/04-Specs/reconcile-ui-ux-specification.md) — Reconcile-specific interaction behavior when that module is in scope.

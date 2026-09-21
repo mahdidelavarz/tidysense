@@ -5,3 +5,8 @@ Use **Vitest** for pure logic, utilities and useful hook tests; **Testing Librar
 Test server field errors, preserved form input, loading/empty/error/forbidden/conflict states, polling/cancellation where relevant, keyboard use, Persian/RTL and representative mobile/desktop reflow. Do not test Tailwind class lists/framework internals or pursue arbitrary coverage percentages.
 
 Measure before optimizing. Bound list rendering with the cursor contract, avoid waterfalls, lazy-load meaningful route boundaries and keep polling cancellable/visibility-aware. Performance changes must preserve accessibility and authoritative error/state behavior.
+
+## Related Mind Map
+
+- [API/frontend state contracts](../../mindmap/01-Closed-Discussions/020b-api-and-frontend-state-contracts.md) — failure, recovery and asynchronous state coverage.
+- [Test coverage matrix](../../mindmap/05-Implementation/test-coverage-matrix.md) — milestone-level evidence expectations.

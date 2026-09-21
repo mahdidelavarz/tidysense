@@ -6,7 +6,11 @@ Current audit result: [remaining conflicts and open decisions](remaining-conflic
 
 ## Active conflicts
 
-None. Documentation conflicts `CON-001` through `CON-012` were resolved by this consolidation. Prototype implementation gaps are migration work, not competing architecture.
+| ID | Status | Scope | Current constraint |
+|---|---|---|---|
+| `CON-013` | `OPEN` | Later milestone labels/order in Mind Map implementation artifacts | Discussion 022 declares Capture/deterministic Reconcile as M4, Planning foundation M5 and AI Planning M6; `dependency-graph.md`/`milestone-exit-gate-plan.md` label Planning mock M4, real Planning M5 and deterministic Reconcile M6, with a duplicate M6 row. DevMap stable STEP IDs follow Discussion 022 and preserve compatible dependencies. Reconcile the Mind Map implementation artifacts before STEP-07; this does not block STEP-02. |
+
+Documentation conflicts `CON-001` through `CON-012` remain resolved. Prototype implementation gaps are migration work, not competing architecture.
 
 ## Open / deferred decisions
 

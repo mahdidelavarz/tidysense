@@ -2,6 +2,12 @@
 
 TidySense UI is Persian, RTL, calm, low-noise and semantic-token driven. Set `lang="fa"` and `dir="rtl"`; use logical CSS and do not mirror non-directional icons.
 
+## Related Mind Map
+
+- [AI-native MVP baseline](../../mindmap/04-Specs/ai-native-mvp-baseline.md) — product tone, manual escape and removed crisis UX.
+- [Day-0 onboarding](../../mindmap/04-Specs/day-0-onboarding.md) — authentication/onboarding flow context.
+- [Reconcile UI specification](../../mindmap/04-Specs/reconcile-ui-ux-specification.md) — adaptation flow presentation.
+
 ## Compact foundation
 
 - Typography: one Persian-capable UI family; sizes `12, 14, 16, 20, 24, 32px`; weights `400, 500, 700`; body line height `1.75`, heading `1.35`.

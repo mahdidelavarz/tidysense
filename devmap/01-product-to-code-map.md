@@ -4,9 +4,9 @@ This routes accepted concepts; it does not redefine behavior.
 
 | Concept | Product authority | Backend destination | Frontend destination | State |
 |---|---|---|---|---|
-| identity/OTP/session | accepted auth model + ADR-001 | JWT cookie/sessionEpoch, OTP use cases, Kavenegar | auth routes and current-user bootstrap | prototype migration required |
+| identity/OTP/session | accepted auth model + ADR-001 | JWT cookie/sessionEpoch, OTP use cases, Kavenegar | auth routes and current-user bootstrap | foundation exists; STEP-02 incomplete |
 | Goal | 012/019A/026 | Guid aggregate, ownership, review snapshot | feature list/detail/create | not canonical yet |
-| Project | 012/019A/026 | Guid user-owned aggregate replacing prototype | feature list/detail/create | unsafe prototype exists |
+| Project | 012/019A/026 | Guid user-owned aggregate replacing prototype | feature list/detail/create | ownership-safe read proof only; module incomplete |
 | Task/Today | 015/019A/025/026 | Task, sequence rules, Today query/events | Task/Today features | not implemented |
 | Routine/occurrence | 015/019A/024 | multi-slot local scheduling/generation | Routine/Today features | not implemented |
 | PlanningFact/Planning | 013–014A/020/023/026 | attempts/drafts/facts/context/apply | chat/draft/review/apply | not implemented |
@@ -16,3 +16,9 @@ This routes accepted concepts; it does not redefine behavior.
 | Work Hub/IA queue | `FOR_CODEX.md` items 2–9 | future read models as accepted later | pending product consolidation | not canonical in this pass |
 
 Canonical infrastructure: `/api/v1`, UUID/Guid, DateTimeOffset/DateOnly, current EF naming, central Problem Details, OpenAPI-generated transport types. Do not infer architecture from prototype code.
+
+## Related Mind Map
+
+- [AI-native MVP baseline](../mindmap/04-Specs/ai-native-mvp-baseline.md) — canonical product model and removed concepts.
+- [Updated implementation plan](../mindmap/01-Closed-Discussions/022-updated-mvp-implementation-plan.md) — accepted milestone ordering.
+- [Backend domain package](../mindmap/05-Implementation/backend-domain-package/README.md) — canonical data handoff and invariants.

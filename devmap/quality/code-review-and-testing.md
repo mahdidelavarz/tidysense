@@ -17,3 +17,8 @@ Reviewers should ask whether an existing pattern was reused because it fits, not
 Use the lowest level that exercises the contract, then add integration/E2E where boundaries matter. Critical paths require end-to-end evidence; pure functions do not require browser tests. Authorization, database constraints, concurrency, idempotency, migrations and outbox require real integration. UI tests focus on behavior/states/accessibility, not implementation structure.
 
 No numeric coverage target substitutes for scenario coverage. A changed branch with product/security significance needs a test even if global coverage is high.
+
+## Related Mind Map
+
+- [Validation plan and decision gates](../../mindmap/01-Closed-Discussions/021-validation-plan-and-decision-gates.md) — hard evidence and review gates.
+- [Milestone exit-gate plan](../../mindmap/05-Implementation/milestone-exit-gate-plan.md) — slice completion evidence.

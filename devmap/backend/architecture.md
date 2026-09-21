@@ -15,3 +15,8 @@ Controller → feature/application use case → domain transition
 - Cross-row invariants use an explicit transaction and deterministic lock order when necessary.
 - Domain/application behavior is provider-neutral. Npgsql configuration and PostgreSQL migrations stay in persistence infrastructure.
 - Kavenegar is the only production SMS adapter. IPPanel code is obsolete prototype migration debt.
+
+## Related Mind Map
+
+- [Transactions, concurrency and idempotency](../../mindmap/01-Closed-Discussions/019b-transactions-concurrency-and-idempotency.md) — write boundaries and durable event intent.
+- [AI runtime boundaries](../../mindmap/01-Closed-Discussions/020a-ai-runtime-boundaries-and-orchestration.md) — external provider ports and orchestration authority.

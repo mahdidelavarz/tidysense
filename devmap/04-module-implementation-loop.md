@@ -22,3 +22,9 @@ For a module such as Goal:
 18. Update DevMap only if a reusable convention changed.
 
 Do not redesign architecture during an ordinary module task. If the current pattern is inadequate, propose a decision/ADR before spreading a replacement.
+
+## Related Mind Map
+
+- [AI-native MVP baseline](../mindmap/04-Specs/ai-native-mvp-baseline.md) — canonical entities and product-wide invariants.
+- [Updated MVP implementation plan](../mindmap/01-Closed-Discussions/022-updated-mvp-implementation-plan.md) — dependency order and slice evidence.
+- [Canonical backend reference](../mindmap/05-Implementation/backend-domain-package/dotnet-ef-core-reference.md) — entity ownership and persistence handoff.

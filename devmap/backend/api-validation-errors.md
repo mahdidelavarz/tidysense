@@ -26,3 +26,8 @@ Client validation improves feedback but never replaces these layers.
 All non-success responses use RFC 9457 Problem Details with stable `type`, HTTP `status`, safe `title/detail`, `traceId`, and an application `code`. Validation errors include field-keyed errors. Do not expose exception text, SQL/provider messages, secret values, existence of another user's resource, or raw AI/provider responses.
 
 Use ownership-safe `404`; `401` for unauthenticated; `403` for authenticated permission denial when existence disclosure is safe; `409` for version/idempotency conflict; contract-specific `422` for a well-formed semantic failure; `429` for rate limiting. Central `IExceptionHandler` owns the stable-code Problem Details mapping.
+
+## Related Mind Map
+
+- [API contract index](../../mindmap/04-Specs/api-contracts-phase-1.md) — global contract and resource families.
+- [API/frontend state contracts](../../mindmap/01-Closed-Discussions/020b-api-and-frontend-state-contracts.md) — lifecycle and failure-state distinctions.

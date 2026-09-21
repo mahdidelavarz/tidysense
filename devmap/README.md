@@ -30,7 +30,9 @@ Do not rescan the full repository or Mind Map for a focused task unless behavior
 
 | Need | Primary document |
 |---|---|
-| context routing | [`00-context-index.md`](00-context-index.md) |
+| task context routing | [`context/context-routing.md`](context/context-routing.md) |
+| context summaries index | [`00-context-index.md`](00-context-index.md) |
+| numbered execution roadmap | [`development-steps.md`](development-steps.md) |
 | product concept to implementation area | [`01-product-to-code-map.md`](01-product-to-code-map.md) |
 | system architecture and dependency direction | [`02-architecture.md`](02-architecture.md) |
 | end-to-end delivery flow | [`03-development-flow.md`](03-development-flow.md) |

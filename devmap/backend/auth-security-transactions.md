@@ -17,3 +17,9 @@ Kavenegar is the production SMS adapter; IPPanel is obsolete. Secrets use enviro
 ## Transactions
 
 One use case owns each write transaction. Revalidate identity, permission, domain-defined ownership, selected resources, warnings and expected versions immediately before commit. Canonical mutations and event/outbox intent commit atomically. Retryable consequential commands use stable idempotency. Bulk commands are all-or-nothing; lost responses recover by idempotent replay/status lookup.
+
+## Related Mind Map
+
+- [Authentication specification](../../mindmap/04-Specs/auth-phase-1.md) — OTP, JWT, session, CSRF and auth transaction behavior.
+- [Retained authentication/API decisions](../../mindmap/01-Closed-Discussions/001-008-legacy-surviving-decisions.md) — surviving canonical auth and current-user rules.
+- [Transactions, concurrency and idempotency](../../mindmap/01-Closed-Discussions/019b-transactions-concurrency-and-idempotency.md) — consequential command guarantees.

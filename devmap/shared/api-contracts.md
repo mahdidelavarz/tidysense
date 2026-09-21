@@ -17,6 +17,12 @@ List request base: `cursor?`, bounded `limit?`, `sort?`, and feature-specific al
 
 `nextCursor` is present only when another page is available and continues the same filter/order snapshot semantics. Filters/sorts are allowlisted per endpoint; there is no universal advanced query language.
 
+## Related Mind Map
+
+- [API contract index](../../mindmap/04-Specs/api-contracts-phase-1.md) — canonical global/resource contract.
+- [Transactions, concurrency and idempotency](../../mindmap/01-Closed-Discussions/019b-transactions-concurrency-and-idempotency.md) — versions, replay and CommandResult behavior.
+- [API/frontend state contracts](../../mindmap/01-Closed-Discussions/020b-api-and-frontend-state-contracts.md) — asynchronous and failure-state semantics.
+
 ## Generation workflow
 
 Change backend DTO/endpoint → regenerate OpenAPI → regenerate TypeScript artifact → compile frontend and run contract/API tests → commit generated diff with the contract change. CI eventually checks drift, but provider/orchestration details remain under deferred `DEC-011`.

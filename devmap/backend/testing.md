@@ -11,3 +11,8 @@ Canonical stack: **xUnit**, ASP.NET Core **`WebApplicationFactory`**, and a real
 | browser E2E | critical browser → API → real PostgreSQL slices |
 
 EF InMemory/SQLite cannot prove PostgreSQL behavior and must not replace these tests. Keep provider-neutral rule tests separate from Npgsql mapping/migration evidence. Test product rules, bug regressions, security boundaries, schema changes and consequential commands; do not chase arbitrary coverage percentages or test framework internals.
+
+## Related Mind Map
+
+- [Validation plan and decision gates](../../mindmap/01-Closed-Discussions/021-validation-plan-and-decision-gates.md) — product evidence and hard gates.
+- [Test coverage matrix](../../mindmap/05-Implementation/test-coverage-matrix.md) — required milestone test families.

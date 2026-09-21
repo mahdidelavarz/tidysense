@@ -10,3 +10,9 @@ The current code has default ASP.NET logging only; the rules below are `LOCKED` 
 - Semantic product events are not debug logs. They use a versioned catalog and transactionally committed outbox intent.
 - AI observability records bounded metadata/artifact versions and approved retention classes, not raw content by default.
 - Metrics/alerts need an owner, threshold, consumer, and response; do not emit unowned telemetry.
+
+## Related Mind Map
+
+- [Events, AI observability and retention](../../mindmap/01-Closed-Discussions/019c-events-ai-observability-and-retention.md) — semantic evidence and privacy classes.
+- [Structured-output reliability and cost controls](../../mindmap/01-Closed-Discussions/020c-structured-output-reliability-and-cost-controls.md) — AI runtime observability.
+- [AI guardrails](../../mindmap/04-Specs/ai-guardrails.md) — minimized content and safety boundaries.

@@ -1,8 +1,8 @@
-# Remaining Conflicts and Open Decisions — 2026-09-20
+# Remaining Conflicts and Open Decisions — 2026-09-21
 
 ## Conflicts
 
-No unresolved documentation contradiction remains among the consolidated inventory, baseline, live Canvas, Discussions 023–026, canonical schema reference, implementation plan and DevMap.
+`CON-013` is open in later implementation-planning artifacts. Authoritative Discussion 022 assigns M4 to Capture/deterministic Reconcile, M5 to Planning foundation and M6 to AI Planning. The separate dependency graph/exit-gate plan assigns M4 to Planning mock, M5 to real AI Planning and M6 to deterministic Reconcile, and the exit-gate table also duplicates M6. Stable DevMap STEP IDs follow Discussion 022 and retain compatible dependency constraints; reconcile those Mind Map implementation artifacts before STEP-07. STEP-02 authentication is unaffected.
 
 No product-document conflict was reopened by restoring PostgreSQL. The M1 foundation retains Guid identity, JWT-cookie plus `sessionEpoch`, Kavenegar, `/api/v1`, canonical temporal types and owner-scoped Project read.
 
@@ -14,4 +14,4 @@ No product-document conflict was reopened by restoring PostgreSQL. The M1 founda
 
 The prototype/dev data remains disposable, so PostgreSQL received a fresh canonical migration rather than translated SQL Server history. The migration applies cleanly and the M1 persistence/security suite passes against isolated real PostgreSQL databases. Before enabling real external auth/SMS, supply environment-specific JWT/Kavenegar values and rotate any historically exposed credentials.
 
-No unresolved product or recurring architecture decision blocks continuing M1. Broader orchestration remains intentionally unconfirmed and may not be silently decided during feature work.
+No unresolved product or recurring architecture decision blocks STEP-02. `CON-013` must be cleared before STEP-07; broader orchestration remains intentionally unconfirmed and may not be silently decided during feature work.

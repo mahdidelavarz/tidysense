@@ -14,3 +14,8 @@ Ambiguous local `DateTime` values and treating timestamps as planner dates both 
 ## Consequences and migration
 
 The disposable prototype schema is not migrated. New canonical columns use explicit instant/date meanings and are tested against real PostgreSQL. API offsets represent an instant; PostgreSQL does not preserve the original textual offset. A future user-profile IANA zone changes zone selection only, not stored instant/date semantics.
+
+## Related Mind Map
+
+- [Temporal checkpoint baseline](../../mindmap/01-Closed-Discussions/012a-temporal-checkpoint-amendment.md)
+- [Routine local-date amendment](../../mindmap/01-Closed-Discussions/015b-routine-local-date-and-daily-occurrence-amendment.md)

@@ -2,8 +2,11 @@
 
 Use the smallest context set that can safely answer the task.
 
+The canonical task router is [`context/context-routing.md`](context/context-routing.md); numbered execution state is in [`development-steps.md`](development-steps.md).
+
 | Task | Read first | Then |
 |---|---|---|
+| numbered step command | `/AGENTS.md`, `development-steps.md`, `context/active-conventions.md` | only the step-linked authorities and source |
 | any implementation | `context/project-summary.md`, `context/active-conventions.md` | relevant checklist |
 | backend feature | `context/backend-summary.md` | `backend/README.md` and linked detail |
 | frontend feature | `context/frontend-summary.md` | `frontend/README.md` and linked detail |

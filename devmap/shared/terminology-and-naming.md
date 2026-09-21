@@ -11,3 +11,8 @@ Use Goal, Project, Task, Routine, RoutineOccurrence, PlanningFact, CaptureItem, 
 - Repository: root `/frontend` and `/backend`; never document `/app/frontend` or `/app/backend`.
 
 Avoid vague `Manager`, `Helper`, `CommonService`, `GeneralForm` and premature universal abstractions.
+
+## Related Mind Map
+
+- [AI-native MVP baseline](../../mindmap/04-Specs/ai-native-mvp-baseline.md) — canonical record names and removed terms.
+- [Planning facts](../../mindmap/01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context.md), [Routine slots](../../mindmap/01-Closed-Discussions/024-multi-time-daily-routine-scheduling-and-occurrence-semantics.md), [Task sequences](../../mindmap/01-Closed-Discussions/025-task-dependency-sequences-and-hierarchical-reconcile-grouping.md), and [Capture/Backlog removal](../../mindmap/01-Closed-Discussions/026-backlog-removal-parent-owned-undated-tasks-and-quick-capture.md) — later terminology amendments.

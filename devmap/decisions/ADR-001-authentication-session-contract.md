@@ -19,3 +19,8 @@ Authenticate with a signed JWT stored in a secure `HttpOnly`, same-origin cookie
 ## Consequences and migration
 
 Replace opaque session persistence, issue/validate JWT cookies, add `sessionEpoch` to canonical user identity, align OTP/current-user routes under `/api/v1`, delete obsolete session-list/revoke routes, and update integration/security tests. Do not maintain both auth models.
+
+## Related Mind Map
+
+- [Authentication specification](../../mindmap/04-Specs/auth-phase-1.md)
+- [Retained authentication/API decisions](../../mindmap/01-Closed-Discussions/001-008-legacy-surviving-decisions.md)
