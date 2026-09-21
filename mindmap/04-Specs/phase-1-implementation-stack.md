@@ -17,15 +17,16 @@
 
 - C# + ASP.NET Core on .NET 10
 - feature-oriented domain/application boundaries
-- Entity Framework Core 10 with Npgsql
+- Entity Framework Core 10 with `Npgsql.EntityFrameworkCore.PostgreSQL`
 - PostgreSQL + versioned EF Core migrations
 - explicit DTO/schema validation
 - RFC 9457 Problem Details and trace identity
 - transaction, concurrency, idempotency, outbox, and observability support
-- integration tests with real PostgreSQL behavior
+- integration tests with real PostgreSQL behavior through Testcontainers or an explicitly configured local instance
 
 ### Infrastructure
 
+- PostgreSQL is canonical again. The temporary SQL Server decision was superseded before further domain development; domain/application/API contracts remain provider-neutral.
 - Local/CI/deployment orchestration, Docker Compose topology, CI provider and edge/proxy choice remain deferred under `DEC-011`.
 - Health/readiness, monitoring, structured logs, backups, rollback and incident procedures remain required outcomes when deployment is designed.
 

@@ -12,7 +12,7 @@ The implementation foundation uses:
 
 - React, strict TypeScript, and Vite for the frontend;
 - C# and ASP.NET Core on .NET 10 for the backend;
-- Entity Framework Core with Npgsql and PostgreSQL versioned migrations;
+- Entity Framework Core with Npgsql and versioned PostgreSQL migrations; temporary DevMap ADR-006 is superseded;
 - versioned JSON/REST contracts using camelCase;
 - RFC 9457 Problem Details for errors;
 - secure phone OTP and JWT cookie authentication;

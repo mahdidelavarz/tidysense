@@ -1,9 +1,3 @@
 namespace TidySense.Common.Exceptions;
 
-public class UnauthorizedException : Exception
-{
-    public UnauthorizedException(string message)
-        : base(message)
-    {
-    }
-}
+public sealed class UnauthorizedException(string message) : Exception(message);

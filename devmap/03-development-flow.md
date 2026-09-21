@@ -7,7 +7,7 @@ The normal path is sequential where contracts depend on earlier work; safe front
 | 1. product rule | owning Mind Map source | identify behavior, lifecycle, states, conflicts | source links and acceptance scenarios |
 | 2. domain contract | product rule | model identity, invariants, transitions, authority | domain types/tests; no infrastructure types |
 | 3. schema | domain contract | constraints, indexes, ownership, versioning | reviewed EF model + migration + rollback/upgrade plan |
-| 4. persistence | schema | user-scoped queries, mappings, concurrency | PostgreSQL integration tests |
+| 4. persistence | schema | user-scoped queries, mappings, concurrency | real PostgreSQL integration tests |
 | 5. application logic | domain + persistence | authorization, orchestration, transaction/idempotency/outbox | use-case tests and command result |
 | 6. HTTP contract | application result | DTOs, validation, versioned route, Problem Details | OpenAPI/contract tests |
 | 7. frontend contract | reviewed HTTP contract | TS types/schema and transport function | typed service test/fixture |

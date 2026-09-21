@@ -16,4 +16,4 @@ Deterministic backend code owns authentication, authorization, domain-defined ow
 
 Controllers bind HTTP and call one use case. Feature/application services orchestrate rules and transactions. Direct `AppDbContext` is normal for simple queries/persistence; repositories/ports require a real aggregate, domain, external-dependency or testing boundary. No generic repositories. Domain code does not depend on HTTP/provider types. Frontend features depend on shared infrastructure, never the reverse.
 
-Full Compose/CI/deployment orchestration remains deferred (`DEC-011`); this does not relax secret handling or block domain implementation.
+PostgreSQL is the canonical persistence provider. Domain and application code remain provider-neutral; Npgsql configuration and migrations stay in infrastructure. The temporary SQL Server decision is superseded (`DEC-015`/ADR-006). Full Compose/CI/deployment orchestration remains deferred (`DEC-011`); this does not relax secret handling or block domain implementation.

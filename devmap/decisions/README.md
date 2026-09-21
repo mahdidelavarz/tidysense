@@ -26,8 +26,8 @@ None. Documentation conflicts `CON-001` through `CON-012` were resolved by this 
 | `CON-006` | `/api/v1` is canonical. Prototype `/api/...` routes are removed during migration; no dual API. | [API contract](../shared/api-contracts.md) |
 | `CON-007` | Root `/frontend` and `/backend` are canonical; no `/app` move. | [architecture](../02-architecture.md) |
 | `CON-008` | Product name is TidySense. “Adaptive Planner” is historical terminology only. | [terminology](../shared/terminology-and-naming.md) |
-| `CON-009` | `DateTimeOffset` represents instants; `DateOnly` represents local dates; Npgsql persists instants with UTC-compatible semantics. | [data types](../shared/data-types-and-datetime.md), [ADR-003](ADR-003-temporal-representation.md) |
-| `CON-010` | Keep the established EF/PostgreSQL identifier convention; do not introduce global snake_case. | [domain/persistence](../backend/domain-model-and-persistence.md) |
+| `CON-009` | `DateTimeOffset` represents instants and `DateOnly` represents local dates; Npgsql persists them as `timestamptz` and `date`, with UTC-offset values required for instant writes. | [data types](../shared/data-types-and-datetime.md), [ADR-003](ADR-003-temporal-representation.md) |
+| `CON-010` | Keep the established EF/PostgreSQL identifier convention; do not introduce a provider-driven naming rewrite. | [domain/persistence](../backend/domain-model-and-persistence.md) |
 | `CON-011` | Ownership is not universal. Explicitly user-owned entities enforce backend ownership. Canonical Project is user-owned, so current permission-only Project access is unsafe migration debt. | [domain/persistence](../backend/domain-model-and-persistence.md) |
 | `CON-012` | Implementation has started: backend IAM/Project and frontend scaffolding exist. No milestone gate is complete without its recorded evidence. | [project summary](../context/project-summary.md), [implementation plan](../../mindmap/01-Closed-Discussions/022-updated-mvp-implementation-plan.md) |
 
@@ -36,7 +36,7 @@ None. Documentation conflicts `CON-001` through `CON-012` were resolved by this 
 | ID | Decision | Authority | ADR |
 |---|---|---|---|
 | `DEC-001` | Feature/application services may use `AppDbContext` directly for simple work; repositories/ports require a real aggregate, domain, external, or testing boundary; no generic repository. | [backend architecture](../backend/architecture.md) | [ADR-004](ADR-004-backend-persistence-boundary.md) |
-| `DEC-002` | xUnit + Testcontainers for .NET + `WebApplicationFactory`; real PostgreSQL for database semantics. | [backend testing](../backend/testing.md) | — |
+| `DEC-002` | xUnit + `WebApplicationFactory` + real PostgreSQL integration tests; use PostgreSQL Testcontainers or an explicitly configured local instance. | [backend testing](../backend/testing.md) | — |
 | `DEC-003` | `src/features/<feature>/`, `src/shared/`, `src/routes/`; features own their components, hooks, services, schemas, types and utilities. | [frontend architecture](../frontend/stack-architecture-folder.md) | — |
 | `DEC-004` | TanStack Router file-based routing with the Vite plugin, generated route tree and root providers. | [routing/state/API](../frontend/routing-state-api.md) | — |
 | `DEC-005` | Generated OpenAPI TypeScript transport types; Zod for forms, client-only constraints and explicit runtime validation. | [API contract](../shared/api-contracts.md) | [ADR-005](ADR-005-openapi-types-and-zod.md) |
@@ -47,7 +47,13 @@ None. Documentation conflicts `CON-001` through `CON-012` were resolved by this 
 | `DEC-010` | Vitest + Testing Library + Playwright, chosen by test purpose rather than arbitrary coverage targets. | [frontend testing](../frontend/testing-performance.md) | — |
 | `DEC-012` | UUID / .NET `Guid` canonical identities. | [data types](../shared/data-types-and-datetime.md) | [ADR-002](ADR-002-canonical-uuid-identity.md) |
 | `DEC-013` | `DateTimeOffset` instants and `DateOnly` local dates. | [data types](../shared/data-types-and-datetime.md) | [ADR-003](ADR-003-temporal-representation.md) |
-| `DEC-014` | Existing EF/PostgreSQL identifier convention; no new global snake_case convention. | [domain/persistence](../backend/domain-model-and-persistence.md) | — |
+| `DEC-014` | Existing EF/PostgreSQL identifier convention; no new provider-driven naming strategy. | [domain/persistence](../backend/domain-model-and-persistence.md) | — |
+
+## Superseded decisions
+
+| ID | Status | Outcome | ADR |
+|---|---|---|---|
+| `DEC-015` | `SUPERSEDED` | SQL Server was temporarily active because PostgreSQL was unavailable. PostgreSQL became available before further domain expansion, so Npgsql/PostgreSQL is canonical again and all temporary SQL Server infrastructure was removed. | [ADR-006](ADR-006-temporary-sql-server-provider.md) |
 
 ## ADR policy
 

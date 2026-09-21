@@ -1,156 +1,56 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using TidySense.Common;
+using Microsoft.Extensions.Options;
+using TidySense.Common.Auth;
 using TidySense.Data;
 using TidySense.Models;
 
 namespace TidySense.Services;
 
-public class OtpService
+public sealed class OtpService(
+    AppDbContext dbContext,
+    IOptions<OtpOptions> options,
+    ISmsSender smsSender)
 {
-    private readonly AppDbContext _dbContext;
-    private readonly IConfiguration _configuration;
-
-    private readonly ISmsSender _smsSender;
-
-    public OtpService(
-        AppDbContext dbContext,
-        IConfiguration configuration,
-        ISmsSender smsSender)
+    public async Task RequestAsync(User user, CancellationToken cancellationToken)
     {
-        _dbContext = dbContext;
-        _configuration = configuration;
-        _smsSender = smsSender;
+        var now = DateTimeOffset.UtcNow;
+        var active = await dbContext.OtpChallenges
+            .Where(x => x.UserId == user.Id && x.ConsumedAt == null && x.ExpiresAt > now)
+            .ToListAsync(cancellationToken);
+        foreach (var challenge in active) challenge.ConsumedAt = now;
+
+        var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+        dbContext.OtpChallenges.Add(new OtpChallenge
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, CodeHash = Hash(code), CreatedAt = now,
+            ExpiresAt = now.AddMinutes(AuthConstants.OtpExpirationMinutes)
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await smsSender.SendAsync(user.PhoneNumber, code, cancellationToken);
     }
 
-public async Task RequestAsync(int userId, string phoneNumber)
-{
-    var now = DateTime.UtcNow;
-
-    var activeChallenges =
-        await _dbContext.OtpChallenges
-            .Where(x =>
-                x.UserId == userId &&
-                x.ConsumedAt == null &&
-                x.ExpiresAt > now)
-            .ToListAsync();
-
-    foreach (var challenge in activeChallenges)
+    public async Task<bool> VerifyAsync(User user, string code, CancellationToken cancellationToken)
     {
-        challenge.ConsumedAt = now;
+        var now = DateTimeOffset.UtcNow;
+        var challenge = await dbContext.OtpChallenges
+            .Where(x => x.UserId == user.Id && x.ConsumedAt == null && x.ExpiresAt > now)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (challenge is null || challenge.FailedAttempts >= AuthConstants.OtpMaxAttempts) return false;
+
+        var valid = CryptographicOperations.FixedTimeEquals(
+            Convert.FromHexString(challenge.CodeHash), Convert.FromHexString(Hash(code)));
+        if (!valid) challenge.FailedAttempts++;
+        else challenge.ConsumedAt = now;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return valid;
     }
 
-    var code = GenerateCode();
-
-    var challengeEntity = new OtpChallenge
+    private string Hash(string code)
     {
-        UserId = userId,
-        CodeHash = HashCode(code),
-        FailedAttempts = 0,
-        CreatedAt = now,
-        ExpiresAt = now.AddMinutes(
-            AuthConstants.OtpExpirationMinutes)
-    };
-
-    _dbContext.OtpChallenges.Add(challengeEntity);
-
-    await _dbContext.SaveChangesAsync();
-
-    // Development only.
-    Console.WriteLine(
-        $"[OTP] UserId={userId}, Code={code}, " +
-        $"ExpiresAt={challengeEntity.ExpiresAt:O}");
-
-    await _smsSender.SendAsync(
-            phoneNumber,
-            code);
-}
-
-    public async Task<bool> VerifyAsync(
-        User user,
-        string code)
-    {
-        var now = DateTime.UtcNow;
-
-        var challenge =
-            await _dbContext.OtpChallenges
-                .Where(x =>
-                    x.UserId == user.Id &&
-                    x.ConsumedAt == null &&
-                    x.ExpiresAt > now)
-                .OrderByDescending(x => x.CreatedAt)
-                .FirstOrDefaultAsync();
-
-        if (challenge is null)
-        {
-            return false;
-        }
-
-        if (challenge.FailedAttempts >=
-            AuthConstants.OtpMaxAttempts)
-        {
-            return false;
-        }
-
-        var suppliedHash = HashCode(code);
-
-        var valid =
-            CryptographicOperations.FixedTimeEquals(
-                Convert.FromHexString(
-                    challenge.CodeHash),
-                Convert.FromHexString(
-                    suppliedHash));
-
-        if (!valid)
-        {
-            challenge.FailedAttempts++;
-
-            await _dbContext.SaveChangesAsync();
-
-            return false;
-        }
-
-        challenge.ConsumedAt = now;
-
-        await _dbContext.SaveChangesAsync();
-
-        return true;
-    }
-
-    private static string GenerateCode()
-    {
-        var min = (int)Math.Pow(
-            10,
-            AuthConstants.OtpLength - 1);
-
-        var max = (int)Math.Pow(
-            10,
-            AuthConstants.OtpLength);
-
-        return RandomNumberGenerator
-            .GetInt32(min, max)
-            .ToString();
-    }
-
-    private string HashCode(string code)
-    {
-        var secret =
-            _configuration[
-                "Authentication:OtpSecret"];
-
-        if (string.IsNullOrWhiteSpace(secret))
-        {
-            throw new InvalidOperationException(
-                "Authentication:OtpSecret is not configured.");
-        }
-
-        using var hmac = new HMACSHA256(
-            Encoding.UTF8.GetBytes(secret));
-
-        var hash = hmac.ComputeHash(
-            Encoding.UTF8.GetBytes(code));
-
-        return Convert.ToHexString(hash);
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(options.Value.HashingKey));
+        return Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(code)));
     }
 }

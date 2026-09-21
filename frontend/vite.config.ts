@@ -1,8 +1,18 @@
 import react from '@vitejs/plugin-react'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react() , tailwindcss()],
+  plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true }), react(), tailwindcss()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://localhost:7075',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })

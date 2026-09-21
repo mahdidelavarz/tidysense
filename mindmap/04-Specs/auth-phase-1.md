@@ -76,7 +76,7 @@ User.normalizedPhone
 Rules:
 
 - required
-- unique in PostgreSQL
+- unique in the active relational database
 - stored in E.164 format
 - Iranian mobile numbers only during Phase 1
 - raw input is never stored or compared as the uniqueness key
@@ -141,7 +141,7 @@ Backend responsibilities:
 2. apply server-side request limits
 3. generate a cryptographically secure OTP
 4. compute the OTP digest
-5. store the challenge in PostgreSQL
+5. store the challenge in the active relational database
 6. send through `OtpDeliveryGateway`
 7. return a generic response
 
@@ -241,7 +241,7 @@ Example request:
 
 ## Transaction boundary
 
-The following must execute in one PostgreSQL transaction:
+The following must execute in one relational database transaction:
 
 ```txt
 lock/load active OTP challenge
@@ -496,6 +496,6 @@ auth/security
 auth/provider
 ```
 
-Use PostgreSQL for OTP challenges and user state.
+Use PostgreSQL for OTP challenges and user state. The auth contract remains provider-neutral above persistence.
 
 Do not introduce Redis, a session service, a refresh-token family, or a second authentication framework without a new accepted discussion.

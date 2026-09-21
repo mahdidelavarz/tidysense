@@ -1,8 +1,8 @@
 # Domain Model and Persistence
 
-- Canonical entity/FK IDs are `Guid`/PostgreSQL `uuid`.
-- Instants are `DateTimeOffset`/`timestamptz`; local dates are `DateOnly`/`date`; local slots are `TimeOnly`/`time`.
-- Keep the repository’s established EF/PostgreSQL identifier convention. Do not install a global snake_case convention.
+- Canonical entity/FK IDs are .NET `Guid`/PostgreSQL `uuid`.
+- Instants are `DateTimeOffset`/PostgreSQL `timestamp with time zone`; local dates are `DateOnly`/`date`; local slots are `TimeOnly`/`time without time zone`.
+- Keep the repository's established EF identifier convention. Do not install a new naming strategy solely because the provider changed.
 - Configure required lengths, conversions, checks, indexes, delete behavior and optimistic `Version` in Fluent API.
 - Lifecycle rows preserve history; privacy deletion is a separate governed operation. Broad cascades do not perform product transitions.
 
@@ -10,4 +10,4 @@ Ownership follows the accepted domain, not a universal base class. Goal, Project
 
 Task has no Backlog, `Placement`, Task `ReviewDate` or `ReviewDateSource`. Sequence pair/scope/order invariants apply. Routine occurrence uniqueness distinguishes timed and untimed slots. PlanningFact has exactly one accepted owner. Capture resolution creates a separate work identity.
 
-Migration from prototype structures must explicitly map integer IDs to Guid IDs, cut over FKs, normalize ambiguous `DateTime` values, add Project ownership, replace opaque sessions and remove obsolete routes/provider code. Do not extend prototype integer Project architecture into new modules.
+The disposable prototype database is replaced by a direct canonical PostgreSQL schema: Guid IDs, canonical temporal types, Project ownership, JWT plus `sessionEpoch`, and no persisted session model. No compatibility migration for prototype integer data is required. Do not extend prototype integer Project architecture into new modules. Npgsql accepts only UTC (`Offset == 00:00`) `DateTimeOffset` values for `timestamp with time zone`; application-created instants use UTC while API offsets still identify equivalent instants.

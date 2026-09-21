@@ -1,24 +1,14 @@
 namespace TidySense.Models;
 
-public class User
+public sealed class User
 {
-    public int Id { get; set; }
-
-    public string PhoneNumber { get; set; } = null!;
-
+    public Guid Id { get; set; }
+    public string PhoneNumber { get; set; } = string.Empty;
     public string? DisplayName { get; set; }
-
-    public bool IsActive { get; set; }
-
-    public bool IsDeleted { get; set; }
-
-    public DateTime CreatedAt { get; set; }
-
-    public DateTime? UpdatedAt { get; set; }
-
-    public ICollection<UserGroup> UserGroups { get; set; }
-        = new List<UserGroup>();
-
-    public ICollection<OtpChallenge> OtpChallenges { get; set; }
-        = new List<OtpChallenge>();
+    public bool IsActive { get; set; } = true;
+    public int SessionEpoch { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+    public ICollection<OtpChallenge> OtpChallenges { get; set; } = [];
+    public ICollection<Project> Projects { get; set; } = [];
 }

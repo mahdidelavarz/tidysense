@@ -7,7 +7,7 @@ Use Goal, Project, Task, Routine, RoutineOccurrence, PlanningFact, CaptureItem, 
 - C#: PascalCase types/members, camelCase locals, `I` interface prefix, `Async` for awaitable I/O.
 - TypeScript: PascalCase components/types, camelCase functions, `useX` hooks and feature query-key factories.
 - API: `/api/v1`, plural resource nouns, camelCase JSON, stable documented enum/error strings.
-- Database: keep existing EF/PostgreSQL convention; do not introduce global snake_case.
+- Database: keep the existing EF/PostgreSQL identifier convention; do not introduce a provider-driven naming rewrite.
 - Repository: root `/frontend` and `/backend`; never document `/app/frontend` or `/app/backend`.
 
 Avoid vague `Manager`, `Helper`, `CommonService`, `GeneralForm` and premature universal abstractions.

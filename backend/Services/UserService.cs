@@ -1,175 +1,43 @@
-using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
-using TidySense.Common.Exceptions;
 using TidySense.Data;
-using TidySense.DTOs.Auth.Users;
 using TidySense.Models;
 
 namespace TidySense.Services;
 
-public class UserService
+public sealed class UserService(AppDbContext dbContext)
 {
-    private readonly AppDbContext _dbContext;
-    private readonly IMapper _mapper;
+    public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        dbContext.Users.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
-    public UserService(
-        AppDbContext dbContext,
-        IMapper mapper)
+    public Task<User?> GetByPhoneNumberAsync(string phoneNumber, CancellationToken cancellationToken = default) =>
+        dbContext.Users.SingleOrDefaultAsync(x => x.PhoneNumber == phoneNumber, cancellationToken);
+
+    public async Task<User> GetOrCreateAsync(string rawPhoneNumber, CancellationToken cancellationToken)
     {
-        _dbContext = dbContext;
-        _mapper = mapper;
-    }
+        var phoneNumber = NormalizeIranianMobile(rawPhoneNumber);
+        var existing = await GetByPhoneNumberAsync(phoneNumber, cancellationToken);
+        if (existing is not null) return existing;
 
-    // --------------------------------------------------
-    // Authentication
-    // --------------------------------------------------
-
-    public async Task<User?> GetByIdAsync(int id)
-    {
-        return await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == id);
-    }
-
-    public async Task<User?> GetByPhoneNumberAsync(
-        string phoneNumber)
-    {
-        return await _dbContext.Users
-            .FirstOrDefaultAsync(x =>
-                x.PhoneNumber == phoneNumber);
-    }
-
-    // public async Task<User> GetOrCreateAsync(
-    //     string phoneNumber)
-    // {
-    //     var normalizedPhoneNumber =
-    //         phoneNumber.Trim();
-
-    //     var user =
-    //         await GetByPhoneNumberAsync(
-    //             normalizedPhoneNumber);
-
-    //     if (user is not null)
-    //     {
-    //         return user;
-    //     }
-
-    //     user = new User
-    //     {
-    //         PhoneNumber = normalizedPhoneNumber,
-    //         IsActive = true,
-    //         IsDeleted = false,
-    //         CreatedAt = DateTime.UtcNow
-    //     };
-
-    //     _dbContext.Users.Add(user);
-
-    //     await _dbContext.SaveChangesAsync();
-
-    //     return user;
-    // }
-
-    // --------------------------------------------------
-    // User management
-    // --------------------------------------------------
-
-    public async Task<IEnumerable<UserDto>> GetAllAsync()
-    {
-        return await _dbContext.Users
-            .AsNoTracking()
-            .OrderBy(x => x.Id)
-            .ProjectTo<UserDto>(
-                _mapper.ConfigurationProvider)
-            .ToListAsync();
-    }
-
-    public async Task<UserDto> GetDtoByIdAsync(int id)
-    {
-        var user = await _dbContext.Users
-            .AsNoTracking()
-            .Where(x => x.Id == id)
-            .ProjectTo<UserDto>(
-                _mapper.ConfigurationProvider)
-            .FirstOrDefaultAsync();
-
-        if (user is null)
+        var user = new User
         {
-            throw new ResourceNotFoundException(
-                "User",
-                id);
-        }
-
+            Id = Guid.NewGuid(),
+            PhoneNumber = phoneNumber,
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync(cancellationToken);
         return user;
     }
 
-    public async Task<UserDto> CreateAsync(
-        CreateUserDto dto)
+    public static string NormalizeIranianMobile(string value)
     {
-        var phoneNumber = dto.PhoneNumber.Trim();
-
-        var exists = await _dbContext.Users
-            .AnyAsync(x =>
-                x.PhoneNumber == phoneNumber);
-
-        if (exists)
-        {
-            throw new InvalidOperationException(
-                "A user with this phone number already exists.");
-        }
-
-        var user = _mapper.Map<User>(dto);
-
-        user.PhoneNumber = phoneNumber;
-        user.IsActive = true;
-        user.IsDeleted = false;
-        user.CreatedAt = DateTime.UtcNow;
-
-        _dbContext.Users.Add(user);
-
-        await _dbContext.SaveChangesAsync();
-
-        return _mapper.Map<UserDto>(user);
-    }
-
-    public async Task<UserDto> UpdateAsync(
-        int id,
-        UpdateUserDto dto)
-    {
-        var user = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == id);
-
-        if (user is null)
-        {
-            throw new ResourceNotFoundException(
-                "User",
-                id);
-        }
-
-        _mapper.Map(dto, user);
-
-        user.UpdatedAt = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return _mapper.Map<UserDto>(user);
-    }
-
-    public async Task DeleteAsync(int id)
-    {
-        var user = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == id);
-
-        if (user is null)
-        {
-            throw new ResourceNotFoundException(
-                "User",
-                id);
-        }
-
-        user.IsDeleted = true;
-        user.IsActive = false;
-        user.UpdatedAt = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        if (digits.StartsWith("0098")) digits = digits[4..];
+        else if (digits.StartsWith("98")) digits = digits[2..];
+        else if (digits.StartsWith('0')) digits = digits[1..];
+        if (digits.Length != 10 || !digits.StartsWith('9'))
+            throw new ArgumentException("A valid Iranian mobile number is required.", nameof(value));
+        return $"+98{digits}";
     }
 }

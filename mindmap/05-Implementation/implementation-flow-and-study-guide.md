@@ -12,4 +12,4 @@ Status: **Canonical companion to Discussion 022**.
 
 Current first slice is M1 foundation/canonical ownership. Do not start Goal/Task/Routine/Today/Reconcile/Planning/AI features until the required foundation contract and evidence are ready.
 
-Study priorities: ASP.NET Core JWT cookies and `IExceptionHandler`; EF Core Guid/DateOnly/DateTimeOffset/Npgsql behavior; Testcontainers + WebApplicationFactory; TanStack file routing/Query; OpenAPI TypeScript generation; RTL accessibility. Full orchestration remains deferred.
+Study priorities: ASP.NET Core JWT cookies and `IExceptionHandler`; EF Core Guid/DateOnly/UTC-compatible DateTimeOffset behavior with Npgsql; PostgreSQL Testcontainers or configured local PostgreSQL + WebApplicationFactory; TanStack file routing/Query; OpenAPI TypeScript generation; RTL accessibility. Full orchestration remains deferred.

@@ -1,10 +1,10 @@
 # Required Database Invariant Tests
 
-Run with xUnit + Testcontainers for .NET against real PostgreSQL. EF InMemory or a compatibility database is not evidence for these semantics.
+Run with xUnit + `WebApplicationFactory` against real PostgreSQL through Testcontainers or an explicitly configured isolated local database. EF InMemory or a compatibility database is not evidence for these semantics.
 
 ## Identity and ownership
 
-1. All canonical PK/FK values round-trip as Guid/uuid.
+1. All canonical PK/FK values round-trip as Guid/PostgreSQL `uuid`.
 2. Cross-user Goal/Project/Task/Routine/PlanningFact references are rejected by the use case and cannot leak through API reads.
 3. Project endpoints require authenticated `UserId`, not permission alone.
 4. RoutineOccurrence ownership resolves through Routine; no artificial owner column is required.
@@ -34,7 +34,7 @@ Run with xUnit + Testcontainers for .NET against real PostgreSQL. EF InMemory or
 
 ## Time, concurrency and atomicity
 
-19. `DateOnly` values round-trip without UTC day shift; `DateTimeOffset` instants persist with UTC-compatible `timestamptz` semantics.
+19. `DateOnly` values round-trip without UTC day shift; UTC-offset `DateTimeOffset` instants persist with `timestamptz` semantics.
 20. Stale `Version` updates return the concurrency contract.
 21. Today excludes terminal/wrong-date Tasks and selects due timed/untimed occurrences in the configured pilot timezone.
 22. Sequence/bulk commands roll back every row and event intent when one item fails.

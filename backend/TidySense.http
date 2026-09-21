@@ -1,6 +1,5 @@
-@TidySense_HostAddress = http://localhost:5082
+@baseUrl = https://localhost:7075
+@projectId = 00000000-0000-0000-0000-000000000000
 
-GET {{TidySense_HostAddress}}/weatherforecast/
+GET {{baseUrl}}/api/v1/projects/{{projectId}}
 Accept: application/json
-
-###

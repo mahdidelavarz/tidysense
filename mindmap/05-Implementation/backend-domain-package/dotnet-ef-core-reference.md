@@ -12,11 +12,12 @@ public DateTimeOffset UpdatedAt { get; private set; }
 ```
 
 - Entity/FK IDs: `Guid`; PostgreSQL `uuid`.
-- Real instants: `DateTimeOffset`; PostgreSQL `timestamptz`; write UTC-compatible values through Npgsql.
+- Real instants: `DateTimeOffset`; PostgreSQL `timestamptz`; write UTC-offset values through Npgsql.
 - Local calendar dates: `DateOnly`; PostgreSQL `date`.
 - Local wall-clock slots: `TimeOnly`; PostgreSQL `time`.
 - Keep established EF-generated identifier names. Do not add a global snake_case convention.
 - Configure `Version` as a concurrency token; enforce cross-row invariants transactionally.
+- Keep these domain meanings provider-neutral. Npgsql mappings and PostgreSQL migrations are infrastructure artifacts.
 
 ## Ownership
 
@@ -53,4 +54,4 @@ Feature/application services may query and persist directly through `AppDbContex
 
 ## Migration notes
 
-Before replacing prototype IAM/Project, define integer-to-Guid row mapping, FK cutover and rollback; normalize existing instant values with an explicit timezone; convert planner dates to `date`; add Project ownership; replace opaque sessions with JWT/sessionEpoch; and remove obsolete `/api/...` routes rather than maintaining dual APIs.
+The prototype/dev database is disposable. Create the canonical PostgreSQL schema directly with Guid keys, explicit temporal types, Project ownership and JWT/sessionEpoch; remove obsolete opaque-session, temporary SQL Server, and `/api/...` structures rather than maintaining compatibility.

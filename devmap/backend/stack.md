@@ -3,20 +3,19 @@
 ## Locked
 
 - C# on .NET 10; ASP.NET Core controllers.
-- EF Core 10 with Npgsql and PostgreSQL.
+- EF Core 10 with `Npgsql.EntityFrameworkCore.PostgreSQL`; PostgreSQL is the canonical active provider.
 - Versioned EF Core migrations.
 - RFC 9457 Problem Details, generated OpenAPI, same-origin deployment behind Nginx.
-- Real PostgreSQL integration evidence; an in-memory provider is not invariant evidence.
+- Real PostgreSQL integration evidence through PostgreSQL Testcontainers or an explicitly configured local PostgreSQL test instance; EF InMemory is not invariant evidence.
 
 ## Inferred from code
 
 - nullable reference types and implicit usings;
 - built-in dependency injection and configuration/options;
 - `async` EF/API work;
-- AutoMapper for simple DTO projection/mapping;
-- Swagger/Swashbuckle in development;
+- generated ASP.NET Core OpenAPI documents and generated frontend transport types;
 - typed `HttpClient` for provider adapters.
 
-Exact test packages, health-check packages, resilience components, and AI SDKs are not selected. Do not add them silently; follow dependency policy and open decisions.
+The domain/application/API contracts must not depend on PostgreSQL types, raw SQL or provider-specific query behavior. Npgsql configuration and PostgreSQL migrations are infrastructure artifacts. The temporary SQL Server provider was removed before further domain expansion.
 
-The repository targets `net10.0`, but the inspected machine has only SDK 9.0.102. Pin/install the approved SDK before treating build results as code evidence.
+The repository targets `net10.0`; a workspace-local .NET 10 SDK is used in the current development environment.

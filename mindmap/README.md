@@ -18,14 +18,14 @@ This vault contains the accepted product model, architecture projections, resear
 - Implementation has started: backend IAM/Project scaffolding and the frontend scaffold exist.
 - Existing scaffolding does not prove any milestone gate complete. Gates require their recorded tests and evidence.
 - The repository remains rooted at `/frontend` and `/backend`.
-- The DevMap decision register is consolidated; only `DEC-011` (local/CI/deployment orchestration) remains deferred.
+- The DevMap decision register is consolidated; `DEC-011` remains deferred and temporary SQL Server decision `DEC-015` is superseded.
 - Pilot and release readiness are not claimed.
 
 ## Authority
 
 For product behavior, later accepted discussions override earlier contradictory text. The consolidated inventory and baseline project that result. Historical discussion bodies remain evidence and must be read with their amendment notices.
 
-Technical architecture is owned by `/devmap` and the accepted ADRs there. The backend is .NET 10 / ASP.NET Core / EF Core / PostgreSQL. Prototype code is evidence, not authority where it conflicts with an accepted contract.
+Technical architecture is owned by `/devmap` and the accepted ADRs there. The backend is .NET 10 / ASP.NET Core / EF Core / Npgsql / PostgreSQL. Persistence-facing architecture remains provider-neutral. Prototype code is evidence, not authority where it conflicts with an accepted contract.
 
 ## Change rule
 

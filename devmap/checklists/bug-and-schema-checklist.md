@@ -12,7 +12,7 @@
 
 - [ ] domain authority and compatibility reviewed
 - [ ] EF migration inspected
-- [ ] clean and upgrade PostgreSQL paths tested
+- [ ] clean and supported-upgrade PostgreSQL paths tested
 - [ ] constraints/ownership/concurrency/indexes verified
 - [ ] rollback/forward-fix and deployment order documented
 

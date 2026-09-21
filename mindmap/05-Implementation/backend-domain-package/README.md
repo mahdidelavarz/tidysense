@@ -6,6 +6,6 @@ Status: **Documentation/reference package; not an applied migration.** Discussio
 - [dotnet-ef-core-reference.md](dotnet-ef-core-reference.md) is the EF Core implementation contract.
 - [database-invariant-test-cases.md](database-invariant-test-cases.md) is test guidance and must be read with the 023–026 amendments.
 
-EF Core migrations generated from the canonical model are the schema authority. Keep the repository’s established EF/PostgreSQL identifier convention; the reference deliberately uses quoted PascalCase identifiers and does not mandate global snake_case.
+EF Core migrations generated from the canonical model are the schema authority. The current migration set targets PostgreSQL. Keep the repository's established EF/PostgreSQL identifier convention; do not add a provider-driven naming rewrite.
 
-Canonical IDs are PostgreSQL `uuid` / .NET `Guid`. Instants are `timestamptz` / `DateTimeOffset`; planner dates are `date` / `DateOnly`; local slots are `time` / `TimeOnly`. Existing integer IDs and ambiguous prototype `DateTime` columns require an explicit cutover migration and must not be extended.
+Canonical mappings are PostgreSQL `uuid` / .NET `Guid`, `timestamptz` / UTC-compatible `DateTimeOffset`, `date` / `DateOnly`, and `time` / `TimeOnly`. The disposable prototype schema is recreated directly; no integer-key or temporary SQL Server compatibility migration is required.

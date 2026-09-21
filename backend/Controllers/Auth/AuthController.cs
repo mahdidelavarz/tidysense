@@ -1,131 +1,67 @@
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TidySense.Common;
+using Microsoft.Extensions.Options;
+using TidySense.Common.Auth;
 using TidySense.DTOs.Auth;
-using TidySense.DTOs.Auth.Users;
 using TidySense.Services;
 
-namespace TidySense.Controllers;
+namespace TidySense.Controllers.Auth;
 
 [ApiController]
-[Route("api/auth")]
-public class AuthController : ControllerBase
+[Route("api/v1/auth")]
+public sealed class AuthController(AuthService auth, IOptions<JwtOptions> jwtOptions) : ControllerBase
 {
-    private readonly AuthService _authService;
-    private readonly SessionService _sessionService;
-    private readonly UserService _userService;
-
-    public AuthController(
-        AuthService authService,
-        SessionService sessionService,
-        UserService userService)
-    {
-        _authService = authService;
-        _sessionService = sessionService;
-        _userService = userService;
-    }
-
-    [HttpPost("register")]
     [AllowAnonymous]
-    public async Task<IActionResult> Register(
-        CreateUserDto dto)
+    [HttpPost("otp/request")]
+    public async Task<IActionResult> RequestOtp(RequestOtpDto dto, CancellationToken cancellationToken)
     {
-        await _authService.RegisterAsync(
-            dto);
-
+        await auth.RequestOtpAsync(dto.PhoneNumber, cancellationToken);
         return NoContent();
     }
 
-    [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<IActionResult> Login(
-        RequestOtpDto dto)
-    {
-        await _authService.LoginAsync(
-            dto.PhoneNumber);
-
-        return NoContent();
-    }
-
     [HttpPost("otp/verify")]
-    [AllowAnonymous]
-    public async Task<IActionResult> VerifyOtp(
-        [FromBody] VerifyOtpDto dto)
+    public async Task<ActionResult<CurrentUserDto>> VerifyOtp(VerifyOtpDto dto, CancellationToken cancellationToken)
     {
-        var result = await _authService.VerifyOtpAsync(
-            dto.PhoneNumber,
-            dto.Code);
-
-        var claims = new[]
-        {
-            new Claim(
-                AuthConstants.UserIdClaim,
-                result.Session.UserId.ToString()),
-
-            new Claim(
-                AuthConstants.SessionTokenClaim,
-                result.Token)
-        };
-
-        var identity = new ClaimsIdentity(
-            claims,
-            AuthConstants.AuthenticationScheme);
-
-        var principal = new ClaimsPrincipal(identity);
-
-        await HttpContext.SignInAsync(
-            AuthConstants.AuthenticationScheme,
-            principal);
-
-        return NoContent();
+        var result = await auth.VerifyOtpAsync(dto.PhoneNumber, dto.Code, cancellationToken);
+        WriteCookie(result.Token);
+        return Ok(result.User);
     }
 
+    [Authorize]
+    [HttpGet("current-user")]
+    public async Task<ActionResult<CurrentUserDto>> CurrentUser(CancellationToken cancellationToken) =>
+        Ok(await auth.GetCurrentAsync(cancellationToken));
+
+    [Authorize]
     [HttpPost("logout")]
-    [Authorize]
-    public async Task<IActionResult> Logout()
+    public IActionResult Logout()
     {
-        var token = User.FindFirstValue(
-            AuthConstants.SessionTokenClaim);
-
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            var session =
-                await _sessionService
-                    .GetValidSessionAsync(token);
-
-            if (session is not null)
-            {
-                await _sessionService.RevokeAsync(
-                    session);
-            }
-        }
-
-        await HttpContext.SignOutAsync(
-            AuthConstants.AuthenticationScheme);
-
+        DeleteCookie();
         return NoContent();
     }
 
-    [HttpGet("me")]
     [Authorize]
-    public async Task<ActionResult<UserDto>> Me()
+    [HttpPost("logout-all")]
+    public async Task<IActionResult> LogoutAll(CancellationToken cancellationToken)
     {
-        return Ok(
-            await _authService.GetCurrentUserAsync());
+        await auth.RevokeAllAsync(cancellationToken);
+        DeleteCookie();
+        return NoContent();
     }
-    
-    private int GetUserId()
-    {
-        var value = User.FindFirstValue(
-            AuthConstants.UserIdClaim);
 
-        if (!int.TryParse(value, out var userId))
+    private void WriteCookie(string token)
+    {
+        var options = jwtOptions.Value;
+        Response.Cookies.Append(options.CookieName, token, new CookieOptions
         {
-            throw new UnauthorizedAccessException();
-        }
-
-        return userId;
+            HttpOnly = true,
+            Secure = !HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment(),
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddMinutes(options.LifetimeMinutes),
+            IsEssential = true
+        });
     }
+
+    private void DeleteCookie() => Response.Cookies.Delete(jwtOptions.Value.CookieName);
 }

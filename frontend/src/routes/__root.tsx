@@ -1,13 +1,9 @@
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 export const Route = createRootRoute({
   component: () => (
-    <>
+    <main className="min-h-screen bg-canvas text-text-primary">
       <Outlet />
-      <TanStackRouterDevtools />
-      <ReactQueryDevtools />
-    </>
+    </main>
   ),
 });

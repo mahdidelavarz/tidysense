@@ -54,12 +54,12 @@ There is **no dedicated crisis UX, crisis routing flow, emergency-resource page,
 ## 5. Technical baseline
 
 - Root layout: `/frontend`, `/backend`.
-- Backend: .NET 10, ASP.NET Core, EF Core, Npgsql/PostgreSQL.
+- Backend: .NET 10, ASP.NET Core, EF Core with Npgsql/PostgreSQL.
 - API: `/api/v1`, camelCase JSON, RFC 9457 Problem Details.
 - Auth: JWT in HttpOnly cookie with `sessionEpoch`; no refresh/per-device/session-list/individual-revoke architecture.
 - SMS: Kavenegar production adapter behind a narrow provider boundary.
 - Time: `DateTimeOffset` instants, `DateOnly` local dates, one configured pilot IANA timezone.
-- Database names: current EF/PostgreSQL convention; no new global snake_case convention.
+- Persistence: provider-neutral domain/application/API contracts; current EF/PostgreSQL naming retained; PostgreSQL migrations remain infrastructure artifacts.
 - Frontend: React/TypeScript, TanStack Router file routes, TanStack Query, generated OpenAPI types, Zod for forms/client validation.
 
 ## 6. Pilot evidence and readiness

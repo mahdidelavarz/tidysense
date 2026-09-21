@@ -1,20 +1,13 @@
 namespace TidySense.Models;
 
-public class OtpChallenge
+public sealed class OtpChallenge
 {
-    public long Id { get; set; }
-
-    public int UserId { get; set; }
-
-    public string CodeHash { get; set; } = null!;
-
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string CodeHash { get; set; } = string.Empty;
     public int FailedAttempts { get; set; }
-
-    public DateTime CreatedAt { get; set; }
-
-    public DateTime ExpiresAt { get; set; }
-
-    public DateTime? ConsumedAt { get; set; }
-
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? ConsumedAt { get; set; }
     public User User { get; set; } = null!;
 }

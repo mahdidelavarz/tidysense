@@ -5,7 +5,7 @@
 
 ## Decision
 
-Use `DateTimeOffset` for real instants and `DateOnly` for local calendar dates. Persist instants as PostgreSQL `timestamptz` with Npgsql UTC-compatible values. The pilot uses one explicitly configured application IANA timezone for Today, local day/week boundaries, Routine scheduling and review boundaries. Local times are separate wall-clock values.
+Use `DateTimeOffset` for real instants and `DateOnly` for local calendar dates. PostgreSQL persists them as `timestamp with time zone` and `date`; Npgsql requires UTC-offset `DateTimeOffset` values when writing instants. The pilot uses one explicitly configured application IANA timezone for Today, local day/week boundaries, Routine scheduling and review boundaries. Local times are separate wall-clock values.
 
 ## Alternatives rejected
 
@@ -13,4 +13,4 @@ Ambiguous local `DateTime` values and treating timestamps as planner dates both 
 
 ## Consequences and migration
 
-Audit prototype `DateTime` columns and data assumptions, convert instants with an explicit UTC interpretation, migrate planner dates to `date`, and test DST/day-boundary behavior against real PostgreSQL. A future user-profile IANA zone changes zone selection only, not stored instant/date semantics.
+The disposable prototype schema is not migrated. New canonical columns use explicit instant/date meanings and are tested against real PostgreSQL. API offsets represent an instant; PostgreSQL does not preserve the original textual offset. A future user-profile IANA zone changes zone selection only, not stored instant/date semantics.

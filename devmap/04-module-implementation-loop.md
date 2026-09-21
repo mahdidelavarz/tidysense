@@ -9,7 +9,7 @@ For a module such as Goal:
 5. Record acceptance scenarios, entities, lifecycle, permissions, temporal rules, and events.
 6. Inspect the closest existing implementation pattern; state why it applies.
 7. Implement domain types and transition tests.
-8. Add/alter EF configuration and migration; test real PostgreSQL behavior.
+8. Add/alter EF configuration and PostgreSQL migration; test real PostgreSQL behavior without leaking provider details into domain/application contracts.
 9. Implement the application use case, authorization, transaction, idempotency, and events.
 10. Add DTOs, transport validation, mapping, versioned endpoint, errors, and API tests.
 11. Add frontend contract types/schema and API service.
