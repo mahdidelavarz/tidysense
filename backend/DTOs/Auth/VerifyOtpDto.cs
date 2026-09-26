@@ -3,5 +3,6 @@ using System.ComponentModel.DataAnnotations;
 namespace TidySense.DTOs.Auth;
 
 public sealed record VerifyOtpDto(
-    [Required, MaxLength(16)] string PhoneNumber,
-    [Required, StringLength(6, MinimumLength = 6)] string Code);
+    [Required, MaxLength(24)] string PhoneNumber,
+    [Required, RegularExpression("^[0-9]{4}$")] string Code,
+    [Required, RegularExpression("LOGIN")] string Purpose);

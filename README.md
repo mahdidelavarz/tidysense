@@ -29,7 +29,14 @@ Development secrets belong in .NET User Secrets for `backend/TidySense.csproj`; 
 .\.dotnet\dotnet.exe user-secrets set "Otp:HashingKey" "<at-least-32-character-random-secret>" --project .\backend\TidySense.csproj
 ```
 
-The non-secret pilot timezone, JWT issuer/audience, ports, and Kavenegar base URL are tracked in configuration. Kavenegar credentials are not required merely to start or test locally. Real provider use requires `Kavenegar:ApiKey`, `Kavenegar:Sender`, and optionally `Kavenegar:Template` through external configuration.
+The backend does not use a `.env` file. .NET User Secrets keeps local values outside the repository. Set Kavenegar credentials with:
+
+```powershell
+.\.dotnet\dotnet.exe user-secrets set "Kavenegar:ApiKey" "<your-api-key>" --project .\backend\TidySense.csproj
+.\.dotnet\dotnet.exe user-secrets set "Kavenegar:Sender" "<your-sender>" --project .\backend\TidySense.csproj
+```
+
+The Development profile uses a local SMS sender, so these credentials are only used when the real provider is selected in a non-Development profile. During local login, the generated code appears in a temporary browser toast; the development OTP endpoint is restricted to loopback. Production deployments should supply `Kavenegar__ApiKey` and `Kavenegar__Sender` through their secret store or environment. `Kavenegar:Template` is optional. The non-secret pilot timezone, JWT issuer/audience, ports, and Kavenegar base URL are tracked in configuration.
 
 Real PostgreSQL integration tests read the user- or process-scoped `TIDYSENSE_TEST_POSTGRES` administrative connection. Never commit or print its value.
 

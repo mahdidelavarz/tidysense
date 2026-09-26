@@ -64,24 +64,24 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 - [x] Guid User/OTP schema, unique normalized phone, HMAC OTP digest foundation.
 - [x] JWT cookie issuance, sessionEpoch claim validation, logout and logout-all backend scaffolding.
 - [x] Kavenegar-only production adapter boundary.
-- [ ] Align request/verification/current-user responses and routes with the canonical contract, including `202` request and `/api/v1/users/me`.
-- [ ] Make OTP validation/attempt update/consumption and create-or-load User one safe relational transaction.
-- [ ] Add row-lock/equivalent duplicate OTP consumption protection and recover cleanly from duplicate-user races.
-- [ ] Add backend-owned resend/request/verification rate limits and generic privacy-safe responses.
-- [ ] Enforce JSON and approved Origin/Referer rules on unsafe cookie-authenticated requests.
-- [ ] Add a development/test-only authentication mechanism with a production-profile unavailability test.
-- [ ] Complete Kavenegar timeout/error behavior without exposing provider details.
-- [ ] Implement Persian/RTL login, OTP, current-user bootstrap, reload persistence, logout and revoked/expired-session states.
-- [ ] Add auth unit, real-PostgreSQL race, API security, frontend behavior and browser integration tests.
-- [ ] Manually verify new-user login, returning-user login, reload, logout and logout-all.
+- [x] Align request/verification/current-user responses and routes with the canonical contract, including `202` request and `/api/v1/users/me`.
+- [x] Make OTP validation/attempt update/consumption and create-or-load User one safe relational transaction.
+- [x] Add row-lock/equivalent duplicate OTP consumption protection and recover cleanly from duplicate-user races.
+- [x] Add backend-owned resend/request/verification rate limits and generic privacy-safe responses.
+- [x] Enforce JSON and approved Origin/Referer rules on unsafe cookie-authenticated requests.
+- [x] Add a development/test-only authentication mechanism with a production-profile unavailability test.
+- [x] Complete Kavenegar timeout/error behavior without exposing provider details.
+- [x] Implement Persian/RTL login, OTP, current-user bootstrap, reload persistence, logout and revoked/expired-session states.
+- [x] Add auth unit, real-PostgreSQL race, API security, frontend behavior and browser integration tests.
+- [x] Verify new-user login, returning-user login, reload, logout and logout-all in Chrome against isolated local PostgreSQL; visually inspect First Entry and account screens.
 
 **Verification:** Auth-focused xUnit and real-PostgreSQL concurrency tests; WebApplicationFactory cookie/CSRF/privacy tests; frontend tests; browser login against local PostgreSQL; production-profile test proves dev auth endpoint is absent; full `./dev.ps1 check`.
 
 **Completion criteria:** Every checklist item passes; JWT is never exposed to JavaScript; duplicate consumption/user creation is safe; current-user/logout behavior survives reload and manual verification; no obsolete session architecture remains.
 
-**Status:** `IN_PROGRESS`
+**Status:** `DONE`
 
-**Evidence:** Existing scaffolding in [AuthController](../backend/Controllers/Auth/AuthController.cs), [AuthService](../backend/Services/AuthService.cs), [OtpService](../backend/Services/OtpService.cs), [JWT validation](../backend/Common/Auth/JwtCookieEvents.cs), and [Kavenegar adapter](../backend/Infrastructure/Sms/KavenegarSmsSender.cs). Remaining checklist is not yet evidenced.
+**Evidence:** [Auth API](../backend/Controllers/Auth/AuthController.cs), [OTP transaction and limits](../backend/Services/OtpService.cs), [schema migration](../backend/Migrations/20260921120000_CompleteAuthentication.cs), [API/PostgreSQL tests](../backend.Tests/AuthenticationCompletionTests.cs), [provider tests](../backend.Tests/KavenegarSmsSenderTests.cs), [frontend auth](../frontend/src/features/auth/components/LoginView.tsx), [browser scenarios](../frontend/e2e/auth.spec.ts), [isolated browser runner](../auth-e2e.ps1). Verified 2026-09-21: `./dev.ps1 check` passed (16 backend, 6 frontend tests, lint/typecheck/build/OpenAPI); `./auth-e2e.ps1` passed (2 Chrome tests on isolated PostgreSQL). First Entry and account screenshots were visually inspected. Follow-up regression verified that a consumed OTP permits a fresh request immediately after logout: 8 auth API/PostgreSQL tests and 2 Chrome scenarios passed.
 
 ---
 
@@ -105,9 +105,9 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Completion criteria:** M1 exit evidence is recorded and reusable write contracts are locked without introducing a product module prematurely.
 
-**Status:** `NOT_STARTED`
+**Status:** `IN_PROGRESS` — implementation and verification are review ready; formal M1 `SLICE_LOCKED` approvals remain pending per the Contract Freeze Register.
 
-**Evidence:** None; current Project-read and Problem Details evidence is partial input only.
+**Evidence:** [M1 review package](step-03-m1-review-package.md), [command executor](../backend/Services/CommandExecutionService.cs), [payload policy](../backend/Common/Events/EventPayloadSchema.cs), [delivery migration](../backend/Migrations/20260921123236_Step3DeliveryContracts.cs), [event hardening migration](../backend/Migrations/20260926085120_HardenStep3EventContract.cs), [PostgreSQL/API tests](../backend.Tests/DeliveryContractTests.cs), [migration rollback tests](../backend.Tests/DeliveryMigrationTests.cs), [generated OpenAPI](../backend/openapi/TidySense.json). Verified 2026-09-26: `./dev.ps1 check` passed (27 backend, 6 frontend tests, lint/typecheck/build/OpenAPI); the focused delivery/migration run passed 10 tests; `./auth-e2e.ps1` passed (2 Chrome authentication regressions on isolated PostgreSQL); EF reported no pending model changes. Research and Security/Privacy event review conditions are resolved; accountable Backend owner sign-off remains outstanding. Command/idempotency/CommandResult remains a foundation until its M2 lock gate.
 
 ---
 

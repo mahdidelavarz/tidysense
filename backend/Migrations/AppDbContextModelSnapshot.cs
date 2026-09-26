@@ -22,18 +22,183 @@ namespace TidySense.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("TidySense.Models.OtpChallenge", b =>
+            modelBuilder.Entity("TidySense.Models.CommandResult", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CodeHash")
+                    b.Property<Guid?>("AggregateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AggregateType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long?>("AggregateVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CommandType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long?>("ExpectedVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("IdempotencyRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyRecordId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("CommandResults", t =>
+                        {
+                            t.HasCheckConstraint("CK_CommandResults_Status", "\"Status\" IN ('SUCCEEDED', 'CONFLICTED', 'FAILED_FINAL', 'FAILED_RETRYABLE')");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.DomainEvent", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("AggregateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AggregateType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("AggregateVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CommandResultId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ConfirmationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<DateTimeOffset?>("ConsumedAt")
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("EventVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("ProposalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ReconcileSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("RuleId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RuleVersion")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("CommandResultId");
+
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.HasIndex("UserId", "OccurredAt");
+
+                    b.HasIndex("AggregateType", "AggregateId", "OccurredAt");
+
+                    b.ToTable("DomainEvents", t =>
+                        {
+                            t.HasCheckConstraint("CK_DomainEvents_Actor", "\"Actor\" IN ('USER', 'SYSTEM_DETERMINISTIC')");
+
+                            t.HasCheckConstraint("CK_DomainEvents_AggregateVersion", "\"AggregateVersion\" > 0");
+
+                            t.HasCheckConstraint("CK_DomainEvents_EventVersion", "\"EventVersion\" > 0");
+
+                            t.HasCheckConstraint("CK_DomainEvents_PayloadObject", "jsonb_typeof(\"PayloadJson\") = 'object'");
+
+                            t.HasCheckConstraint("CK_DomainEvents_PayloadSize", "octet_length(\"PayloadJson\"::text) <= 4096");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.IdempotencyRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CommandType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -42,17 +207,160 @@ namespace TidySense.Migrations
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("FailedAttempts")
-                        .HasColumnType("integer");
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("ResultId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "ExpiresAt");
+                    b.HasIndex("Status", "ExpiresAt");
 
-                    b.ToTable("OtpChallenges");
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("IdempotencyRecords", t =>
+                        {
+                            t.HasCheckConstraint("CK_IdempotencyRecords_Status", "\"Status\" IN ('IN_PROGRESS', 'SUCCEEDED', 'CONFLICTED', 'FAILED_FINAL', 'FAILED_RETRYABLE')");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.OtpChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodeDigest")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedPhone")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedPhone", "Purpose", "CreatedAt");
+
+                    b.ToTable("OtpChallenges", t =>
+                        {
+                            t.HasCheckConstraint("CK_OtpChallenges_AttemptCount", "\"AttemptCount\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.OtpRateEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("KeyDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Kind", "KeyDigest", "CreatedAt");
+
+                    b.ToTable("OtpRateEvents");
+                });
+
+            modelBuilder.Entity("TidySense.Models.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("OutboxMessages", t =>
+                        {
+                            t.HasCheckConstraint("CK_OutboxMessages_AttemptCount", "\"AttemptCount\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("TidySense.Models.Project", b =>
@@ -120,6 +428,9 @@ namespace TidySense.Migrations
                     b.Property<int>("SessionEpoch")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("SetupComplete")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -128,18 +439,36 @@ namespace TidySense.Migrations
                     b.HasIndex("PhoneNumber")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", t =>
+                        {
+                            t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0");
+                        });
                 });
 
-            modelBuilder.Entity("TidySense.Models.OtpChallenge", b =>
+            modelBuilder.Entity("TidySense.Models.DomainEvent", b =>
                 {
-                    b.HasOne("TidySense.Models.User", "User")
-                        .WithMany("OtpChallenges")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("TidySense.Models.CommandResult", null)
+                        .WithMany()
+                        .HasForeignKey("CommandResultId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
 
-                    b.Navigation("User");
+            modelBuilder.Entity("TidySense.Models.IdempotencyRecord", b =>
+                {
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TidySense.Models.OutboxMessage", b =>
+                {
+                    b.HasOne("TidySense.Models.DomainEvent", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TidySense.Models.Project", b =>
@@ -155,8 +484,6 @@ namespace TidySense.Migrations
 
             modelBuilder.Entity("TidySense.Models.User", b =>
                 {
-                    b.Navigation("OtpChallenges");
-
                     b.Navigation("Projects");
                 });
 #pragma warning restore 612, 618

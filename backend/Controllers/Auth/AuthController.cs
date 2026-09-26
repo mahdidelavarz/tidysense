@@ -15,23 +15,20 @@ public sealed class AuthController(AuthService auth, IOptions<JwtOptions> jwtOpt
     [HttpPost("otp/request")]
     public async Task<IActionResult> RequestOtp(RequestOtpDto dto, CancellationToken cancellationToken)
     {
-        await auth.RequestOtpAsync(dto.PhoneNumber, cancellationToken);
-        return NoContent();
+        var retryAfterSeconds = await auth.RequestOtpAsync(dto.PhoneNumber,
+            HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", cancellationToken);
+        return Accepted(new { retryAfterSeconds });
     }
 
     [AllowAnonymous]
     [HttpPost("otp/verify")]
     public async Task<ActionResult<CurrentUserDto>> VerifyOtp(VerifyOtpDto dto, CancellationToken cancellationToken)
     {
-        var result = await auth.VerifyOtpAsync(dto.PhoneNumber, dto.Code, cancellationToken);
+        var result = await auth.VerifyOtpAsync(dto.PhoneNumber, dto.Code,
+            HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", cancellationToken);
         WriteCookie(result.Token);
         return Ok(result.User);
     }
-
-    [Authorize]
-    [HttpGet("current-user")]
-    public async Task<ActionResult<CurrentUserDto>> CurrentUser(CancellationToken cancellationToken) =>
-        Ok(await auth.GetCurrentAsync(cancellationToken));
 
     [Authorize]
     [HttpPost("logout")]
@@ -58,10 +55,12 @@ public sealed class AuthController(AuthService auth, IOptions<JwtOptions> jwtOpt
             HttpOnly = true,
             Secure = !HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment(),
             SameSite = SameSiteMode.Lax,
+            Path = "/",
             Expires = DateTimeOffset.UtcNow.AddMinutes(options.LifetimeMinutes),
             IsEssential = true
         });
     }
 
-    private void DeleteCookie() => Response.Cookies.Delete(jwtOptions.Value.CookieName);
+    private void DeleteCookie() => Response.Cookies.Delete(jwtOptions.Value.CookieName,
+        new CookieOptions { Path = "/", SameSite = SameSiteMode.Lax });
 }

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using TidySense.Data;
+using TidySense.Common.Events;
 
 namespace TidySense.Backend.Tests;
 
@@ -49,6 +50,13 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
             }));
         builder.ConfigureServices(services =>
         {
+            services.AddSingleton(new EventPayloadSchema("PROJECT_TITLE_CHANGED", 1,
+                new EventPayloadFieldPolicy("changedFields", true, value =>
+                    value.ValueKind == System.Text.Json.JsonValueKind.Array &&
+                    value.GetArrayLength() > 0 && value.EnumerateArray().All(item =>
+                        item.ValueKind == System.Text.Json.JsonValueKind.String &&
+                        item.GetString() is "title"))));
+            services.AddControllers().AddApplicationPart(typeof(DeliveryContractTestController).Assembly);
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(ConnectionString));

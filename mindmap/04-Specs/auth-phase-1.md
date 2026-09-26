@@ -4,6 +4,8 @@
 
 `RETAINED_WITH_AMENDMENTS — CURRENT WITHIN THE BOUNDARY BELOW`
 
+Step 2 operational amendment (2026-09-21): the owner selected a 4-digit OTP, 2-minute expiry, 120-second resend cooldown, 5 attempts, a 14-day JWT, browser logout-all, and the persistent rate limits and provider policy recorded in the M1 configuration register. Those values supersede the older suggested lifetime and the unresolved-value notes below.
+
 Retained authentication and session specification for the current AI-native MVP, limited by the legacy reconciliation boundary below.
 
 Retained through [[01-Closed-Discussions/001-008-legacy-surviving-decisions]] after the legacy source discussion was removed. Product-model language outside the retained authentication and session contract is not current authority.

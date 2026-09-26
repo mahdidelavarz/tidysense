@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TidySense.Data;
+using TidySense.Common.Errors;
 
 namespace TidySense.Common.Auth;
 
@@ -44,15 +44,6 @@ public static class JwtCookieEvents
 
     private static Task WriteProblemAsync(HttpContext context, int status, string code, string title)
     {
-        context.Response.StatusCode = status;
-        context.Response.ContentType = "application/problem+json";
-        return context.Response.WriteAsync(JsonSerializer.Serialize(new
-        {
-            type = $"https://tidysense.local/problems/{code.ToLowerInvariant().Replace('_', '-')}",
-            title,
-            status,
-            code,
-            traceId = context.TraceIdentifier
-        }));
+        return ApiProblem.WriteAsync(context, status, code, title);
     }
 }

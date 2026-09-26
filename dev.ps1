@@ -107,7 +107,7 @@ function Test-Database {
 function Build-Backend {
     Write-Step 'Building backend and generating OpenAPI'
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
-    & $dotnet build $backendProject
+    & $dotnet build $backendProject -p:OutputPath=bin/dev-check/ -p:UseAppHost=false
     Assert-ExitCode 'Backend build'
     Write-Pass 'Backend build and OpenAPI generation completed'
 }
@@ -129,7 +129,7 @@ function Build-Frontend {
 function Test-Backend {
     $env:TIDYSENSE_TEST_POSTGRES = Get-TestConnection
     Write-Step 'Running backend tests against real PostgreSQL'
-    & $dotnet test $backendTests --no-restore
+    & $dotnet test $backendTests --no-restore -p:OutputPath=bin/dev-check/ -p:OpenApiGenerateDocuments=false
     Assert-ExitCode 'Backend tests'
     Write-Pass 'Backend PostgreSQL integration tests completed'
 }
@@ -146,6 +146,7 @@ switch ($Command) {
     'backend' {
         Write-Host 'Backend: https://localhost:7075 (readiness: /health/ready)' -ForegroundColor Green
         $env:ASPNETCORE_ENVIRONMENT = 'Development'
+        $env:Database__MigrateOnStart = 'true'
         & $dotnet run --project $backendProject --launch-profile https
         Assert-ExitCode 'Backend server'
     }

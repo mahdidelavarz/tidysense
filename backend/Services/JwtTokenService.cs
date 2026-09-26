@@ -16,7 +16,11 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
         var claims = new[]
         {
             new Claim(AuthConstants.UserIdClaim, user.Id.ToString()),
-            new Claim(AuthConstants.SessionEpochClaim, user.SessionEpoch.ToString())
+            new Claim(AuthConstants.SessionEpochClaim, user.SessionEpoch.ToString()),
+            new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Iat,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                ClaimValueTypes.Integer64)
         };
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.SigningKey)),

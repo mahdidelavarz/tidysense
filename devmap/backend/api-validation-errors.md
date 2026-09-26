@@ -27,6 +27,8 @@ All non-success responses use RFC 9457 Problem Details with stable `type`, HTTP 
 
 Use ownership-safe `404`; `401` for unauthenticated; `403` for authenticated permission denial when existence disclosure is safe; `409` for version/idempotency conflict; contract-specific `422` for a well-formed semantic failure; `429` for rate limiting. Central `IExceptionHandler` owns the stable-code Problem Details mapping.
 
+The shared Step 3 Problem Details shape also includes `messageKey` (currently the stable `code`), `retryable`, `traceId`, and `correlationId`. Validation includes field-keyed `errors`. An owned version conflict uses `CONFLICT_STALE_VERSION` and may include `entityId`, `expectedVersion`, and `currentVersion`; idempotency hash mismatch uses `IDEMPOTENCY_MISMATCH`. These details are emitted only after the use case has proved ownership. The OpenAPI `ApiProblemDto` describes this response shape.
+
 ## Related Mind Map
 
 - [API contract index](../../mindmap/04-Specs/api-contracts-phase-1.md) — global contract and resource families.

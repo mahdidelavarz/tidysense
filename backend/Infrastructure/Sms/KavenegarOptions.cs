@@ -7,4 +7,5 @@ public sealed class KavenegarOptions
     public string ApiKey { get; init; } = string.Empty;
     public string Sender { get; init; } = string.Empty;
     public string Template { get; init; } = string.Empty;
+    public int TimeoutSeconds { get; init; } = 5;
 }

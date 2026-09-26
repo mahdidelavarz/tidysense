@@ -8,6 +8,7 @@
     "build": "vite build && tsc -b",
     "typecheck": "tsc -b",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "generate:api": "openapi-typescript ../backend/openapi/TidySense.json -o src/shared/api/generated.ts",
     "lint": "biome check .",
     "format": "biome format --write .",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/router-plugin": "^1.168.35",
     "@testing-library/jest-dom": "^7.0.1",

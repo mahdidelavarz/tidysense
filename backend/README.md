@@ -2,7 +2,7 @@
 
 The backend targets .NET 10 and uses EF Core with Npgsql/PostgreSQL. Domain/application/API contracts stay provider-neutral.
 
-For complete local setup and repository commands, see the root `README.md`. `dev.ps1 backend` starts the Development launch profile at `https://localhost:7075`; `/health/ready` executes a real database connectivity check without returning connection details.
+For complete local setup and repository commands, see the root `README.md`. `dev.ps1 backend` starts the Development launch profile at `https://localhost:7075`; `/health/live` checks the process without a database dependency, while `/health/ready` executes a real database connectivity check without returning connection details.
 
 ## Required configuration
 

@@ -9,34 +9,24 @@ public sealed class UserService(AppDbContext dbContext)
     public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         dbContext.Users.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
-    public Task<User?> GetByPhoneNumberAsync(string phoneNumber, CancellationToken cancellationToken = default) =>
-        dbContext.Users.SingleOrDefaultAsync(x => x.PhoneNumber == phoneNumber, cancellationToken);
-
-    public async Task<User> GetOrCreateAsync(string rawPhoneNumber, CancellationToken cancellationToken)
-    {
-        var phoneNumber = NormalizeIranianMobile(rawPhoneNumber);
-        var existing = await GetByPhoneNumberAsync(phoneNumber, cancellationToken);
-        if (existing is not null) return existing;
-
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            PhoneNumber = phoneNumber,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-        dbContext.Users.Add(user);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return user;
-    }
-
     public static string NormalizeIranianMobile(string value)
     {
-        var digits = new string(value.Where(char.IsDigit).ToArray());
-        if (digits.StartsWith("0098")) digits = digits[4..];
-        else if (digits.StartsWith("98")) digits = digits[2..];
-        else if (digits.StartsWith('0')) digits = digits[1..];
-        if (digits.Length != 10 || !digits.StartsWith('9'))
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("A valid Iranian mobile number is required.", nameof(value));
+        var normalizedDigits = new string(value.Trim().Select(c => c switch
+        {
+            >= '۰' and <= '۹' => (char)('0' + c - '۰'),
+            >= '٠' and <= '٩' => (char)('0' + c - '٠'),
+            _ => c
+        }).ToArray());
+        var digits = normalizedDigits switch
+        {
+            { Length: 11 } s when s.StartsWith("09") => s[1..],
+            { Length: 12 } s when s.StartsWith("98") => s[2..],
+            { Length: 13 } s when s.StartsWith("+98") => s[3..],
+            _ => string.Empty
+        };
+        if (digits.Length != 10 || !digits.StartsWith('9') || !digits.All(char.IsAsciiDigit))
             throw new ArgumentException("A valid Iranian mobile number is required.", nameof(value));
         return $"+98{digits}";
     }

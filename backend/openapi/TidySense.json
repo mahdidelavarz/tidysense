@@ -5,6 +5,18 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/health/live": {
+      "get": {
+        "tags": [
+          "TidySense"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/projects/{id}": {
       "get": {
         "tags": [
@@ -47,17 +59,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/ApiProblemDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/ApiProblemDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/ApiProblemDto"
                 }
               }
             }
@@ -67,17 +79,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/ApiProblemDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/ApiProblemDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/ApiProblemDto"
                 }
               }
             }
@@ -166,10 +178,34 @@
         }
       }
     },
-    "/api/v1/auth/current-user": {
-      "get": {
+    "/api/v1/auth/logout": {
+      "post": {
         "tags": [
           "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout-all": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Users"
         ],
         "responses": {
           "200": {
@@ -194,39 +230,108 @@
           }
         }
       }
-    },
-    "/api/v1/auth/logout": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/auth/logout-all": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
+      "ApiProblemDto": {
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "messageKey",
+          "retryable",
+          "traceId",
+          "correlationId",
+          "detail",
+          "errors",
+          "entityId",
+          "expectedVersion",
+          "currentVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "code": {
+            "type": "string"
+          },
+          "messageKey": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "entityId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "currentVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "CurrentUserDto": {
         "required": [
           "id",
           "phoneNumber",
-          "displayName"
+          "displayName",
+          "setupComplete"
         ],
         "type": "object",
         "properties": {
@@ -242,44 +347,9 @@
               "null",
               "string"
             ]
-          }
-        }
-      },
-      "ProblemDetails": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
-          "title": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "detail": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "instance": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "setupComplete": {
+            "type": "boolean"
           }
         }
       },
@@ -340,11 +410,15 @@
       },
       "RequestOtpDto": {
         "required": [
-          "phoneNumber"
+          "phoneNumber",
+          "purpose"
         ],
         "type": "object",
         "properties": {
           "phoneNumber": {
+            "type": "string"
+          },
+          "purpose": {
             "type": "string"
           }
         }
@@ -352,7 +426,8 @@
       "VerifyOtpDto": {
         "required": [
           "phoneNumber",
-          "code"
+          "code",
+          "purpose"
         ],
         "type": "object",
         "properties": {
@@ -361,6 +436,9 @@
           },
           "code": {
             "type": "string"
+          },
+          "purpose": {
+            "type": "string"
           }
         }
       }
@@ -368,10 +446,16 @@
   },
   "tags": [
     {
+      "name": "TidySense"
+    },
+    {
       "name": "Projects"
     },
     {
       "name": "Auth"
+    },
+    {
+      "name": "Users"
     }
   ]
 }

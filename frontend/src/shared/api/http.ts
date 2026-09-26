@@ -1,6 +1,16 @@
 import axios, { AxiosError } from 'axios'
 
 export const http = axios.create({ baseURL: '/api/v1', withCredentials: true })
+http.interceptors.response.use(
+  response => response,
+  error => {
+    if (error instanceof AxiosError && error.response?.status === 401 &&
+      !error.config?.url?.endsWith('/auth/otp/verify')) {
+      window.dispatchEvent(new Event('tidysense:unauthorized'))
+    }
+    return Promise.reject(error)
+  },
+)
 
 export type ApiError = {
   status: number

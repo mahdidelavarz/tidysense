@@ -5,6 +5,8 @@
 - Guid identities; DateTimeOffset instants; DateOnly local dates; one configured pilot IANA timezone.
 - Keep existing EF/PostgreSQL identifier naming; no provider-driven naming rewrite.
 - JWT HttpOnly cookie + sessionEpoch; Kavenegar; backend security authority.
+- Consequential writes use owned optimistic versions, user-scoped idempotency, an authoritative CommandResult, and domain event plus outbox intent in one PostgreSQL transaction; M2 owns product-command lock.
+- Every durable domain event uses a registered `(eventType, eventVersion)` payload schema with explicitly approved fields. Payloads are JSON objects up to 4,096 UTF-8 bytes, exclude authentication material and unnecessary direct PII, and are validated both by the write path and database size/shape constraints. Outbox rows reference rather than copy R1 event payloads; `CommandResultId` means the linked R1 result, and R4 idempotency/outbox rows remain independently deletable.
 - Feature-oriented backend with direct EF for simple work and only justified narrow ports/repositories; no generic repository.
 - Feature-oriented frontend, TanStack file routes, generated OpenAPI types + Zod forms.
 - Cursor pagination with stable ordering and allowlisted feature filters/sorts.
