@@ -18,7 +18,9 @@ public sealed class ApiExceptionHandler(
             OtpRateLimitException => (StatusCodes.Status429TooManyRequests, "RATE_LIMITED", "Too many requests"),
             SmsSendException => (StatusCodes.Status503ServiceUnavailable, "DELIVERY_UNAVAILABLE", "Verification is temporarily unavailable"),
             VersionConflictException => (StatusCodes.Status409Conflict, "CONFLICT_STALE_VERSION", "The resource changed"),
+            CommandConflictException commandConflict => (StatusCodes.Status409Conflict, commandConflict.ErrorCode, "The command context changed"),
             IdempotencyMismatchException => (StatusCodes.Status409Conflict, "IDEMPOTENCY_MISMATCH", "Idempotency key conflict"),
+            DomainRuleException rule => (StatusCodes.Status422UnprocessableEntity, rule.ErrorCode, "The command is not valid"),
             CommandRejectedException => (StatusCodes.Status422UnprocessableEntity, "DOMAIN_RULE_VIOLATION", "Command is not valid"),
             ArgumentException => (StatusCodes.Status400BadRequest, "VALIDATION_FAILED", "Invalid request"),
             _ => (StatusCodes.Status500InternalServerError, ErrorCodes.UnexpectedError, "An unexpected error occurred")

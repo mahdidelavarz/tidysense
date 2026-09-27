@@ -1,9 +1,9 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { logout } from '../features/auth/services/auth-api'
-import { currentUserQueryKey } from '../features/auth/components/AuthGate'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { currentUserQueryKey } from '../features/auth/components/AuthGate'
+import { logout } from '../features/auth/services/auth-api'
+import { ParentDashboard } from '../features/parents/components/ParentDashboard'
 
 function Home() {
   const queryClient = useQueryClient()
@@ -22,22 +22,14 @@ function Home() {
       setLeaving(false)
     }
   }
-  return (
-    <section className="mx-auto max-w-xl p-6">
-      <h1 className="text-2xl font-bold">TidySense</h1>
-      <p className="mt-3 text-text-secondary">برنامهٔ شما آماده است.</p>
-      <Link className="mt-5 inline-block rounded-lg bg-accent px-4 py-3 text-white" to="/projects/$projectId" params={{ projectId: '00000000-0000-0000-0000-000000000000' }}>
-        مشاهدهٔ نمونهٔ پروژه
-      </Link>
-      <div className="mt-8 flex gap-4">
-        <button type="button" className="underline disabled:opacity-50" disabled={leaving} onClick={() => leave(false)}>خروج از این مرورگر</button>
-        <button type="button" className="underline disabled:opacity-50" disabled={leaving} onClick={() => leave(true)}>خروج از همهٔ نشست‌ها</button>
-      </div>
-      {error && <p role="alert" className="mt-3 text-attention">{error}</p>}
-    </section>
-  )
+  return <>
+    <ParentDashboard />
+    <footer className="mx-auto mb-8 flex max-w-5xl flex-wrap gap-4 border-t border-border px-4 pt-5 text-sm sm:px-8">
+      <button type="button" className="underline disabled:opacity-50" disabled={leaving} onClick={() => leave(false)}>خروج از این مرورگر</button>
+      <button type="button" className="underline disabled:opacity-50" disabled={leaving} onClick={() => leave(true)}>خروج از همه‌ی نشست‌ها</button>
+      {error && <p role="alert" className="w-full text-attention">{error}</p>}
+    </footer>
+  </>
 }
 
-export const Route = createFileRoute('/')({
-  component: Home,
-})
+export const Route = createFileRoute('/')({ component: Home })

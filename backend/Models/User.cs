@@ -10,5 +10,6 @@ public sealed class User
     public bool SetupComplete { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
+    public ICollection<Goal> Goals { get; set; } = [];
     public ICollection<Project> Projects { get; set; } = [];
 }

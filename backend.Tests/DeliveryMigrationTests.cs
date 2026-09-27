@@ -88,4 +88,38 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
         Assert.Equal(1, await db.CommandResults.AsNoTracking()
             .CountAsync(x => x.Id == result.Id, cancellationToken));
     }
+
+    [Fact]
+    public async Task Step4_migration_backfills_existing_project_and_round_trips_description_rename()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync("20260926085120_HardenStep3EventContract", cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        var userId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Users" ("Id", "PhoneNumber", "IsActive", "SessionEpoch", "SetupComplete", "CreatedAt")
+            VALUES ({userId}, {"+989" + Random.Shared.Next(100000000, 1000000000)}, {true}, {0}, {true}, {now});
+            INSERT INTO "Projects" ("Id", "UserId", "Title", "Description", "ReviewDate", "Version", "CreatedAt", "UpdatedAt")
+            VALUES ({projectId}, {userId}, {"Legacy project"}, {"Legacy meaning"}, {new DateOnly(2026, 12, 1)}, {1L}, {now}, {now});
+            """, cancellationToken);
+
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        db.ChangeTracker.Clear();
+        var upgraded = await db.Projects.AsNoTracking().SingleAsync(x => x.Id == projectId, cancellationToken);
+        Assert.Equal("Legacy meaning", upgraded.CompletionMeaning);
+        Assert.Equal("ACTIVE", upgraded.Status);
+        Assert.Equal("MIGRATED_DEFAULT", upgraded.ReviewDateSource);
+        Assert.Equal("SYSTEM_MIGRATED", upgraded.Source);
+
+        await migrator.MigrateAsync("20260926085120_HardenStep3EventContract", cancellationToken);
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        db.ChangeTracker.Clear();
+        var reapplied = await db.Projects.AsNoTracking().SingleAsync(x => x.Id == projectId, cancellationToken);
+        Assert.Equal("Legacy meaning", reapplied.CompletionMeaning);
+        Assert.Equal("MIGRATED_DEFAULT", reapplied.ReviewDateSource);
+    }
 }

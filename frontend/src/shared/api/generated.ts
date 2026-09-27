@@ -37,6 +37,407 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    cursor?: string;
+                    limit?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CursorPageDtoOfGoalDto"];
+                        "application/json": components["schemas"]["CursorPageDtoOfGoalDto"];
+                        "text/json": components["schemas"]["CursorPageDtoOfGoalDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateGoalRequest"];
+                    "text/json": components["schemas"]["CreateGoalRequest"];
+                    "application/*+json": components["schemas"]["CreateGoalRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GoalDto"];
+                        "application/json": components["schemas"]["GoalDto"];
+                        "text/json": components["schemas"]["GoalDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GoalDto"];
+                        "application/json": components["schemas"]["GoalDto"];
+                        "text/json": components["schemas"]["GoalDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateGoalRequest"];
+                    "text/json": components["schemas"]["UpdateGoalRequest"];
+                    "application/*+json": components["schemas"]["UpdateGoalRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GoalDto"];
+                        "application/json": components["schemas"]["GoalDto"];
+                        "text/json": components["schemas"]["GoalDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{id}/terminal-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TerminalPreviewRequest"];
+                    "text/json": components["schemas"]["TerminalPreviewRequest"];
+                    "application/*+json": components["schemas"]["TerminalPreviewRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TerminalPreviewDto"];
+                        "application/json": components["schemas"]["TerminalPreviewDto"];
+                        "text/json": components["schemas"]["TerminalPreviewDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{id}/terminal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TerminalCommandRequest"];
+                    "text/json": components["schemas"]["TerminalCommandRequest"];
+                    "application/*+json": components["schemas"]["TerminalCommandRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GoalDto"];
+                        "application/json": components["schemas"]["GoalDto"];
+                        "text/json": components["schemas"]["GoalDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    cursor?: string;
+                    limit?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CursorPageDtoOfProjectDto"];
+                        "application/json": components["schemas"]["CursorPageDtoOfProjectDto"];
+                        "text/json": components["schemas"]["CursorPageDtoOfProjectDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateProjectRequest"];
+                    "text/json": components["schemas"]["CreateProjectRequest"];
+                    "application/*+json": components["schemas"]["CreateProjectRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProjectDto"];
+                        "application/json": components["schemas"]["ProjectDto"];
+                        "text/json": components["schemas"]["ProjectDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{id}": {
         parameters: {
             query?: never;
@@ -90,8 +491,175 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateProjectRequest"];
+                    "text/json": components["schemas"]["UpdateProjectRequest"];
+                    "application/*+json": components["schemas"]["UpdateProjectRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProjectDto"];
+                        "application/json": components["schemas"]["ProjectDto"];
+                        "text/json": components["schemas"]["ProjectDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/terminal-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TerminalPreviewRequest"];
+                    "text/json": components["schemas"]["TerminalPreviewRequest"];
+                    "application/*+json": components["schemas"]["TerminalPreviewRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TerminalPreviewDto"];
+                        "application/json": components["schemas"]["TerminalPreviewDto"];
+                        "text/json": components["schemas"]["TerminalPreviewDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/terminal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TerminalCommandRequest"];
+                    "text/json": components["schemas"]["TerminalCommandRequest"];
+                    "application/*+json": components["schemas"]["TerminalCommandRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProjectDto"];
+                        "application/json": components["schemas"]["ProjectDto"];
+                        "text/json": components["schemas"]["ProjectDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -308,6 +876,24 @@ export interface components {
             /** Format: int64 */
             currentVersion: null | number | string;
         };
+        CreateGoalRequest: {
+            title: string;
+            desiredOutcome: string;
+            /** Format: date */
+            targetDate: null | string;
+            /** Format: date */
+            reviewDate: null | string;
+        };
+        CreateProjectRequest: {
+            title: string;
+            completionMeaning: null | string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: date */
+            targetDate: null | string;
+            /** Format: date */
+            reviewDate: null | string;
+        };
         CurrentUserDto: {
             /** Format: uuid */
             id: string;
@@ -315,25 +901,120 @@ export interface components {
             displayName: null | string;
             setupComplete: boolean;
         };
-        ProjectDto: {
+        CursorPageDtoOfGoalDto: {
+            items: components["schemas"]["GoalDto"][];
+            page: components["schemas"]["PageInfoDto"];
+        };
+        CursorPageDtoOfProjectDto: {
+            items: components["schemas"]["ProjectDto"][];
+            page: components["schemas"]["PageInfoDto"];
+        };
+        GoalDto: {
             /** Format: uuid */
             id: string;
             title: string;
-            description: null | string;
+            desiredOutcome: string;
+            status: string;
             /** Format: date */
             targetDate: null | string;
             /** Format: date */
             reviewDate: string;
+            reviewDateSource: string;
+            /** Format: date-time */
+            lastContinuationDecisionAt: null | string;
+            source: string;
             /** Format: int64 */
             version: number | string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** Format: date-time */
+            terminalAt: null | string;
+        };
+        PageInfoDto: {
+            nextCursor: null | string;
+            hasMore: boolean;
+        };
+        ProjectDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            goalId: null | string;
+            title: string;
+            completionMeaning: null | string;
+            status: string;
+            /** Format: date */
+            targetDate: null | string;
+            /** Format: date */
+            reviewDate: string;
+            reviewDateSource: string;
+            source: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            terminalAt: null | string;
         };
         RequestOtpDto: {
             phoneNumber: string;
             purpose: string;
+        };
+        TerminalBlockerDto: {
+            resourceType: string;
+            /** Format: uuid */
+            resourceId: string;
+            status: string;
+            /** Format: int64 */
+            version: number | string;
+        };
+        TerminalCommandRequest: {
+            targetStatus: string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+            previewHash: string;
+        };
+        TerminalPreviewDto: {
+            /** Format: uuid */
+            entityId: string;
+            entityType: string;
+            currentStatus: string;
+            targetStatus: string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+            canApply: boolean;
+            blockers: components["schemas"]["TerminalBlockerDto"][];
+            previewHash: string;
+        };
+        TerminalPreviewRequest: {
+            targetStatus: string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
+        UpdateGoalRequest: {
+            title: string;
+            desiredOutcome: string;
+            /** Format: date */
+            targetDate: null | string;
+            /** Format: date */
+            reviewDate: null | string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
+        UpdateProjectRequest: {
+            title: string;
+            completionMeaning: null | string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: date */
+            targetDate: null | string;
+            /** Format: date */
+            reviewDate: null | string;
+            /** Format: int64 */
+            expectedVersion: number | string;
         };
         VerifyOtpDto: {
             phoneNumber: string;

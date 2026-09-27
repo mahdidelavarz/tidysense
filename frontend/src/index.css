@@ -13,4 +13,16 @@
 
 :root { font-family: Tahoma, Arial, sans-serif; background: #f3f1ec; color: #2b2a2e; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
-button, input { font: inherit; }
+button, input, textarea, select { font: inherit; }
+button, a, input, textarea, select { outline-color: #4f7a88; outline-offset: 2px; }
+
+@layer components {
+  .primary-button { @apply rounded-lg bg-accent px-4 py-2.5 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50; }
+  .secondary-button { @apply rounded-lg border border-accent bg-surface px-4 py-2.5 font-medium text-accent disabled:cursor-not-allowed disabled:opacity-50; }
+  .danger-button { @apply rounded-lg border border-attention bg-surface px-4 py-2.5 font-medium text-attention disabled:cursor-not-allowed disabled:opacity-50; }
+  .resource-card { @apply block rounded-xl border border-border bg-surface p-5 shadow-sm transition hover:border-accent focus-visible:border-accent; }
+  .form-card { @apply space-y-4 rounded-xl border border-border bg-surface p-5 shadow-sm; }
+  .field-label { @apply block space-y-1.5 text-sm font-medium; }
+  .field-input { @apply block w-full rounded-lg border border-border bg-white px-3 py-2.5 text-text-primary; }
+  .state-card { @apply rounded-xl border border-border bg-surface p-5 text-text-secondary; }
+}

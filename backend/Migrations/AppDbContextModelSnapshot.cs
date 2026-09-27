@@ -187,6 +187,82 @@ namespace TidySense.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TidySense.Models.Goal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DesiredOutcome")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset?>("LastContinuationDecisionAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("ReviewDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReviewDateSource")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateOnly?>("TargetDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("TerminalAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id");
+
+                    b.HasIndex("UserId", "Status", "ReviewDate");
+
+                    b.ToTable("Goals", t =>
+                        {
+                            t.HasCheckConstraint("CK_Goals_ReviewDateSource", "\"ReviewDateSource\" IN ('USER', 'SYSTEM_DEFAULT', 'MIGRATED_DEFAULT')");
+
+                            t.HasCheckConstraint("CK_Goals_Source", "\"Source\" IN ('MANUAL', 'AI_ASSISTED', 'SYSTEM_MIGRATED')");
+
+                            t.HasCheckConstraint("CK_Goals_Status", "\"Status\" IN ('ACTIVE', 'ACHIEVED', 'ABANDONED')");
+
+                            t.HasCheckConstraint("CK_Goals_TerminalState", "(\"Status\" = 'ACTIVE' AND \"TerminalAt\" IS NULL) OR (\"Status\" IN ('ACHIEVED', 'ABANDONED') AND \"TerminalAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Goals_Version", "\"Version\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("TidySense.Models.IdempotencyRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -369,18 +445,39 @@ namespace TidySense.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CompletionMeaning")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Description")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                    b.Property<Guid?>("GoalId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateOnly>("ReviewDate")
                         .HasColumnType("date");
 
+                    b.Property<string>("ReviewDateSource")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<DateOnly?>("TargetDate")
                         .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("TerminalAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -399,9 +496,24 @@ namespace TidySense.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "Id");
+                    b.HasIndex("GoalId", "UserId");
 
-                    b.ToTable("Projects");
+                    b.HasIndex("UserId", "CreatedAt", "Id");
+
+                    b.HasIndex("UserId", "Status", "ReviewDate");
+
+                    b.ToTable("Projects", t =>
+                        {
+                            t.HasCheckConstraint("CK_Projects_ReviewDateSource", "\"ReviewDateSource\" IN ('USER', 'SYSTEM_DEFAULT', 'MIGRATED_DEFAULT')");
+
+                            t.HasCheckConstraint("CK_Projects_Source", "\"Source\" IN ('MANUAL', 'AI_ASSISTED', 'SYSTEM_MIGRATED')");
+
+                            t.HasCheckConstraint("CK_Projects_Status", "\"Status\" IN ('ACTIVE', 'COMPLETED', 'STOPPED')");
+
+                            t.HasCheckConstraint("CK_Projects_TerminalState", "(\"Status\" = 'ACTIVE' AND \"TerminalAt\" IS NULL) OR (\"Status\" IN ('COMPLETED', 'STOPPED') AND \"TerminalAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Projects_Version", "\"Version\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("TidySense.Models.User", b =>
@@ -453,6 +565,17 @@ namespace TidySense.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("TidySense.Models.Goal", b =>
+                {
+                    b.HasOne("TidySense.Models.User", "User")
+                        .WithMany("Goals")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TidySense.Models.IdempotencyRecord", b =>
                 {
                     b.HasOne("TidySense.Models.User", null)
@@ -479,11 +602,26 @@ namespace TidySense.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("TidySense.Models.Goal", "Goal")
+                        .WithMany("Projects")
+                        .HasForeignKey("GoalId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Goal");
+
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TidySense.Models.Goal", b =>
+                {
+                    b.Navigation("Projects");
                 });
 
             modelBuilder.Entity("TidySense.Models.User", b =>
                 {
+                    b.Navigation("Goals");
+
                     b.Navigation("Projects");
                 });
 #pragma warning restore 612, 618

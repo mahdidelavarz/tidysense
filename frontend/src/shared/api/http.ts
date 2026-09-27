@@ -18,6 +18,8 @@ export type ApiError = {
   title: string
   detail?: string
   traceId?: string
+  currentVersion?: number
+  errors?: Record<string, string[]>
 }
 
 export function toApiError(error: unknown): ApiError {
@@ -29,6 +31,8 @@ export function toApiError(error: unknown): ApiError {
       title: data?.title ?? 'خطایی رخ داد',
       detail: data?.detail,
       traceId: data?.traceId,
+      currentVersion: data?.currentVersion,
+      errors: data?.errors,
     }
   }
   return { status: 0, code: 'UNEXPECTED_ERROR', title: 'خطایی رخ داد' }

@@ -44,6 +44,7 @@ builder.Services.AddCors(options => options.AddPolicy("Browser", policy =>
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddHttpContextAccessor();
+foreach (var schema in ParentEventSchemas.All()) builder.Services.AddSingleton(schema);
 builder.Services.AddSingleton<EventPayloadValidator>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -105,7 +106,10 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<OtpService>();
 builder.Services.AddHostedService<OtpRateCleanupService>();
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<GoalService>();
+builder.Services.AddScoped<ApplicationDateService>();
 builder.Services.AddScoped<CommandExecutionService>();
+builder.Services.AddSingleton(TimeProvider.System);
 if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddSingleton<DevelopmentSmsSender>();

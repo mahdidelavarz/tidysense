@@ -10,6 +10,7 @@
 - Feature-oriented backend with direct EF for simple work and only justified narrow ports/repositories; no generic repository.
 - Feature-oriented frontend, TanStack file routes, generated OpenAPI types + Zod forms.
 - Cursor pagination with stable ordering and allowlisted feature filters/sorts.
+- Goal and Project use persisted review snapshots, explicit terminal transitions and owner-scoped versions. Goal terminal and Project attach/reparent serialize on the Goal; later child modules must extend the same blocker preview before permitting child creation.
 - PostgreSQL/Npgsql is canonical; domain/application/API contracts remain provider-neutral.
 - xUnit + real PostgreSQL (Testcontainers or configured local instance) + WebApplicationFactory; Vitest/Testing Library/Playwright.
 - Local backend secrets use .NET User Secrets; real-PostgreSQL tests use user/process-scoped `TIDYSENSE_TEST_POSTGRES`. Use root `dev.ps1` commands; Vite proxies `/api` to backend HTTPS without broad local CORS.

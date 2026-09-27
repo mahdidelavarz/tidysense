@@ -69,7 +69,11 @@ try {
         Start-Sleep -Seconds 1
     }
     if (-not $ready) {
-        $failure = ((Get-Content -LiteralPath $stderr -Tail 8 -ErrorAction SilentlyContinue) -join ' ') -replace 'Password=[^;\s]+', 'Password=[redacted]'
+        $failure = @(
+            Get-Content -LiteralPath $stdout -Tail 40 -ErrorAction SilentlyContinue
+            Get-Content -LiteralPath $stderr -Tail 40 -ErrorAction SilentlyContinue
+        ) -join ' '
+        $failure = $failure -replace 'Password=[^;\s]+', 'Password=[redacted]'
         throw "Isolated backend did not become ready. $failure"
     }
     Write-Host 'Running Chrome browser tests...'

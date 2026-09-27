@@ -131,9 +131,9 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Completion criteria:** Both parent modules meet the module checklist and terminal behavior never infers Goal achievement or leaves illegal child states.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** Existing Project read is only a proof pattern, not module completion.
+**Evidence:** [Step 4 acceptance contract and verification record](step-04-goal-project-acceptance.md), [Goal/Project API and PostgreSQL tests](../backend.Tests/GoalProjectModuleTests.cs), [migration and rollback test](../backend.Tests/DeliveryMigrationTests.cs), [generated OpenAPI](../backend/openapi/TidySense.json), [Persian/RTL parent dashboard](../frontend/src/features/parents/components/ParentDashboard.tsx), [browser acceptance](../frontend/e2e/parents.spec.ts). Verified 2026-09-27: `./dev.ps1 check` passed (36 backend, 12 frontend tests, typecheck/lint/build/OpenAPI); `./auth-e2e.ps1` passed 3 Chrome scenarios on isolated PostgreSQL. Goal completion stayed explicit and the attachment/terminal race preserved the no-active-child-under-terminal-Goal invariant.
 
 ---
 

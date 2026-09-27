@@ -6,7 +6,9 @@
 - Configure required lengths, conversions, checks, indexes, delete behavior and optimistic `Version` in Fluent API.
 - Lifecycle rows preserve history; privacy deletion is a separate governed operation. Broad cascades do not perform product transitions.
 
-Ownership follows the accepted domain, not a universal base class. Goal, Project, Task, Routine, PlanningFact and CaptureItem are user-owned and every backend read/write applies ownership. RoutineOccurrence inherits through Routine. Shared/system records receive no artificial `UserId`. Canonical Project is user-owned; the current permission-only Project endpoints are unsafe prototype code and must be corrected before reuse.
+Ownership follows the accepted domain, not a universal base class. Goal, Project, Task, Routine, PlanningFact and CaptureItem are user-owned and every backend read/write applies ownership. RoutineOccurrence inherits through Routine. Shared/system records receive no artificial `UserId`. Goal and Project are canonical user-owned modules: Project may reference an owned Goal through a same-owner composite foreign key, while Goal/Project lifecycle and review snapshots remain independent persisted state.
+
+Goal and Project begin at version `1` and status `ACTIVE`. Their review date is a persisted snapshot whose source records user choice or system default; later target-date edits do not move it implicitly. Terminal transitions are explicit and store `TerminalAt`. A Goal terminal command locks the Goal and rejects active Projects; Project attachment/reparenting locks affected Goals in deterministic order, so an active child cannot race beneath a terminal Goal. Later child-owning slices extend the same preview/blocker boundary before creating their child rows.
 
 Task has no Backlog, `Placement`, Task `ReviewDate` or `ReviewDateSource`. Sequence pair/scope/order invariants apply. Routine occurrence uniqueness distinguishes timed and untimed slots. PlanningFact has exactly one accepted owner. Capture resolution creates a separate work identity.
 

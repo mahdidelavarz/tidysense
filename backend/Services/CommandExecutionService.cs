@@ -99,13 +99,30 @@ public sealed class CommandExecutionService(
                 request.CommandType, result.Status, stopwatch.ElapsedMilliseconds, request.CorrelationId);
             return result;
         }
-        catch (CommandRejectedException)
+        catch (CommandConflictException conflict)
+        {
+            await transaction.RollbackToSavepointAsync("before_mutation", cancellationToken);
+            db.ChangeTracker.Clear();
+            record = await LockRecordAsync(request, cancellationToken);
+            var result = NewResult(record, "CONFLICTED", DateTimeOffset.UtcNow,
+                null, null, null, null, conflict.ErrorCode);
+            db.CommandResults.Add(result);
+            record.Status = "CONFLICTED";
+            record.ResultId = result.Id;
+            record.CompletedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            logger.LogInformation("Command resolved. CommandType: {CommandType}, Outcome: {Outcome}, DurationMs: {DurationMs}, CorrelationId: {CorrelationId}",
+                request.CommandType, result.Status, stopwatch.ElapsedMilliseconds, request.CorrelationId);
+            return result;
+        }
+        catch (CommandRejectedException rejection)
         {
             await transaction.RollbackToSavepointAsync("before_mutation", cancellationToken);
             db.ChangeTracker.Clear();
             record = await LockRecordAsync(request, cancellationToken);
             var result = NewResult(record, "FAILED_FINAL", DateTimeOffset.UtcNow,
-                null, null, null, null, "DOMAIN_RULE_VIOLATION");
+                null, null, null, null, rejection.ErrorCode);
             db.CommandResults.Add(result);
             record.Status = "FAILED_FINAL";
             record.ResultId = result.Id;

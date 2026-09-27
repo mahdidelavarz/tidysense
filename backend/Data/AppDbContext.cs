@@ -11,6 +11,7 @@ public sealed class AppDbContext(
     public DbSet<User> Users => Set<User>();
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
     public DbSet<OtpRateEvent> OtpRateEvents => Set<OtpRateEvent>();
+    public DbSet<Goal> Goals => Set<Goal>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<CommandResult> CommandResults => Set<CommandResult>();
@@ -60,14 +61,55 @@ public sealed class AppDbContext(
             entity.HasIndex(x => x.CreatedAt);
         });
 
+        modelBuilder.Entity<Goal>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasAlternateKey(x => new { x.Id, x.UserId });
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.DesiredOutcome).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ReviewDateSource).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Source).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt, x.Id });
+            entity.HasIndex(x => new { x.UserId, x.Status, x.ReviewDate });
+            entity.HasOne(x => x.User).WithMany(x => x.Goals).HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Goals_Status", "\"Status\" IN ('ACTIVE', 'ACHIEVED', 'ABANDONED')");
+                t.HasCheckConstraint("CK_Goals_Source", "\"Source\" IN ('MANUAL', 'AI_ASSISTED', 'SYSTEM_MIGRATED')");
+                t.HasCheckConstraint("CK_Goals_ReviewDateSource", "\"ReviewDateSource\" IN ('USER', 'SYSTEM_DEFAULT', 'MIGRATED_DEFAULT')");
+                t.HasCheckConstraint("CK_Goals_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_Goals_TerminalState", "(\"Status\" = 'ACTIVE' AND \"TerminalAt\" IS NULL) OR (\"Status\" IN ('ACHIEVED', 'ABANDONED') AND \"TerminalAt\" IS NOT NULL)");
+            });
+        });
+
         modelBuilder.Entity<Project>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
-            entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.CompletionMeaning).HasMaxLength(2000);
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ReviewDateSource).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Source).HasMaxLength(24).IsRequired();
             entity.Property(x => x.Version).IsConcurrencyToken();
-            entity.HasIndex(x => new { x.UserId, x.Id });
-            entity.HasOne(x => x.User).WithMany(x => x.Projects).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt, x.Id });
+            entity.HasIndex(x => new { x.UserId, x.Status, x.ReviewDate });
+            entity.HasOne(x => x.User).WithMany(x => x.Projects).HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Goal).WithMany(x => x.Projects)
+                .HasForeignKey(x => new { x.GoalId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Projects_Status", "\"Status\" IN ('ACTIVE', 'COMPLETED', 'STOPPED')");
+                t.HasCheckConstraint("CK_Projects_Source", "\"Source\" IN ('MANUAL', 'AI_ASSISTED', 'SYSTEM_MIGRATED')");
+                t.HasCheckConstraint("CK_Projects_ReviewDateSource", "\"ReviewDateSource\" IN ('USER', 'SYSTEM_DEFAULT', 'MIGRATED_DEFAULT')");
+                t.HasCheckConstraint("CK_Projects_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_Projects_TerminalState", "(\"Status\" = 'ACTIVE' AND \"TerminalAt\" IS NULL) OR (\"Status\" IN ('COMPLETED', 'STOPPED') AND \"TerminalAt\" IS NOT NULL)");
+            });
         });
 
         modelBuilder.Entity<IdempotencyRecord>(entity =>

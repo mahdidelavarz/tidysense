@@ -1,21 +1,22 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const origin = 'http://127.0.0.1:5174'
 
-async function codeFor(request: import('@playwright/test').APIRequestContext, phone: string) {
-  const response = await request.get(`/api/v1/dev/otp/latest?phoneNumber=${phone}`)
-  expect(response.ok()).toBeTruthy()
-  return (await response.json()).code as string
+async function codeFromToast(page: Page) {
+  const toast = page.getByRole('status')
+  await expect(toast).toContainText(/\d{4}/)
+  const match = (await toast.textContent())?.match(/\d{4}/)
+  expect(match).not.toBeNull()
+  return match![0]
 }
 
-test('new user login, invalid code, reload, logout, and immediate login again', async ({ page, request }) => {
+test('new user login, invalid code, reload, logout, and immediate login again', async ({ page }) => {
   const phone = `0912${String(Date.now() % 10_000_000).padStart(7, '0')}`
   await page.goto('/login')
   await page.getByLabel('شماره موبایل').fill(phone)
   await page.getByRole('button', { name: 'دریافت کد' }).click()
   await expect(page.getByLabel('کد تأیید')).toBeVisible()
-  const code = await codeFor(request, phone)
-  await expect(page.getByRole('status')).toContainText(code)
+  const code = await codeFromToast(page)
   await page.getByLabel('کد تأیید').fill('0000')
   await page.getByRole('button', { name: 'ورود' }).click()
   await expect(page.getByText('کد نامعتبر یا منقضی شده است.')).toBeVisible()
@@ -33,8 +34,7 @@ test('new user login, invalid code, reload, logout, and immediate login again', 
   await page.getByLabel('شماره موبایل').fill(phone)
   await page.getByRole('button', { name: 'دریافت کد' }).click()
   await expect(page.getByLabel('کد تأیید')).toBeVisible()
-  const freshCode = await codeFor(request, phone)
-  await expect(page.getByRole('status')).toContainText(freshCode)
+  const freshCode = await codeFromToast(page)
   await page.getByLabel('کد تأیید').fill(freshCode)
   await page.getByRole('button', { name: 'ورود' }).click()
   await expect(page).toHaveURL(/first-entry/)
@@ -48,13 +48,13 @@ test('returning login and logout-all revoke another browser', async ({ browser, 
   await page.goto('/login')
   await page.getByLabel('شماره موبایل').fill('09120000000')
   await page.getByRole('button', { name: 'دریافت کد' }).click()
-  await page.getByLabel('کد تأیید').fill(await codeFor(request, '09120000000'))
+  await page.getByLabel('کد تأیید').fill(await codeFromToast(page))
   await page.getByRole('button', { name: 'ورود' }).click()
   await expect(page).toHaveURL(`${origin}/`)
   const another = await browser.newContext({ storageState: await page.context().storageState() })
   const second = await another.newPage()
   await second.goto('/')
-  await second.getByRole('button', { name: 'خروج از همهٔ نشست‌ها' }).click()
+  await second.getByRole('button', { name: /خروج از همه/ }).click()
   await expect(second).toHaveURL(/login/)
   await page.reload()
   await expect(page).toHaveURL(/login/)
