@@ -2,7 +2,7 @@
 
 ## Status
 
-`WORKSTREAM_I_APPROVED — M1 NAMES INSTANTIATED; ACKNOWLEDGEMENT PENDING`
+`WORKSTREAM_I_APPROVED — M1 NAMES INSTANTIATED; BACKEND OWNER ACKNOWLEDGED`
 
 M1 roles are instantiated in [[05-Implementation/m1-entry-package]]: Reza owns Backend and Mahdi owns every other accountability lane. Alireza is a paid external design contributor whose work is accepted by Mahdi; he is not an accountable owner. Later milestones must revisit Mahdi's concentration of roles before entry.
 
@@ -27,7 +27,7 @@ M1 roles are instantiated in [[05-Implementation/m1-entry-package]]: Reza owns B
 | Role | Named owner | Boundary |
 |---|---|---|
 | Product owner | Mahdi | confirmed |
-| Backend owner | Reza | confirmed; acknowledgement pending |
+| Backend owner | Reza | confirmed; M1 Backend owner sign-off recorded 2026-09-27 |
 | Product Design owner | Mahdi | confirmed; Alireza is a paid external contributor |
 | Frontend owner | Mahdi | temporary |
 | Security/Privacy owner | Mahdi | temporary; Reza supplies independent technical review |

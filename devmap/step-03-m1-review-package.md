@@ -1,6 +1,17 @@
 # Step 3 M1 Contract Review Package
 
-**Status:** Review ready; formal `SLICE_LOCKED` sign-off is pending. Step 3 remains `IN_PROGRESS` until the reviewers named in the Mind Map Contract Freeze Register approve the M1 rows. The command/idempotency/CommandResult row is due for lock at M2.
+**Status:** Approved and `SLICE_LOCKED` on 2026-09-27. The four M1 contracts are locked and Step 3 is `DONE`. The command/idempotency/CommandResult row remains `DRAFT` until its M2 lock gate.
+
+## Approval record
+
+| M1 contract | Mandatory reviewer approval | Accountable owner sign-off | Final state |
+|---|---|---|---|
+| Auth/session/ownership | Security/Privacy: `APPROVED` | Reza, Backend owner: signed off 2026-09-27 | `SLICE_LOCKED` |
+| Canonical IDs/entities/versions | Product and Security/Privacy: `APPROVED` | Reza, Backend owner: signed off 2026-09-27 | `SLICE_LOCKED` |
+| Problem Details/error codes | Frontend: `APPROVED` | Reza, Backend owner: signed off 2026-09-27 | `SLICE_LOCKED` |
+| Event envelope/privacy classes | Research and Security/Privacy: full `APPROVED` after the three conditional issues were resolved and verified | Reza, Backend owner: signed off 2026-09-27 | `SLICE_LOCKED` |
+
+All reviewer roles required by the Contract Freeze Register and the M1 exit approval matrix are represented in these approvals. This lock covers only the reusable M1 envelope and privacy/retention boundaries documented below; product event catalogs, event-specific payload schemas, consumers and pilot fields retain their later review gates.
 
 ## Contract inventory
 
@@ -63,9 +74,9 @@ Exact R1/R4 durations, legal basis, deletion/anonymization and restore mechanics
 
 The [payload policy](../backend/Common/Events/EventPayloadSchema.cs), [model](../backend/Models/DomainEvent.cs), [outbox/result/idempotency models](../backend/Models/OutboxMessage.cs), [EF mapping](../backend/Data/AppDbContext.cs), [base migration](../backend/Migrations/20260921123236_Step3DeliveryContracts.cs), [event-contract hardening migration](../backend/Migrations/20260926085120_HardenStep3EventContract.cs), [executor](../backend/Services/CommandExecutionService.cs), [PostgreSQL contract tests](../backend.Tests/DeliveryContractTests.cs) and [migration tests](../backend.Tests/DeliveryMigrationTests.cs) are the implementation evidence. Tests prove one committed mutation/result/R1 event/R4 outbox intent, replay without a second event, conflict/rollback without event intent, rejection of unregistered/unapproved/sensitive/oversized payloads, the database byte limit when EF is bypassed, unambiguous result linkage backed by an R1-to-R1 foreign key, independent R4 deletion with surviving R1 evidence, and downgrade/reapply after cleanup. They do **not** prove a production publisher, privacy deletion or retention jobs.
 
-On 2026-09-26 the Research and Security/Privacy review returned `NEEDS CHANGE` with three conditions: schema-defined allowlisted/minimized payloads with a consistent size cap; unambiguous `commandId` semantics; and independent R1/R4 retention. The reviewer explicitly approved the contract after those conditions were resolved and covered by tests/documentation. The policy, `CommandResultId` rename, foreign-key removal, migration and evidence above satisfy those conditions, so the Research and Security/Privacy approval is recorded as complete.
+On 2026-09-26 the Research and Security/Privacy review returned `NEEDS CHANGE` with three conditions: schema-defined allowlisted/minimized payloads with a consistent size cap; unambiguous `commandId` semantics; and independent R1/R4 retention. The policy, `CommandResultId` rename, foreign-key removal, migration and evidence above satisfy those conditions. On 2026-09-27 the reviewer confirmed full Research and Security/Privacy approval.
 
-The [Contract Freeze Register](../mindmap/05-Implementation/contract-freeze-register.md) still requires accountable Backend owner sign-off. The [Ownership Matrix](../mindmap/05-Implementation/ownership-matrix.md) names Reza for Backend and records his acknowledgement as pending. There is no implemented production event consumer to acknowledge at M1; the test-only fixture is not a consumer contract. The Backend owner must acknowledge the reusable producer/envelope handoff. Each future producing slice and actual consumer must acknowledge its versioned event/payload contract before that slice locks, and a future outbox publisher requires an Operations/Backend delivery handoff. Until Reza's M1 acknowledgement is recorded, the event row remains `DRAFT` and Step 3 remains `IN_PROGRESS`.
+The [Ownership Matrix](../mindmap/05-Implementation/ownership-matrix.md) names Reza for Backend. His accountable Backend owner sign-off for Step 3 and the four applicable M1 contracts was recorded on 2026-09-27. There is no implemented production event consumer to acknowledge at M1; the test-only fixture is not a consumer contract. Each future producing slice and actual consumer must acknowledge its versioned event/payload contract before that slice locks, and a future outbox publisher requires an Operations/Backend delivery handoff.
 
 ## Migration and recovery
 
@@ -77,4 +88,4 @@ The [Contract Freeze Register](../mindmap/05-Implementation/contract-freeze-regi
 
 On 2026-09-26, `./dev.ps1 check` passed 27 backend PostgreSQL/API tests and 6 frontend tests plus lint, typecheck, build and OpenAPI generation. The focused delivery/migration run passed 10 tests. `./auth-e2e.ps1` passed 2 Chrome scenarios against isolated PostgreSQL. EF `migrations has-pending-model-changes` reported no drift after the hardening migration. NuGet vulnerability-feed warnings were emitted because the configured feeds were unreachable; they did not affect compilation or test results.
 
-Pending gate: accountable Backend owner acknowledgement/sign-off for the applicable M1 rows and the formal Contract Freeze Register transition. The event row's Research and Security/Privacy review is complete; it remains `DRAFT`. No row is marked `SLICE_LOCKED` by this package, and Step 3 remains `IN_PROGRESS`.
+Gate result recorded 2026-09-27: all mandatory M1 reviewer approvals and Reza's accountable Backend owner sign-off are present. The four M1 rows are `SLICE_LOCKED`, and Step 3 is `DONE`. The command/idempotency/CommandResult foundation remains `DRAFT` for its M2 gate. Step 4 is not started by this transition.

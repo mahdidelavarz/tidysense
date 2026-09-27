@@ -2,7 +2,7 @@
 
 ## Status
 
-`WORKSTREAM_I_APPROVED — CONTRACTS REMAIN DRAFT UNTIL THEIR RECORDED LOCK GATES`
+`WORKSTREAM_I_APPROVED — M1 CONTRACTS SLICE_LOCKED; LATER LOCK GATES REMAIN DRAFT`
 
 ## Freeze levels
 
@@ -13,11 +13,11 @@
 
 | Contract | Accountable owner | Contributors | Mandatory reviewers | First consumer | Required lock | Lock evidence | Current state |
 |---|---|---|---|---|---|---|---|
-| auth/session/ownership | Backend owner | Backend + Frontend | Security/Privacy | all slices | M1 `SLICE_LOCKED` | auth spec, tests, config record | `DRAFT` |
-| canonical IDs/entities/versions | Backend owner | Backend | Product, Security/Privacy | M2/M3/M4 | M1 `SLICE_LOCKED` | schema, migrations, invariants | `DRAFT` |
-| Problem Details/error codes | Backend owner | Backend + Frontend | Frontend owner | M2 | M1 `SLICE_LOCKED` | API schemas/contract tests | `DRAFT` |
+| auth/session/ownership | Backend owner | Backend + Frontend | Security/Privacy | all slices | M1 `SLICE_LOCKED` | [Step 3 M1 review package](../../devmap/step-03-m1-review-package.md#approval-record); auth specification, tests and configuration record. Security/Privacy approved; Reza signed off as Backend owner on 2026-09-27. | `SLICE_LOCKED` |
+| canonical IDs/entities/versions | Backend owner | Backend | Product, Security/Privacy | M2/M3/M4 | M1 `SLICE_LOCKED` | [Step 3 M1 review package](../../devmap/step-03-m1-review-package.md#approval-record); schema, migrations and invariants. Product and Security/Privacy approved; Reza signed off as Backend owner on 2026-09-27. | `SLICE_LOCKED` |
+| Problem Details/error codes | Backend owner | Backend + Frontend | Frontend owner | M2 | M1 `SLICE_LOCKED` | [Step 3 M1 review package](../../devmap/step-03-m1-review-package.md#approval-record); API schemas and contract tests. Frontend approved; Reza signed off as Backend owner on 2026-09-27. | `SLICE_LOCKED` |
 | command/idempotency/CommandResult | Backend owner | Backend + Frontend | Product, Security/Privacy | M2 onward | M2 `SLICE_LOCKED` | replay/conflict/lost-response tests | `DRAFT` |
-| event envelope/privacy classes | Backend owner | Backend + Research | Research, Security/Privacy | all producing slices | M1 `SLICE_LOCKED`; pilot fields `PILOT_LOCKED` | [Step 3 event family/consumer, schema-defined bounded-payload, result-link and independent-retention review](../../devmap/step-03-m1-review-package.md#m1-event-envelope-and-privacy-review-completed-2026-09-26); [accepted event/retention authority](../01-Closed-Discussions/019c-events-ai-observability-and-retention.md); PostgreSQL policy/constraint/retention/migration tests linked in review package. Research + Security/Privacy approved after the 2026-09-26 conditions were resolved; Backend owner acknowledgement pending. | `DRAFT` |
+| event envelope/privacy classes | Backend owner | Backend + Research | Research, Security/Privacy | all producing slices | M1 `SLICE_LOCKED`; pilot fields `PILOT_LOCKED` | [Step 3 event family/consumer, schema-defined bounded-payload, result-link and independent-retention review](../../devmap/step-03-m1-review-package.md#m1-event-envelope-and-privacy-review-completed-2026-09-26); [accepted event/retention authority](../01-Closed-Discussions/019c-events-ai-observability-and-retention.md); PostgreSQL policy/constraint/retention/migration tests linked in review package. Research and Security/Privacy confirmed full approval and Reza signed off as Backend owner on 2026-09-27. Product event catalogs and pilot fields remain subject to their later lock gates. | `SLICE_LOCKED` |
 | Task/Today projection | Product owner | Product + Backend + Frontend | Design, Backend | M2/M4/M6 | M2 `SLICE_LOCKED` | schema/E2E evidence | `DRAFT` |
 | RoutineOccurrence/local-date rules | Backend owner | Backend + Product | Product, Frontend | M3/M6 | M3 `SLICE_LOCKED` | timezone/property tests | `DRAFT` |
 | Planning Attempt/Draft/revisions | Product owner | Product + Backend + Frontend | Design, Safety | M4/M5 | M4 `SLICE_LOCKED` | mock fixtures/state tests | `DRAFT` |
