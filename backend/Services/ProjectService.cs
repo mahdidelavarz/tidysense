@@ -131,7 +131,8 @@ public sealed class ProjectService(
         VersionGuard.RequireMatch(id, request.ExpectedVersion, project.Version);
         if (project.Status != ParentStatuses.Active)
             throw new DomainRuleException("RESOURCE_NOT_ACTIVE", "Project is not active.");
-        return Preview(project, request.TargetStatus);
+        var blockers = await ProjectBlockersAsync(db, id, currentUser.UserId, cancellationToken);
+        return Preview(project, request.TargetStatus, blockers);
     }
 
     public async Task<ProjectDto> TerminalAsync(Guid id, TerminalCommandRequest request, string idempotencyKey,
@@ -152,10 +153,13 @@ public sealed class ProjectService(
             VersionGuard.RequireMatch(id, request.ExpectedVersion, project.Version);
             if (project.Status != ParentStatuses.Active)
                 throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
-            var currentPreview = Preview(project, request.TargetStatus);
+            var blockers = await ProjectBlockersAsync(context, id, owner, ct);
+            var currentPreview = Preview(project, request.TargetStatus, blockers);
             if (!CryptographicOperations.FixedTimeEquals(
                     Convert.FromHexString(currentPreview.PreviewHash), Convert.FromHexString(request.PreviewHash)))
                 throw new CommandConflictException("CONFIRMATION_STALE", "The terminal preview changed.");
+            if (blockers.Count > 0)
+                throw new CommandRejectedException("PARENT_HAS_ACTIVE_CHILDREN");
             project.Status = request.TargetStatus;
             project.TerminalAt = now;
             project.UpdatedAt = now;
@@ -173,18 +177,23 @@ public sealed class ProjectService(
             x => x.Id == id && x.UserId == currentUser.UserId, cancellationToken)
         ?? throw new ResourceNotFoundException("Project", id);
 
-    private static async Task<Project> LockOwnedAsync(AppDbContext context, Guid id, Guid userId,
+    internal static async Task<Project> LockOwnedAsync(AppDbContext context, Guid id, Guid userId,
         CancellationToken cancellationToken) =>
         await context.Projects.FromSqlInterpolated($"SELECT * FROM \"Projects\" WHERE \"Id\" = {id} AND \"UserId\" = {userId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken) ?? throw new ResourceNotFoundException("Project", id);
 
-    private static TerminalPreviewDto Preview(Project project, string target)
-    {
-        TerminalBlockerDto[] blockers = [];
-        return new TerminalPreviewDto(project.Id, "Project", project.Status, target, project.Version,
-            true, blockers, ParentCommandSupport.PreviewHash(project.Id, "Project", project.Status,
-                target, project.Version, blockers));
-    }
+    private static Task<List<TerminalBlockerDto>> ProjectBlockersAsync(AppDbContext context,
+        Guid id, Guid userId, CancellationToken cancellationToken) => context.Tasks.AsNoTracking()
+        .Where(x => x.ProjectId == id && x.UserId == userId && x.Status == TaskStatuses.Active)
+        .OrderBy(x => x.Id)
+        .Select(x => new TerminalBlockerDto("Task", x.Id, x.Status, x.Version))
+        .ToListAsync(cancellationToken);
+
+    private static TerminalPreviewDto Preview(Project project, string target,
+        IReadOnlyList<TerminalBlockerDto> blockers) =>
+        new(project.Id, "Project", project.Status, target, project.Version,
+            blockers.Count == 0, blockers, ParentCommandSupport.PreviewHash(project.Id, "Project",
+                project.Status, target, project.Version, blockers));
 
     private static void RequireProjectTerminal(string status)
     {

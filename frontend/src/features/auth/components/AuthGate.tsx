@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Navigate, Outlet, useLocation } from '@tanstack/react-router'
-import { currentUser } from '../services/auth-api'
 import { useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { AppShell } from '../../../shared/ui/AppShell'
+import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
+import { currentUser } from '../services/auth-api'
 
 export const currentUserQueryKey = ['auth', 'current-user'] as const
 
@@ -17,14 +18,16 @@ export function AuthGate() {
     return () => window.removeEventListener('tidysense:unauthorized', clearSession)
   }, [queryClient])
 
-  if (auth.isPending) return <p className="p-6" role="status">در حال بررسی نشست…</p>
+  if (auth.isPending) {
+    return <main className="min-h-screen bg-canvas p-4 text-text-primary sm:p-8"><div className="mx-auto max-w-md pt-16"><LoadingState text="در حال بررسی نشست…" /></div></main>
+  }
   if (auth.isError) {
-    return <section className="p-6" role="alert">
-      <p>بررسی نشست ممکن نشد.</p>
-      <button type="button" onClick={() => auth.refetch()}>تلاش دوباره</button>
-    </section>
+    return <main className="min-h-screen bg-canvas p-4 text-text-primary sm:p-8"><div className="mx-auto max-w-md pt-16">
+      <ErrorState title="بررسی نشست ممکن نشد." description="ارتباط را بررسی کنید و دوباره تلاش کنید." onRetry={() => auth.refetch()} />
+    </div></main>
   }
   if (!auth.data && !onLogin) return <Navigate to="/login" />
   if (auth.data && onLogin) return <Navigate to={auth.data.setupComplete ? '/' : '/first-entry'} />
-  return <Outlet />
+  if (auth.data) return <AppShell><Outlet /></AppShell>
+  return <main className="min-h-screen bg-canvas text-text-primary"><Outlet /></main>
 }

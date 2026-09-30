@@ -21,9 +21,21 @@ Reuse order: existing pattern -> shared component -> extend stable abstraction -
 - Keep props semantic (`entity="goal"`, `tone="caution"`) so entity and state colors do not collapse into aliases.
 - Dialog/Drawer/Bottom Sheet choice follows the accepted flow and responsive context; all require focus management, escape/close semantics, labelled title, and restored focus.
 
+Current proven shared foundations are intentionally small:
+
+- `AppShell` for authenticated product identity, primary navigation, skip-link and content landmark;
+- `FormField`, `ValidationSummary` and `FormError` for labelled controls and client/server feedback;
+- `LoadingState`, `EmptyState`, `ErrorState` and `ResourceState` for the applicable query-state matrix;
+- `EntityLabel` and `StatusBadge` for entity identity and lifecycle state without conflating them;
+- `ConfirmationDialog` for existing Goal/Project consequential confirmations.
+
+These components own stable interaction and visual semantics only. Goal and Project forms, terminal copy, query orchestration and lifecycle rules remain feature-owned. Do not expand this set in anticipation of Task, Today or Routine; extract only when their implemented screens demonstrate the same need.
+
 ## Page pattern
 
 A page composes route state, query state, feature actions, and layout. It does not contain raw Axios calls or duplicate backend business logic.
+
+Use the shared `page-container`/`page-container-narrow`, `page-header` and surface classes to keep content width and spacing rhythm consistent. Page-level actions stack on narrow screens and may reflow inline at `sm` or wider. RTL pages use logical edges; local LTR direction is limited to values that require it.
 
 ## UI state matrix
 

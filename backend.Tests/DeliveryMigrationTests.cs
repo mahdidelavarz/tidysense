@@ -122,4 +122,37 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
         Assert.Equal("Legacy meaning", reapplied.CompletionMeaning);
         Assert.Equal("MIGRATED_DEFAULT", reapplied.ReviewDateSource);
     }
+
+    [Fact]
+    public async Task Step5_task_schema_round_trips_from_the_verified_parent_baseline()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync("20260927072255_Step4GoalProjectModules", cancellationToken);
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var user = new User
+        {
+            Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000),
+            IsActive = true, SetupComplete = true, CreatedAt = now
+        };
+        var task = new TaskItem
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, Title = "Migration Task",
+            PlannedDate = new DateOnly(2026, 9, 28), CreatedAt = now, UpdatedAt = now
+        };
+        db.AddRange(user, task);
+        await db.SaveChangesAsync(cancellationToken);
+        Assert.Equal(1, await db.Tasks.CountAsync(x => x.Id == task.Id, cancellationToken));
+
+        db.Tasks.Remove(task);
+        db.Users.Remove(user);
+        await db.SaveChangesAsync(cancellationToken);
+        await migrator.MigrateAsync("20260927072255_Step4GoalProjectModules", cancellationToken);
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        Assert.Equal(0, await db.Tasks.CountAsync(cancellationToken));
+    }
 }

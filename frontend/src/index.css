@@ -3,26 +3,252 @@
 @theme {
   --color-canvas: #f3f1ec;
   --color-surface: #ffffff;
+  --color-surface-sunken: #ebe7df;
   --color-accent: #4f7a88;
+  --color-accent-strong: #3c616d;
   --color-accent-tint: #e7eef0;
+  --color-positive: #5f8f68;
+  --color-positive-tint: #e9f0e9;
+  --color-caution: #b8863e;
+  --color-caution-tint: #f5ede0;
+  --color-attention: #b36b52;
+  --color-attention-tint: #f3e7e1;
   --color-text-primary: #2b2a2e;
   --color-text-secondary: #6e6c74;
+  --color-text-tertiary: #9d9aa2;
   --color-border: #d5d0c3;
-  --color-attention: #b36b52;
+  --color-border-subtle: #e4e0d6;
+  --color-entity-goal: #b8863e;
+  --color-entity-project: #4f7a88;
+  --color-entity-task: #5f8f68;
+  --color-entity-routine: #86678f;
 }
 
-:root { font-family: Tahoma, Arial, sans-serif; background: #f3f1ec; color: #2b2a2e; }
-body { margin: 0; min-width: 320px; min-height: 100vh; }
-button, input, textarea, select { font: inherit; }
-button, a, input, textarea, select { outline-color: #4f7a88; outline-offset: 2px; }
+:root {
+  color: var(--color-text-primary);
+  background: var(--color-canvas);
+  font-family: Tahoma, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--color-canvas);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  line-height: 1.75;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--color-accent-tint);
+  color: var(--color-text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}
+
+@layer base {
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+    outline-offset: 3px;
+  }
+}
 
 @layer components {
-  .primary-button { @apply rounded-lg bg-accent px-4 py-2.5 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50; }
-  .secondary-button { @apply rounded-lg border border-accent bg-surface px-4 py-2.5 font-medium text-accent disabled:cursor-not-allowed disabled:opacity-50; }
-  .danger-button { @apply rounded-lg border border-attention bg-surface px-4 py-2.5 font-medium text-attention disabled:cursor-not-allowed disabled:opacity-50; }
-  .resource-card { @apply block rounded-xl border border-border bg-surface p-5 shadow-sm transition hover:border-accent focus-visible:border-accent; }
-  .form-card { @apply space-y-4 rounded-xl border border-border bg-surface p-5 shadow-sm; }
-  .field-label { @apply block space-y-1.5 text-sm font-medium; }
-  .field-input { @apply block w-full rounded-lg border border-border bg-white px-3 py-2.5 text-text-primary; }
-  .state-card { @apply rounded-xl border border-border bg-surface p-5 text-text-secondary; }
+  .page-container {
+    @apply mx-auto w-full max-w-5xl px-4 py-6 sm:px-8 sm:py-10;
+  }
+
+  .page-container-narrow {
+    @apply mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-10;
+  }
+
+  .page-header {
+    @apply rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm sm:p-8;
+  }
+
+  .surface-card {
+    @apply rounded-xl border border-border-subtle bg-surface p-5 shadow-sm sm:p-6;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .ghost-button {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-bold transition duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .primary-button {
+    @apply border border-accent bg-accent text-white shadow-sm hover:border-accent-strong hover:bg-accent-strong active:translate-y-px;
+  }
+
+  .secondary-button {
+    @apply border border-border bg-surface text-text-primary hover:border-accent hover:bg-accent-tint hover:text-accent-strong active:translate-y-px;
+  }
+
+  .danger-button {
+    @apply border border-attention bg-surface text-text-primary hover:bg-attention-tint active:translate-y-px;
+  }
+
+  .ghost-button {
+    @apply border border-transparent bg-transparent text-text-secondary hover:bg-surface-sunken hover:text-text-primary;
+  }
+
+  .text-link {
+    @apply rounded-sm font-medium text-accent underline decoration-accent/40 underline-offset-4 transition hover:text-accent-strong hover:decoration-accent-strong;
+  }
+
+  .resource-card {
+    @apply relative block overflow-hidden rounded-xl border border-border-subtle bg-surface p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-border hover:shadow-md focus-visible:border-accent;
+    border-inline-start-width: 3px;
+    border-inline-start-color: var(--entity-color, var(--color-accent));
+  }
+
+  .entity-surface {
+    border-inline-start: 4px solid var(--entity-color, var(--color-accent));
+  }
+
+  .entity-goal {
+    --entity-color: var(--color-entity-goal);
+    --entity-tint: var(--color-caution-tint);
+  }
+
+  .entity-project {
+    --entity-color: var(--color-entity-project);
+    --entity-tint: var(--color-accent-tint);
+  }
+
+  .entity-task {
+    --entity-color: var(--color-entity-task);
+    --entity-tint: var(--color-positive-tint);
+  }
+
+  .entity-routine {
+    --entity-color: var(--color-entity-routine);
+    --entity-tint: color-mix(in srgb, var(--color-entity-routine) 12%, var(--color-surface));
+  }
+
+  .entity-label {
+    @apply inline-flex items-center gap-2 text-sm font-bold;
+    color: var(--color-text-primary);
+  }
+
+  .entity-label::before {
+    width: 0.625rem;
+    height: 0.625rem;
+    content: "";
+    border: 2px solid var(--entity-color, var(--color-accent));
+    border-radius: 999px;
+    background: var(--entity-tint, var(--color-accent-tint));
+  }
+
+  .form-card {
+    @apply space-y-5 rounded-xl border border-border-subtle bg-surface p-5 shadow-sm sm:p-6;
+  }
+
+  .form-grid {
+    @apply grid gap-5 sm:grid-cols-2;
+  }
+
+  .field-label {
+    @apply block text-sm font-bold text-text-primary;
+  }
+
+  .field-hint {
+    @apply mt-1 block text-xs leading-6 text-text-secondary;
+  }
+
+  .field-input {
+    @apply mt-2 block min-h-11 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-base text-text-primary shadow-sm transition placeholder:text-text-tertiary hover:border-text-tertiary focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-secondary;
+  }
+
+  .field-input[aria-invalid="true"] {
+    @apply border-attention bg-attention-tint focus:border-attention focus:ring-attention/20;
+  }
+
+  .field-error {
+    @apply mt-1.5 block text-xs font-bold leading-6 text-text-primary;
+  }
+
+  .state-card {
+    @apply rounded-xl border border-border-subtle bg-surface p-6 text-text-secondary shadow-sm;
+  }
+
+  .state-card-error {
+    @apply border-attention/40 bg-attention-tint text-text-primary;
+  }
+
+  .status-badge {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
+  }
+
+  .status-badge::before {
+    width: 0.375rem;
+    height: 0.375rem;
+    content: "";
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .status-active {
+    @apply bg-accent-tint text-accent-strong;
+  }
+
+  .status-positive {
+    @apply bg-positive-tint text-text-primary;
+  }
+
+  .status-positive::before {
+    background: var(--color-positive);
+  }
+
+  .status-neutral {
+    @apply bg-surface-sunken text-text-secondary;
+  }
+
+  .dialog-backdrop {
+    @apply fixed inset-0 z-40 flex items-end justify-center bg-text-primary/35 p-3 backdrop-blur-[2px] sm:items-center sm:p-6;
+  }
+
+  .dialog-panel {
+    @apply z-50 max-h-[calc(100vh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-subtle bg-surface p-5 shadow-lg sm:max-h-[calc(100vh-3rem)] sm:p-6;
+  }
+
+  .skeleton-line {
+    @apply h-3 animate-pulse rounded-full bg-surface-sunken;
+  }
 }

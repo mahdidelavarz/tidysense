@@ -13,6 +13,7 @@ public sealed class AppDbContext(
     public DbSet<OtpRateEvent> OtpRateEvents => Set<OtpRateEvent>();
     public DbSet<Goal> Goals => Set<Goal>();
     public DbSet<Project> Projects => Set<Project>();
+    public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<CommandResult> CommandResults => Set<CommandResult>();
     public DbSet<DomainEvent> DomainEvents => Set<DomainEvent>();
@@ -88,6 +89,7 @@ public sealed class AppDbContext(
         modelBuilder.Entity<Project>(entity =>
         {
             entity.HasKey(x => x.Id);
+            entity.HasAlternateKey(x => new { x.Id, x.UserId });
             entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
             entity.Property(x => x.CompletionMeaning).HasMaxLength(2000);
             entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
@@ -109,6 +111,43 @@ public sealed class AppDbContext(
                 t.HasCheckConstraint("CK_Projects_ReviewDateSource", "\"ReviewDateSource\" IN ('USER', 'SYSTEM_DEFAULT', 'MIGRATED_DEFAULT')");
                 t.HasCheckConstraint("CK_Projects_Version", "\"Version\" > 0");
                 t.HasCheckConstraint("CK_Projects_TerminalState", "(\"Status\" = 'ACTIVE' AND \"TerminalAt\" IS NULL) OR (\"Status\" IN ('COMPLETED', 'STOPPED') AND \"TerminalAt\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<TaskItem>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Source).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt, x.Id });
+            entity.HasIndex(x => new { x.UserId, x.Status, x.PlannedDate });
+            entity.HasIndex(x => new { x.UserId, x.GoalId, x.Status });
+            entity.HasIndex(x => new { x.UserId, x.ProjectId, x.Status });
+            entity.HasIndex(x => new { x.UserId, x.SequenceId, x.SequenceOrder })
+                .IsUnique().HasFilter("\"SequenceId\" IS NOT NULL");
+            entity.HasOne(x => x.User).WithMany(x => x.Tasks).HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Goal).WithMany(x => x.Tasks)
+                .HasForeignKey(x => new { x.GoalId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Project).WithMany(x => x.Tasks)
+                .HasForeignKey(x => new { x.ProjectId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Tasks_Status", "\"Status\" IN ('ACTIVE', 'COMPLETED', 'DROPPED')");
+                t.HasCheckConstraint("CK_Tasks_Source", "\"Source\" IN ('MANUAL', 'AI_ASSISTED', 'SYSTEM_MIGRATED')");
+                t.HasCheckConstraint("CK_Tasks_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_Tasks_ParentExclusive", "NOT (\"GoalId\" IS NOT NULL AND \"ProjectId\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_Tasks_TemporalValidity", "\"Status\" <> 'ACTIVE' OR \"GoalId\" IS NOT NULL OR \"ProjectId\" IS NOT NULL OR \"PlannedDate\" IS NOT NULL");
+                t.HasCheckConstraint("CK_Tasks_SequencePair", "(\"SequenceId\" IS NULL AND \"SequenceOrder\" IS NULL) OR (\"SequenceId\" IS NOT NULL AND \"SequenceOrder\" IS NOT NULL AND \"SequenceOrder\" > 0)");
+                t.HasCheckConstraint("CK_Tasks_Deadline", "\"Deadline\" IS NULL OR \"PlannedDate\" IS NULL OR \"PlannedDate\" <= \"Deadline\"");
+                t.HasCheckConstraint("CK_Tasks_TerminalState", "(\"Status\" = 'ACTIVE' AND \"TerminalAt\" IS NULL AND \"CompletedForLocalDate\" IS NULL) OR (\"Status\" = 'COMPLETED' AND \"TerminalAt\" IS NOT NULL AND \"CompletedForLocalDate\" IS NOT NULL) OR (\"Status\" = 'DROPPED' AND \"TerminalAt\" IS NOT NULL AND \"CompletedForLocalDate\" IS NULL)");
             });
         });
 

@@ -158,12 +158,21 @@ public sealed class GoalService(
     private Task<List<TerminalBlockerDto>> GoalBlockersAsync(Guid id, Guid userId, CancellationToken ct) =>
         GoalBlockersAsync(db, id, userId, ct);
 
-    private static Task<List<TerminalBlockerDto>> GoalBlockersAsync(AppDbContext context, Guid id, Guid userId,
-        CancellationToken ct) => context.Projects.AsNoTracking()
-        .Where(x => x.GoalId == id && x.UserId == userId && x.Status == ParentStatuses.Active)
-        .OrderBy(x => x.Id)
-        .Select(x => new TerminalBlockerDto("Project", x.Id, x.Status, x.Version))
-        .ToListAsync(ct);
+    private static async Task<List<TerminalBlockerDto>> GoalBlockersAsync(AppDbContext context, Guid id, Guid userId,
+        CancellationToken ct)
+    {
+        var projects = await context.Projects.AsNoTracking()
+            .Where(x => x.GoalId == id && x.UserId == userId && x.Status == ParentStatuses.Active)
+            .OrderBy(x => x.Id)
+            .Select(x => new TerminalBlockerDto("Project", x.Id, x.Status, x.Version))
+            .ToListAsync(ct);
+        var tasks = await context.Tasks.AsNoTracking()
+            .Where(x => x.GoalId == id && x.UserId == userId && x.Status == TaskStatuses.Active)
+            .OrderBy(x => x.Id)
+            .Select(x => new TerminalBlockerDto("Task", x.Id, x.Status, x.Version))
+            .ToListAsync(ct);
+        return projects.Concat(tasks).ToList();
+    }
 
     private static TerminalPreviewDto Preview(Goal goal, string target, IReadOnlyList<TerminalBlockerDto> blockers) =>
         new(goal.Id, "Goal", goal.Status, target, goal.Version, blockers.Count == 0, blockers,

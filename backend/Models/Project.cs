@@ -18,4 +18,5 @@ public sealed class Project
     public string Source { get; set; } = CreationSources.Manual;
     public User User { get; set; } = null!;
     public Goal? Goal { get; set; }
+    public ICollection<TaskItem> Tasks { get; set; } = [];
 }

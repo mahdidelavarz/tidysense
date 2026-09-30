@@ -666,6 +666,456 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    cursor?: string;
+                    limit?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CursorPageDtoOfTaskDto"];
+                        "application/json": components["schemas"]["CursorPageDtoOfTaskDto"];
+                        "text/json": components["schemas"]["CursorPageDtoOfTaskDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateTaskRequest"];
+                    "text/json": components["schemas"]["CreateTaskRequest"];
+                    "application/*+json": components["schemas"]["CreateTaskRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskDto"];
+                        "application/json": components["schemas"]["TaskDto"];
+                        "text/json": components["schemas"]["TaskDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskDto"];
+                        "application/json": components["schemas"]["TaskDto"];
+                        "text/json": components["schemas"]["TaskDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateTaskRequest"];
+                    "text/json": components["schemas"]["UpdateTaskRequest"];
+                    "application/*+json": components["schemas"]["UpdateTaskRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskDto"];
+                        "application/json": components["schemas"]["TaskDto"];
+                        "text/json": components["schemas"]["TaskDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CompleteTaskRequest"];
+                    "text/json": components["schemas"]["CompleteTaskRequest"];
+                    "application/*+json": components["schemas"]["CompleteTaskRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskDto"];
+                        "application/json": components["schemas"]["TaskDto"];
+                        "text/json": components["schemas"]["TaskDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/drop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DropTaskRequest"];
+                    "text/json": components["schemas"]["DropTaskRequest"];
+                    "application/*+json": components["schemas"]["DropTaskRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskDto"];
+                        "application/json": components["schemas"]["TaskDto"];
+                        "text/json": components["schemas"]["TaskDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RestoreTaskRequest"];
+                    "text/json": components["schemas"]["RestoreTaskRequest"];
+                    "application/*+json": components["schemas"]["RestoreTaskRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskDto"];
+                        "application/json": components["schemas"]["TaskDto"];
+                        "text/json": components["schemas"]["TaskDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TodayDto"];
+                        "application/json": components["schemas"]["TodayDto"];
+                        "text/json": components["schemas"]["TodayDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/otp/request": {
         parameters: {
             query?: never;
@@ -876,6 +1326,12 @@ export interface components {
             /** Format: int64 */
             currentVersion: null | number | string;
         };
+        CompleteTaskRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+            /** Format: date */
+            completedForLocalDate: string;
+        };
         CreateGoalRequest: {
             title: string;
             desiredOutcome: string;
@@ -894,6 +1350,22 @@ export interface components {
             /** Format: date */
             reviewDate: null | string;
         };
+        CreateTaskRequest: {
+            title: string;
+            description: null | string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            /** Format: date */
+            plannedDate: null | string;
+            /** Format: date */
+            deadline: null | string;
+            /** Format: uuid */
+            sequenceId: null | string;
+            /** Format: int32 */
+            sequenceOrder: null | number | string;
+        };
         CurrentUserDto: {
             /** Format: uuid */
             id: string;
@@ -908,6 +1380,14 @@ export interface components {
         CursorPageDtoOfProjectDto: {
             items: components["schemas"]["ProjectDto"][];
             page: components["schemas"]["PageInfoDto"];
+        };
+        CursorPageDtoOfTaskDto: {
+            items: components["schemas"]["TaskDto"][];
+            page: components["schemas"]["PageInfoDto"];
+        };
+        DropTaskRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
         };
         GoalDto: {
             /** Format: uuid */
@@ -963,6 +1443,52 @@ export interface components {
             phoneNumber: string;
             purpose: string;
         };
+        RestoreTaskRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+            /** Format: date */
+            plannedDate: null | string;
+        };
+        TaskDependencyDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            status: string;
+            /** Format: int64 */
+            version: number | string;
+        };
+        TaskDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            title: string;
+            description: null | string;
+            status: string;
+            /** Format: date */
+            plannedDate: null | string;
+            /** Format: date */
+            deadline: null | string;
+            /** Format: uuid */
+            sequenceId: null | string;
+            /** Format: int32 */
+            sequenceOrder: null | number | string;
+            isBlocked: boolean;
+            blockedBy: components["schemas"]["TaskDependencyDto"][];
+            /** Format: date */
+            completedForLocalDate: null | string;
+            source: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            terminalAt: null | string;
+        };
         TerminalBlockerDto: {
             resourceType: string;
             /** Format: uuid */
@@ -994,6 +1520,11 @@ export interface components {
             /** Format: int64 */
             expectedVersion: number | string;
         };
+        TodayDto: {
+            /** Format: date */
+            localDate: string;
+            tasks: components["schemas"]["TaskDto"][];
+        };
         UpdateGoalRequest: {
             title: string;
             desiredOutcome: string;
@@ -1013,6 +1544,24 @@ export interface components {
             targetDate: null | string;
             /** Format: date */
             reviewDate: null | string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
+        UpdateTaskRequest: {
+            title: string;
+            description: null | string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            /** Format: date */
+            plannedDate: null | string;
+            /** Format: date */
+            deadline: null | string;
+            /** Format: uuid */
+            sequenceId: null | string;
+            /** Format: int32 */
+            sequenceOrder: null | number | string;
             /** Format: int64 */
             expectedVersion: number | string;
         };

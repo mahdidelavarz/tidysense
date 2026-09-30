@@ -6,8 +6,8 @@ async function codeFromToast(page: Page) {
   const toast = page.getByRole('status')
   await expect(toast).toContainText(/\d{4}/)
   const match = (await toast.textContent())?.match(/\d{4}/)
-  expect(match).not.toBeNull()
-  return match![0]
+  if (!match) throw new Error('Development OTP was not visible in the notification.')
+  return match[0]
 }
 
 test('new user login, invalid code, reload, logout, and immediate login again', async ({ page }) => {
@@ -59,4 +59,33 @@ test('returning login and logout-all revoke another browser', async ({ browser, 
   await page.reload()
   await expect(page).toHaveURL(/login/)
   await another.close()
+})
+
+test('manual task moves through Today to completion', async ({ page }) => {
+  const session = await page.request.post('/api/v1/dev/test-session', {
+    data: {}, headers: { Origin: origin },
+  })
+  expect(session.ok()).toBeTruthy()
+  const todayResponse = await page.request.get('/api/v1/today')
+  expect(todayResponse.ok()).toBeTruthy()
+  const { localDate } = await todayResponse.json() as { localDate: string }
+  const title = `کار مرورگر ${Date.now()}`
+
+  await page.goto('/tasks')
+  await page.getByRole('button', { name: 'کار جدید' }).click()
+  await page.getByLabel('عنوان کار').fill(title)
+  await page.getByLabel('تاریخ برنامه‌ریزی').fill(localDate)
+  await page.getByRole('button', { name: 'ساخت کار' }).click()
+  await expect(page.getByRole('heading', { name: title })).toBeVisible()
+
+  await page.getByRole('link', { name: 'امروز' }).click()
+  await expect(page.getByRole('heading', { name: title })).toBeVisible()
+  await page.screenshot({ path: 'test-results/step-05-today-before.png', fullPage: true })
+  await page.getByRole('button', { name: 'تکمیل کار' }).click()
+  await expect(page.getByText('برای امروز کاری نمانده است.')).toBeVisible()
+  await page.screenshot({ path: 'test-results/step-05-today-after.png', fullPage: true })
+
+  await page.getByRole('link', { name: 'کارها', exact: true }).click()
+  await page.getByRole('heading', { name: title }).click()
+  await expect(page.getByText('تکمیل‌شده')).toBeVisible()
 })

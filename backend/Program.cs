@@ -45,6 +45,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddHttpContextAccessor();
 foreach (var schema in ParentEventSchemas.All()) builder.Services.AddSingleton(schema);
+foreach (var schema in TaskEventSchemas.All()) builder.Services.AddSingleton(schema);
 builder.Services.AddSingleton<EventPayloadValidator>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -107,6 +108,7 @@ builder.Services.AddScoped<OtpService>();
 builder.Services.AddHostedService<OtpRateCleanupService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<GoalService>();
+builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<ApplicationDateService>();
 builder.Services.AddScoped<CommandExecutionService>();
 builder.Services.AddSingleton(TimeProvider.System);

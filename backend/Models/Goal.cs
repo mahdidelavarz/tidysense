@@ -18,4 +18,5 @@ public sealed class Goal
     public long Version { get; set; } = 1;
     public User User { get; set; } = null!;
     public ICollection<Project> Projects { get; set; } = [];
+    public ICollection<TaskItem> Tasks { get; set; } = [];
 }
