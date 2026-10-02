@@ -14,4 +14,5 @@ public sealed class User
     public ICollection<Project> Projects { get; set; } = [];
     public ICollection<TaskItem> Tasks { get; set; } = [];
     public ICollection<Routine> Routines { get; set; } = [];
+    public ICollection<CaptureItem> Captures { get; set; } = [];
 }

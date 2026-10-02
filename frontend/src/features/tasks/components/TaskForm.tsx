@@ -6,7 +6,7 @@ import { DateField } from '../../../shared/ui/DateField'
 import { FormError, FormField, ValidationSummary } from '../../../shared/ui/FormUi'
 import type { GoalDto } from '../../goals/types/goal.types'
 import type { ProjectDto } from '../../projects/types/project.types'
-import { type TaskFields, taskFieldsSchema } from '../types/task.schema'
+import { type TaskFields, taskCreateFieldsSchema, taskFieldsSchema } from '../types/task.schema'
 import type { CreateTaskRequest, TaskDto, UpdateTaskRequest } from '../types/task.types'
 import { TaskParentSelect } from './TaskParentSelect'
 import { TaskSequenceSelect } from './TaskSequenceSelect'
@@ -14,9 +14,10 @@ import { TaskSequenceSelect } from './TaskSequenceSelect'
 /**
  * Create/edit form for a Task, rendered as the body of a Sheet. Sequence
  * placement is offered only on create; an existing Task's position is
- * immutable here.
+ * immutable here. On create, a title with no date and no parent is not yet a
+ * Task: it is handed to `onCapture` and saved as a quick capture.
  */
-export function TaskForm({ task, goals, projects, tasks = [], pending, error, onSubmit, onCancel }: {
+export function TaskForm({ task, goals, projects, tasks = [], pending, error, onSubmit, onCapture, onCancel }: {
   task?: TaskDto
   goals: GoalDto[]
   projects: ProjectDto[]
@@ -24,10 +25,11 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
   pending: boolean
   error: unknown
   onSubmit: (request: CreateTaskRequest | UpdateTaskRequest) => void
+  onCapture?: (title: string) => void
   onCancel: () => void
 }) {
   const form = useForm<TaskFields>({
-    resolver: zodResolver(taskFieldsSchema),
+    resolver: zodResolver(onCapture && !task ? taskCreateFieldsSchema : taskFieldsSchema),
     defaultValues: {
       title: task?.title ?? '',
       description: task?.description ?? '',
@@ -35,11 +37,17 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
       plannedDate: task?.plannedDate ?? '',
       deadline: task?.deadline ?? '',
       sequenceChoice: 'none',
+      isProtected: task?.isProtected ?? false,
     },
   })
   const { errors } = form.formState
+  const capturing = Boolean(onCapture) && !task && form.watch('parentScope') === 'none' && !form.watch('plannedDate')
   const submit = form.handleSubmit(values => {
     const [scope, parentId] = values.parentScope.split(':')
+    if (onCapture && !task && scope === 'none' && !values.plannedDate) {
+      onCapture(values.title)
+      return
+    }
     const sequence = task
       ? { sequenceId: task.sequenceId, sequenceOrder: task.sequenceOrder }
       : parseSequence(values.sequenceChoice)
@@ -51,6 +59,7 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
       plannedDate: emptyToNull(values.plannedDate),
       deadline: emptyToNull(values.deadline),
       ...sequence,
+      isProtected: values.isProtected,
       ...(task ? { expectedVersion: task.version } : {}),
     })
   })
@@ -83,11 +92,23 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
       {task?.sequenceId && task.sequenceOrder != null && (
         <p className="notice">جایگاه این کار در دنباله حفظ می‌شود (ترتیب {formatNumber(Number(task.sequenceOrder))}).</p>
       )}
+      <label className="flex items-start gap-3 rounded-xl border border-border-subtle p-3.5">
+        <input className="mt-1 size-5 shrink-0 accent-accent" type="checkbox" {...form.register('isProtected')} />
+        <span>
+          <span className="block text-sm font-bold text-text-primary">این کار محافظت شود</span>
+          <span className="block text-xs leading-6 text-text-secondary">در بازبینی، کنار گذاشتن کار محافظت‌شده پیشنهاد نمی‌شود.</span>
+        </span>
+      </label>
+      {capturing && (
+        <p className="notice" role="status">
+          بدون تاریخ و بدون هدف یا پروژه، این مورد هنوز یک کار نیست. فقط عنوانش به‌صورت یادداشت سریع ذخیره می‌شود و بعداً در «بازبینی» تعیین تکلیف می‌شود.
+        </p>
+      )}
       <FormError error={error} />
       <div className="sheet-actions">
         <button className="secondary-button" type="button" disabled={pending} onClick={onCancel}>انصراف</button>
         <button className="primary-button" type="submit" disabled={pending}>
-          {pending ? 'در حال ذخیره…' : task ? 'ذخیره تغییرات' : 'ساخت کار'}
+          {pending ? 'در حال ذخیره…' : task ? 'ذخیره تغییرات' : capturing ? 'ذخیره یادداشت' : 'ساخت کار'}
         </button>
       </div>
     </form>

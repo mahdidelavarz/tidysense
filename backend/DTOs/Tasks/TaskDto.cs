@@ -15,6 +15,8 @@ public sealed record TaskDto(
     int? SequenceOrder,
     bool IsBlocked,
     IReadOnlyList<TaskDependencyDto> BlockedBy,
+    bool IsProtected,
+    int CarryCount,
     DateOnly? CompletedForLocalDate,
     string Source,
     long Version,

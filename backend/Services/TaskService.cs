@@ -72,7 +72,7 @@ public sealed class TaskService(
             new
             {
                 title, description, request.GoalId, request.ProjectId, request.PlannedDate,
-                request.Deadline, request.SequenceId, request.SequenceOrder
+                request.Deadline, request.SequenceId, request.SequenceOrder, request.IsProtected
             }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
         {
@@ -96,17 +96,13 @@ public sealed class TaskService(
                 Deadline = request.Deadline,
                 SequenceId = request.SequenceId,
                 SequenceOrder = request.SequenceOrder,
+                IsProtected = request.IsProtected,
+                ProtectionReasonCode = request.IsProtected ? ProtectionReasonCodes.User : null,
                 CreatedAt = now,
                 UpdatedAt = now
             });
-            var payload = JsonSerializer.Serialize(new
-            {
-                source = CreationSources.Manual,
-                parentScope = Scope(request.GoalId, request.ProjectId),
-                hasPlannedDate = request.PlannedDate is not null,
-                inSequence = request.SequenceId is not null
-            });
-            return new CommandMutation("Task", id, 1, TaskEventTypes.TaskCreated, 1, payload, now);
+            return new CommandMutation("Task", id, 1, TaskEventTypes.TaskCreated, 1,
+                CreatedPayload(request.GoalId, request.ProjectId, request.PlannedDate, request.SequenceId), now);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(result.AggregateId!.Value, cancellationToken);
@@ -124,7 +120,8 @@ public sealed class TaskService(
             new
             {
                 id, title, description, request.GoalId, request.ProjectId, request.PlannedDate,
-                request.Deadline, request.SequenceId, request.SequenceOrder, request.ExpectedVersion
+                request.Deadline, request.SequenceId, request.SequenceOrder, request.ExpectedVersion,
+                request.IsProtected
             }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
         {
@@ -153,6 +150,12 @@ public sealed class TaskService(
             if (item.Deadline != request.Deadline) { item.Deadline = request.Deadline; changed.Add("deadline"); }
             if (item.SequenceId != request.SequenceId) { item.SequenceId = request.SequenceId; changed.Add("sequenceId"); }
             if (item.SequenceOrder != request.SequenceOrder) { item.SequenceOrder = request.SequenceOrder; changed.Add("sequenceOrder"); }
+            if (request.IsProtected is { } isProtected && item.IsProtected != isProtected)
+            {
+                item.IsProtected = isProtected;
+                item.ProtectionReasonCode = isProtected ? ProtectionReasonCodes.User : null;
+                changed.Add("isProtected");
+            }
             if (changed.Count == 0) throw new CommandRejectedException("NO_CHANGES");
             item.Version++;
             item.UpdatedAt = now;
@@ -208,17 +211,73 @@ public sealed class TaskService(
             VersionGuard.RequireMatch(id, request.ExpectedVersion, item.Version);
             if (item.Status != TaskStatuses.Active)
                 throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
-            item.Status = TaskStatuses.Dropped;
-            item.CompletedForLocalDate = null;
-            item.TerminalAt = now;
-            item.UpdatedAt = now;
-            item.Version++;
+            Drop(item, now);
             return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskDropped, 1,
                 "{}", now);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
     }
+
+    /// <summary>
+    /// Carry: an explicit move of a dated Task to another planned date. It never moves other
+    /// Tasks, including later members of the same sequence.
+    /// </summary>
+    public async Task<TaskDto> CarryAsync(Guid id, CarryTaskRequest request, string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var now = dates.UtcNow;
+        var today = dates.Today;
+        if (request.PlannedDate < today)
+            throw new ArgumentException("plannedDate cannot be in the past.");
+        var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "CARRY_TASK",
+            new { id, request.ExpectedVersion, request.PlannedDate }, now);
+        var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
+        {
+            var item = await LockOwnedAsync(context, id, owner, ct);
+            VersionGuard.RequireMatch(id, request.ExpectedVersion, item.Version);
+            if (item.Status != TaskStatuses.Active)
+                throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
+            if (item.PlannedDate is null) throw new CommandRejectedException("TASK_NOT_SCHEDULED");
+            if (item.PlannedDate == request.PlannedDate) throw new CommandRejectedException("NO_CHANGES");
+            if (item.Deadline is { } deadline && request.PlannedDate > deadline)
+                throw new CommandRejectedException("DEADLINE_EXCEEDED");
+            var payload = Carry(item, request.PlannedDate, today, now, TaskCarryScopes.Task);
+            return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskCarried, 1,
+                payload, now);
+        }, cancellationToken);
+        ParentCommandSupport.RequireSuccess(result);
+        return await GetByIdAsync(id, cancellationToken);
+    }
+
+    /// <summary>Moves a locked dated Task and returns its TASK_CARRIED payload.</summary>
+    internal static string Carry(TaskItem item, DateOnly plannedDate, DateOnly today,
+        DateTimeOffset now, string scope)
+    {
+        var wasDue = item.PlannedDate <= today;
+        item.PlannedDate = plannedDate;
+        item.UpdatedAt = now;
+        item.Version++;
+        return JsonSerializer.Serialize(new { scope, wasDue });
+    }
+
+    internal static void Drop(TaskItem item, DateTimeOffset now)
+    {
+        item.Status = TaskStatuses.Dropped;
+        item.CompletedForLocalDate = null;
+        item.TerminalAt = now;
+        item.UpdatedAt = now;
+        item.Version++;
+    }
+
+    internal static string CreatedPayload(Guid? goalId, Guid? projectId, DateOnly? plannedDate,
+        Guid? sequenceId) => JsonSerializer.Serialize(new
+    {
+        source = CreationSources.Manual,
+        parentScope = Scope(goalId, projectId),
+        hasPlannedDate = plannedDate is not null,
+        inSequence = sequenceId is not null
+    });
 
     public async Task<TaskDto> RestoreAsync(Guid id, RestoreTaskRequest request, string idempotencyKey,
         CancellationToken cancellationToken)
@@ -283,6 +342,8 @@ public sealed class TaskService(
                 .ToListAsync(cancellationToken);
         var bySequence = unresolved.GroupBy(x => x.SequenceId!.Value)
             .ToDictionary(x => x.Key, x => x.ToArray());
+        var signals = await TaskHistory.LoadAsync(db, currentUser.UserId,
+            items.Select(x => x.Id).ToArray(), cancellationToken);
         return items.Select(item =>
         {
             var blockers = item.Status == TaskStatuses.Active && item.SequenceId is { } sequenceId &&
@@ -290,17 +351,18 @@ public sealed class TaskService(
                 ? members.Where(x => x.SequenceOrder < order).Select(x =>
                     new TaskDependencyDto(x.Id, x.Title, x.Status, x.Version)).ToArray()
                 : [];
-            return ToDto(item, blockers);
+            return ToDto(item, blockers, signals.GetValueOrDefault(item.Id, TaskSignals.None).CarryCount);
         }).ToArray();
     }
 
-    private static TaskDto ToDto(TaskItem value, IReadOnlyList<TaskDependencyDto> blockers) =>
+    private static TaskDto ToDto(TaskItem value, IReadOnlyList<TaskDependencyDto> blockers,
+        int carryCount) =>
         new(value.Id, value.GoalId, value.ProjectId, value.Title, value.Description, value.Status,
             value.PlannedDate, value.Deadline, value.SequenceId, value.SequenceOrder,
-            blockers.Count > 0, blockers, value.CompletedForLocalDate, value.Source, value.Version,
-            value.CreatedAt, value.UpdatedAt, value.TerminalAt);
+            blockers.Count > 0, blockers, value.IsProtected, carryCount, value.CompletedForLocalDate,
+            value.Source, value.Version, value.CreatedAt, value.UpdatedAt, value.TerminalAt);
 
-    private static void ValidateShape(Guid? goalId, Guid? projectId, DateOnly? plannedDate,
+    internal static void ValidateShape(Guid? goalId, Guid? projectId, DateOnly? plannedDate,
         DateOnly? deadline, Guid? sequenceId, int? sequenceOrder, bool active)
     {
         if (goalId is not null && projectId is not null)
@@ -319,7 +381,7 @@ public sealed class TaskService(
         ParentCommandSupport.LockParentsAsync(context, owner, scopes, requestedGoalId,
             requestedProjectId, cancellationToken);
 
-    private static async Task LockSequencesAsync(AppDbContext context, IEnumerable<Guid> sequenceIds,
+    internal static async Task LockSequencesAsync(AppDbContext context, IEnumerable<Guid> sequenceIds,
         CancellationToken cancellationToken)
     {
         foreach (var key in sequenceIds.Distinct().Order().Select(SequenceLockKey))

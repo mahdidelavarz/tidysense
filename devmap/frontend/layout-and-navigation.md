@@ -22,14 +22,15 @@ This is two layouts, not one scaled layout: the tab bar, drawer and bottom sheet
 
 ### Destinations
 
-Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/Navigation.tsx), in order of daily use: **Today → Tasks → Routines → Projects → Goals**. Add a destination only when its product step ships. The tab bar holds at most four destinations plus create. Routines (STEP-06) is marked `tab: false`: it lives in the sidebar and drawer only, because Routines are executed from Today. Any further destination needs the same decision: replace a tab, or stay out of the tab bar.
+Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/Navigation.tsx), in order of daily use: **Today → Tasks → Routines → Reconcile → Projects → Goals**. Add a destination only when its product step ships. The tab bar holds at most four destinations plus create. Routines (STEP-06) and Reconcile (STEP-07) are marked `tab: false`: they live in the sidebar and drawer only, because Routines are executed from Today and Reconcile is offered from Today when there is something to decide. The Reconcile link carries one count badge for everything waiting in it. Any further destination needs the same decision: replace a tab, or stay out of the tab bar.
 
 ## Routes
 
 | Route | Page | Width |
 |---|---|---|
 | `/` | redirects to `/today` | — |
-| `/today` | Today: tasks for the local date, ready first, waiting below, then the date's Routines with a row per slot | narrow |
+| `/today` | Today: a dismissible Reconcile offer when eligible, then tasks for the local date, ready first, waiting below, then the date's Routines with a row per slot | narrow |
+| `/reconcile` | Reconcile: summary, execution lane (owner → sequence → Task), commitment-review lane, capture lane, Review & Apply dialog | narrow |
 | `/tasks`, `/tasks/$taskId` | Task list, Task detail | narrow |
 | `/routines`, `/routines/$routineId` | Routine list, Routine detail with occurrence history | narrow |
 | `/projects`, `/projects/$projectId` | Project list, Project detail | wide list, narrow detail |

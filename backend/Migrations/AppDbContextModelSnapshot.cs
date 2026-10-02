@@ -22,6 +22,124 @@ namespace TidySense.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TidySense.Models.ActionConfirmation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("character varying(48)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PreviewHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PreviewJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("ReconcileSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReconcileSessionId");
+
+                    b.HasIndex("Status", "ExpiresAt");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("ActionConfirmations", t =>
+                        {
+                            t.HasCheckConstraint("CK_ActionConfirmations_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
+
+                            t.HasCheckConstraint("CK_ActionConfirmations_Status", "\"Status\" IN ('CREATED', 'SUBMITTED', 'RESOLVED', 'EXPIRED', 'CANCELLED')");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.CaptureItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Status", "CreatedAt", "Id");
+
+                    b.ToTable("Captures", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Captures_Resolution", "(\"Status\" = 'UNRESOLVED' AND \"ResolvedAt\" IS NULL) OR (\"Status\" IN ('RESOLVED', 'DISCARDED') AND \"ResolvedAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Captures_Source", "\"Source\" IN ('MANUAL', 'SYSTEM_MIGRATED')");
+
+                            t.HasCheckConstraint("CK_Captures_Status", "\"Status\" IN ('UNRESOLVED', 'RESOLVED', 'DISCARDED')");
+
+                            t.HasCheckConstraint("CK_Captures_Version", "\"Version\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("TidySense.Models.CommandResult", b =>
                 {
                     b.Property<Guid>("Id")
@@ -516,6 +634,186 @@ namespace TidySense.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TidySense.Models.ReconcileFact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("EvidenceQuality")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("FactType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("FactVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ObservedMetrics")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.PrimitiveCollection<string[]>("ReasonCodes")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("ReconcileFacts", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReconcileFacts_MetricsObject", "jsonb_typeof(\"ObservedMetrics\") = 'object'");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.ReconcilePrompt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("LocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "LocalDate")
+                        .IsUnique();
+
+                    b.ToTable("ReconcilePrompts", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReconcilePrompts_State", "\"State\" IN ('DISMISSED', 'SKIPPED')");
+
+                            t.HasCheckConstraint("CK_ReconcilePrompts_Version", "\"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.ReconcileSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ActionableBacklogCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("DegradedMode")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("FactSnapshotVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("LocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("OldestUnresolvedAgeDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("OpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<int>("ReviewDueCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RulesCatalogVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Timezone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TriggerType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int>("UnresolvedCaptureCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ReconcileSessions_OneOpenPerUser")
+                        .HasFilter("\"Status\" = 'OPEN'");
+
+                    b.HasIndex("UserId", "OpenedAt");
+
+                    b.ToTable("ReconcileSessions", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReconcileSessions_Completion", "(\"Status\" = 'OPEN' AND \"CompletedAt\" IS NULL) OR (\"Status\" <> 'OPEN' AND \"CompletedAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_ReconcileSessions_Counts", "\"ActionableBacklogCount\" >= 0 AND \"ReviewDueCount\" >= 0 AND \"UnresolvedCaptureCount\" >= 0");
+
+                            t.HasCheckConstraint("CK_ReconcileSessions_Severity", "\"Severity\" IN ('NONE', 'LIGHT', 'MEDIUM', 'RECOVERY')");
+
+                            t.HasCheckConstraint("CK_ReconcileSessions_Status", "\"Status\" IN ('OPEN', 'COMPLETED', 'ABANDONED', 'EXPIRED')");
+
+                            t.HasCheckConstraint("CK_ReconcileSessions_TriggerType", "\"TriggerType\" IN ('MANUAL', 'PROMPT')");
+
+                            t.HasCheckConstraint("CK_ReconcileSessions_Version", "\"Version\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("TidySense.Models.Routine", b =>
                 {
                     b.Property<Guid>("Id")
@@ -683,6 +981,47 @@ namespace TidySense.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TidySense.Models.RuleMatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<Guid[]>("AffectedEntityIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
+
+                    b.PrimitiveCollection<string[]>("AllowedActionTypes")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.PrimitiveCollection<string[]>("ConsequenceCodes")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<DateTimeOffset>("MatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RuleId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RuleVersion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("RuleMatches");
+                });
+
             modelBuilder.Entity("TidySense.Models.TaskItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -705,11 +1044,18 @@ namespace TidySense.Migrations
                     b.Property<Guid?>("GoalId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsProtected")
+                        .HasColumnType("boolean");
+
                     b.Property<DateOnly?>("PlannedDate")
                         .HasColumnType("date");
 
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ProtectionReasonCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<Guid?>("SequenceId")
                         .HasColumnType("uuid");
@@ -769,6 +1115,8 @@ namespace TidySense.Migrations
 
                             t.HasCheckConstraint("CK_Tasks_ParentExclusive", "NOT (\"GoalId\" IS NOT NULL AND \"ProjectId\" IS NOT NULL)");
 
+                            t.HasCheckConstraint("CK_Tasks_Protection", "(\"IsProtected\" AND \"ProtectionReasonCode\" = 'USER') OR (NOT \"IsProtected\" AND \"ProtectionReasonCode\" IS NULL)");
+
                             t.HasCheckConstraint("CK_Tasks_SequencePair", "(\"SequenceId\" IS NULL AND \"SequenceOrder\" IS NULL) OR (\"SequenceId\" IS NOT NULL AND \"SequenceOrder\" IS NOT NULL AND \"SequenceOrder\" > 0)");
 
                             t.HasCheckConstraint("CK_Tasks_Source", "\"Source\" IN ('MANUAL', 'AI_ASSISTED', 'SYSTEM_MIGRATED')");
@@ -822,6 +1170,34 @@ namespace TidySense.Migrations
                         {
                             t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0");
                         });
+                });
+
+            modelBuilder.Entity("TidySense.Models.ActionConfirmation", b =>
+                {
+                    b.HasOne("TidySense.Models.ReconcileSession", "Session")
+                        .WithMany()
+                        .HasForeignKey("ReconcileSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("TidySense.Models.CaptureItem", b =>
+                {
+                    b.HasOne("TidySense.Models.User", "User")
+                        .WithMany("Captures")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TidySense.Models.DomainEvent", b =>
@@ -880,6 +1256,35 @@ namespace TidySense.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TidySense.Models.ReconcileFact", b =>
+                {
+                    b.HasOne("TidySense.Models.ReconcileSession", "Session")
+                        .WithMany("Facts")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("TidySense.Models.ReconcilePrompt", b =>
+                {
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TidySense.Models.ReconcileSession", b =>
+                {
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TidySense.Models.Routine", b =>
                 {
                     b.HasOne("TidySense.Models.Routine", "ContinuationOf")
@@ -925,6 +1330,17 @@ namespace TidySense.Migrations
                     b.Navigation("Routine");
                 });
 
+            modelBuilder.Entity("TidySense.Models.RuleMatch", b =>
+                {
+                    b.HasOne("TidySense.Models.ReconcileSession", "Session")
+                        .WithMany("RuleMatches")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
             modelBuilder.Entity("TidySense.Models.TaskItem", b =>
                 {
                     b.HasOne("TidySense.Models.User", "User")
@@ -968,6 +1384,13 @@ namespace TidySense.Migrations
                     b.Navigation("Tasks");
                 });
 
+            modelBuilder.Entity("TidySense.Models.ReconcileSession", b =>
+                {
+                    b.Navigation("Facts");
+
+                    b.Navigation("RuleMatches");
+                });
+
             modelBuilder.Entity("TidySense.Models.Routine", b =>
                 {
                     b.Navigation("Occurrences");
@@ -975,6 +1398,8 @@ namespace TidySense.Migrations
 
             modelBuilder.Entity("TidySense.Models.User", b =>
                 {
+                    b.Navigation("Captures");
+
                     b.Navigation("Goals");
 
                     b.Navigation("Projects");

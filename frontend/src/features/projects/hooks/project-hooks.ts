@@ -1,11 +1,13 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
+import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
 import { routineKeys } from '../../routines/hooks/routine-hooks'
 import {
   createProject,
   getProject,
   listProjects,
   previewProjectTerminal,
+  reviewProject,
   terminateProject,
   updateProject,
 } from '../services/projects-api'
@@ -72,6 +74,26 @@ export function useUpdateProject(projectId: string) {
       await Promise.all([
         client.invalidateQueries({ queryKey: projectKeys.list }),
         client.invalidateQueries({ queryKey: projectKeys.options }),
+      ])
+    },
+  })
+}
+
+/**
+ * Keeps a Project active from its Reconcile review checkpoint. The Project id
+ * travels with each call because the review lane lists several Projects.
+ */
+export function useReviewProject() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ projectId, expectedVersion }: { projectId: string; expectedVersion: number }) =>
+      reviewProject(projectId, expectedVersion),
+    onSuccess: async data => {
+      client.setQueryData(projectKeys.detail(data.id), data)
+      await Promise.all([
+        client.invalidateQueries({ queryKey: projectKeys.list }),
+        client.invalidateQueries({ queryKey: projectKeys.options }),
+        client.invalidateQueries({ queryKey: reconcileKeys.all }),
       ])
     },
   })

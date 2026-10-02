@@ -4,6 +4,7 @@ import { showToast, useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
+import { TodayReconcileEntry } from '../../reconcile/components/TodayReconcileEntry'
 import { useCompleteOccurrence, useCorrectOccurrence } from '../../routines/hooks/routine-hooks'
 import type { RoutineOccurrenceDto } from '../../routines/types/routine.types'
 import { useCompleteTask } from '../../tasks/hooks/task-hooks'
@@ -70,6 +71,8 @@ export function TodayView() {
           </button>
         )}
       />
+
+      <TodayReconcileEntry />
 
       <div className="mb-4">
         <FormError error={complete.error ?? completeOccurrence.error ?? correctOccurrence.error} />

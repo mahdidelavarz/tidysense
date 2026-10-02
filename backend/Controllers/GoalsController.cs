@@ -47,6 +47,15 @@ public sealed class GoalsController(GoalService goals) : ControllerBase
         CancellationToken cancellationToken) =>
         Ok(await goals.UpdateAsync(id, request, idempotencyKey, cancellationToken));
 
+    [HttpPost("{id:guid}/review")]
+    [ProducesResponseType<GoalDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<GoalDto>> Review(Guid id, ReviewGoalRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        Ok(await goals.ReviewAsync(id, request, idempotencyKey, cancellationToken));
+
     [HttpPost("{id:guid}/terminal-preview")]
     [ProducesResponseType<TerminalPreviewDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<TerminalPreviewDto>> PreviewTerminal(Guid id,

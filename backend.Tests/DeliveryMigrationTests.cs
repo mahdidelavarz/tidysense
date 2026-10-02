@@ -198,4 +198,59 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
         Assert.Equal(0, await db.Routines.CountAsync(cancellationToken));
         Assert.Equal(0, await db.RoutineOccurrences.CountAsync(cancellationToken));
     }
+
+    [Fact]
+    public async Task Step7_capture_and_reconcile_schema_round_trips_and_keeps_existing_tasks_unprotected()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync("20261002132639_Step6RoutineOccurrence", cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        var userId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Users" ("Id", "PhoneNumber", "IsActive", "SessionEpoch", "SetupComplete", "CreatedAt")
+            VALUES ({userId}, {"+989" + Random.Shared.Next(100000000, 1000000000)}, {true}, {0}, {true}, {now});
+            INSERT INTO "Tasks" ("Id", "UserId", "Title", "Status", "PlannedDate", "Source", "Version", "CreatedAt", "UpdatedAt")
+            VALUES ({taskId}, {userId}, {"Step 6 task"}, {"ACTIVE"}, {new DateOnly(2026, 10, 2)}, {"MANUAL"}, {1L}, {now}, {now});
+            """, cancellationToken);
+
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        db.ChangeTracker.Clear();
+        var upgraded = await db.Tasks.AsNoTracking().SingleAsync(x => x.Id == taskId, cancellationToken);
+        Assert.False(upgraded.IsProtected);
+        Assert.Null(upgraded.ProtectionReasonCode);
+
+        var capture = new CaptureItem
+        {
+            Id = Guid.NewGuid(), UserId = userId, Title = "Migration capture", CreatedAt = now, UpdatedAt = now
+        };
+        var session = new ReconcileSession
+        {
+            Id = Guid.NewGuid(), UserId = userId, RulesCatalogVersion = "test", Timezone = "Asia/Tehran",
+            LocalDate = new DateOnly(2026, 10, 3), OpenedAt = now
+        };
+        db.AddRange(capture, session);
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
+        // The filtered unique index allows only one open session per user.
+        db.ReconcileSessions.Add(new ReconcileSession
+        {
+            Id = Guid.NewGuid(), UserId = userId, RulesCatalogVersion = "test", Timezone = "Asia/Tehran",
+            LocalDate = new DateOnly(2026, 10, 3), OpenedAt = now
+        });
+        var duplicate = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(cancellationToken));
+        Assert.Equal("IX_ReconcileSessions_OneOpenPerUser",
+            ((Npgsql.PostgresException)duplicate.InnerException!).ConstraintName);
+        db.ChangeTracker.Clear();
+
+        await migrator.MigrateAsync("20261002132639_Step6RoutineOccurrence", cancellationToken);
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        Assert.Equal(0, await db.Captures.CountAsync(cancellationToken));
+        Assert.Equal(0, await db.ReconcileSessions.CountAsync(cancellationToken));
+        Assert.Equal(1, await db.Tasks.AsNoTracking().CountAsync(x => x.Id == taskId, cancellationToken));
+    }
 }

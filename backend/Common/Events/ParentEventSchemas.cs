@@ -12,6 +12,15 @@ public static class ParentEventTypes
     public const string ProjectUpdated = "PROJECT_UPDATED";
     public const string ProjectCompleted = "PROJECT_COMPLETED";
     public const string ProjectStopped = "PROJECT_STOPPED";
+    public const string GoalContinuationResolved = "GOAL_CONTINUATION_RESOLVED";
+    public const string ProjectReviewResolved = "PROJECT_REVIEW_RESOLVED";
+}
+
+public static class ReviewDecisions
+{
+    public const string Continue = "CONTINUE";
+    public const string ReviewLater = "REVIEW_LATER";
+    public const string KeepWithNewReviewDate = "KEEP_WITH_NEW_REVIEW_DATE";
 }
 
 public static class ParentEventSchemas
@@ -37,7 +46,15 @@ public static class ParentEventSchemas
         yield return Updated(ParentEventTypes.ProjectUpdated, ProjectFields);
         yield return new EventPayloadSchema(ParentEventTypes.ProjectCompleted, 1);
         yield return new EventPayloadSchema(ParentEventTypes.ProjectStopped, 1);
+        yield return Reviewed(ParentEventTypes.GoalContinuationResolved,
+            [ReviewDecisions.Continue, ReviewDecisions.ReviewLater]);
+        yield return Reviewed(ParentEventTypes.ProjectReviewResolved,
+            [ReviewDecisions.KeepWithNewReviewDate]);
     }
+
+    private static EventPayloadSchema Reviewed(string type, HashSet<string> decisions) => new(type, 1,
+        new EventPayloadFieldPolicy("decision", true, x => IsAllowedString(x, decisions)),
+        new EventPayloadFieldPolicy("reviewDateSource", true, x => IsAllowedString(x, ReviewSources)));
 
     private static EventPayloadSchema Created(string type, bool includeScope)
     {

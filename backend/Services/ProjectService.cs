@@ -123,6 +123,34 @@ public sealed class ProjectService(
         return await GetByIdAsync(id, cancellationToken);
     }
 
+    /// <summary>Project review checkpoint: keep the Project active and store the next review snapshot.</summary>
+    public async Task<ProjectDto> ReviewAsync(Guid id, ReviewProjectRequest request, string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var now = dates.UtcNow;
+        var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "REVIEW_PROJECT",
+            new { id, request.ReviewDate, request.ExpectedVersion }, now);
+        var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
+        {
+            var project = await LockOwnedAsync(context, id, owner, ct);
+            VersionGuard.RequireMatch(id, request.ExpectedVersion, project.Version);
+            if (project.Status != ParentStatuses.Active)
+                throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
+            var review = dates.NextReview(project.TargetDate, request.ReviewDate, 30);
+            project.ReviewDate = review.Date;
+            project.ReviewDateSource = review.Source;
+            project.Version++;
+            project.UpdatedAt = now;
+            return new CommandMutation("Project", id, project.Version, ParentEventTypes.ProjectReviewResolved,
+                1, JsonSerializer.Serialize(new
+                {
+                    decision = ReviewDecisions.KeepWithNewReviewDate, reviewDateSource = review.Source
+                }), now);
+        }, cancellationToken);
+        ParentCommandSupport.RequireSuccess(result);
+        return await GetByIdAsync(id, cancellationToken);
+    }
+
     public async Task<TerminalPreviewDto> PreviewTerminalAsync(Guid id, TerminalPreviewRequest request,
         CancellationToken cancellationToken)
     {

@@ -10,6 +10,8 @@ Use Goal, Project, Task, Routine, RoutineOccurrence, PlanningFact, CaptureItem, 
 - Database: keep the existing EF/PostgreSQL identifier convention; do not introduce a provider-driven naming rewrite.
 - Repository: root `/frontend` and `/backend`; never document `/app/frontend` or `/app/backend`.
 
+Persian UI terms: Reconcile «بازبینی», quick capture «یادداشت سریع», Carry «انتقال», Drop «کنار گذاشتن», Keep «فعلاً بماند», commitment review «مرور تعهدها», protected «محافظت‌شده». Reconcile wording stays neutral: it describes work to organise, never the person.
+
 Avoid vague `Manager`, `Helper`, `CommonService`, `GeneralForm` and premature universal abstractions.
 
 ## Related Mind Map

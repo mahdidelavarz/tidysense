@@ -16,6 +16,12 @@ public sealed class AppDbContext(
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<Routine> Routines => Set<Routine>();
     public DbSet<RoutineOccurrence> RoutineOccurrences => Set<RoutineOccurrence>();
+    public DbSet<CaptureItem> Captures => Set<CaptureItem>();
+    public DbSet<ReconcileSession> ReconcileSessions => Set<ReconcileSession>();
+    public DbSet<ReconcileFact> ReconcileFacts => Set<ReconcileFact>();
+    public DbSet<RuleMatch> RuleMatches => Set<RuleMatch>();
+    public DbSet<ReconcilePrompt> ReconcilePrompts => Set<ReconcilePrompt>();
+    public DbSet<ActionConfirmation> ActionConfirmations => Set<ActionConfirmation>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<CommandResult> CommandResults => Set<CommandResult>();
     public DbSet<DomainEvent> DomainEvents => Set<DomainEvent>();
@@ -123,6 +129,7 @@ public sealed class AppDbContext(
             entity.Property(x => x.Description).HasMaxLength(2000);
             entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
             entity.Property(x => x.Source).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.ProtectionReasonCode).HasMaxLength(32);
             entity.Property(x => x.Version).IsConcurrencyToken();
             entity.HasIndex(x => new { x.UserId, x.CreatedAt, x.Id });
             entity.HasIndex(x => new { x.UserId, x.Status, x.PlannedDate });
@@ -149,6 +156,7 @@ public sealed class AppDbContext(
                 t.HasCheckConstraint("CK_Tasks_TemporalValidity", "\"Status\" <> 'ACTIVE' OR \"GoalId\" IS NOT NULL OR \"ProjectId\" IS NOT NULL OR \"PlannedDate\" IS NOT NULL");
                 t.HasCheckConstraint("CK_Tasks_SequencePair", "(\"SequenceId\" IS NULL AND \"SequenceOrder\" IS NULL) OR (\"SequenceId\" IS NOT NULL AND \"SequenceOrder\" IS NOT NULL AND \"SequenceOrder\" > 0)");
                 t.HasCheckConstraint("CK_Tasks_Deadline", "\"Deadline\" IS NULL OR \"PlannedDate\" IS NULL OR \"PlannedDate\" <= \"Deadline\"");
+                t.HasCheckConstraint("CK_Tasks_Protection", "(\"IsProtected\" AND \"ProtectionReasonCode\" = 'USER') OR (NOT \"IsProtected\" AND \"ProtectionReasonCode\" IS NULL)");
                 t.HasCheckConstraint("CK_Tasks_TerminalState", "(\"Status\" = 'ACTIVE' AND \"TerminalAt\" IS NULL AND \"CompletedForLocalDate\" IS NULL) OR (\"Status\" = 'COMPLETED' AND \"TerminalAt\" IS NOT NULL AND \"CompletedForLocalDate\" IS NOT NULL) OR (\"Status\" = 'DROPPED' AND \"TerminalAt\" IS NOT NULL AND \"CompletedForLocalDate\" IS NULL)");
             });
         });
@@ -216,6 +224,115 @@ public sealed class AppDbContext(
                 t.HasCheckConstraint("CK_RoutineOccurrences_Status", "\"Status\" IN ('PENDING', 'DONE', 'MISSED')");
                 t.HasCheckConstraint("CK_RoutineOccurrences_Version", "\"Version\" > 0");
                 t.HasCheckConstraint("CK_RoutineOccurrences_Resolution", "(\"Status\" = 'PENDING' AND \"ResolvedAt\" IS NULL) OR (\"Status\" IN ('DONE', 'MISSED') AND \"ResolvedAt\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<CaptureItem>(entity =>
+        {
+            entity.ToTable("Captures");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Source).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.UserId, x.Status, x.CreatedAt, x.Id });
+            entity.HasOne(x => x.User).WithMany(x => x.Captures).HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Captures_Status", "\"Status\" IN ('UNRESOLVED', 'RESOLVED', 'DISCARDED')");
+                t.HasCheckConstraint("CK_Captures_Source", "\"Source\" IN ('MANUAL', 'SYSTEM_MIGRATED')");
+                t.HasCheckConstraint("CK_Captures_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_Captures_Resolution", "(\"Status\" = 'UNRESOLVED' AND \"ResolvedAt\" IS NULL) OR (\"Status\" IN ('RESOLVED', 'DISCARDED') AND \"ResolvedAt\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<ReconcileSession>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.TriggerType).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.RulesCatalogVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Timezone).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Severity).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.UserId, x.OpenedAt });
+            // One open session per user is the database backstop for the open-session check.
+            entity.HasIndex(x => x.UserId).IsUnique().HasFilter("\"Status\" = 'OPEN'")
+                .HasDatabaseName("IX_ReconcileSessions_OneOpenPerUser");
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ReconcileSessions_Status", "\"Status\" IN ('OPEN', 'COMPLETED', 'ABANDONED', 'EXPIRED')");
+                t.HasCheckConstraint("CK_ReconcileSessions_TriggerType", "\"TriggerType\" IN ('MANUAL', 'PROMPT')");
+                t.HasCheckConstraint("CK_ReconcileSessions_Severity", "\"Severity\" IN ('NONE', 'LIGHT', 'MEDIUM', 'RECOVERY')");
+                t.HasCheckConstraint("CK_ReconcileSessions_Counts", "\"ActionableBacklogCount\" >= 0 AND \"ReviewDueCount\" >= 0 AND \"UnresolvedCaptureCount\" >= 0");
+                t.HasCheckConstraint("CK_ReconcileSessions_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_ReconcileSessions_Completion", "(\"Status\" = 'OPEN' AND \"CompletedAt\" IS NULL) OR (\"Status\" <> 'OPEN' AND \"CompletedAt\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<ReconcileFact>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.FactType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.EntityType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ObservedMetrics).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.ReasonCodes).IsRequired();
+            entity.Property(x => x.EvidenceQuality).HasMaxLength(16).IsRequired();
+            entity.HasIndex(x => x.SessionId);
+            entity.HasOne(x => x.Session).WithMany(x => x.Facts).HasForeignKey(x => x.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable(t => t.HasCheckConstraint("CK_ReconcileFacts_MetricsObject",
+                "jsonb_typeof(\"ObservedMetrics\") = 'object'"));
+        });
+
+        modelBuilder.Entity<RuleMatch>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.RuleId).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.RuleVersion).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.AffectedEntityIds).IsRequired();
+            entity.Property(x => x.AllowedActionTypes).IsRequired();
+            entity.Property(x => x.ConsequenceCodes).IsRequired();
+            entity.HasIndex(x => x.SessionId);
+            entity.HasOne(x => x.Session).WithMany(x => x.RuleMatches).HasForeignKey(x => x.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReconcilePrompt>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.State).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.UserId, x.LocalDate }).IsUnique();
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ReconcilePrompts_State", "\"State\" IN ('DISMISSED', 'SKIPPED')");
+                t.HasCheckConstraint("CK_ReconcilePrompts_Version", "\"Version\" > 0");
+            });
+        });
+
+        modelBuilder.Entity<ActionConfirmation>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ActionType).HasMaxLength(48).IsRequired();
+            entity.Property(x => x.RequestJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.PreviewJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.PreviewHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt });
+            entity.HasIndex(x => new { x.Status, x.ExpiresAt });
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Session).WithMany().HasForeignKey(x => x.ReconcileSessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ActionConfirmations_Status", "\"Status\" IN ('CREATED', 'SUBMITTED', 'RESOLVED', 'EXPIRED', 'CANCELLED')");
+                t.HasCheckConstraint("CK_ActionConfirmations_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
             });
         });
 

@@ -2,7 +2,7 @@
 
 This is the stable execution roadmap. It is derived from the consolidated product baseline, Discussion 022, the dependency graph, current code, and verified evidence. Step IDs are permanent; amend scope/status without casual renumbering.
 
-The STEP IDs intentionally do not reuse ambiguous M4–M6 labels. Discussion 022 declares its amended M1–M8 sequence authoritative, while older implementation dependency/exit artifacts assign those labels differently. This roadmap follows Discussion 022 and preserves the compatible dependency constraints; `CON-013` records the source-document cleanup required before STEP-07.
+The STEP IDs are independent of the Mind Map M-labels. This roadmap follows Discussion 022's amended M1–M8 sequence; the Mind Map dependency/exit artifacts were reconciled to it on 2026-10-02 (`CON-013`, resolved).
 
 ## Execution protocol
 
@@ -193,15 +193,15 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Goal:** Deliver deterministic adaptation without depending on AI.
 
-**Scope:** CaptureItem lifecycle/resolution, deterministic facts/cleanup/severity, Project→Sequence→Task grouping, blocked-actionable handling, separate Capture lane, Reconcile session/preview/confirmation, atomic bulk/sequence actions and continued Today access.
+**Scope:** CaptureItem lifecycle/resolution, Task Carry and protection, deterministic facts/cleanup/severity, rule catalog R1/R2/R3/R6, Project→Sequence→Task grouping, blocked-actionable handling, separate Capture lane, commitment-review lane (Goal/Project review checkpoints, Goal Continuation Check, undated direct child Tasks), Reconcile session/preview/confirmation, atomic bulk/sequence actions and continued Today access.
 
-**Out of scope:** AI explanations/recommendations, raw Reconcile text, dedicated crisis UX, automatic mutation.
+**Out of scope:** AI explanations/recommendations, rules R4 (Routine mismatch) and R5 (Project overload), raw Reconcile text, dedicated crisis UX, automatic mutation.
 
 **Required DevMap context:** [architecture](02-architecture.md), [module loop](04-module-implementation-loop.md), [transactions](backend/auth-security-transactions.md), [API contract](shared/api-contracts.md), [frontend forms/pages](frontend/forms-components-pages.md), [accessibility](frontend/design-system-accessibility.md).
 
 **Required Mind Map context:** [Reconcile trigger/severity](../mindmap/01-Closed-Discussions/016-reconcile-trigger-and-severity.md), [Reconcile actions](../mindmap/01-Closed-Discussions/017-ai-reconcile-intelligence-and-actions.md), [sequence grouping](../mindmap/01-Closed-Discussions/025-task-dependency-sequences-and-hierarchical-reconcile-grouping.md), [Capture amendment](../mindmap/01-Closed-Discussions/026-backlog-removal-parent-owned-undated-tasks-and-quick-capture.md), [Reconcile UI specification](../mindmap/04-Specs/reconcile-ui-ux-specification.md).
 
-**Dependencies:** STEP-06, reusable confirmation/command contracts from STEP-03, and documentation reconciliation of `CON-013`.
+**Dependencies:** STEP-06 and reusable confirmation/command contracts from STEP-03. `CON-013` was reconciled on 2026-10-02.
 
 **Implementation checklist:** Implement Capture lifecycle; lock deterministic fact/rule/reason catalog; build grouping and separate lanes; implement ReconcileSession/previews/confirmations; enforce version/ownership/atomic bulk behavior; build accessible UI with Today still available; add events/evidence.
 
@@ -209,9 +209,9 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Completion criteria:** Users can understand and explicitly apply deterministic adaptation with no AI authority and no partial bulk effects.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:** [Step 7 acceptance contract, recorded deviations and verification record](step-07-capture-reconcile-acceptance.md), [Capture API](../backend/Controllers/CapturesController.cs), [Reconcile API](../backend/Controllers/ReconcileController.cs), [Capture service](../backend/Services/CaptureService.cs), [Reconcile service](../backend/Services/ReconcileService.cs), [facts, severity and rules](../backend/Services/ReconcileRules.cs), [preview builder](../backend/Services/ReconcilePreview.cs), [schema migration](../backend/Migrations/20261002143512_Step7CaptureReconcile.cs), [rule and preview tests](../backend.Tests/ReconcileRulesTests.cs), [Capture/Reconcile PostgreSQL/API tests](../backend.Tests/CaptureReconcileModuleTests.cs), [generated OpenAPI](../backend/openapi/TidySense.json), [Reconcile page](../frontend/src/features/reconcile/components/ReconcilePage.tsx), [capture lane](../frontend/src/features/captures/components/CaptureLane.tsx), [Today entry](../frontend/src/features/reconcile/components/TodayReconcileEntry.tsx), [browser acceptance](../frontend/e2e/reconcile.spec.ts). Verified 2026-10-02: `./dev.ps1 check` passed (96 backend, 34 frontend tests, typecheck/lint/build/OpenAPI) against local PostgreSQL 18; `./auth-e2e.ps1` passed all 9 Chrome scenarios on an isolated PostgreSQL database, including "a quick capture and an overdue sequence are resolved in Reconcile while Today stays usable"; EF reported no pending model changes. Decisions confirmed with the owner: `CON-013` cleared by renumbering the Mind Map artifacts; commitment-review lane included; rule catalog R1/R2/R3/R6; Reconcile in sidebar and drawer with a Today entry, and capture through Add Task. The Reconcile and confirmation freeze-register rows stay `DRAFT` until their reviewers approve.
 
 ---
 

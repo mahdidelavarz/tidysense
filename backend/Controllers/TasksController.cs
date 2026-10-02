@@ -66,6 +66,15 @@ public sealed class TasksController(TaskService tasks) : ControllerBase
         CancellationToken cancellationToken) =>
         Ok(await tasks.DropAsync(id, request, idempotencyKey, cancellationToken));
 
+    [HttpPost("{id:guid}/carry")]
+    [ProducesResponseType<TaskDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<TaskDto>> Carry(Guid id, CarryTaskRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        Ok(await tasks.CarryAsync(id, request, idempotencyKey, cancellationToken));
+
     [HttpPost("{id:guid}/restore")]
     [ProducesResponseType<TaskDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]

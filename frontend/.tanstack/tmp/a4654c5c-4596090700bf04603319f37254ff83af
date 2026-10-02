@@ -17,6 +17,7 @@ import { Route as GoalsIndexRouteImport } from './routes/goals/index'
 import { Route as GoalsGoalIdRouteImport } from './routes/goals/$goalId'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
+import { Route as ReconcileIndexRouteImport } from './routes/reconcile/index'
 import { Route as RoutinesIndexRouteImport } from './routes/routines/index'
 import { Route as RoutinesRoutineIdRouteImport } from './routes/routines/$routineId'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
@@ -62,6 +63,11 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReconcileIndexRoute = ReconcileIndexRouteImport.update({
+  id: '/reconcile/',
+  path: '/reconcile/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoutinesIndexRoute = RoutinesIndexRouteImport.update({
   id: '/routines/',
   path: '/routines/',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/goals/': typeof GoalsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/reconcile/': typeof ReconcileIndexRoute
   '/routines/': typeof RoutinesIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/goals': typeof GoalsIndexRoute
   '/projects': typeof ProjectsIndexRoute
+  '/reconcile': typeof ReconcileIndexRoute
   '/routines': typeof RoutinesIndexRoute
   '/tasks': typeof TasksIndexRoute
 }
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/goals/': typeof GoalsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/reconcile/': typeof ReconcileIndexRoute
   '/routines/': typeof RoutinesIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/goals/'
     | '/projects/'
+    | '/reconcile/'
     | '/routines/'
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/goals'
     | '/projects'
+    | '/reconcile'
     | '/routines'
     | '/tasks'
   id:
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/goals/'
     | '/projects/'
+    | '/reconcile/'
     | '/routines/'
     | '/tasks/'
   fileRoutesById: FileRoutesById
@@ -182,6 +194,7 @@ export interface RootRouteChildren {
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   GoalsIndexRoute: typeof GoalsIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
+  ReconcileIndexRoute: typeof ReconcileIndexRoute
   RoutinesIndexRoute: typeof RoutinesIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
 }
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reconcile/': {
+      id: '/reconcile/'
+      path: '/reconcile'
+      fullPath: '/reconcile/'
+      preLoaderRoute: typeof ReconcileIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/routines/': {
       id: '/routines/'
       path: '/routines'
@@ -286,6 +306,7 @@ const rootRouteChildren: RootRouteChildren = {
   TasksTaskIdRoute: TasksTaskIdRoute,
   GoalsIndexRoute: GoalsIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
+  ReconcileIndexRoute: ReconcileIndexRoute,
   RoutinesIndexRoute: RoutinesIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
 }

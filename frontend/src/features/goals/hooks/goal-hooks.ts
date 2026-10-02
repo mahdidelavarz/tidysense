@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
-import { createGoal, getGoal, listGoals, previewGoalTerminal, terminateGoal, updateGoal } from '../services/goals-api'
+import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
+import { createGoal, getGoal, listGoals, previewGoalTerminal, reviewGoal, terminateGoal, updateGoal } from '../services/goals-api'
 import type { CreateGoalRequest, GoalTerminalPreview, GoalTerminalStatus, UpdateGoalRequest } from '../types/goal.types'
 
 /** Query key factory for Goal queries. The single source of truth other Goal hooks and mutations invalidate against. */
@@ -59,6 +60,29 @@ export function useUpdateGoal(goalId: string) {
       await Promise.all([
         client.invalidateQueries({ queryKey: goalKeys.list }),
         client.invalidateQueries({ queryKey: goalKeys.options }),
+      ])
+    },
+  })
+}
+
+/**
+ * Answers a Goal Continuation Check from Reconcile. The Goal id travels with
+ * each call because the review lane lists several Goals.
+ */
+export function useReviewGoal() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ goalId, decision, expectedVersion }: {
+      goalId: string
+      decision: 'CONTINUE' | 'REVIEW_LATER'
+      expectedVersion: number
+    }) => reviewGoal(goalId, decision, expectedVersion),
+    onSuccess: async data => {
+      client.setQueryData(goalKeys.detail(data.id), data)
+      await Promise.all([
+        client.invalidateQueries({ queryKey: goalKeys.list }),
+        client.invalidateQueries({ queryKey: goalKeys.options }),
+        client.invalidateQueries({ queryKey: reconcileKeys.all }),
       ])
     },
   })

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getReconcileOverview, resolveReconcilePrompt } from '../../reconcile/services/reconcile-api'
 import { completeOccurrence, correctOccurrence } from '../../routines/services/routines-api'
 import { completeTask } from '../../tasks/services/tasks-api'
 import { getToday } from '../services/today-api'
@@ -11,13 +12,23 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('../../tasks/services/tasks-api', () => ({ completeTask: vi.fn() }))
 vi.mock('../../routines/services/routines-api', () => ({ completeOccurrence: vi.fn(), correctOccurrence: vi.fn() }))
+vi.mock('../../reconcile/services/reconcile-api', () => ({ getReconcileOverview: vi.fn(), resolveReconcilePrompt: vi.fn() }))
 vi.mock('../services/today-api', () => ({ getToday: vi.fn() }))
 
 const actionable = {
   id: '00000000-0000-0000-0000-000000000111', goalId: null, projectId: null,
   title: 'کار آماده', description: null, status: 'ACTIVE', plannedDate: '2026-09-28', deadline: null,
-  sequenceId: null, sequenceOrder: null, isBlocked: false, blockedBy: [], completedForLocalDate: null,
+  sequenceId: null, sequenceOrder: null, isBlocked: false, blockedBy: [], isProtected: false, carryCount: 0,
+  completedForLocalDate: null,
   source: 'MANUAL', version: 3, createdAt: '2026-09-28T00:00:00Z', updatedAt: '2026-09-28T00:00:00Z', terminalAt: null,
+}
+const quietOverview = {
+  localDate: '2026-09-28', eligible: false, severity: 'NONE', triggerReasons: [],
+  counts: {
+    actionableBacklogCount: 0, oldestUnresolvedAgeDays: null, repeatedCarryTaskCount: 0, deadlineRiskCount: 0,
+    affectedParentCount: 0, reviewDueCount: 0, unresolvedCaptureCount: 0,
+  },
+  attentionCount: 0, promptState: 'NOT_PRESENTED', showPrompt: false,
 }
 const blocked = {
   ...actionable,
@@ -39,7 +50,32 @@ function renderToday() {
 }
 
 describe('TodayView', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getReconcileOverview).mockResolvedValue(quietOverview)
+  })
+
+  it('offers Reconcile without blocking Today and hides the offer for the day when declined', async () => {
+    vi.mocked(getToday).mockResolvedValue({ localDate: '2026-09-28', tasks: [actionable], routineOccurrences: [] })
+    vi.mocked(getReconcileOverview).mockResolvedValue({
+      ...quietOverview, eligible: true, severity: 'MEDIUM', showPrompt: true, attentionCount: 4,
+      counts: { ...quietOverview.counts, actionableBacklogCount: 3, reviewDueCount: 1 },
+    })
+    vi.mocked(resolveReconcilePrompt).mockResolvedValue({ localDate: '2026-09-28', state: 'SKIPPED' })
+    renderToday()
+
+    const offer = within(await screen.findByRole('region', { name: 'پیشنهاد بازبینی' }))
+    expect(offer.getByText('چند مورد به مرور نیاز دارد.')).toBeInTheDocument()
+    expect(offer.getByText('۳ تصمیم اجرایی · ۱ مرور تعهد')).toBeInTheDocument()
+    // Today's own work stays usable next to the offer.
+    expect(screen.getByRole('button', { name: 'تکمیل کار: کار آماده' })).toBeEnabled()
+
+    vi.mocked(getReconcileOverview).mockResolvedValue({ ...quietOverview, eligible: true, promptState: 'SKIPPED' })
+    fireEvent.click(offer.getByRole('button', { name: 'فعلاً نه' }))
+    await waitFor(() => expect(resolveReconcilePrompt).toHaveBeenCalledWith('SKIPPED'))
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'پیشنهاد بازبینی' })).not.toBeInTheDocument())
+    expect(screen.getByText('کار آماده')).toBeInTheDocument()
+  })
 
   it('keeps blocked sequence work as context and completes only actionable work', async () => {
     vi.mocked(getToday).mockResolvedValue({ localDate: '2026-09-28', tasks: [actionable, blocked], routineOccurrences: [] })

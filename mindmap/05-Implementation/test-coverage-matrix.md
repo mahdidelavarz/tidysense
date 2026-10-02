@@ -11,19 +11,19 @@ Legend: `R` required for milestone exit; `C` continuously required after introdu
 | domain invariants | R | C | C | C | C | C | C | C | C |
 | database constraints/migrations/rollback | R | C | C | C | C | C | C | C | C |
 | authentication/ownership/authorization | R | C | C | C | C | C | C | C | C |
-| transactions/concurrency/idempotency | R | R | R | R | C | R | R | C | C |
+| transactions/concurrency/idempotency | R | R | R | R | R | C | R | C | C |
 | API schemas/errors/compatibility | R | R | R | R | R | R | R | C | C |
 | frontend state machine/input preservation | — | R | R | R | R | R | R | C | C |
 | accessibility/responsive behavior | — | R | R | R | R | R | R | C | C |
 | events/outbox/delivery/deduplication | R | R | R | R | R | R | R | R | C |
-| logs/traces/alerts/privacy redaction | R | C | C | C | R | C | R | R | C |
-| retention/deletion/restricted access | R | C | C | C | R | C | R | R | R |
+| logs/traces/alerts/privacy redaction | R | C | C | C | C | R | R | R | C |
+| retention/deletion/restricted access | R | C | C | C | C | R | R | R | R |
 | end-to-end slice | — | R | R | R | R | R | R | R | R |
-| rollback/kill-switch/drill | R | C | C | C | R | C | R | R | R |
+| rollback/kill-switch/drill | R | C | C | C | C | R | R | R | R |
 
 ## AI-specific required tests
 
-| Test | M4 mock | M5 Planning | M7 Reconcile | M9 |
+| Test | M5 mock | M6 Planning | M7 Reconcile | M9 |
 |---|---|---|---|---|
 | schema/semantic/temporal/reference/policy gates | R | C | C | C |
 | invalid and partial output creates no resource | R | C | C | C |

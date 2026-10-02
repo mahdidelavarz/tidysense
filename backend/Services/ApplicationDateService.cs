@@ -29,4 +29,24 @@ public sealed class ApplicationDateService(IOptions<ApplicationTimeOptions> opti
         if (requested is not null) return (requested.Value, ReviewDateSources.User);
         return (targetDate ?? Today.AddDays(days), ReviewDateSources.SystemDefault);
     }
+
+    /// <summary>
+    /// The review snapshot stored when a review keeps the entity active: the requested date, or
+    /// the default interval capped by a target date that is still in the future.
+    /// </summary>
+    public (DateOnly Date, string Source) NextReview(DateOnly? targetDate, DateOnly? requested, int days)
+    {
+        var today = Today;
+        if (requested is { } date)
+        {
+            if (date <= today) throw new ArgumentException("reviewDate must be in the future.");
+            return (date, ReviewDateSources.User);
+        }
+        var next = today.AddDays(days);
+        return (targetDate is { } target && target > today && target < next ? target : next,
+            ReviewDateSources.SystemDefault);
+    }
+
+    public DateOnly LocalDateOf(DateTimeOffset instant) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, _timeZone).DateTime);
 }

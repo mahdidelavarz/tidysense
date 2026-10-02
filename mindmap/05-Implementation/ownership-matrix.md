@@ -14,8 +14,8 @@ M1 roles are instantiated in [[05-Implementation/m1-entry-package]]: Reza owns B
 | domain/persistence/transactions | Backend owner | Backend | Product, Security | migration and slice exit |
 | authentication/authorization | Backend owner | Backend + Frontend | Security/Privacy | M1 and production gate |
 | events/observability/retention | Backend owner | Backend + Research | Security/Privacy, Research | schema lock/M8 |
-| AI runtime/reliability/cost | Backend owner | Backend + Frontend | Safety, Security/Privacy, Product | M5/M7 exits |
-| AI UX and manual escape | Product owner | Design + Frontend + Backend | Safety | M4/M5/M7 exits |
+| AI runtime/reliability/cost | Backend owner | Backend + Frontend | Safety, Security/Privacy, Product | M6/M7 exits |
+| AI UX and manual escape | Product owner | Design + Frontend + Backend | Safety | M5/M6/M7 exits |
 | provider safeguards/high-risk boundary | AI/Safety owner | Product + Backend | Security/Privacy, Research | any real-user AI exposure/M8 |
 | metrics and pilot analysis | Pilot Research owner | Research + Backend/Product | Safety, Security/Privacy | M8/M9 |
 | operations/support/incident/rollback | Backend owner | Backend + Product | Safety, Security/Privacy | M8/M9 |
@@ -40,9 +40,9 @@ M1 roles are instantiated in [[05-Implementation/m1-entry-package]]: Reza owns B
 | M1 | Backend owner | Product, Frontend, Security/Privacy |
 | M2 | Product/Frontend owner | Backend, Design, Security/Privacy |
 | M3 | Backend owner | Product, Frontend, Design |
-| M4 | Product/Frontend owner | Backend, Design, Safety |
-| M5 | Backend owner | Product, Frontend, Safety, Security/Privacy |
-| M6 | Backend owner | Product, Frontend, Design, Safety, Research |
+| M4 | Backend owner | Product, Frontend, Design, Safety, Research |
+| M5 | Product/Frontend owner | Backend, Design, Safety |
+| M6 | Backend owner | Product, Frontend, Safety, Security/Privacy |
 | M7 | Backend owner | Product, Frontend, Design, Safety, Security/Privacy, Research |
 | M8 | Pilot Research owner | Product, Backend, Safety, Security/Privacy |
 | M9 | Product owner | all accountable owners and mandatory reviewers |

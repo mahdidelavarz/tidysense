@@ -10,7 +10,8 @@ public sealed record CreateTaskRequest(
     DateOnly? PlannedDate,
     DateOnly? Deadline,
     Guid? SequenceId,
-    [Range(1, int.MaxValue)] int? SequenceOrder);
+    [Range(1, int.MaxValue)] int? SequenceOrder,
+    bool IsProtected = false);
 
 public sealed record UpdateTaskRequest(
     [Required, StringLength(200, MinimumLength = 1)] string Title,
@@ -21,7 +22,9 @@ public sealed record UpdateTaskRequest(
     DateOnly? Deadline,
     Guid? SequenceId,
     [Range(1, int.MaxValue)] int? SequenceOrder,
-    [Range(1, long.MaxValue)] long ExpectedVersion);
+    [Range(1, long.MaxValue)] long ExpectedVersion,
+    // Omitted means "leave as is", so clients written before protection existed cannot clear it.
+    bool? IsProtected = null);
 
 public sealed record CompleteTaskRequest(
     [Range(1, long.MaxValue)] long ExpectedVersion,
@@ -32,3 +35,7 @@ public sealed record DropTaskRequest([Range(1, long.MaxValue)] long ExpectedVers
 public sealed record RestoreTaskRequest(
     [Range(1, long.MaxValue)] long ExpectedVersion,
     DateOnly? PlannedDate);
+
+public sealed record CarryTaskRequest(
+    [Range(1, long.MaxValue)] long ExpectedVersion,
+    DateOnly PlannedDate);

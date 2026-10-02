@@ -16,11 +16,13 @@ import type { CreateRoutineRequest, RoutineDto, UpdateRoutineRequest } from '../
 /**
  * Create/edit form for a Routine, rendered as the body of a Sheet.
  * `routine` edits it in place; `source` prefills a continuation of a stopped
- * Routine (a new Routine, so it also asks for its first date).
+ * Routine (a new Routine, so it also asks for its first date); `initialTitle`
+ * prefills a Routine made from a quick capture.
  */
-export function RoutineForm({ routine, source, goals, projects, pending, error, onSubmit, onCancel }: {
+export function RoutineForm({ routine, source, initialTitle, goals, projects, pending, error, onSubmit, onCancel }: {
   routine?: RoutineDto
   source?: RoutineDto
+  initialTitle?: string
   goals: GoalDto[]
   projects: ProjectDto[]
   pending: boolean
@@ -36,7 +38,7 @@ export function RoutineForm({ routine, source, goals, projects, pending, error, 
   const form = useForm<RoutineFields>({
     resolver: zodResolver(routineFieldsSchema),
     defaultValues: {
-      title: initial?.title ?? '',
+      title: initial?.title ?? initialTitle ?? '',
       description: initial?.description ?? '',
       parentScope: initialGoalId ? `goal:${initialGoalId}` : initialProjectId ? `project:${initialProjectId}` : 'none',
       recurrenceType: (initial?.recurrence.type as RoutineFields['recurrenceType'] | undefined) ?? 'DAILY',

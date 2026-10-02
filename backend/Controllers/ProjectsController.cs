@@ -48,6 +48,15 @@ public sealed class ProjectsController(ProjectService projectService) : Controll
         CancellationToken cancellationToken) =>
         Ok(await projectService.UpdateAsync(id, request, idempotencyKey, cancellationToken));
 
+    [HttpPost("{id:guid}/review")]
+    [ProducesResponseType<ProjectDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<ProjectDto>> Review(Guid id, ReviewProjectRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        Ok(await projectService.ReviewAsync(id, request, idempotencyKey, cancellationToken));
+
     [HttpPost("{id:guid}/terminal-preview")]
     [ProducesResponseType<TerminalPreviewDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<TerminalPreviewDto>> PreviewTerminal(Guid id,

@@ -102,6 +102,36 @@ public sealed class GoalService(
         return await GetByIdAsync(id, cancellationToken);
     }
 
+    /// <summary>
+    /// Goal Continuation Check. Both decisions keep the Goal active and store the next review
+    /// snapshot; neither is inferred from execution.
+    /// </summary>
+    public async Task<GoalDto> ReviewAsync(Guid id, ReviewGoalRequest request, string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var now = dates.UtcNow;
+        var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "REVIEW_GOAL",
+            new { id, request.Decision, request.ReviewDate, request.ExpectedVersion }, now);
+        var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
+        {
+            var goal = await LockOwnedAsync(context, id, owner, ct);
+            VersionGuard.RequireMatch(id, request.ExpectedVersion, goal.Version);
+            if (goal.Status != ParentStatuses.Active)
+                throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
+            var review = dates.NextReview(goal.TargetDate, request.ReviewDate, 90);
+            goal.ReviewDate = review.Date;
+            goal.ReviewDateSource = review.Source;
+            goal.LastContinuationDecisionAt = now;
+            goal.Version++;
+            goal.UpdatedAt = now;
+            return new CommandMutation("Goal", id, goal.Version, ParentEventTypes.GoalContinuationResolved,
+                1, JsonSerializer.Serialize(new { decision = request.Decision, reviewDateSource = review.Source }),
+                now);
+        }, cancellationToken);
+        ParentCommandSupport.RequireSuccess(result);
+        return await GetByIdAsync(id, cancellationToken);
+    }
+
     public async Task<TerminalPreviewDto> PreviewTerminalAsync(Guid id, TerminalPreviewRequest request,
         CancellationToken cancellationToken)
     {

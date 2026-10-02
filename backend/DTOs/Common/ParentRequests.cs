@@ -11,6 +11,17 @@ public sealed record TerminalCommandRequest(
     [Range(1, long.MaxValue)] long ExpectedVersion,
     [Required, RegularExpression("^[0-9A-Fa-f]{64}$")] string PreviewHash);
 
+/// <summary>Goal Continuation Check. Abandoning uses the terminal flow instead.</summary>
+public sealed record ReviewGoalRequest(
+    [Required, RegularExpression("^(CONTINUE|REVIEW_LATER)$")] string Decision,
+    DateOnly? ReviewDate,
+    [Range(1, long.MaxValue)] long ExpectedVersion);
+
+/// <summary>Keeps the Project active with a new review date. Completing or stopping uses the terminal flow.</summary>
+public sealed record ReviewProjectRequest(
+    DateOnly? ReviewDate,
+    [Range(1, long.MaxValue)] long ExpectedVersion);
+
 public sealed record TerminalPreviewDto(
     Guid EntityId,
     string EntityType,

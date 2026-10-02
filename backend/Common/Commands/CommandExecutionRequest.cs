@@ -22,11 +22,15 @@ public sealed record CommandMutation(
     int EventVersion,
     string PayloadJson,
     DateTimeOffset OccurredAt,
-    IReadOnlyList<CascadeEvent>? CascadeEvents = null);
+    IReadOnlyList<CascadeEvent>? CascadeEvents = null,
+    Guid? ConfirmationId = null,
+    Guid? ReconcileSessionId = null);
 
 /// <summary>
-/// A deterministic consequence of the confirmed command on another aggregate (for example a
-/// Routine stopped by its Project's terminal transition). Recorded in the same transaction.
+/// A consequence of the confirmed command on another aggregate, recorded in the same
+/// transaction. By default it is deterministic (for example a Routine stopped by its Project's
+/// terminal transition). A member the user explicitly confirmed, such as each Task of a bulk
+/// Reconcile action, is recorded with actor <see cref="EventActors.User"/> instead.
 /// </summary>
 public sealed record CascadeEvent(
     string AggregateType,
@@ -34,4 +38,11 @@ public sealed record CascadeEvent(
     long AggregateVersion,
     string EventType,
     int EventVersion,
-    string PayloadJson);
+    string PayloadJson,
+    string Actor = EventActors.SystemDeterministic);
+
+public static class EventActors
+{
+    public const string User = "USER";
+    public const string SystemDeterministic = "SYSTEM_DETERMINISTIC";
+}

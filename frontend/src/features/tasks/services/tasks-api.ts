@@ -45,6 +45,16 @@ export async function dropTask(id: string, expectedVersion: number): Promise<Tas
   return response.data
 }
 
+/** Carries a dated Task to another planned date. Later Tasks of the same sequence do not move. */
+export async function carryTask(id: string, expectedVersion: number, plannedDate: string): Promise<TaskDto> {
+  const response = await http.post<TaskDto>(
+    `/tasks/${encodeURIComponent(id)}/carry`,
+    { expectedVersion, plannedDate },
+    { headers: commandHeaders() },
+  )
+  return response.data
+}
+
 /** Restores a dropped Task back to active, optionally with a new planned date. */
 export async function restoreTask(id: string, expectedVersion: number, plannedDate: string | null): Promise<TaskDto> {
   const response = await http.post<TaskDto>(

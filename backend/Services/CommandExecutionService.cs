@@ -65,6 +65,8 @@ public sealed class CommandExecutionService(
                 AggregateType = mutation.AggregateType, AggregateId = mutation.AggregateId,
                 AggregateVersion = mutation.AggregateVersion, TransactionId = transactionId,
                 CorrelationId = request.CorrelationId, CommandResultId = result.Id,
+                ConfirmationId = mutation.ConfirmationId,
+                ReconcileSessionId = mutation.ReconcileSessionId,
                 PayloadJson = mutation.PayloadJson
             };
             db.CommandResults.Add(result);
@@ -76,16 +78,18 @@ public sealed class CommandExecutionService(
             foreach (var cascade in mutation.CascadeEvents ?? [])
             {
                 eventPayloadValidator.Validate(cascade.EventType, cascade.EventVersion, cascade.PayloadJson);
-                // The user confirmed the parent command, not each consequence.
+                // Unless the cascade says otherwise, the user confirmed the parent command, not each consequence.
                 var cascadeEvent = new DomainEvent
                 {
                     EventId = Guid.NewGuid(), EventType = cascade.EventType,
                     EventVersion = cascade.EventVersion, OccurredAt = mutation.OccurredAt,
                     RecordedAt = DateTimeOffset.UtcNow, UserId = request.UserId,
-                    Actor = "SYSTEM_DETERMINISTIC", AggregateType = cascade.AggregateType,
+                    Actor = cascade.Actor, AggregateType = cascade.AggregateType,
                     AggregateId = cascade.AggregateId, AggregateVersion = cascade.AggregateVersion,
                     TransactionId = transactionId, CorrelationId = request.CorrelationId,
                     CausationId = domainEvent.EventId, CommandResultId = result.Id,
+                    ConfirmationId = mutation.ConfirmationId,
+                    ReconcileSessionId = mutation.ReconcileSessionId,
                     PayloadJson = cascade.PayloadJson
                 };
                 db.DomainEvents.Add(cascadeEvent);

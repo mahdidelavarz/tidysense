@@ -1,7 +1,8 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
+import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
 import { todayKey } from '../../today/hooks/today-hooks'
-import { completeTask, createTask, dropTask, getTask, listTasks, restoreTask, updateTask } from '../services/tasks-api'
+import { carryTask, completeTask, createTask, dropTask, getTask, listTasks, restoreTask, updateTask } from '../services/tasks-api'
 import type { CreateTaskRequest, TaskDto, UpdateTaskRequest } from '../types/task.types'
 
 /** Query key factory for Task queries. The single source of truth other Task hooks and mutations invalidate against. */
@@ -45,16 +46,17 @@ export function useCreateTask() {
       await Promise.all([
         client.invalidateQueries({ queryKey: taskKeys.all }),
         client.invalidateQueries({ queryKey: todayKey }),
+        client.invalidateQueries({ queryKey: reconcileKeys.all }),
       ])
     },
   })
 }
 
 /**
- * Every Task lifecycle mutation (update/drop/restore/complete) returns the
- * new authoritative TaskDto and must: cache it at its detail key, and
- * invalidate the list/options/Today queries it can affect. Shared here so
- * each mutation hook below stays a one-line `onSuccess`.
+ * Every Task lifecycle mutation (update/carry/drop/restore/complete) returns
+ * the new authoritative TaskDto and must: cache it at its detail key, and
+ * invalidate the list/options/Today/Reconcile queries it can affect. Shared
+ * here so each mutation hook below stays a one-line `onSuccess`.
  */
 function useTaskCacheSync() {
   const client = useQueryClient()
@@ -64,8 +66,19 @@ function useTaskCacheSync() {
       client.invalidateQueries({ queryKey: taskKeys.list }),
       client.invalidateQueries({ queryKey: taskKeys.options }),
       client.invalidateQueries({ queryKey: todayKey }),
+      client.invalidateQueries({ queryKey: reconcileKeys.all }),
     ])
   }, [client])
+}
+
+/** Carries a dated Task to another planned date. Later Tasks of its sequence stay where they are. */
+export function useCarryTask(taskId: string) {
+  const sync = useTaskCacheSync()
+  return useMutation({
+    mutationFn: ({ expectedVersion, plannedDate }: { expectedVersion: number; plannedDate: string }) =>
+      carryTask(taskId, expectedVersion, plannedDate),
+    onSuccess: sync,
+  })
 }
 
 /** Updates a Task's editable fields under an optimistic version check. */

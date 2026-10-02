@@ -6,11 +6,7 @@ Current audit result: [remaining conflicts and open decisions](remaining-conflic
 
 ## Active conflicts
 
-| ID | Status | Scope | Current constraint |
-|---|---|---|---|
-| `CON-013` | `OPEN` | Later milestone labels/order in Mind Map implementation artifacts | Discussion 022 declares Capture/deterministic Reconcile as M4, Planning foundation M5 and AI Planning M6; `dependency-graph.md`/`milestone-exit-gate-plan.md` label Planning mock M4, real Planning M5 and deterministic Reconcile M6, with a duplicate M6 row. DevMap stable STEP IDs follow Discussion 022 and preserve compatible dependencies. Reconcile the Mind Map implementation artifacts before STEP-07; this does not block STEP-02. |
-
-Documentation conflicts `CON-001` through `CON-012` remain resolved. Prototype implementation gaps are migration work, not competing architecture.
+None. Documentation conflicts `CON-001` through `CON-013` are resolved. Prototype implementation gaps are migration work, not competing architecture.
 
 ## Open / deferred decisions
 
@@ -34,6 +30,7 @@ Documentation conflicts `CON-001` through `CON-012` remain resolved. Prototype i
 | `CON-010` | Keep the established EF/PostgreSQL identifier convention; do not introduce a provider-driven naming rewrite. | [domain/persistence](../backend/domain-model-and-persistence.md) |
 | `CON-011` | Ownership is not universal. Explicitly user-owned entities enforce backend ownership. Canonical Project is user-owned, so current permission-only Project access is unsafe migration debt. | [domain/persistence](../backend/domain-model-and-persistence.md) |
 | `CON-012` | Implementation has started: backend IAM/Project and frontend scaffolding exist. No milestone gate is complete without its recorded evidence. | [project summary](../context/project-summary.md), [implementation plan](../../mindmap/01-Closed-Discussions/022-updated-mvp-implementation-plan.md) |
+| `CON-013` | Mind Map implementation artifacts use Discussion 022's milestone labels: M4 Capture/deterministic Reconcile, M5 Planning foundation, M6 AI Planning; M9 is the readiness gate closing M8. Deterministic Reconcile does not depend on the Planning mock. | [implementation plan](../../mindmap/01-Closed-Discussions/022-updated-mvp-implementation-plan.md), [dependency graph](../../mindmap/05-Implementation/dependency-graph.md), [exit gates](../../mindmap/05-Implementation/milestone-exit-gate-plan.md) |
 
 ## Resolved decisions
 

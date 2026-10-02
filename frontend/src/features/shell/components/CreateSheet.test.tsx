@@ -3,11 +3,13 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'
+import { createCapture } from '../../captures/services/captures-api'
 import { createGoal, listGoals } from '../../goals/services/goals-api'
 import { listProjects } from '../../projects/services/projects-api'
 import { createTask, listTasks } from '../../tasks/services/tasks-api'
 import { CreateSheet } from './CreateSheet'
 
+vi.mock('../../captures/services/captures-api', () => ({ createCapture: vi.fn() }))
 vi.mock('../../goals/services/goals-api', () => ({ createGoal: vi.fn(), listGoals: vi.fn() }))
 vi.mock('../../projects/services/projects-api', () => ({ createProject: vi.fn(), listProjects: vi.fn() }))
 vi.mock('../../tasks/services/tasks-api', () => ({ createTask: vi.fn(), listTasks: vi.fn() }))
@@ -62,30 +64,44 @@ describe('CreateSheet', () => {
     expect(useUiStore.getState().toasts.map(toast => toast.message)).toEqual(['هدف ساخته شد.'])
   })
 
-  it('requires a planned date for a standalone Task and submits the date picked in the calendar', async () => {
+  it('saves a title with no date and no parent as a quick capture, not as a Task', async () => {
+    vi.mocked(createCapture).mockResolvedValue({
+      id: '00000000-0000-0000-0000-000000000401', title: 'تماس با دندان‌پزشک', status: 'UNRESOLVED',
+      source: 'MANUAL', version: 1, createdAt: '2026-10-02T00:00:00Z', updatedAt: '2026-10-02T00:00:00Z',
+      resolvedAt: null,
+    })
+    useUiStore.getState().openCreate('task')
+    renderSheet()
+    fireEvent.change(screen.getByLabelText('عنوان کار'), { target: { value: 'تماس با دندان‌پزشک' } })
+    // The form says what will happen before the user submits.
+    expect(screen.getByRole('status')).toHaveTextContent('یادداشت سریع')
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره یادداشت' }))
+    await waitFor(() => expect(createCapture).toHaveBeenCalledWith('تماس با دندان‌پزشک'))
+    expect(createTask).not.toHaveBeenCalled()
+    await waitFor(() => expect(useUiStore.getState().createTarget).toBeNull())
+    expect(useUiStore.getState().toasts.map(toast => toast.message)).toEqual(['یادداشت ذخیره شد.'])
+  })
+
+  it('creates a standalone Task once a date is picked in the calendar', async () => {
     const today = toIsoDate(new Date())
     vi.mocked(createTask).mockResolvedValue({
       id: '00000000-0000-0000-0000-000000000101', goalId: null, projectId: null,
       title: 'مرور یادداشت‌ها', description: null, status: 'ACTIVE', plannedDate: today,
       deadline: null, sequenceId: null, sequenceOrder: null, isBlocked: false, blockedBy: [],
-      completedForLocalDate: null, source: 'MANUAL', version: 1,
+      isProtected: false, carryCount: 0, completedForLocalDate: null, source: 'MANUAL', version: 1,
       createdAt: '2026-09-28T00:00:00Z', updatedAt: '2026-09-28T00:00:00Z', terminalAt: null,
     })
     useUiStore.getState().openCreate('task')
     renderSheet()
     fireEvent.change(screen.getByLabelText('عنوان کار'), { target: { value: 'مرور یادداشت‌ها' } })
-    fireEvent.click(screen.getByRole('button', { name: 'ساخت کار' }))
-    const alerts = await screen.findAllByRole('alert')
-    expect(alerts.some(alert => alert.textContent?.includes('کار مستقل باید تاریخ برنامه‌ریزی داشته باشد'))).toBe(true)
-    expect(createTask).not.toHaveBeenCalled()
-
     fireEvent.click(screen.getByLabelText('تاریخ برنامه‌ریزی'))
     fireEvent.click(screen.getByRole('button', { name: 'امروز' }))
     fireEvent.click(screen.getByRole('button', { name: 'ساخت کار' }))
     await waitFor(() => expect(createTask).toHaveBeenCalled())
     expect(vi.mocked(createTask).mock.calls[0][0]).toEqual({
       title: 'مرور یادداشت‌ها', description: null, goalId: null, projectId: null,
-      plannedDate: today, deadline: null, sequenceId: null, sequenceOrder: null,
+      plannedDate: today, deadline: null, sequenceId: null, sequenceOrder: null, isProtected: false,
     })
+    expect(createCapture).not.toHaveBeenCalled()
   })
 })

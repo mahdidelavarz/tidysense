@@ -41,6 +41,16 @@ export async function updateProject(id: string, request: UpdateProjectRequest): 
   return response.data
 }
 
+/** Keeps a Project active after its review checkpoint and sets its next review date. */
+export async function reviewProject(id: string, expectedVersion: number): Promise<ProjectDto> {
+  const response = await http.post<ProjectDto>(
+    `/projects/${encodeURIComponent(id)}/review`,
+    { reviewDate: null, expectedVersion },
+    { headers: commandHeaders() },
+  )
+  return response.data
+}
+
 /** Previews the blockers/effects of an explicit terminal transition before it is confirmed. */
 export async function previewProjectTerminal(
   id: string,

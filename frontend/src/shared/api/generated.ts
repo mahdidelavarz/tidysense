@@ -37,6 +37,327 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/captures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    cursor?: string;
+                    limit?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CursorPageDtoOfCaptureDto"];
+                        "application/json": components["schemas"]["CursorPageDtoOfCaptureDto"];
+                        "text/json": components["schemas"]["CursorPageDtoOfCaptureDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateCaptureRequest"];
+                    "text/json": components["schemas"]["CreateCaptureRequest"];
+                    "application/*+json": components["schemas"]["CreateCaptureRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CaptureDto"];
+                        "application/json": components["schemas"]["CaptureDto"];
+                        "text/json": components["schemas"]["CaptureDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/captures/{id}/resolve-task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ResolveCaptureToTaskRequest"];
+                    "text/json": components["schemas"]["ResolveCaptureToTaskRequest"];
+                    "application/*+json": components["schemas"]["ResolveCaptureToTaskRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CaptureResolutionDto"];
+                        "application/json": components["schemas"]["CaptureResolutionDto"];
+                        "text/json": components["schemas"]["CaptureResolutionDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/captures/{id}/resolve-routine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ResolveCaptureToRoutineRequest"];
+                    "text/json": components["schemas"]["ResolveCaptureToRoutineRequest"];
+                    "application/*+json": components["schemas"]["ResolveCaptureToRoutineRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CaptureResolutionDto"];
+                        "application/json": components["schemas"]["CaptureResolutionDto"];
+                        "text/json": components["schemas"]["CaptureResolutionDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/captures/{id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DiscardCaptureRequest"];
+                    "text/json": components["schemas"]["DiscardCaptureRequest"];
+                    "application/*+json": components["schemas"]["DiscardCaptureRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CaptureDto"];
+                        "application/json": components["schemas"]["CaptureDto"];
+                        "text/json": components["schemas"]["CaptureDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/goals": {
         parameters: {
             query?: never;
@@ -226,6 +547,75 @@ export interface paths {
             };
         };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReviewGoalRequest"];
+                    "text/json": components["schemas"]["ReviewGoalRequest"];
+                    "application/*+json": components["schemas"]["ReviewGoalRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GoalDto"];
+                        "application/json": components["schemas"]["GoalDto"];
+                        "text/json": components["schemas"]["GoalDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -552,6 +942,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReviewProjectRequest"];
+                    "text/json": components["schemas"]["ReviewProjectRequest"];
+                    "application/*+json": components["schemas"]["ReviewProjectRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProjectDto"];
+                        "application/json": components["schemas"]["ProjectDto"];
+                        "text/json": components["schemas"]["ProjectDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{id}/terminal-preview": {
         parameters: {
             query?: never;
@@ -634,6 +1093,421 @@ export interface paths {
                         "text/plain": components["schemas"]["ProjectDto"];
                         "application/json": components["schemas"]["ProjectDto"];
                         "text/json": components["schemas"]["ProjectDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileOverviewDto"];
+                        "application/json": components["schemas"]["ReconcileOverviewDto"];
+                        "text/json": components["schemas"]["ReconcileOverviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/prompt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ResolveReconcilePromptRequest"];
+                    "text/json": components["schemas"]["ResolveReconcilePromptRequest"];
+                    "application/*+json": components["schemas"]["ResolveReconcilePromptRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcilePromptDto"];
+                        "application/json": components["schemas"]["ReconcilePromptDto"];
+                        "text/json": components["schemas"]["ReconcilePromptDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OpenReconcileSessionRequest"];
+                    "text/json": components["schemas"]["OpenReconcileSessionRequest"];
+                    "application/*+json": components["schemas"]["OpenReconcileSessionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileSessionDto"];
+                        "application/json": components["schemas"]["ReconcileSessionDto"];
+                        "text/json": components["schemas"]["ReconcileSessionDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileSessionDto"];
+                        "application/json": components["schemas"]["ReconcileSessionDto"];
+                        "text/json": components["schemas"]["ReconcileSessionDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/sessions/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CompleteReconcileSessionRequest"];
+                    "text/json": components["schemas"]["CompleteReconcileSessionRequest"];
+                    "application/*+json": components["schemas"]["CompleteReconcileSessionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileSessionDto"];
+                        "application/json": components["schemas"]["ReconcileSessionDto"];
+                        "text/json": components["schemas"]["ReconcileSessionDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/sessions/{id}/previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateReconcilePreviewRequest"];
+                    "text/json": components["schemas"]["CreateReconcilePreviewRequest"];
+                    "application/*+json": components["schemas"]["CreateReconcilePreviewRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ActionConfirmationDto"];
+                        "application/json": components["schemas"]["ActionConfirmationDto"];
+                        "text/json": components["schemas"]["ActionConfirmationDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/confirmations/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SubmitConfirmationRequest"];
+                    "text/json": components["schemas"]["SubmitConfirmationRequest"];
+                    "application/*+json": components["schemas"]["SubmitConfirmationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ConfirmationResultDto"];
+                        "application/json": components["schemas"]["ConfirmationResultDto"];
+                        "text/json": components["schemas"]["ConfirmationResultDto"];
                     };
                 };
                 /** @description Conflict */
@@ -1556,6 +2430,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/{id}/carry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CarryTaskRequest"];
+                    "text/json": components["schemas"]["CarryTaskRequest"];
+                    "application/*+json": components["schemas"]["CarryTaskRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskDto"];
+                        "application/json": components["schemas"]["TaskDto"];
+                        "text/json": components["schemas"]["TaskDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/{id}/restore": {
         parameters: {
             query?: never;
@@ -1851,6 +2794,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AcknowledgedWarningDto: {
+            warningId: string;
+            warningHash: string;
+        };
+        ActionConfirmationDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            reconcileSessionId: string;
+            actionType: string;
+            status: string;
+            canApply: boolean;
+            items: components["schemas"]["ReconcilePreviewItemDto"][];
+            warnings: components["schemas"]["ConfirmationWarningDto"][];
+            previewHash: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         ApiProblemDto: {
             type: string;
             title: string;
@@ -1872,7 +2833,39 @@ export interface components {
             /** Format: int64 */
             currentVersion: null | number | string;
         };
+        CaptureDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            status: string;
+            source: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            resolvedAt: null | string;
+        };
+        CaptureResolutionDto: {
+            capture: components["schemas"]["CaptureDto"];
+            /** Format: uuid */
+            taskId: null | string;
+            /** Format: uuid */
+            routineId: null | string;
+        };
+        CarryTaskRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+            /** Format: date */
+            plannedDate: string;
+        };
         CompleteOccurrenceRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
+        CompleteReconcileSessionRequest: {
             /** Format: int64 */
             expectedVersion: number | string;
         };
@@ -1882,10 +2875,27 @@ export interface components {
             /** Format: date */
             completedForLocalDate: string;
         };
+        ConfirmationResultDto: {
+            /** Format: uuid */
+            confirmationId: string;
+            status: string;
+            actionType: string;
+            /** Format: int32 */
+            affectedCount: number | string;
+        };
+        ConfirmationWarningDto: {
+            warningId: string;
+            code: string;
+            affectedEntityIds: string[];
+            warningHash: string;
+        };
         CorrectOccurrenceRequest: {
             targetStatus: string;
             /** Format: int64 */
             expectedVersion: number | string;
+        };
+        CreateCaptureRequest: {
+            title: string;
         };
         CreateGoalRequest: {
             title: string;
@@ -1904,6 +2914,15 @@ export interface components {
             targetDate: null | string;
             /** Format: date */
             reviewDate: null | string;
+        };
+        CreateReconcilePreviewRequest: {
+            actionType: string;
+            taskIds: null | string[];
+            /** Format: uuid */
+            sequenceId: null | string;
+            /** Format: date */
+            plannedDate: null | string;
+            includeTaskIds: null | string[];
         };
         CreateRoutineRequest: {
             title: string;
@@ -1932,6 +2951,8 @@ export interface components {
             sequenceId: null | string;
             /** Format: int32 */
             sequenceOrder: null | number | string;
+            /** @default false */
+            isProtected: boolean;
         };
         CurrentUserDto: {
             /** Format: uuid */
@@ -1939,6 +2960,10 @@ export interface components {
             phoneNumber: string;
             displayName: null | string;
             setupComplete: boolean;
+        };
+        CursorPageDtoOfCaptureDto: {
+            items: components["schemas"]["CaptureDto"][];
+            page: components["schemas"]["PageInfoDto"];
         };
         CursorPageDtoOfGoalDto: {
             items: components["schemas"]["GoalDto"][];
@@ -1959,6 +2984,10 @@ export interface components {
         CursorPageDtoOfTaskDto: {
             items: components["schemas"]["TaskDto"][];
             page: components["schemas"]["PageInfoDto"];
+        };
+        DiscardCaptureRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
         };
         DropTaskRequest: {
             /** Format: int64 */
@@ -1987,6 +3016,9 @@ export interface components {
             /** Format: date-time */
             terminalAt: null | string;
         };
+        OpenReconcileSessionRequest: {
+            triggerType: string;
+        };
         PageInfoDto: {
             nextCursor: null | string;
             hasMore: boolean;
@@ -2014,6 +3046,143 @@ export interface components {
             /** Format: date-time */
             terminalAt: null | string;
         };
+        ReconcileCountsDto: {
+            /** Format: int32 */
+            actionableBacklogCount: number | string;
+            /** Format: int32 */
+            oldestUnresolvedAgeDays: null | number | string;
+            /** Format: int32 */
+            repeatedCarryTaskCount: number | string;
+            /** Format: int32 */
+            deadlineRiskCount: number | string;
+            /** Format: int32 */
+            affectedParentCount: number | string;
+            /** Format: int32 */
+            reviewDueCount: number | string;
+            /** Format: int32 */
+            unresolvedCaptureCount: number | string;
+        };
+        ReconcileOverviewDto: {
+            /** Format: date */
+            localDate: string;
+            eligible: boolean;
+            severity: string;
+            triggerReasons: string[];
+            counts: components["schemas"]["ReconcileCountsDto"];
+            /** Format: int32 */
+            attentionCount: number | string;
+            promptState: string;
+            showPrompt: boolean;
+        };
+        ReconcileOwnerGroupDto: {
+            ownerType: string;
+            /** Format: uuid */
+            ownerId: null | string;
+            ownerTitle: null | string;
+            sequences: components["schemas"]["ReconcileSequenceGroupDto"][];
+            tasks: components["schemas"]["ReconcileTaskItemDto"][];
+        };
+        ReconcilePreviewItemDto: {
+            /** Format: uuid */
+            taskId: string;
+            title: string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+            classification: string;
+            /** Format: date */
+            currentPlannedDate: null | string;
+            /** Format: date */
+            resultingPlannedDate: null | string;
+            resultingStatus: string;
+        };
+        ReconcilePromptDto: {
+            /** Format: date */
+            localDate: string;
+            state: string;
+        };
+        ReconcileReviewItemDto: {
+            entityType: string;
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date */
+            reviewDate: string;
+            /** Format: date */
+            targetDate: null | string;
+            allowedActions: string[];
+            undatedTasks: components["schemas"]["ReconcileTaskRefDto"][];
+        };
+        ReconcileRuleMatchDto: {
+            ruleId: string;
+            ruleVersion: string;
+            affectedEntityIds: string[];
+            allowedActions: string[];
+        };
+        ReconcileSequenceGroupDto: {
+            /** Format: uuid */
+            sequenceId: string;
+            reasonCodes: string[];
+            ruleIds: string[];
+            allowedActions: string[];
+            droppedPredecessor: null | components["schemas"]["ReconcileTaskRefDto"];
+            items: components["schemas"]["ReconcileTaskItemDto"][];
+        };
+        ReconcileSessionDto: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date */
+            localDate: string;
+            rulesCatalogVersion: string;
+            /** Format: date-time */
+            openedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            openedSeverity: string;
+            /** Format: int32 */
+            openedActionableBacklogCount: number | string;
+            severity: string;
+            triggerReasons: string[];
+            counts: components["schemas"]["ReconcileCountsDto"];
+            executionGroups: components["schemas"]["ReconcileOwnerGroupDto"][];
+            commitmentReviews: components["schemas"]["ReconcileReviewItemDto"][];
+            captures: components["schemas"]["CaptureDto"][];
+            ruleMatches: components["schemas"]["ReconcileRuleMatchDto"][];
+        };
+        ReconcileTaskItemDto: {
+            /** Format: uuid */
+            taskId: string;
+            title: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date */
+            plannedDate: null | string;
+            /** Format: date */
+            deadline: null | string;
+            /** Format: int32 */
+            ageDays: null | number | string;
+            /** Format: int32 */
+            carryCount: number | string;
+            isProtected: boolean;
+            isBlocked: boolean;
+            actionable: boolean;
+            reasonCodes: string[];
+            ruleIds: string[];
+            allowedActions: string[];
+        };
+        ReconcileTaskRefDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date */
+            deadline: null | string;
+        };
         RecurrenceDto: {
             type: string;
             daysOfWeek: null | (number | string)[];
@@ -2024,11 +3193,55 @@ export interface components {
             phoneNumber: string;
             purpose: string;
         };
+        ResolveCaptureToRoutineRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+            title: null | string;
+            description: null | string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            recurrence: components["schemas"]["RecurrenceDto"];
+            timesOfDay: null | string[];
+            /** Format: date */
+            effectiveFromLocalDate: null | string;
+        };
+        ResolveCaptureToTaskRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+            title: null | string;
+            description: null | string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            /** Format: date */
+            plannedDate: null | string;
+            /** Format: date */
+            deadline: null | string;
+        };
+        ResolveReconcilePromptRequest: {
+            state: string;
+        };
         RestoreTaskRequest: {
             /** Format: int64 */
             expectedVersion: number | string;
             /** Format: date */
             plannedDate: null | string;
+        };
+        ReviewGoalRequest: {
+            decision: string;
+            /** Format: date */
+            reviewDate: null | string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
+        ReviewProjectRequest: {
+            /** Format: date */
+            reviewDate: null | string;
+            /** Format: int64 */
+            expectedVersion: number | string;
         };
         RoutineDto: {
             /** Format: uuid */
@@ -2081,6 +3294,9 @@ export interface components {
             /** Format: int64 */
             expectedVersion: number | string;
         };
+        SubmitConfirmationRequest: {
+            acknowledgedWarnings: null | components["schemas"]["AcknowledgedWarningDto"][];
+        };
         TaskDependencyDto: {
             /** Format: uuid */
             id: string;
@@ -2109,6 +3325,9 @@ export interface components {
             sequenceOrder: null | number | string;
             isBlocked: boolean;
             blockedBy: components["schemas"]["TaskDependencyDto"][];
+            isProtected: boolean;
+            /** Format: int32 */
+            carryCount: number | string;
             /** Format: date */
             completedForLocalDate: null | string;
             source: string;
@@ -2218,6 +3437,7 @@ export interface components {
             sequenceOrder: null | number | string;
             /** Format: int64 */
             expectedVersion: number | string;
+            isProtected?: null | boolean;
         };
         VerifyOtpDto: {
             phoneNumber: string;

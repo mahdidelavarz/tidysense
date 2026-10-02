@@ -41,6 +41,16 @@ export async function updateGoal(id: string, request: UpdateGoalRequest): Promis
   return response.data
 }
 
+/** Answers the Goal Continuation Check. Both decisions keep the Goal active and set its next review date. */
+export async function reviewGoal(id: string, decision: 'CONTINUE' | 'REVIEW_LATER', expectedVersion: number): Promise<GoalDto> {
+  const response = await http.post<GoalDto>(
+    `/goals/${encodeURIComponent(id)}/review`,
+    { decision, reviewDate: null, expectedVersion },
+    { headers: commandHeaders() },
+  )
+  return response.data
+}
+
 /** Previews the blockers/effects of an explicit terminal transition before it is confirmed. */
 export async function previewGoalTerminal(
   id: string,

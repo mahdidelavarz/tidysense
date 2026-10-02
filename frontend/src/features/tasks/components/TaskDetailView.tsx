@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarDays, Flag, Link2, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import { CalendarClock, CalendarDays, Flag, Link2, Pencil, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatLocalDate, formatNumber } from '../../../shared/lib/date'
@@ -14,20 +14,23 @@ import { Sheet } from '../../../shared/ui/Sheet'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { useGoalOptions } from '../../goals/hooks/goal-hooks'
 import { useProjectOptions } from '../../projects/hooks/project-hooks'
-import { useDropTask, useRestoreTask, useTask, useUpdateTask } from '../hooks/task-hooks'
+import { useCarryTask, useDropTask, useRestoreTask, useTask, useUpdateTask } from '../hooks/task-hooks'
 import type { TaskDto, UpdateTaskRequest } from '../types/task.types'
 import { BlockedByList } from './BlockedByList'
+import { TaskCarrySheet } from './TaskCarrySheet'
 import { TaskForm } from './TaskForm'
 
-/** Task detail page: read, edit, drop/restore, and the same-sequence blocker context. */
+/** Task detail page: read, edit, carry, drop/restore, and the same-sequence blocker context. */
 export function TaskDetailView({ taskId }: { taskId: string }) {
   const task = useTask(taskId)
   const goals = useGoalOptions()
   const projects = useProjectOptions()
   const update = useUpdateTask(taskId)
+  const carry = useCarryTask(taskId)
   const drop = useDropTask(taskId)
   const restore = useRestoreTask(taskId)
   const [editing, setEditing] = useState(false)
+  const [carrying, setCarrying] = useState(false)
   const [confirmDrop, setConfirmDrop] = useState(false)
 
   if (task.isPending) {
@@ -57,6 +60,12 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <EntityLabel entity="task" />
           <StatusBadge status={data.status} />
+          {data.isProtected && (
+            <span className="status-badge status-neutral">
+              <ShieldCheck size={14} aria-hidden="true" />
+              محافظت‌شده
+            </span>
+          )}
         </div>
         <h1 className="page-title mt-3 wrap-break-word">{data.title}</h1>
         {data.description
@@ -67,6 +76,9 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
           <DetailTerm icon={CalendarDays} label="تاریخ برنامه‌ریزی" value={formatLocalDate(data.plannedDate)} dateTime={data.plannedDate} />
           <DetailTerm icon={Flag} label="مهلت" value={formatLocalDate(data.deadline)} dateTime={data.deadline} />
         </dl>
+        {Number(data.carryCount) > 0 && (
+          <p className="notice mt-4">تاریخ این کار تاکنون {formatNumber(Number(data.carryCount))} بار پس از سررسید جابه‌جا شده است.</p>
+        )}
         {data.sequenceId && data.sequenceOrder != null && (
           <div className="notice mt-4">
             <p className="font-bold text-text-primary">بخشی از یک دنباله (ترتیب {formatNumber(Number(data.sequenceOrder))})</p>
@@ -83,6 +95,14 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
           <h2 className="section-title" id="task-actions">چه کاری می‌خواهید انجام دهید؟</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <ActionTile icon={Pencil} label="ویرایش کار" description="عنوان، توضیحات، وابستگی یا تاریخ‌ها را تغییر دهید." onClick={() => setEditing(true)} />
+            {data.plannedDate && (
+              <ActionTile
+                icon={CalendarClock}
+                label="انتقال به تاریخ دیگر"
+                description="فقط همین کار جابه‌جا می‌شود؛ کارهای بعدی دنباله سر جای خود می‌مانند."
+                onClick={() => setCarrying(true)}
+              />
+            )}
             <ActionTile
               icon={Trash2}
               tone="attention"
@@ -133,6 +153,21 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
             })}
           />
         </Sheet>
+      )}
+      {carrying && data.plannedDate && (
+        <TaskCarrySheet
+          currentDate={data.plannedDate}
+          deadline={data.deadline}
+          pending={carry.isPending}
+          error={carry.error}
+          onClose={() => setCarrying(false)}
+          onSubmit={plannedDate => carry.mutate({ expectedVersion: version, plannedDate }, {
+            onSuccess: () => {
+              setCarrying(false)
+              showToast('کار به تاریخ جدید منتقل شد.')
+            },
+          })}
+        />
       )}
       {confirmDrop && (
         <ConfirmationDialog

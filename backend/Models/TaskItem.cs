@@ -14,6 +14,8 @@ public sealed class TaskItem
     public Guid? SequenceId { get; set; }
     public int? SequenceOrder { get; set; }
     public DateOnly? CompletedForLocalDate { get; set; }
+    public bool IsProtected { get; set; }
+    public string? ProtectionReasonCode { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public DateTimeOffset? TerminalAt { get; set; }
@@ -31,4 +33,9 @@ public static class TaskStatuses
     public const string Dropped = "DROPPED";
 
     public static bool IsKnown(string value) => value is Active or Completed or Dropped;
+}
+
+public static class ProtectionReasonCodes
+{
+    public const string User = "USER";
 }
