@@ -13,11 +13,12 @@ export const goalKeys = {
 }
 
 /** Cursor-paginated Goal list for the Goals panel, loaded one page at a time. */
-export function useGoals() {
+export function useGoals(status?: string) {
   return useInfiniteQuery({
-    queryKey: goalKeys.list,
+    // The filter is part of the key, so every variant is still invalidated by the `list` prefix.
+    queryKey: [...goalKeys.list, status ?? 'all'],
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => listGoals(undefined, pageParam),
+    queryFn: ({ pageParam }) => listGoals(status, pageParam),
     getNextPageParam: page => page.page.nextCursor ?? undefined,
   })
 }

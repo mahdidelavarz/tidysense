@@ -1,13 +1,18 @@
-import { Link } from '@tanstack/react-router'
+import { CalendarClock, CalendarDays, CircleCheckBig, CircleSlash, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatLocalDate } from '../../../shared/lib/date'
+import { showToast } from '../../../shared/lib/ui-store'
+import { ActionTile } from '../../../shared/ui/ActionTile'
 import { DetailTerm } from '../../../shared/ui/DetailTerm'
 import { EntityLabel, StatusBadge } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
+import { BackLink } from '../../../shared/ui/PageHeader'
+import { Sheet } from '../../../shared/ui/Sheet'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { useGoal, useGoalTerminal, useUpdateGoal } from '../hooks/goal-hooks'
-import { GoalEditForm } from './GoalEditForm'
+import type { UpdateGoalRequest } from '../types/goal.types'
+import { GoalForm } from './GoalForm'
 import { GoalTerminalDialog } from './GoalTerminalDialog'
 
 /** Goal detail page: read, edit and the explicit achieve/abandon terminal flow. */
@@ -18,78 +23,88 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
   const [editing, setEditing] = useState(false)
 
   if (goal.isPending) {
-    return <div className="page-container-narrow"><LoadingState text="در حال دریافت هدف…" /></div>
+    return <div className="page"><BackLink to="/goals" /><LoadingState text="در حال دریافت هدف…" /></div>
   }
   if (goal.isError) {
-    const api = toApiError(goal.error)
+    const notFound = toApiError(goal.error).status === 404
     return (
-      <div className="page-container-narrow">
+      <div className="page">
+        <BackLink to="/goals" />
         <ErrorState
-          title={api.status === 404 ? 'هدف پیدا نشد.' : 'دریافت هدف ممکن نشد.'}
-          description={api.status === 404 ? 'ممکن است این هدف وجود نداشته باشد یا در دسترس شما نباشد.' : 'ارتباط را بررسی کنید و دوباره تلاش کنید.'}
-          onRetry={api.status === 404 ? undefined : () => goal.refetch()}
+          title={notFound ? 'هدف پیدا نشد.' : 'دریافت هدف ممکن نشد.'}
+          description={notFound ? 'ممکن است این هدف وجود نداشته باشد یا در دسترس شما نباشد.' : 'ارتباط را بررسی کنید و دوباره تلاش کنید.'}
+          onRetry={notFound ? undefined : () => goal.refetch()}
         />
       </div>
     )
   }
 
   const data = goal.data
+  const version = Number(data.version)
   return (
-    <div className="page-container-narrow space-y-6">
-      <Link className="text-link inline-flex min-h-11 items-center" to="/">بازگشت به هدف‌ها و پروژه‌ها</Link>
+    <div className="page">
+      <BackLink to="/goals" />
 
-      <article className="page-header entity-surface entity-goal">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <EntityLabel entity="goal" />
-            <h1 className="mt-2 break-words text-2xl font-bold leading-snug tracking-tight sm:text-3xl">{data.title}</h1>
-          </div>
+      <article>
+        <div className="flex flex-wrap items-center gap-2">
+          <EntityLabel entity="goal" />
           <StatusBadge status={data.status} />
         </div>
-        <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-text-secondary sm:text-base">{data.desiredOutcome}</p>
-        <dl className="mt-6 grid gap-4 border-t border-border-subtle pt-5 text-sm sm:grid-cols-2">
-          <DetailTerm label="تاریخ هدف" value={formatLocalDate(data.targetDate)} dateTime={data.targetDate} />
-          <DetailTerm label="تاریخ بازبینی" value={formatLocalDate(data.reviewDate)} dateTime={data.reviewDate} />
+        <h1 className="page-title mt-3 wrap-break-word">{data.title}</h1>
+        <p className="mt-3 whitespace-pre-wrap leading-8 text-text-secondary">{data.desiredOutcome}</p>
+        <dl className="card mt-6 grid gap-5 sm:grid-cols-2">
+          <DetailTerm icon={CalendarDays} label="تاریخ هدف" value={formatLocalDate(data.targetDate)} dateTime={data.targetDate} />
+          <DetailTerm icon={CalendarClock} label="تاریخ بازبینی" value={formatLocalDate(data.reviewDate)} dateTime={data.reviewDate} />
         </dl>
       </article>
 
       {data.status === 'ACTIVE' && (
-        <section className="surface-card" aria-label="عملیات هدف">
-          <p className="mb-4 text-sm font-bold text-text-secondary">عملیات هدف</p>
-          <div className="grid gap-3 sm:flex sm:flex-wrap">
-            <button className="secondary-button" type="button" onClick={() => setEditing(value => !value)}>
-              {editing ? 'انصراف از ویرایش' : 'ویرایش هدف'}
-            </button>
-            <button
-              className="primary-button"
-              type="button"
+        <section className="mt-8" aria-labelledby="goal-actions">
+          <h2 className="section-title" id="goal-actions">چه کاری می‌خواهید انجام دهید؟</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <ActionTile icon={Pencil} label="ویرایش هدف" description="عنوان، نتیجه مطلوب یا تاریخ‌ها را تغییر دهید." onClick={() => setEditing(true)} />
+            <ActionTile
+              icon={CircleCheckBig}
+              tone="positive"
+              label={terminal.previewPending ? 'در حال آماده‌سازی…' : 'تحقق هدف'}
+              description="ثبت می‌کنید که به این نتیجه رسیده‌اید."
               disabled={terminal.previewPending}
-              onClick={() => terminal.requestPreview({ status: 'ACHIEVED', version: Number(data.version) })}
-            >
-              {terminal.previewPending ? 'در حال آماده‌سازی…' : 'تحقق هدف'}
-            </button>
-            <button
-              className="danger-button"
-              type="button"
+              onClick={() => terminal.requestPreview({ status: 'ACHIEVED', version })}
+            />
+            <ActionTile
+              icon={CircleSlash}
+              tone="attention"
+              label="رها کردن هدف"
+              description="این هدف را بدون تحقق کنار می‌گذارید."
               disabled={terminal.previewPending}
-              onClick={() => terminal.requestPreview({ status: 'ABANDONED', version: Number(data.version) })}
-            >
-              رها کردن هدف
-            </button>
+              onClick={() => terminal.requestPreview({ status: 'ABANDONED', version })}
+            />
           </div>
         </section>
       )}
 
+      <div className="mt-4 space-y-3">
+        <FormError error={terminal.previewError} />
+        <FormError error={terminal.terminalError} />
+      </div>
+
       {editing && (
-        <GoalEditForm
-          goal={data}
-          pending={update.isPending}
-          error={update.error}
-          onSubmit={request => update.mutate(request, { onSuccess: () => setEditing(false) })}
-        />
+        <Sheet title="ویرایش هدف" onClose={() => setEditing(false)} locked={update.isPending}>
+          <GoalForm
+            goal={data}
+            pending={update.isPending}
+            error={update.error}
+            onCancel={() => setEditing(false)}
+            // GoalForm's onSubmit covers create and edit; passing `goal` guarantees the edit shape.
+            onSubmit={request => update.mutate(request as UpdateGoalRequest, {
+              onSuccess: () => {
+                setEditing(false)
+                showToast('تغییرات هدف ذخیره شد.')
+              },
+            })}
+          />
+        </Sheet>
       )}
-      <FormError error={terminal.previewError} />
-      <FormError error={terminal.terminalError} />
       {terminal.preview && (
         <GoalTerminalDialog
           preview={terminal.preview}

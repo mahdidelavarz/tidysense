@@ -1,31 +1,36 @@
 import { Link } from '@tanstack/react-router'
+import { ChevronLeft, Lock } from 'lucide-react'
 import { formatLocalDate } from '../../../shared/lib/date'
-import { EntityLabel, StatusBadge } from '../../../shared/ui/EntityUi'
+import { EntityIcon, StatusBadge } from '../../../shared/ui/EntityUi'
 import type { TaskDto } from '../types/task.types'
 
-/** One Task summary card in the Tasks workspace list. */
-export function TaskCard({ task }: { task: TaskDto }) {
-  return (
-    <Link className="resource-card entity-task h-full" to="/tasks/$taskId" params={{ taskId: task.id }}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <EntityLabel entity="task" />
-          <h2 className="mt-2 truncate text-lg font-bold leading-snug">{task.title}</h2>
-        </div>
-        <StatusBadge status={task.status} />
-      </div>
-      {task.description && <p className="mt-3 line-clamp-2 text-sm leading-7 text-text-secondary">{task.description}</p>}
-      <div className="mt-5 flex flex-wrap gap-x-4 gap-y-1 border-t border-border-subtle pt-3 text-xs text-text-secondary">
-        <span>{ownerLabel(task)}</span>
-        <span>برنامه: {formatLocalDate(task.plannedDate)}</span>
-        {task.isBlocked && <span className="font-bold text-text-primary">مسدود</span>}
-      </div>
-    </Link>
-  )
+/** Where a Task belongs, in words. */
+export function taskOwnerLabel(task: Pick<TaskDto, 'goalId' | 'projectId'>) {
+  if (task.projectId) return 'زیر یک پروژه'
+  if (task.goalId) return 'زیر یک هدف'
+  return 'مستقل'
 }
 
-function ownerLabel(task: Pick<TaskDto, 'goalId' | 'projectId'>) {
-  if (task.projectId) return 'وابسته به پروژه'
-  if (task.goalId) return 'وابسته به هدف'
-  return 'مستقل'
+/** One Task row in the Tasks list. The whole row opens the Task. */
+export function TaskCard({ task }: { task: TaskDto }) {
+  return (
+    <Link className="row-link" to="/tasks/$taskId" params={{ taskId: task.id }}>
+      <EntityIcon entity="task" />
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate font-bold leading-7">{task.title}</h2>
+        <p className="flex flex-wrap items-center gap-x-3 text-xs text-text-secondary">
+          <span>{taskOwnerLabel(task)}</span>
+          <span>{task.plannedDate ? formatLocalDate(task.plannedDate) : 'بدون تاریخ'}</span>
+          {task.isBlocked && (
+            <span className="flex items-center gap-1 font-bold text-caution">
+              <Lock size={12} aria-hidden="true" />
+              منتظر کار پیشین
+            </span>
+          )}
+        </p>
+      </div>
+      {task.status !== 'ACTIVE' && <StatusBadge status={task.status} />}
+      <ChevronLeft size={20} className="shrink-0 text-text-tertiary" aria-hidden="true" />
+    </Link>
+  )
 }

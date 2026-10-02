@@ -39,7 +39,7 @@ describe('TodayView', () => {
     renderToday()
     expect(await screen.findByText('کار منتظر')).toBeInTheDocument()
     expect(screen.getByText('منتظر تکمیل کارهای پیشین')).toBeInTheDocument()
-    const buttons = screen.getAllByRole('button', { name: 'تکمیل کار' })
+    const buttons = screen.getAllByRole('button', { name: /^تکمیل کار/ })
     expect(buttons[1]).toBeDisabled()
     fireEvent.click(buttons[0])
     await waitFor(() => expect(completeTask).toHaveBeenCalledWith(actionable.id, 3, '2026-09-28'))

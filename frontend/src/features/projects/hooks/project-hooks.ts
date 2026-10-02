@@ -25,11 +25,12 @@ export const projectKeys = {
 }
 
 /** Cursor-paginated Project list for the Projects panel, loaded one page at a time. */
-export function useProjects() {
+export function useProjects(status?: string) {
   return useInfiniteQuery({
-    queryKey: projectKeys.list,
+    // The filter is part of the key, so every variant is still invalidated by the `list` prefix.
+    queryKey: [...projectKeys.list, status ?? 'all'],
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => listProjects(undefined, pageParam),
+    queryFn: ({ pageParam }) => listProjects(status, pageParam),
     getNextPageParam: page => page.page.nextCursor ?? undefined,
   })
 }

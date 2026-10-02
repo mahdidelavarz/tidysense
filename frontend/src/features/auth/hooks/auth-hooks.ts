@@ -44,6 +44,11 @@ export function useLogout() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (all: boolean) => logout(all),
-    onSuccess: () => client.setQueryData(currentUserKey, null),
+    onSuccess: () => {
+      client.setQueryData(currentUserKey, null)
+      // Drop every other cached query so the next person to sign in on this
+      // browser can never see the previous user's data.
+      client.removeQueries({ predicate: query => query.queryKey[0] !== currentUserKey[0] })
+    },
   })
 }

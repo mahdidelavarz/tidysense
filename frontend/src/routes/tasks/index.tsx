@@ -1,4 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { TaskWorkspace } from '../../features/tasks/components/TaskWorkspace'
+import { TasksPage } from '../../features/tasks/components/TasksPage'
 
-export const Route = createFileRoute('/tasks/')({ component: TaskWorkspace })
+export const Route = createFileRoute('/tasks/')({ component: TasksPage })

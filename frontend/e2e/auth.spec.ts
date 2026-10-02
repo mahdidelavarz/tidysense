@@ -10,6 +10,11 @@ async function codeFromToast(page: Page) {
   return match[0]
 }
 
+/** Sign-out lives in the account menu at the foot of the sidebar. */
+async function openAccountMenu(page: Page) {
+  await page.getByRole('button', { name: 'حساب کاربری' }).click()
+}
+
 test('new user login, invalid code, reload, logout, and immediate login again', async ({ page }) => {
   const phone = `0912${String(Date.now() % 10_000_000).padStart(7, '0')}`
   await page.goto('/login')
@@ -25,10 +30,12 @@ test('new user login, invalid code, reload, logout, and immediate login again', 
   await expect(page).toHaveURL(/first-entry/)
   await page.screenshot({ path: 'test-results/auth-first-entry.png' })
   await page.getByRole('link', { name: 'ادامه به برنامه' }).click()
+  await expect(page).toHaveURL(/today/)
+  await openAccountMenu(page)
   await expect(page.getByRole('button', { name: 'خروج از این مرورگر' })).toBeVisible()
   await page.screenshot({ path: 'test-results/auth-account.png' })
   await page.reload()
-  await expect(page.getByRole('button', { name: 'خروج از این مرورگر' })).toBeVisible()
+  await openAccountMenu(page)
   await page.getByRole('button', { name: 'خروج از این مرورگر' }).click()
   await expect(page).toHaveURL(/login/)
   await page.getByLabel('شماره موبایل').fill(phone)
@@ -50,10 +57,13 @@ test('returning login and logout-all revoke another browser', async ({ browser, 
   await page.getByRole('button', { name: 'دریافت کد' }).click()
   await page.getByLabel('کد تأیید').fill(await codeFromToast(page))
   await page.getByRole('button', { name: 'ورود' }).click()
-  await expect(page).toHaveURL(`${origin}/`)
+  await expect(page).toHaveURL(`${origin}/today`)
   const another = await browser.newContext({ storageState: await page.context().storageState() })
   const second = await another.newPage()
+  // The bare root forwards to Today.
   await second.goto('/')
+  await expect(second).toHaveURL(`${origin}/today`)
+  await openAccountMenu(second)
   await second.getByRole('button', { name: /خروج از همه/ }).click()
   await expect(second).toHaveURL(/login/)
   await page.reload()
@@ -74,18 +84,22 @@ test('manual task moves through Today to completion', async ({ page }) => {
   await page.goto('/tasks')
   await page.getByRole('button', { name: 'کار جدید' }).click()
   await page.getByLabel('عنوان کار').fill(title)
-  await page.getByLabel('تاریخ برنامه‌ریزی').fill(localDate)
+  // The Jalali calendar exposes each day's ISO date for exactly this kind of lookup.
+  await page.getByLabel('تاریخ برنامه‌ریزی').click()
+  await page.locator(`[data-date="${localDate}"]`).click()
   await page.getByRole('button', { name: 'ساخت کار' }).click()
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
 
   await page.getByRole('link', { name: 'امروز' }).click()
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-before.png', fullPage: true })
-  await page.getByRole('button', { name: 'تکمیل کار' }).click()
+  await page.getByRole('button', { name: `تکمیل کار: ${title}` }).click()
   await expect(page.getByText('برای امروز کاری نمانده است.')).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-after.png', fullPage: true })
 
+  // The list defaults to active Tasks; a completed one is under "all".
   await page.getByRole('link', { name: 'کارها', exact: true }).click()
+  await page.getByRole('button', { name: 'همه', exact: true }).click()
   await page.getByRole('heading', { name: title }).click()
   await expect(page.getByText('تکمیل‌شده')).toBeVisible()
 })

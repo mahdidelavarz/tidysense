@@ -1,56 +1,92 @@
-import { Link } from '@tanstack/react-router'
-import { formatLocalDate } from '../../../shared/lib/date'
+import { Plus, Sun } from 'lucide-react'
+import { formatLongDate, formatNumber } from '../../../shared/lib/date'
+import { showToast, useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
+import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { useCompleteTask } from '../../tasks/hooks/task-hooks'
+import type { TaskDto } from '../../tasks/types/task.types'
 import { useToday } from '../hooks/today-hooks'
 import { TodayTaskCard } from './TodayTaskCard'
 
-/** Today page: the pilot-timezone local date's actionable Tasks, with one-tap completion. */
+/** Today page: the local date's Tasks, split into what can be done now and what is waiting. */
 export function TodayView() {
   const today = useToday()
   const complete = useCompleteTask()
+  const openCreate = useUiStore(state => state.openCreate)
 
-  if (today.isPending) return <div className="page-container-narrow"><LoadingState text="در حال آماده‌سازی امروز…" /></div>
+  if (today.isPending) {
+    return <div className="page"><PageHeader title="امروز" /><LoadingState text="در حال آماده‌سازی امروز…" /></div>
+  }
   if (today.isError) {
     return (
-      <div className="page-container-narrow">
+      <div className="page">
+        <PageHeader title="امروز" />
         <ErrorState description="ارتباط را بررسی کنید و دوباره تلاش کنید." onRetry={() => today.refetch()} />
       </div>
     )
   }
 
   const { localDate, tasks } = today.data
-  return (
-    <div className="page-container-narrow space-y-6">
-      <header className="page-header">
-        <p className="text-sm font-bold text-accent">تمرکز روزانه</p>
-        <h1 className="mt-2 text-2xl font-bold leading-snug tracking-tight sm:text-3xl">امروز</h1>
-        <p className="mt-2 text-sm text-text-secondary"><time dateTime={localDate}>{formatLocalDate(localDate)}</time></p>
-        <p className="mt-3 max-w-xl text-sm leading-7 text-text-secondary">
-          فقط کارهای فعالِ برنامه‌ریزی‌شده برای تاریخ محلی امروز اینجا دیده می‌شوند.
-        </p>
-      </header>
+  const ready = tasks.filter(task => !task.isBlocked)
+  const waiting = tasks.filter(task => task.isBlocked)
 
-      <FormError error={complete.error} />
+  const renderTask = (task: TaskDto) => (
+    <li key={task.id}>
+      <TodayTaskCard
+        task={task}
+        completing={complete.isPending && complete.variables?.taskId === task.id}
+        onComplete={() => complete.mutate(
+          { taskId: task.id, expectedVersion: Number(task.version), completedForLocalDate: localDate },
+          { onSuccess: () => showToast('کار انجام شد.') },
+        )}
+      />
+    </li>
+  )
+
+  return (
+    <div className="page">
+      <PageHeader
+        title="امروز"
+        description={(
+          <>
+            <time className="font-bold text-accent-strong" dateTime={localDate}>{formatLongDate(localDate)}</time>
+            {tasks.length > 0 && <span> · {formatNumber(ready.length)} کار آماده انجام</span>}
+          </>
+        )}
+        action={(
+          <button className="secondary-button shrink-0" type="button" onClick={() => openCreate('task')}>
+            <Plus size={20} aria-hidden="true" />
+            افزودن کار
+          </button>
+        )}
+      />
+
+      <div className="mb-4">
+        <FormError error={complete.error} />
+      </div>
+
       {tasks.length === 0 ? (
         <EmptyState
+          icon={Sun}
           title="برای امروز کاری نمانده است."
-          description="می‌توانید از فضای کارها یک اقدام را برای امروز برنامه‌ریزی کنید."
-          action={<Link className="secondary-button" to="/tasks">رفتن به کارها</Link>}
+          description="کارهایی که برای تاریخ امروز برنامه‌ریزی شوند اینجا دیده می‌شوند."
         />
       ) : (
-        <ul className="space-y-4">
-          {tasks.map(task => (
-            <li key={task.id}>
-              <TodayTaskCard
-                task={task}
-                completing={complete.isPending && complete.variables?.taskId === task.id}
-                onComplete={() => complete.mutate({ taskId: task.id, expectedVersion: Number(task.version), completedForLocalDate: localDate })}
-              />
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-8">
+          {ready.length > 0 && (
+            <section aria-labelledby="today-ready">
+              <h2 className="section-title" id="today-ready">آماده انجام</h2>
+              <ul className="mt-3 space-y-3">{ready.map(renderTask)}</ul>
+            </section>
+          )}
+          {waiting.length > 0 && (
+            <section aria-labelledby="today-waiting">
+              <h2 className="section-title" id="today-waiting">در انتظار کارهای پیشین</h2>
+              <ul className="mt-3 space-y-3">{waiting.map(renderTask)}</ul>
+            </section>
+          )}
+        </div>
       )}
     </div>
   )

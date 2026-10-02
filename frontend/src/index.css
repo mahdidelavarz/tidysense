@@ -1,35 +1,71 @@
 @import "tailwindcss";
 
+/*
+ * TidySense design tokens. The authoritative description of this system is
+ * devmap/frontend/design-system.md — change tokens there and here together.
+ */
 @theme {
-  --color-canvas: #f3f1ec;
+  --font-sans: "Vazirmatn Variable", Vazirmatn, Tahoma, system-ui, sans-serif;
+
+  --color-canvas: #f5f4f0;
   --color-surface: #ffffff;
-  --color-surface-sunken: #ebe7df;
-  --color-accent: #4f7a88;
-  --color-accent-strong: #3c616d;
-  --color-accent-tint: #e7eef0;
-  --color-positive: #5f8f68;
-  --color-positive-tint: #e9f0e9;
-  --color-caution: #b8863e;
-  --color-caution-tint: #f5ede0;
-  --color-attention: #b36b52;
-  --color-attention-tint: #f3e7e1;
-  --color-text-primary: #2b2a2e;
-  --color-text-secondary: #6e6c74;
-  --color-text-tertiary: #9d9aa2;
-  --color-border: #d5d0c3;
-  --color-border-subtle: #e4e0d6;
-  --color-entity-goal: #b8863e;
-  --color-entity-project: #4f7a88;
-  --color-entity-task: #5f8f68;
-  --color-entity-routine: #86678f;
+  --color-surface-sunken: #eeece6;
+  --color-accent: #1f6f6b;
+  --color-accent-strong: #175653;
+  --color-accent-tint: #e2f0ee;
+  --color-positive: #2f855a;
+  --color-positive-tint: #e3f2e9;
+  --color-caution: #a86a12;
+  --color-caution-tint: #f8eedb;
+  --color-attention: #bf4d34;
+  --color-attention-tint: #fbe9e4;
+  --color-text-primary: #1d1c21;
+  --color-text-secondary: #5a5863;
+  --color-text-tertiary: #84818d;
+  --color-border: #dcd8ce;
+  --color-border-subtle: #e9e6de;
+  --color-entity-goal: #b7791f;
+  --color-entity-project: #4a5fc1;
+  --color-entity-task: #2f855a;
+  --color-entity-routine: #8556b8;
+
+  --shadow-sm: 0 1px 2px rgb(29 28 33 / 0.05);
+  --shadow-md: 0 6px 20px -6px rgb(29 28 33 / 0.14);
+  --shadow-lg: 0 24px 48px -16px rgb(29 28 33 / 0.28);
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --animate-sheet-up: sheet-up 280ms var(--ease-standard);
+  --animate-sheet-side: sheet-side 280ms var(--ease-standard);
+  --animate-fade-in: fade-in 200ms var(--ease-standard);
+  --animate-pop-in: pop-in 200ms var(--ease-standard);
+
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes sheet-side {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
 }
 
 :root {
+  --sidebar-width: 17rem;
+  --tabbar-height: 4.25rem;
   color: var(--color-text-primary);
   background: var(--color-canvas);
-  font-family: Tahoma, Arial, sans-serif;
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -40,12 +76,11 @@ html {
   min-width: 320px;
   min-height: 100%;
   background: var(--color-canvas);
-  scroll-behavior: smooth;
 }
 
 body {
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   line-height: 1.75;
 }
@@ -63,6 +98,12 @@ input,
 textarea,
 select {
   -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+select:not(:disabled),
+[role="button"] {
+  cursor: pointer;
 }
 
 ::selection {
@@ -83,101 +124,187 @@ select {
 
 @layer base {
   :focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
-    outline-offset: 3px;
+    outline: 3px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+    outline-offset: 2px;
   }
 }
 
 @layer components {
-  .page-container {
-    @apply mx-auto w-full max-w-5xl px-4 py-6 sm:px-8 sm:py-10;
+  /* ---------- Application frame ---------- */
+  .app-frame {
+    min-height: 100dvh;
+    padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1.5rem);
   }
 
-  .page-container-narrow {
-    @apply mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-10;
+  .sidebar {
+    @apply fixed inset-y-0 z-10 hidden flex-col gap-6 border-border-subtle bg-surface p-5;
+    inset-inline-start: 0;
+    width: var(--sidebar-width);
+    border-inline-end-width: 1px;
   }
 
-  .page-header {
-    @apply rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm sm:p-8;
+  .tabbar {
+    @apply fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 items-stretch border-t border-border-subtle bg-surface/95 backdrop-blur;
+    height: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
-  .surface-card {
-    @apply rounded-xl border border-border-subtle bg-surface p-5 shadow-sm sm:p-6;
+  @media (min-width: 64rem) {
+    .app-frame {
+      padding-bottom: 0;
+      padding-inline-start: var(--sidebar-width);
+    }
+
+    .sidebar {
+      display: flex;
+    }
+
+    .tabbar {
+      display: none;
+    }
   }
 
+  .nav-item {
+    @apply flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-text-secondary transition-colors duration-200 hover:bg-surface-sunken hover:text-text-primary;
+  }
+
+  .nav-item[aria-current="page"] {
+    @apply bg-accent-tint font-bold text-accent-strong;
+  }
+
+  .tab-item {
+    @apply flex flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium text-text-secondary transition-colors duration-200;
+  }
+
+  .tab-item[aria-current="page"] {
+    @apply font-bold text-accent-strong;
+  }
+
+  .tab-create {
+    @apply mx-auto -mt-5 flex size-14 items-center justify-center rounded-full bg-accent text-white shadow-md transition duration-200 hover:bg-accent-strong active:scale-95;
+  }
+
+  /* ---------- Page ---------- */
+  .page {
+    @apply mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 lg:px-10 lg:pt-10;
+  }
+
+  .page-wide {
+    @apply mx-auto w-full max-w-5xl px-4 pt-4 sm:px-6 lg:px-10 lg:pt-10;
+  }
+
+  .page-title {
+    @apply text-2xl font-extrabold leading-snug tracking-tight sm:text-[1.75rem];
+  }
+
+  .section-title {
+    @apply text-sm font-bold text-text-secondary;
+  }
+
+  /* ---------- Surfaces ---------- */
+  .card {
+    @apply rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm sm:p-6;
+  }
+
+  .card-link {
+    @apply block h-full rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm transition duration-200 hover:border-border hover:shadow-md;
+  }
+
+  .row-link {
+    @apply flex min-h-16 items-center gap-3 rounded-2xl border border-border-subtle bg-surface px-4 py-3 shadow-sm transition duration-200 hover:border-border hover:shadow-md;
+  }
+
+  .notice {
+    @apply rounded-xl bg-surface-sunken p-4 text-sm text-text-secondary;
+  }
+
+  .notice-attention {
+    @apply rounded-xl border border-attention/30 bg-attention-tint p-4 text-sm text-text-primary;
+  }
+
+  /* ---------- Buttons ---------- */
   .primary-button,
   .secondary-button,
   .danger-button,
   .ghost-button {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-bold transition duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition duration-200 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .primary-button {
-    @apply border border-accent bg-accent text-white shadow-sm hover:border-accent-strong hover:bg-accent-strong active:translate-y-px;
+    @apply bg-accent text-white shadow-sm hover:bg-accent-strong active:scale-[0.98];
   }
 
   .secondary-button {
-    @apply border border-border bg-surface text-text-primary hover:border-accent hover:bg-accent-tint hover:text-accent-strong active:translate-y-px;
+    @apply border border-border bg-surface text-text-primary hover:border-accent hover:bg-accent-tint hover:text-accent-strong active:scale-[0.98];
   }
 
   .danger-button {
-    @apply border border-attention bg-surface text-text-primary hover:bg-attention-tint active:translate-y-px;
+    @apply border border-attention/40 bg-surface text-attention hover:bg-attention-tint active:scale-[0.98];
   }
 
   .ghost-button {
-    @apply border border-transparent bg-transparent text-text-secondary hover:bg-surface-sunken hover:text-text-primary;
+    @apply text-text-secondary hover:bg-surface-sunken hover:text-text-primary;
+  }
+
+  .icon-button {
+    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-xl text-text-secondary transition-colors duration-200 hover:bg-surface-sunken hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .text-link {
-    @apply rounded-sm font-medium text-accent underline decoration-accent/40 underline-offset-4 transition hover:text-accent-strong hover:decoration-accent-strong;
+    @apply rounded-sm font-medium text-accent-strong underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent-strong;
   }
 
-  .resource-card {
-    @apply relative block overflow-hidden rounded-xl border border-border-subtle bg-surface p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-border hover:shadow-md focus-visible:border-accent;
-    border-inline-start-width: 3px;
-    border-inline-start-color: var(--entity-color, var(--color-accent));
+  /* ---------- Entity identity ---------- */
+  .entity-goal { --entity-color: var(--color-entity-goal); }
+  .entity-project { --entity-color: var(--color-entity-project); }
+  .entity-task { --entity-color: var(--color-entity-task); }
+  .entity-routine { --entity-color: var(--color-entity-routine); }
+
+  .entity-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
+    color: color-mix(in srgb, var(--entity-color, var(--color-accent)) 78%, black);
+    background: color-mix(in srgb, var(--entity-color, var(--color-accent)) 12%, white);
   }
 
-  .entity-surface {
-    border-inline-start: 4px solid var(--entity-color, var(--color-accent));
+  .entity-icon {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-xl;
+    color: color-mix(in srgb, var(--entity-color, var(--color-accent)) 85%, black);
+    background: color-mix(in srgb, var(--entity-color, var(--color-accent)) 12%, white);
   }
 
-  .entity-goal {
-    --entity-color: var(--color-entity-goal);
-    --entity-tint: var(--color-caution-tint);
+  /* ---------- Status ---------- */
+  .status-badge {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
   }
 
-  .entity-project {
-    --entity-color: var(--color-entity-project);
-    --entity-tint: var(--color-accent-tint);
-  }
-
-  .entity-task {
-    --entity-color: var(--color-entity-task);
-    --entity-tint: var(--color-positive-tint);
-  }
-
-  .entity-routine {
-    --entity-color: var(--color-entity-routine);
-    --entity-tint: color-mix(in srgb, var(--color-entity-routine) 12%, var(--color-surface));
-  }
-
-  .entity-label {
-    @apply inline-flex items-center gap-2 text-sm font-bold;
-    color: var(--color-text-primary);
-  }
-
-  .entity-label::before {
-    width: 0.625rem;
-    height: 0.625rem;
+  .status-badge::before {
+    width: 0.375rem;
+    height: 0.375rem;
     content: "";
-    border: 2px solid var(--entity-color, var(--color-accent));
     border-radius: 999px;
-    background: var(--entity-tint, var(--color-accent-tint));
+    background: currentColor;
   }
 
-  .form-card {
-    @apply space-y-5 rounded-xl border border-border-subtle bg-surface p-5 shadow-sm sm:p-6;
+  .status-active { @apply bg-accent-tint text-accent-strong; }
+  .status-positive { @apply bg-positive-tint text-positive; }
+  .status-neutral { @apply bg-surface-sunken text-text-secondary; }
+
+  /* ---------- Segmented control ---------- */
+  .segmented {
+    @apply inline-flex rounded-xl bg-surface-sunken p-1;
+  }
+
+  .segmented-option {
+    @apply min-h-9 rounded-lg px-4 text-sm font-medium text-text-secondary transition duration-200 hover:text-text-primary;
+  }
+
+  .segmented-option[aria-pressed="true"] {
+    @apply bg-surface font-bold text-text-primary shadow-sm;
+  }
+
+  /* ---------- Forms ---------- */
+  .form-stack {
+    @apply flex flex-col gap-5;
   }
 
   .form-grid {
@@ -193,62 +320,116 @@ select {
   }
 
   .field-input {
-    @apply mt-2 block min-h-11 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-base text-text-primary shadow-sm transition placeholder:text-text-tertiary hover:border-text-tertiary focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-secondary;
+    @apply mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base text-text-primary transition placeholder:text-text-tertiary hover:border-text-tertiary focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-secondary;
   }
 
   .field-input[aria-invalid="true"] {
-    @apply border-attention bg-attention-tint focus:border-attention focus:ring-attention/20;
+    @apply border-attention focus:border-attention focus:ring-attention/20;
   }
 
   .field-error {
-    @apply mt-1.5 block text-xs font-bold leading-6 text-text-primary;
+    @apply mt-1.5 block text-xs font-bold leading-6 text-attention;
   }
 
-  .state-card {
-    @apply rounded-xl border border-border-subtle bg-surface p-6 text-text-secondary shadow-sm;
+  /* ---------- Overlays ---------- */
+  .overlay-backdrop {
+    @apply fixed inset-0 z-40 bg-text-primary/40 backdrop-blur-[2px];
+    animation: var(--animate-fade-in);
   }
 
-  .state-card-error {
-    @apply border-attention/40 bg-attention-tint text-text-primary;
+  /* Bottom sheet on phones, side panel from tablet up. */
+  .sheet-panel {
+    @apply fixed z-50 flex flex-col bg-surface shadow-lg;
+    inset-inline: 0;
+    bottom: 0;
+    max-height: 92dvh;
+    border-radius: 1.5rem 1.5rem 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: var(--animate-sheet-up);
   }
 
-  .status-badge {
-    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
+  .sheet-handle {
+    @apply mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-border;
   }
 
-  .status-badge::before {
-    width: 0.375rem;
-    height: 0.375rem;
-    content: "";
-    border-radius: 999px;
-    background: currentColor;
+  @media (min-width: 48rem) {
+    .sheet-panel {
+      inset-block: 0;
+      inset-inline: auto 0;
+      width: min(30rem, 100vw);
+      max-height: none;
+      border-radius: 0;
+      border-start-start-radius: 1.5rem;
+      border-end-start-radius: 1.5rem;
+      animation: var(--animate-sheet-side);
+    }
+
+    .sheet-handle {
+      display: none;
+    }
   }
 
-  .status-active {
-    @apply bg-accent-tint text-accent-strong;
+  .sheet-body {
+    @apply flex-1 overflow-y-auto px-5 pb-6 sm:px-6;
   }
 
-  .status-positive {
-    @apply bg-positive-tint text-text-primary;
+  /* Keeps a form's submit row visible while the sheet body scrolls. */
+  .sheet-actions {
+    @apply sticky bottom-0 -mx-5 -mb-6 mt-2 flex gap-3 border-t border-border-subtle bg-surface px-5 py-4 sm:-mx-6 sm:justify-end sm:px-6;
   }
 
-  .status-positive::before {
-    background: var(--color-positive);
+  /* On phones the primary action takes the remaining width beside a compact cancel. */
+  .sheet-actions > .primary-button {
+    @apply flex-1 sm:flex-none;
   }
 
-  .status-neutral {
-    @apply bg-surface-sunken text-text-secondary;
+  .drawer-panel {
+    @apply fixed inset-y-0 z-50 flex flex-col gap-6 overflow-y-auto bg-surface p-5 shadow-lg;
+    inset-inline-start: 0;
+    width: min(20rem, 86vw);
+    border-start-end-radius: 1.5rem;
+    border-end-end-radius: 1.5rem;
+    animation: drawer-in 280ms var(--ease-standard);
   }
 
-  .dialog-backdrop {
-    @apply fixed inset-0 z-40 flex items-end justify-center bg-text-primary/35 p-3 backdrop-blur-[2px] sm:items-center sm:p-6;
+  @keyframes drawer-in {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  .dialog-layer {
+    @apply fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center sm:p-6;
   }
 
   .dialog-panel {
-    @apply z-50 max-h-[calc(100vh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-subtle bg-surface p-5 shadow-lg sm:max-h-[calc(100vh-3rem)] sm:p-6;
+    @apply relative z-50 max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-3xl bg-surface p-5 shadow-lg sm:p-7;
+    animation: var(--animate-pop-in);
   }
 
-  .skeleton-line {
-    @apply h-3 animate-pulse rounded-full bg-surface-sunken;
+  .toast {
+    @apply pointer-events-auto flex items-center gap-3 rounded-2xl bg-text-primary px-4 py-3 text-sm font-medium text-white shadow-lg;
+    animation: var(--animate-pop-in);
+  }
+
+  /* ---------- Feedback ---------- */
+  .skeleton {
+    @apply animate-pulse rounded-xl bg-surface-sunken;
+  }
+
+  .check-button {
+    @apply flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-border text-transparent transition duration-200 hover:border-positive hover:bg-positive-tint hover:text-positive disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-transparent disabled:hover:text-transparent;
+  }
+
+  /* ---------- Date picker ---------- */
+  .calendar-day {
+    @apply flex aspect-square w-full items-center justify-center rounded-xl text-sm transition-colors duration-150 hover:bg-surface-sunken;
+  }
+
+  .calendar-day[aria-pressed="true"] {
+    @apply bg-accent font-bold text-white hover:bg-accent-strong;
+  }
+
+  .calendar-day[data-today="true"]:not([aria-pressed="true"]) {
+    @apply font-bold text-accent-strong ring-1 ring-accent/50;
   }
 }

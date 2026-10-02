@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { FolderKanban, Sun, Target } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { getDevelopmentOtp } from '../services/auth-api'
@@ -6,6 +7,12 @@ import { useRequestOtp, useVerifyOtp } from '../hooks/auth-hooks'
 import { DevelopmentOtpToast } from './DevelopmentOtpToast'
 import { OtpStep } from './OtpStep'
 import { PhoneStep } from './PhoneStep'
+
+const loginHighlights = [
+  { icon: Sun, text: 'هر روز فقط کارهای همان روز را ببینید.' },
+  { icon: FolderKanban, text: 'تلاش‌های بزرگ را به پروژه‌های قابل‌مدیریت بشکنید.' },
+  { icon: Target, text: 'هدف‌هایتان را روشن و جلوی چشم نگه دارید.' },
+]
 
 /** Two-step OTP login: phone entry, then code verification. */
 export function LoginView() {
@@ -64,7 +71,7 @@ export function LoginView() {
     verifyOtp.mutate({ phoneNumber: phone, code }, {
       onSuccess: async user => {
         setDevelopmentCode(null)
-        await navigate({ to: user.setupComplete ? '/' : '/first-entry' })
+        await navigate({ to: user.setupComplete ? '/today' : '/first-entry' })
       },
       onError: cause => {
         const apiError = toApiError(cause)
@@ -78,29 +85,47 @@ export function LoginView() {
   const resendRemaining = Math.max(0, Math.ceil((resendUntil - now) / 1000))
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 sm:p-8">
-      <section className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-6 shadow-sm sm:p-8">
+    <div className="grid min-h-dvh grid-rows-[auto_1fr] lg:grid-cols-2 lg:grid-rows-1">
+      {/* Brand panel: a full half on desktop, a compact band on phones. */}
+      <aside className="flex flex-col justify-between gap-8 bg-accent px-6 py-8 text-white sm:px-10 lg:py-14">
         <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-xl font-bold text-white" aria-hidden="true">ت</span>
-          <div>
-            <p className="text-sm font-bold text-accent">تایدی‌سنس</p>
-            <h1 className="text-2xl font-bold">ورود به حساب</h1>
-          </div>
+          <span className="flex size-11 items-center justify-center rounded-xl bg-white text-xl font-extrabold text-accent" aria-hidden="true">ت</span>
+          <span className="text-xl font-extrabold tracking-tight">تایدی‌سنس</span>
         </div>
-        <p className="mt-4 text-sm text-text-secondary">برای ادامه، شماره موبایل خود را وارد کنید.</p>
-        {!phone
-          ? <PhoneStep pending={busy} onSubmit={send} />
-          : (
-            <OtpStep
-              phone={phone}
-              pending={busy}
-              resendRemainingSeconds={resendRemaining}
-              onVerify={verify}
-              onResend={() => send(phone)}
-              onEditPhone={() => { setPhone(null); setError(''); setDevelopmentCode(null) }}
-            />
-          )}
-        {error && <p role="alert" className="mt-5 rounded-lg border border-attention/40 bg-attention-tint p-3 text-sm font-medium text-text-primary">{error}</p>}
+        <div className="hidden lg:block">
+          <p className="text-3xl font-extrabold leading-relaxed">برنامه‌ای که با زندگی واقعی شما کنار می‌آید.</p>
+          <ul className="mt-8 space-y-4 text-white/90">
+            {loginHighlights.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15" aria-hidden="true"><Icon size={20} /></span>
+                {text}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="hidden text-sm text-white/70 lg:block">هدف، پروژه و کار روزانه در یک جای آرام.</p>
+      </aside>
+
+      <section className="flex items-start justify-center px-6 py-10 sm:px-10 lg:items-center">
+        <div className="w-full max-w-sm">
+          <h1 className="text-2xl font-extrabold">ورود به حساب</h1>
+          <p className="mt-2 text-sm text-text-secondary">
+            {phone ? 'کد تأیید پیامک‌شده را وارد کنید.' : 'شماره موبایل خود را وارد کنید تا کد ورود برایتان پیامک شود.'}
+          </p>
+          {!phone
+            ? <PhoneStep pending={busy} onSubmit={send} />
+            : (
+              <OtpStep
+                phone={phone}
+                pending={busy}
+                resendRemainingSeconds={resendRemaining}
+                onVerify={verify}
+                onResend={() => send(phone)}
+                onEditPhone={() => { setPhone(null); setError(''); setDevelopmentCode(null) }}
+              />
+            )}
+          {error && <p role="alert" className="notice-attention mt-5 font-medium">{error}</p>}
+        </div>
       </section>
       {import.meta.env.DEV && developmentCode && (
         <DevelopmentOtpToast code={developmentCode} onDismiss={() => setDevelopmentCode(null)} />

@@ -1,55 +1,71 @@
+import { CircleAlert, type LucideIcon, RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+/** Labelled initial-loading placeholder shaped like the list it replaces. */
 export function LoadingState({ text }: { text: string }) {
   return (
-    <div className="state-card" role="status" aria-live="polite">
-      <div className="flex items-center gap-3">
-        <span className="size-5 animate-spin rounded-full border-2 border-accent-tint border-t-accent" aria-hidden="true" />
-        <span>{text}</span>
-      </div>
-      <div className="mt-5 space-y-3" aria-hidden="true">
-        <div className="skeleton-line w-3/4" />
-        <div className="skeleton-line w-1/2" />
+    <div role="status" aria-live="polite">
+      <span className="sr-only">{text}</span>
+      <div className="space-y-3" aria-hidden="true">
+        <div className="skeleton h-20" />
+        <div className="skeleton h-20 opacity-70" />
+        <div className="skeleton h-20 opacity-40" />
       </div>
     </div>
   )
 }
 
-export function EmptyState({ title, description, action }: {
+/** Explains an empty list and offers the one next step that fills it. */
+export function EmptyState({ icon: Icon, title, description, action }: {
+  icon?: LucideIcon
   title: string
   description?: string
   action?: ReactNode
 }) {
   return (
-    <div className="state-card text-center">
-      <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-surface-sunken text-xl text-text-secondary" aria-hidden="true">＋</div>
-      <p className="mt-3 font-bold text-text-primary">{title}</p>
-      {description && <p className="mx-auto mt-1 max-w-md text-sm">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className="flex flex-col items-center rounded-3xl border border-dashed border-border px-6 py-12 text-center">
+      {Icon && (
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-surface text-text-secondary shadow-sm" aria-hidden="true">
+          <Icon size={26} />
+        </div>
+      )}
+      <p className="mt-4 text-lg font-bold text-text-primary">{title}</p>
+      {description && <p className="mt-1 max-w-sm text-sm text-text-secondary">{description}</p>}
+      {action && <div className="mt-6">{action}</div>}
     </div>
   )
 }
 
-export function ErrorState({ title = 'دریافت اطلاعات ممکن نشد.', description, onRetry, compact = false }: {
+export function ErrorState({ title = 'دریافت اطلاعات ممکن نشد.', description, onRetry, action }: {
   title?: string
   description?: string
   onRetry?: () => void
-  compact?: boolean
+  /** A way out when retrying cannot help (for example a link back from a not-found page). */
+  action?: ReactNode
 }) {
   return (
-    <div className={`state-card state-card-error ${compact ? '' : 'text-center'}`} role="alert">
-      <p className="font-bold text-text-primary">{title}</p>
-      {description && <p className="mt-1 text-sm text-text-secondary">{description}</p>}
-      {onRetry && <button className="secondary-button mt-4" type="button" onClick={onRetry}>تلاش دوباره</button>}
+    <div className="flex flex-col items-center rounded-3xl bg-attention-tint px-6 py-10 text-center" role="alert">
+      <CircleAlert size={28} className="text-attention" aria-hidden="true" />
+      <p className="mt-3 text-lg font-bold text-text-primary">{title}</p>
+      {description && <p className="mt-1 max-w-sm text-sm text-text-secondary">{description}</p>}
+      {onRetry && (
+        <button className="secondary-button mt-5" type="button" onClick={onRetry}>
+          <RefreshCw size={18} aria-hidden="true" />
+          تلاش دوباره
+        </button>
+      )}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   )
 }
 
-export function ResourceState({ pending, error, empty, pendingText, emptyTitle, emptyDescription, emptyAction, onRetry, children }: {
+/** The loading → error → empty → content ladder every list page shares. */
+export function ResourceState({ pending, error, empty, pendingText, emptyIcon, emptyTitle, emptyDescription, emptyAction, onRetry, children }: {
   pending: boolean
   error: unknown
   empty: boolean
   pendingText: string
+  emptyIcon?: LucideIcon
   emptyTitle: string
   emptyDescription?: string
   emptyAction?: ReactNode
@@ -58,6 +74,23 @@ export function ResourceState({ pending, error, empty, pendingText, emptyTitle, 
 }) {
   if (pending) return <LoadingState text={pendingText} />
   if (error) return <ErrorState onRetry={onRetry} description="ارتباط را بررسی کنید و دوباره تلاش کنید." />
-  if (empty) return <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
+  if (empty) return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
   return children
+}
+
+/** "Load more" control for cursor-paginated lists. */
+export function LoadMoreButton({ visible, loading, label, onClick }: {
+  visible: boolean
+  loading: boolean
+  label: string
+  onClick: () => void
+}) {
+  if (!visible) return null
+  return (
+    <div className="mt-6 flex justify-center">
+      <button className="secondary-button" type="button" disabled={loading} onClick={onClick}>
+        {loading ? 'در حال دریافت…' : label}
+      </button>
+    </div>
+  )
 }

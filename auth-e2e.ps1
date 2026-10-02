@@ -60,7 +60,7 @@ try {
 
     $assembly = Join-Path $repoRoot 'backend\bin\auth-e2e\TidySense.dll'
     Write-Host 'Starting isolated backend...'
-    $backendProcess = Start-Process -FilePath 'dotnet' -ArgumentList @($assembly, '--urls', 'https://127.0.0.1:7076') -WorkingDirectory (Join-Path $repoRoot 'backend') -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    $backendProcess = Start-Process -FilePath 'dotnet' -ArgumentList @("`"$assembly`"", '--urls', 'https://127.0.0.1:7076') -WorkingDirectory (Join-Path $repoRoot 'backend') -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     $ready = $false
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
         if ($backendProcess.HasExited) { break }

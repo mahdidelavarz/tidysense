@@ -14,11 +14,12 @@ export const taskKeys = {
 }
 
 /** Cursor-paginated Task list for the Tasks workspace, loaded one page at a time. */
-export function useTasks() {
+export function useTasks(status?: string) {
   return useInfiniteQuery({
-    queryKey: taskKeys.list,
+    // The filter is part of the key, so every variant is still invalidated by the `list` prefix.
+    queryKey: [...taskKeys.list, status ?? 'all'],
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => listTasks(undefined, pageParam),
+    queryFn: ({ pageParam }) => listTasks(status, pageParam),
     getNextPageParam: page => page.page.nextCursor ?? undefined,
   })
 }

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
+import '@fontsource-variable/vazirmatn'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -14,8 +15,6 @@ declare module '@tanstack/react-router' {
   interface Register { router: typeof router }
 }
 
-document.documentElement.lang = 'fa'
-document.documentElement.dir = 'rtl'
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Application root element was not found.')

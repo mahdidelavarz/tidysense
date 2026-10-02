@@ -7,7 +7,7 @@ test('create Goal and child Project, resolve blocker, then explicitly achieve Go
     data: {}, headers: { Origin: origin },
   })
   expect(session.ok()).toBeTruthy()
-  await page.goto('/')
+  await page.goto('/goals')
 
   const suffix = String(Date.now())
   const goalTitle = `هدف مرورگر ${suffix}`
@@ -19,6 +19,7 @@ test('create Goal and child Project, resolve blocker, then explicitly achieve Go
   await page.getByRole('button', { name: 'ساخت هدف' }).click()
   await expect(page.getByRole('link', { name: new RegExp(goalTitle) })).toBeVisible()
 
+  await page.getByRole('link', { name: 'پروژه‌ها', exact: true }).click()
   await page.getByRole('button', { name: 'پروژه جدید' }).click()
   await page.getByLabel('عنوان پروژه').fill(projectTitle)
   await page.getByLabel('معنای تکمیل (اختیاری)').fill('تحویل خروجی محدود')
@@ -26,6 +27,7 @@ test('create Goal and child Project, resolve blocker, then explicitly achieve Go
   await page.getByRole('button', { name: 'ساخت پروژه' }).click()
   await expect(page.getByRole('link', { name: new RegExp(projectTitle) })).toBeVisible()
 
+  await page.getByRole('link', { name: 'هدف‌ها', exact: true }).click()
   await page.getByRole('link', { name: new RegExp(goalTitle) }).click()
   await page.getByRole('button', { name: 'تحقق هدف' }).click()
   await expect(page.getByText(/ابتدا پروژه‌های فعال/)).toBeVisible()
