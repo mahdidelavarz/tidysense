@@ -1,36 +1,20 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { EntityLabel, StatusBadge } from '../../../shared/ui/EntityUi'
+import { useGoalOptions } from '../../goals/hooks/goal-hooks'
+import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { ResourceState } from '../../../shared/ui/StateUi'
-import { listGoals } from '../../goals/services/goals-api'
-import { formatDate, goalKeys, projectKeys } from '../../parents/components/ParentDashboard'
-import { listProjects } from '../../projects/services/projects-api'
+import { EntityLabel } from '../../../shared/ui/EntityUi'
+import { useCreateTask, useTaskOptions, useTasks } from '../hooks/task-hooks'
+import { TaskCard } from './TaskCard'
 import { TaskForm } from './TaskForm'
-import { createTask, listTasks, taskKeys, todayKey } from '../services/tasks-api'
 
+/** Tasks workspace page: list, create form and pagination. */
 export function TaskWorkspace() {
-  const client = useQueryClient()
   const [formOpen, setFormOpen] = useState(false)
-  const tasks = useInfiniteQuery({
-    queryKey: taskKeys.list,
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => listTasks(undefined, pageParam),
-    getNextPageParam: page => page.page.nextCursor ?? undefined,
-  })
-  const taskOptions = useQuery({ queryKey: taskKeys.options, queryFn: () => listTasks(undefined, undefined, 100) })
-  const goals = useQuery({ queryKey: goalKeys.options, queryFn: () => listGoals(undefined, undefined, 100) })
-  const projects = useQuery({ queryKey: projectKeys.all, queryFn: () => listProjects(undefined, undefined, 100) })
-  const create = useMutation({
-    mutationFn: createTask,
-    onSuccess: async () => {
-      setFormOpen(false)
-      await Promise.all([
-        client.invalidateQueries({ queryKey: taskKeys.all }),
-        client.invalidateQueries({ queryKey: todayKey }),
-      ])
-    },
-  })
+  const tasks = useTasks()
+  const taskOptions = useTaskOptions()
+  const goals = useGoalOptions()
+  const projects = useProjectOptions()
+  const create = useCreateTask()
   const items = tasks.data?.pages.flatMap(page => page.items) ?? []
 
   return (
@@ -57,7 +41,7 @@ export function TaskWorkspace() {
           tasks={taskOptions.data?.items ?? []}
           pending={create.isPending}
           error={create.error}
-          onSubmit={request => create.mutate(request)}
+          onSubmit={request => create.mutate(request, { onSuccess: () => setFormOpen(false) })}
         />
       )}
 
@@ -72,25 +56,7 @@ export function TaskWorkspace() {
         onRetry={() => tasks.refetch()}
       >
         <ul className="grid gap-4 md:grid-cols-2">
-          {items.map(task => (
-            <li key={task.id}>
-              <Link className="resource-card entity-task h-full" to="/tasks/$taskId" params={{ taskId: task.id }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <EntityLabel entity="task" />
-                    <h2 className="mt-2 truncate text-lg font-bold leading-snug">{task.title}</h2>
-                  </div>
-                  <StatusBadge status={task.status} />
-                </div>
-                {task.description && <p className="mt-3 line-clamp-2 text-sm leading-7 text-text-secondary">{task.description}</p>}
-                <div className="mt-5 flex flex-wrap gap-x-4 gap-y-1 border-t border-border-subtle pt-3 text-xs text-text-secondary">
-                  <span>{ownerLabel(task)}</span>
-                  <span>برنامه: {formatDate(task.plannedDate)}</span>
-                  {task.isBlocked && <span className="font-bold text-text-primary">مسدود</span>}
-                </div>
-              </Link>
-            </li>
-          ))}
+          {items.map(task => <li key={task.id}><TaskCard task={task} /></li>)}
         </ul>
         {tasks.hasNextPage && (
           <button
@@ -105,10 +71,4 @@ export function TaskWorkspace() {
       </ResourceState>
     </div>
   )
-}
-
-function ownerLabel(task: { goalId: string | null; projectId: string | null }) {
-  if (task.projectId) return 'وابسته به پروژه'
-  if (task.goalId) return 'وابسته به هدف'
-  return 'مستقل'
 }

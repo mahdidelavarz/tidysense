@@ -1,20 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { completeTask, getToday } from '../../tasks/services/tasks-api'
+import { completeTask } from '../../tasks/services/tasks-api'
+import { getToday } from '../services/today-api'
 import { TodayView } from './TodayView'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
 }))
-vi.mock('../../tasks/services/tasks-api', () => ({
-  completeTask: vi.fn(),
-  getToday: vi.fn(),
-  taskKeys: {
-    list: ['tasks', 'list'], options: ['tasks', 'options'], detail: (id: string) => ['tasks', 'detail', id],
-  },
-  todayKey: ['today'],
-}))
+vi.mock('../../tasks/services/tasks-api', () => ({ completeTask: vi.fn() }))
+vi.mock('../services/today-api', () => ({ getToday: vi.fn() }))
 
 const actionable = {
   id: '00000000-0000-0000-0000-000000000111', goalId: null, projectId: null,

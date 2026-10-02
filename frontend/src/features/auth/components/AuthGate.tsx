@@ -1,22 +1,18 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Navigate, Outlet, useLocation } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { AppShell } from '../../../shared/ui/AppShell'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
-import { currentUser } from '../services/auth-api'
+import { useCurrentUser } from '../hooks/auth-hooks'
 
-export const currentUserQueryKey = ['auth', 'current-user'] as const
-
+/**
+ * Route-tree root: resolves the session once, then renders exactly one of
+ * the unauthenticated login page, the first-entry redirect, or the
+ * authenticated app shell. Not-found/unauthenticated/forbidden stay
+ * distinct per devmap/frontend/routing-state-api.md.
+ */
 export function AuthGate() {
   const location = useLocation()
-  const queryClient = useQueryClient()
-  const auth = useQuery({ queryKey: currentUserQueryKey, queryFn: currentUser, retry: false })
+  const auth = useCurrentUser()
   const onLogin = location.pathname === '/login'
-  useEffect(() => {
-    const clearSession = () => queryClient.setQueryData(currentUserQueryKey, null)
-    window.addEventListener('tidysense:unauthorized', clearSession)
-    return () => window.removeEventListener('tidysense:unauthorized', clearSession)
-  }, [queryClient])
 
   if (auth.isPending) {
     return <main className="min-h-screen bg-canvas p-4 text-text-primary sm:p-8"><div className="mx-auto max-w-md pt-16"><LoadingState text="در حال بررسی نشست…" /></div></main>

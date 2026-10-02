@@ -159,8 +159,8 @@ switch ($Command) {
     'all' {
         $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
         Write-Host 'Opening backend and frontend in separate PowerShell windows.' -ForegroundColor Green
-        Start-Process -FilePath $shell -WorkingDirectory $repoRoot -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath, 'backend')
-        Start-Process -FilePath $shell -WorkingDirectory $repoRoot -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath, 'frontend')
+        Start-Process -FilePath $shell -WorkingDirectory $repoRoot -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"", 'backend')
+        Start-Process -FilePath $shell -WorkingDirectory $repoRoot -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"", 'frontend')
     }
     'build' {
         Build-Backend

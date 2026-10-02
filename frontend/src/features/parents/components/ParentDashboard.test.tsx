@@ -57,15 +57,21 @@ describe('ParentDashboard', () => {
       lastContinuationDecisionAt: null, source: 'MANUAL', version: 1,
       createdAt: '2026-09-27T00:00:00Z', updatedAt: '2026-09-27T00:00:00Z', terminalAt: null,
     }
-    vi.mocked(listGoals)
-      .mockResolvedValueOnce({ items: [firstGoal], page: { nextCursor: 'opaque-next', hasMore: true } })
-      .mockResolvedValueOnce({ items: [{ ...firstGoal, id: '00000000-0000-0000-0000-000000000032', title: 'هدف دوم' }],
-        page: { nextCursor: null, hasMore: false } })
+    const secondGoal = { ...firstGoal, id: '00000000-0000-0000-0000-000000000032', title: 'هدف دوم' }
+    // The Projects panel independently loads a flat Goal options list (for
+    // its own parent-select) through this same mocked function, so the
+    // response must be chosen by call arguments, not call order.
+    vi.mocked(listGoals).mockImplementation(async (_status, cursor, limit) => {
+      if (limit === 100) return empty
+      if (!cursor) return { items: [firstGoal], page: { nextCursor: 'opaque-next', hasMore: true } }
+      return { items: [secondGoal], page: { nextCursor: null, hasMore: false } }
+    })
     renderDashboard()
     expect(await screen.findByText('هدف اول')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'نمایش هدف‌های بیشتر' }))
     expect(await screen.findByText('هدف دوم')).toBeInTheDocument()
     expect(screen.getByText('هدف اول')).toBeInTheDocument()
-    expect(vi.mocked(listGoals).mock.calls[1][1]).toBe('opaque-next')
+    const pagedCall = vi.mocked(listGoals).mock.calls.find(call => call[1] === 'opaque-next')
+    expect(pagedCall).toBeDefined()
   })
 })

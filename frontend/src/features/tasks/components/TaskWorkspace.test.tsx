@@ -11,12 +11,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('../../goals/services/goals-api', () => ({ listGoals: vi.fn() }))
 vi.mock('../../projects/services/projects-api', () => ({ listProjects: vi.fn() }))
-vi.mock('../services/tasks-api', () => ({
-  createTask: vi.fn(),
-  listTasks: vi.fn(),
-  taskKeys: { all: ['tasks'], list: ['tasks', 'list'], options: ['tasks', 'options'] },
-  todayKey: ['today'],
-}))
+vi.mock('../services/tasks-api', () => ({ createTask: vi.fn(), listTasks: vi.fn() }))
 
 const empty = { items: [], page: { nextCursor: null, hasMore: false } }
 

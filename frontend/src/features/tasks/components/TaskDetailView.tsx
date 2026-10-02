@@ -1,62 +1,30 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useCallback, useState } from 'react'
-import type { components } from '../../../shared/api/generated'
+import { useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
-import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog'
+import { formatLocalDate } from '../../../shared/lib/date'
+import { DetailTerm } from '../../../shared/ui/DetailTerm'
 import { EntityLabel, StatusBadge } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
-import { listGoals } from '../../goals/services/goals-api'
-import { formatDate, goalKeys, projectKeys } from '../../parents/components/ParentDashboard'
-import { listProjects } from '../../projects/services/projects-api'
+import { useGoalOptions } from '../../goals/hooks/goal-hooks'
+import { useProjectOptions } from '../../projects/hooks/project-hooks'
+import type { UpdateTaskRequest } from '../types/task.types'
+import { BlockedByList } from './BlockedByList'
+import { TaskActiveActions, TaskRestoreAction } from './TaskActions'
 import { TaskForm } from './TaskForm'
-import {
-  dropTask,
-  getTask,
-  restoreTask,
-  taskKeys,
-  todayKey,
-  updateTask,
-} from '../services/tasks-api'
+import { useDropTask, useRestoreTask, useTask, useUpdateTask } from '../hooks/task-hooks'
+import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog'
 
-type UpdateTaskRequest = components['schemas']['UpdateTaskRequest']
-
+/** Task detail page: read, edit, drop/restore, and the same-sequence blocker context. */
 export function TaskDetailView({ taskId }: { taskId: string }) {
-  const client = useQueryClient()
-  const task = useQuery({ queryKey: taskKeys.detail(taskId), queryFn: () => getTask(taskId) })
-  const goals = useQuery({ queryKey: goalKeys.options, queryFn: () => listGoals(undefined, undefined, 100) })
-  const projects = useQuery({ queryKey: projectKeys.all, queryFn: () => listProjects(undefined, undefined, 100) })
+  const task = useTask(taskId)
+  const goals = useGoalOptions()
+  const projects = useProjectOptions()
+  const update = useUpdateTask(taskId)
+  const drop = useDropTask(taskId)
+  const restore = useRestoreTask(taskId)
   const [editing, setEditing] = useState(false)
   const [confirmDrop, setConfirmDrop] = useState(false)
-  const closeDrop = useCallback(() => setConfirmDrop(false), [])
-  const sync = async (data: components['schemas']['TaskDto']) => {
-    client.setQueryData(taskKeys.detail(taskId), data)
-    await Promise.all([
-      client.invalidateQueries({ queryKey: taskKeys.list }),
-      client.invalidateQueries({ queryKey: taskKeys.options }),
-      client.invalidateQueries({ queryKey: todayKey }),
-    ])
-  }
-  const update = useMutation({
-    mutationFn: (request: UpdateTaskRequest) => updateTask(taskId, request),
-    onSuccess: async data => {
-      setEditing(false)
-      await sync(data)
-    },
-  })
-  const drop = useMutation({
-    mutationFn: (version: number) => dropTask(taskId, version),
-    onSuccess: async data => {
-      setConfirmDrop(false)
-      await sync(data)
-    },
-  })
-  const restore = useMutation({
-    mutationFn: ({ version, plannedDate }: { version: number; plannedDate: string | null }) =>
-      restoreTask(taskId, version, plannedDate),
-    onSuccess: sync,
-  })
 
   if (task.isPending) return <div className="page-container-narrow"><LoadingState text="در حال دریافت کار…" /></div>
   if (task.isError) {
@@ -89,9 +57,8 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
           : <p className="mt-5 text-sm text-text-tertiary">توضیحی برای این کار ثبت نشده است.</p>}
         <dl className="mt-6 grid gap-4 border-t border-border-subtle pt-5 text-sm sm:grid-cols-2">
           <DetailTerm label="وابستگی" value={ownerLabel(data)} />
-          <DetailTerm label="تاریخ برنامه‌ریزی" value={formatDate(data.plannedDate)} dateTime={data.plannedDate} />
-          <DetailTerm label="مهلت" value={formatDate(data.deadline)} dateTime={data.deadline} />
-          <DetailTerm label="نسخه" value={String(data.version)} />
+          <DetailTerm label="تاریخ برنامه‌ریزی" value={formatLocalDate(data.plannedDate)} dateTime={data.plannedDate} />
+          <DetailTerm label="مهلت" value={formatLocalDate(data.deadline)} dateTime={data.deadline} />
         </dl>
         {data.sequenceId && (
           <div className="mt-5 rounded-lg bg-surface-sunken p-4 text-sm text-text-secondary">
@@ -99,39 +66,26 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
             {data.isBlocked
               ? <p className="mt-1">این کار تا تکمیل کارهای پیشین قابل انجام نیست.</p>
               : <p className="mt-1">همه پیش‌نیازهای این کار تکمیل شده‌اند.</p>}
-            {data.blockedBy.length > 0 && (
-              <ul className="mt-2 list-inside list-disc">
-                {data.blockedBy.map(blocker => <li key={blocker.id}>{blocker.title}</li>)}
-              </ul>
-            )}
+            <BlockedByList blockers={data.blockedBy} />
           </div>
         )}
       </article>
 
-      {data.status === 'ACTIVE' ? (
-        <section className="surface-card" aria-label="عملیات کار">
-          <p className="mb-4 text-sm font-bold text-text-secondary">عملیات کار</p>
-          <div className="grid gap-3 sm:flex sm:flex-wrap">
-            <button className="secondary-button" type="button" onClick={() => setEditing(value => !value)}>
-              {editing ? 'انصراف از ویرایش' : 'ویرایش کار'}
-            </button>
-            <button className="danger-button" type="button" onClick={() => setConfirmDrop(true)}>کنار گذاشتن کار</button>
-          </div>
-        </section>
-      ) : (
-        <section className="surface-card">
-          <h2 className="font-bold">بازگرداندن کار</h2>
-          <p className="mt-1 text-sm text-text-secondary">کار با همان وابستگی و تاریخ برنامه‌ریزی دوباره فعال می‌شود.</p>
-          <button
-            className="secondary-button mt-4"
-            type="button"
-            disabled={restore.isPending}
-            onClick={() => restore.mutate({ version: Number(data.version), plannedDate: data.plannedDate })}
-          >
-            {restore.isPending ? 'در حال بازگرداندن…' : 'بازگرداندن به حالت فعال'}
-          </button>
-        </section>
-      )}
+      {data.status === 'ACTIVE'
+        ? (
+          <TaskActiveActions
+            editing={editing}
+            dropPending={drop.isPending}
+            onToggleEdit={() => setEditing(value => !value)}
+            onDrop={() => setConfirmDrop(true)}
+          />
+        )
+        : (
+          <TaskRestoreAction
+            pending={restore.isPending}
+            onRestore={() => restore.mutate({ expectedVersion: Number(data.version), plannedDate: data.plannedDate })}
+          />
+        )}
 
       {editing && (
         <TaskForm
@@ -140,7 +94,9 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
           projects={projects.data?.items ?? []}
           pending={update.isPending}
           error={update.error}
-          onSubmit={request => update.mutate(request as UpdateTaskRequest)}
+          // TaskForm's onSubmit type covers both create and edit; passing
+          // `task` guarantees the edit (UpdateTaskRequest) branch here.
+          onSubmit={request => update.mutate(request as UpdateTaskRequest, { onSuccess: () => setEditing(false) })}
         />
       )}
       <FormError error={drop.error ?? restore.error} />
@@ -148,12 +104,17 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
         <ConfirmationDialog
           title="کنار گذاشتن کار"
           description="این کار از فهرست کارهای فعال و امروز خارج می‌شود و بعداً می‌توانید آن را بازگردانید."
-          onClose={closeDrop}
+          onClose={() => setConfirmDrop(false)}
           pending={drop.isPending}
           actions={(
             <>
-              <button className="secondary-button" type="button" disabled={drop.isPending} onClick={closeDrop}>انصراف</button>
-              <button className="danger-button" type="button" disabled={drop.isPending} onClick={() => drop.mutate(Number(data.version))}>
+              <button className="secondary-button" type="button" disabled={drop.isPending} onClick={() => setConfirmDrop(false)}>انصراف</button>
+              <button
+                className="danger-button"
+                type="button"
+                disabled={drop.isPending}
+                onClick={() => drop.mutate(Number(data.version), { onSuccess: () => setConfirmDrop(false) })}
+              >
                 {drop.isPending ? 'در حال ثبت…' : 'تأیید کنار گذاشتن'}
               </button>
             </>
@@ -164,16 +125,7 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
   )
 }
 
-function DetailTerm({ label, value, dateTime }: { label: string; value: string; dateTime?: string | null }) {
-  return (
-    <div>
-      <dt className="text-xs font-bold text-text-secondary">{label}</dt>
-      <dd className="mt-1 font-medium">{dateTime ? <time dateTime={dateTime}>{value}</time> : value}</dd>
-    </div>
-  )
-}
-
-function ownerLabel(task: components['schemas']['TaskDto']) {
+function ownerLabel(task: { goalId: string | null; projectId: string | null }) {
   if (task.projectId) return 'وابسته به پروژه'
   if (task.goalId) return 'وابسته به هدف'
   return 'مستقل'

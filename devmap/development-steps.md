@@ -157,9 +157,9 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Completion criteria:** An authenticated user can manually create a valid Task, see it correctly in Today, complete it once, and recover the authoritative result.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:** [Task API](../backend/Controllers/TasksController.cs), [Today API](../backend/Controllers/TodayController.cs), [Task service](../backend/Services/TaskService.cs), [schema migration](../backend/Migrations/20260928113808_Step5TaskToday.cs), [Task/Today PostgreSQL tests](../backend.Tests/TaskTodayModuleTests.cs), [generated OpenAPI](../backend/openapi/TidySense.json), [Task workspace](../frontend/src/features/tasks/components/TaskWorkspace.tsx), [Today view](../frontend/src/features/today/components/TodayView.tsx), [browser acceptance](../frontend/e2e/auth.spec.ts). Verified 2026-10-02: `./dev.ps1 check` passed (44 backend, 16 frontend tests, typecheck/lint/build/OpenAPI) against a real local PostgreSQL 18 instance; `./auth-e2e.ps1`'s equivalent flow (run manually against an isolated PostgreSQL database after a tooling path-quoting defect in the script was identified, tracked separately, and worked around) passed all 4 Chrome scenarios, including "manual task moves through Today to completion".
 
 ---
 
