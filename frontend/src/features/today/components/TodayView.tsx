@@ -4,15 +4,20 @@ import { showToast, useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
+import { useCompleteOccurrence, useCorrectOccurrence } from '../../routines/hooks/routine-hooks'
+import type { RoutineOccurrenceDto } from '../../routines/types/routine.types'
 import { useCompleteTask } from '../../tasks/hooks/task-hooks'
 import type { TaskDto } from '../../tasks/types/task.types'
 import { useToday } from '../hooks/today-hooks'
+import { TodayRoutineGroup } from './TodayRoutineGroup'
 import { TodayTaskCard } from './TodayTaskCard'
 
-/** Today page: the local date's Tasks, split into what can be done now and what is waiting. */
+/** Today page: the local date's Tasks (ready, then waiting) and its Routine occurrences. */
 export function TodayView() {
   const today = useToday()
   const complete = useCompleteTask()
+  const completeOccurrence = useCompleteOccurrence()
+  const correctOccurrence = useCorrectOccurrence()
   const openCreate = useUiStore(state => state.openCreate)
 
   if (today.isPending) {
@@ -27,9 +32,13 @@ export function TodayView() {
     )
   }
 
-  const { localDate, tasks } = today.data
+  const { localDate, tasks, routineOccurrences } = today.data
   const ready = tasks.filter(task => !task.isBlocked)
   const waiting = tasks.filter(task => task.isBlocked)
+  const routines = groupByRoutine(routineOccurrences)
+  const busyOccurrenceId = completeOccurrence.isPending
+    ? completeOccurrence.variables?.occurrenceId
+    : correctOccurrence.isPending ? correctOccurrence.variables?.occurrenceId : undefined
 
   const renderTask = (task: TaskDto) => (
     <li key={task.id}>
@@ -63,14 +72,14 @@ export function TodayView() {
       />
 
       <div className="mb-4">
-        <FormError error={complete.error} />
+        <FormError error={complete.error ?? completeOccurrence.error ?? correctOccurrence.error} />
       </div>
 
-      {tasks.length === 0 ? (
+      {tasks.length === 0 && routines.length === 0 ? (
         <EmptyState
           icon={Sun}
           title="برای امروز کاری نمانده است."
-          description="کارهایی که برای تاریخ امروز برنامه‌ریزی شوند اینجا دیده می‌شوند."
+          description="کارهایی که برای تاریخ امروز برنامه‌ریزی شوند و روتین‌های امروز اینجا دیده می‌شوند."
         />
       ) : (
         <div className="space-y-8">
@@ -86,8 +95,42 @@ export function TodayView() {
               <ul className="mt-3 space-y-3">{waiting.map(renderTask)}</ul>
             </section>
           )}
+          {routines.length > 0 && (
+            <section aria-labelledby="today-routines">
+              <h2 className="section-title" id="today-routines">روتین‌های امروز</h2>
+              <ul className="mt-3 space-y-3">
+                {routines.map(group => (
+                  <li key={group[0].routineId}>
+                    <TodayRoutineGroup
+                      occurrences={group}
+                      busyId={busyOccurrenceId}
+                      onComplete={occurrence => completeOccurrence.mutate(
+                        { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version) },
+                        { onSuccess: () => showToast('نوبت روتین انجام شد.') },
+                      )}
+                      onCorrect={occurrence => correctOccurrence.mutate(
+                        { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version), targetStatus: 'DONE' },
+                        { onSuccess: () => showToast('سابقه اصلاح شد.') },
+                      )}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       )}
     </div>
   )
+}
+
+/** Groups occurrences by Routine, keeping the server's order of Routines and slots. */
+function groupByRoutine(occurrences: RoutineOccurrenceDto[]): RoutineOccurrenceDto[][] {
+  const groups = new Map<string, RoutineOccurrenceDto[]>()
+  for (const occurrence of occurrences) {
+    const group = groups.get(occurrence.routineId)
+    if (group) group.push(occurrence)
+    else groups.set(occurrence.routineId, [occurrence])
+  }
+  return [...groups.values()]
 }

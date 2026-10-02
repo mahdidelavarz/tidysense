@@ -516,6 +516,173 @@ namespace TidySense.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TidySense.Models.Routine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ContinuationOfRoutineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateOnly>("EffectiveFromLocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveUntilLocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("GoalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("MaterializedThroughLocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecurrenceDefinition")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("RecurrenceTimezone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("StoppedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<TimeOnly[]>("TimesOfDay")
+                        .IsRequired()
+                        .HasColumnType("time without time zone[]");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContinuationOfRoutineId")
+                        .IsUnique()
+                        .HasFilter("\"ContinuationOfRoutineId\" IS NOT NULL");
+
+                    b.HasIndex("GoalId", "UserId");
+
+                    b.HasIndex("ProjectId", "UserId");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id");
+
+                    b.HasIndex("UserId", "GoalId", "Status");
+
+                    b.HasIndex("UserId", "ProjectId", "Status");
+
+                    b.ToTable("Routines", t =>
+                        {
+                            t.HasCheckConstraint("CK_Routines_ContinuationNotSelf", "\"ContinuationOfRoutineId\" IS NULL OR \"ContinuationOfRoutineId\" <> \"Id\"");
+
+                            t.HasCheckConstraint("CK_Routines_EffectiveRange", "\"EffectiveUntilLocalDate\" IS NULL OR \"EffectiveUntilLocalDate\" >= \"EffectiveFromLocalDate\" - 1");
+
+                            t.HasCheckConstraint("CK_Routines_ParentExclusive", "NOT (\"GoalId\" IS NOT NULL AND \"ProjectId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Routines_RecurrenceObject", "jsonb_typeof(\"RecurrenceDefinition\") = 'object'");
+
+                            t.HasCheckConstraint("CK_Routines_Source", "\"Source\" IN ('MANUAL', 'AI_ASSISTED', 'SYSTEM_MIGRATED')");
+
+                            t.HasCheckConstraint("CK_Routines_Status", "\"Status\" IN ('ACTIVE', 'STOPPED')");
+
+                            t.HasCheckConstraint("CK_Routines_StoppedState", "(\"Status\" = 'ACTIVE' AND \"StoppedAt\" IS NULL AND \"EffectiveUntilLocalDate\" IS NULL) OR (\"Status\" = 'STOPPED' AND \"StoppedAt\" IS NOT NULL AND \"EffectiveUntilLocalDate\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Routines_Version", "\"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.RoutineOccurrence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RoutineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ScheduledLocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("ScheduledLocalTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoutineId", "ScheduledLocalDate")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RoutineOccurrences_UntimedIdentity")
+                        .HasFilter("\"ScheduledLocalTime\" IS NULL");
+
+                    b.HasIndex("Status", "ScheduledLocalDate");
+
+                    b.HasIndex("RoutineId", "ScheduledLocalDate", "ScheduledLocalTime")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RoutineOccurrences_TimedIdentity")
+                        .HasFilter("\"ScheduledLocalTime\" IS NOT NULL");
+
+                    b.ToTable("RoutineOccurrences", t =>
+                        {
+                            t.HasCheckConstraint("CK_RoutineOccurrences_Resolution", "(\"Status\" = 'PENDING' AND \"ResolvedAt\" IS NULL) OR (\"Status\" IN ('DONE', 'MISSED') AND \"ResolvedAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_RoutineOccurrences_Status", "\"Status\" IN ('PENDING', 'DONE', 'MISSED')");
+
+                            t.HasCheckConstraint("CK_RoutineOccurrences_Version", "\"Version\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("TidySense.Models.TaskItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -713,6 +880,51 @@ namespace TidySense.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TidySense.Models.Routine", b =>
+                {
+                    b.HasOne("TidySense.Models.Routine", "ContinuationOf")
+                        .WithMany()
+                        .HasForeignKey("ContinuationOfRoutineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TidySense.Models.User", "User")
+                        .WithMany("Routines")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TidySense.Models.Goal", "Goal")
+                        .WithMany("Routines")
+                        .HasForeignKey("GoalId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TidySense.Models.Project", "Project")
+                        .WithMany("Routines")
+                        .HasForeignKey("ProjectId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ContinuationOf");
+
+                    b.Navigation("Goal");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TidySense.Models.RoutineOccurrence", b =>
+                {
+                    b.HasOne("TidySense.Models.Routine", "Routine")
+                        .WithMany("Occurrences")
+                        .HasForeignKey("RoutineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Routine");
+                });
+
             modelBuilder.Entity("TidySense.Models.TaskItem", b =>
                 {
                     b.HasOne("TidySense.Models.User", "User")
@@ -744,12 +956,21 @@ namespace TidySense.Migrations
                 {
                     b.Navigation("Projects");
 
+                    b.Navigation("Routines");
+
                     b.Navigation("Tasks");
                 });
 
             modelBuilder.Entity("TidySense.Models.Project", b =>
                 {
+                    b.Navigation("Routines");
+
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("TidySense.Models.Routine", b =>
+                {
+                    b.Navigation("Occurrences");
                 });
 
             modelBuilder.Entity("TidySense.Models.User", b =>
@@ -757,6 +978,8 @@ namespace TidySense.Migrations
                     b.Navigation("Goals");
 
                     b.Navigation("Projects");
+
+                    b.Navigation("Routines");
 
                     b.Navigation("Tasks");
                 });

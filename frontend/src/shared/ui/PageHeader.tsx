@@ -39,6 +39,7 @@ export function PageHeader({ title, description, action }: {
 
 const backTargets = {
   '/tasks': 'کارها',
+  '/routines': 'روتین‌ها',
   '/projects': 'پروژه‌ها',
   '/goals': 'هدف‌ها',
 } as const

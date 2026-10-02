@@ -33,6 +33,7 @@ describe('GoalDetailView', () => {
       entityId: goal.id, entityType: 'Goal', currentStatus: 'ACTIVE', targetStatus: 'ACHIEVED',
       expectedVersion: 1, canApply: false,
       blockers: [{ resourceType: 'Project', resourceId: '00000000-0000-0000-0000-000000000020', status: 'ACTIVE', version: 1 }],
+      cascades: [],
       previewHash: 'b'.repeat(64),
     })
     renderGoal()
@@ -47,7 +48,7 @@ describe('GoalDetailView', () => {
     vi.mocked(getGoal).mockResolvedValue(goal)
     vi.mocked(previewGoalTerminal).mockResolvedValue({
       entityId: goal.id, entityType: 'Goal', currentStatus: 'ACTIVE', targetStatus: 'ABANDONED',
-      expectedVersion: 1, canApply: true, blockers: [], previewHash: 'c'.repeat(64),
+      expectedVersion: 1, canApply: true, blockers: [], cascades: [], previewHash: 'c'.repeat(64),
     })
     vi.mocked(terminateGoal).mockResolvedValue({ ...goal, status: 'ABANDONED', version: 2 })
     renderGoal()

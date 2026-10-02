@@ -11,6 +11,7 @@ using TidySense.DTOs.Common;
 using TidySense.DTOs.Goals;
 using TidySense.DTOs.Projects;
 using TidySense.DTOs.Tasks;
+using TidySense.DTOs.Today;
 using TidySense.Models;
 using TidySense.Services;
 

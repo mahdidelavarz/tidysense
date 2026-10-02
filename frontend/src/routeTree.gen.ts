@@ -17,6 +17,8 @@ import { Route as GoalsIndexRouteImport } from './routes/goals/index'
 import { Route as GoalsGoalIdRouteImport } from './routes/goals/$goalId'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
+import { Route as RoutinesIndexRouteImport } from './routes/routines/index'
+import { Route as RoutinesRoutineIdRouteImport } from './routes/routines/$routineId'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 
@@ -60,6 +62,16 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoutinesIndexRoute = RoutinesIndexRouteImport.update({
+  id: '/routines/',
+  path: '/routines/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoutinesRoutineIdRoute = RoutinesRoutineIdRouteImport.update({
+  id: '/routines/$routineId',
+  path: '/routines/$routineId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksIndexRoute = TasksIndexRouteImport.update({
   id: '/tasks/',
   path: '/tasks/',
@@ -78,9 +90,11 @@ export interface FileRoutesByFullPath {
   '/today': typeof TodayRoute
   '/goals/$goalId': typeof GoalsGoalIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/routines/$routineId': typeof RoutinesRoutineIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/goals/': typeof GoalsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/routines/': typeof RoutinesIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRoutesByTo {
@@ -90,9 +104,11 @@ export interface FileRoutesByTo {
   '/today': typeof TodayRoute
   '/goals/$goalId': typeof GoalsGoalIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/routines/$routineId': typeof RoutinesRoutineIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/goals': typeof GoalsIndexRoute
   '/projects': typeof ProjectsIndexRoute
+  '/routines': typeof RoutinesIndexRoute
   '/tasks': typeof TasksIndexRoute
 }
 export interface FileRoutesById {
@@ -103,9 +119,11 @@ export interface FileRoutesById {
   '/today': typeof TodayRoute
   '/goals/$goalId': typeof GoalsGoalIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/routines/$routineId': typeof RoutinesRoutineIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/goals/': typeof GoalsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/routines/': typeof RoutinesIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRouteTypes {
@@ -117,9 +135,11 @@ export interface FileRouteTypes {
     | '/today'
     | '/goals/$goalId'
     | '/projects/$projectId'
+    | '/routines/$routineId'
     | '/tasks/$taskId'
     | '/goals/'
     | '/projects/'
+    | '/routines/'
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -129,9 +149,11 @@ export interface FileRouteTypes {
     | '/today'
     | '/goals/$goalId'
     | '/projects/$projectId'
+    | '/routines/$routineId'
     | '/tasks/$taskId'
     | '/goals'
     | '/projects'
+    | '/routines'
     | '/tasks'
   id:
     | '__root__'
@@ -141,9 +163,11 @@ export interface FileRouteTypes {
     | '/today'
     | '/goals/$goalId'
     | '/projects/$projectId'
+    | '/routines/$routineId'
     | '/tasks/$taskId'
     | '/goals/'
     | '/projects/'
+    | '/routines/'
     | '/tasks/'
   fileRoutesById: FileRoutesById
 }
@@ -154,9 +178,11 @@ export interface RootRouteChildren {
   TodayRoute: typeof TodayRoute
   GoalsGoalIdRoute: typeof GoalsGoalIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
+  RoutinesRoutineIdRoute: typeof RoutinesRoutineIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   GoalsIndexRoute: typeof GoalsIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
+  RoutinesIndexRoute: typeof RoutinesIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
 }
 
@@ -218,6 +244,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/routines/': {
+      id: '/routines/'
+      path: '/routines'
+      fullPath: '/routines/'
+      preLoaderRoute: typeof RoutinesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/routines/$routineId': {
+      id: '/routines/$routineId'
+      path: '/routines/$routineId'
+      fullPath: '/routines/$routineId'
+      preLoaderRoute: typeof RoutinesRoutineIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks/': {
       id: '/tasks/'
       path: '/tasks'
@@ -242,9 +282,11 @@ const rootRouteChildren: RootRouteChildren = {
   TodayRoute: TodayRoute,
   GoalsGoalIdRoute: GoalsGoalIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
+  RoutinesRoutineIdRoute: RoutinesRoutineIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   GoalsIndexRoute: GoalsIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
+  RoutinesIndexRoute: RoutinesIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
 }
 export const routeTree = rootRouteImport

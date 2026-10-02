@@ -132,7 +132,11 @@ public sealed class ProjectService(
         if (project.Status != ParentStatuses.Active)
             throw new DomainRuleException("RESOURCE_NOT_ACTIVE", "Project is not active.");
         var blockers = await ProjectBlockersAsync(db, id, currentUser.UserId, cancellationToken);
-        return Preview(project, request.TargetStatus, blockers);
+        var routines = await db.Routines.AsNoTracking()
+            .Where(x => x.ProjectId == id && x.UserId == currentUser.UserId &&
+                x.Status == RoutineStatuses.Active)
+            .ToListAsync(cancellationToken);
+        return Preview(project, request.TargetStatus, blockers, routines);
     }
 
     public async Task<ProjectDto> TerminalAsync(Guid id, TerminalCommandRequest request, string idempotencyKey,
@@ -140,6 +144,7 @@ public sealed class ProjectService(
     {
         RequireProjectTerminal(request.TargetStatus);
         var now = dates.UtcNow;
+        var today = dates.Today;
         var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "TERMINATE_PROJECT",
             new { id, request.TargetStatus, request.ExpectedVersion, request.PreviewHash }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
@@ -154,7 +159,10 @@ public sealed class ProjectService(
             if (project.Status != ParentStatuses.Active)
                 throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
             var blockers = await ProjectBlockersAsync(context, id, owner, ct);
-            var currentPreview = Preview(project, request.TargetStatus, blockers);
+            // Both terminal statuses stop the Project's active Routines in this same transaction.
+            var routines = await context.Routines.FromSqlInterpolated($"SELECT * FROM \"Routines\" WHERE \"ProjectId\" = {id} AND \"UserId\" = {owner} AND \"Status\" = 'ACTIVE' ORDER BY \"Id\" FOR UPDATE")
+                .ToListAsync(ct);
+            var currentPreview = Preview(project, request.TargetStatus, blockers, routines);
             if (!CryptographicOperations.FixedTimeEquals(
                     Convert.FromHexString(currentPreview.PreviewHash), Convert.FromHexString(request.PreviewHash)))
                 throw new CommandConflictException("CONFIRMATION_STALE", "The terminal preview changed.");
@@ -166,7 +174,15 @@ public sealed class ProjectService(
             project.Version++;
             var eventType = request.TargetStatus == ParentStatuses.Completed
                 ? ParentEventTypes.ProjectCompleted : ParentEventTypes.ProjectStopped;
-            return new CommandMutation("Project", id, project.Version, eventType, 1, "{}", now);
+            var cascades = new List<CascadeEvent>();
+            foreach (var routine in routines)
+            {
+                RoutineService.Stop(routine, today, now);
+                cascades.Add(new CascadeEvent("Routine", routine.Id, routine.Version,
+                    RoutineEventTypes.RoutineStopped, 1,
+                    RoutineService.StoppedPayload(RoutineStopCauses.ProjectTerminal)));
+            }
+            return new CommandMutation("Project", id, project.Version, eventType, 1, "{}", now, cascades);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
@@ -190,10 +206,15 @@ public sealed class ProjectService(
         .ToListAsync(cancellationToken);
 
     private static TerminalPreviewDto Preview(Project project, string target,
-        IReadOnlyList<TerminalBlockerDto> blockers) =>
-        new(project.Id, "Project", project.Status, target, project.Version,
-            blockers.Count == 0, blockers, ParentCommandSupport.PreviewHash(project.Id, "Project",
-                project.Status, target, project.Version, blockers));
+        IReadOnlyList<TerminalBlockerDto> blockers, IReadOnlyList<Routine> activeRoutines)
+    {
+        var cascades = activeRoutines.OrderBy(x => x.Id)
+            .Select(x => new TerminalCascadeDto("Routine", x.Id, RoutineStatuses.Stopped, x.Version))
+            .ToArray();
+        return new TerminalPreviewDto(project.Id, "Project", project.Status, target, project.Version,
+            blockers.Count == 0, blockers, cascades, ParentCommandSupport.PreviewHash(project.Id,
+                "Project", project.Status, target, project.Version, blockers, cascades));
+    }
 
     private static void RequireProjectTerminal(string status)
     {

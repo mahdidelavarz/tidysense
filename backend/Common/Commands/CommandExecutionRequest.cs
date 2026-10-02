@@ -21,4 +21,17 @@ public sealed record CommandMutation(
     string EventType,
     int EventVersion,
     string PayloadJson,
-    DateTimeOffset OccurredAt);
+    DateTimeOffset OccurredAt,
+    IReadOnlyList<CascadeEvent>? CascadeEvents = null);
+
+/// <summary>
+/// A deterministic consequence of the confirmed command on another aggregate (for example a
+/// Routine stopped by its Project's terminal transition). Recorded in the same transaction.
+/// </summary>
+public sealed record CascadeEvent(
+    string AggregateType,
+    Guid AggregateId,
+    long AggregateVersion,
+    string EventType,
+    int EventVersion,
+    string PayloadJson);

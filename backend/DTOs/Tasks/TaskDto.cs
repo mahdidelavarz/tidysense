@@ -21,5 +21,3 @@ public sealed record TaskDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     DateTimeOffset? TerminalAt);
-
-public sealed record TodayDto(DateOnly LocalDate, IReadOnlyList<TaskDto> Tasks);

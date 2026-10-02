@@ -183,9 +183,9 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Completion criteria:** Occurrences are generated/resolved exactly once for local dates/slots and Today presents actionable Tasks and Routines correctly.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:** [Step 6 acceptance contract, recorded deviations and verification record](step-06-routine-acceptance.md), [Routine API](../backend/Controllers/RoutinesController.cs), [occurrence API](../backend/Controllers/RoutineOccurrencesController.cs), [Routine service](../backend/Services/RoutineService.cs), [scheduling rules](../backend/Services/RoutineSchedule.cs), [Today service](../backend/Services/TodayService.cs), [schema migration](../backend/Migrations/20261002132639_Step6RoutineOccurrence.cs), [scheduling tests](../backend.Tests/RoutineScheduleTests.cs), [Routine PostgreSQL/API tests](../backend.Tests/RoutineModuleTests.cs), [generated OpenAPI](../backend/openapi/TidySense.json), [Routines page](../frontend/src/features/routines/components/RoutinesPage.tsx), [Today view](../frontend/src/features/today/components/TodayView.tsx), [browser acceptance](../frontend/e2e/routines.spec.ts). Verified 2026-10-02: `./dev.ps1 check` passed (69 backend, 26 frontend tests, typecheck/lint/build/OpenAPI) against local PostgreSQL 18; `./auth-e2e.ps1` passed all 8 Chrome scenarios on an isolated PostgreSQL database, including "a multi-slot Routine and a Task are executed together from Today"; EF reported no pending model changes. Decisions confirmed with the owner: recurrence limited to daily, specific weekdays and monthly-on-day; Routines in sidebar and drawer only; full-history batched catch-up; lifecycle plus `CREATED` occurrence events.
 
 ---
 

@@ -37,10 +37,15 @@ const statusLabels: Record<string, string> = {
   COMPLETED: 'تکمیل‌شده',
   DROPPED: 'کنار گذاشته‌شده',
   STOPPED: 'متوقف‌شده',
+  PENDING: 'در انتظار',
+  DONE: 'انجام‌شده',
+  // A missed occurrence is a neutral fact, so its wording and tone carry no judgement.
+  MISSED: 'انجام‌نشده',
 }
 
 /** Lifecycle status. Kept visually separate from entity identity. */
 export function StatusBadge({ status }: { status: string }) {
-  const tone = status === 'ACHIEVED' || status === 'COMPLETED' ? 'positive' : status === 'ACTIVE' ? 'active' : 'neutral'
+  const positive = status === 'ACHIEVED' || status === 'COMPLETED' || status === 'DONE'
+  const tone = positive ? 'positive' : status === 'ACTIVE' || status === 'PENDING' ? 'active' : 'neutral'
   return <span className={`status-badge status-${tone}`}>{statusLabels[status] ?? status}</span>
 }

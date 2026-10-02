@@ -4,10 +4,12 @@ import { type EntityKind, EntityIcon } from '../../../shared/ui/EntityUi'
 import { Sheet } from '../../../shared/ui/Sheet'
 import { GoalCreateSheet } from '../../goals/components/GoalCreateSheet'
 import { ProjectCreateSheet } from '../../projects/components/ProjectCreateSheet'
+import { RoutineCreateSheet } from '../../routines/components/RoutineCreateSheet'
 import { TaskCreateSheet } from '../../tasks/components/TaskCreateSheet'
 
 const choices: Array<{ target: Exclude<CreateTarget, 'menu'>; entity: EntityKind; label: string; description: string }> = [
   { target: 'task', entity: 'task', label: 'کار', description: 'یک اقدام روشن که می‌توان انجامش داد.' },
+  { target: 'routine', entity: 'routine', label: 'روتین', description: 'کاری که در روزها یا ساعت‌های مشخص تکرار می‌شود.' },
   { target: 'project', entity: 'project', label: 'پروژه', description: 'یک تلاش محدود با پایان مشخص.' },
   { target: 'goal', entity: 'goal', label: 'هدف', description: 'نتیجه یا جهتی که برایتان مهم است.' },
 ]
@@ -23,6 +25,7 @@ export function CreateSheet() {
   const close = useUiStore(state => state.closeCreate)
 
   if (target === 'task') return <TaskCreateSheet onClose={close} />
+  if (target === 'routine') return <RoutineCreateSheet onClose={close} />
   if (target === 'project') return <ProjectCreateSheet onClose={close} />
   if (target === 'goal') return <GoalCreateSheet onClose={close} />
   if (target !== 'menu') return null

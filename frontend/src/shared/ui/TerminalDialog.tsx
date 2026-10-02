@@ -19,6 +19,8 @@ export function TerminalDialog({
   canApply,
   blockersIntro,
   blockers,
+  consequencesIntro,
+  consequences = [],
   onCancel,
   onConfirm,
 }: {
@@ -31,6 +33,9 @@ export function TerminalDialog({
   canApply: boolean
   blockersIntro: string
   blockers: TerminalBlocker[]
+  /** What confirming will change by itself, shown so the decision is informed. */
+  consequencesIntro?: string
+  consequences?: TerminalBlocker[]
   onCancel: () => void
   onConfirm: () => void
 }) {
@@ -61,6 +66,14 @@ export function TerminalDialog({
           <p className="font-bold text-text-primary">{blockersIntro}</p>
           <ul className="mt-3 list-inside list-disc space-y-2">
             {blockers.map(blocker => <li key={blocker.id}>{blocker.label}</li>)}
+          </ul>
+        </div>
+      )}
+      {consequences.length > 0 && (
+        <div className={`notice ${blockers.length > 0 ? 'mt-3' : ''}`}>
+          <p className="font-bold text-text-primary">{consequencesIntro}</p>
+          <ul className="mt-3 list-inside list-disc space-y-2">
+            {consequences.map(consequence => <li key={consequence.id}>{consequence.label}</li>)}
           </ul>
         </div>
       )}

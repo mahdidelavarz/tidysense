@@ -155,4 +155,47 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
         await migrator.MigrateAsync(cancellationToken: cancellationToken);
         Assert.Equal(0, await db.Tasks.CountAsync(cancellationToken));
     }
+
+    [Fact]
+    public async Task Step6_routine_schema_round_trips_from_the_verified_task_baseline()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync("20260928113808_Step5TaskToday", cancellationToken);
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var user = new User
+        {
+            Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000),
+            IsActive = true, SetupComplete = true, CreatedAt = now
+        };
+        var routine = new Routine
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, Title = "Migration Routine",
+            RecurrenceDefinition = "{\"type\":\"DAILY\"}", RecurrenceTimezone = "Asia/Tehran",
+            TimesOfDay = [new TimeOnly(8, 0), new TimeOnly(20, 0)],
+            EffectiveFromLocalDate = new DateOnly(2026, 10, 2), CreatedAt = now, UpdatedAt = now
+        };
+        var occurrence = new RoutineOccurrence
+        {
+            Id = Guid.NewGuid(), RoutineId = routine.Id, ScheduledLocalDate = new DateOnly(2026, 10, 2),
+            ScheduledLocalTime = new TimeOnly(8, 0), CreatedAt = now, UpdatedAt = now
+        };
+        db.AddRange(user, routine, occurrence);
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+        var stored = await db.Routines.AsNoTracking().SingleAsync(x => x.Id == routine.Id, cancellationToken);
+        Assert.Equal(routine.TimesOfDay, stored.TimesOfDay);
+
+        await db.RoutineOccurrences.Where(x => x.Id == occurrence.Id).ExecuteDeleteAsync(cancellationToken);
+        await db.Routines.Where(x => x.Id == routine.Id).ExecuteDeleteAsync(cancellationToken);
+        await db.Users.Where(x => x.Id == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await migrator.MigrateAsync("20260928113808_Step5TaskToday", cancellationToken);
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        Assert.Equal(0, await db.Routines.CountAsync(cancellationToken));
+        Assert.Equal(0, await db.RoutineOccurrences.CountAsync(cancellationToken));
+    }
 }

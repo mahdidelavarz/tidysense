@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { completeOccurrence, correctOccurrence } from '../../routines/services/routines-api'
 import { completeTask } from '../../tasks/services/tasks-api'
 import { getToday } from '../services/today-api'
 import { TodayView } from './TodayView'
@@ -9,6 +10,7 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
 }))
 vi.mock('../../tasks/services/tasks-api', () => ({ completeTask: vi.fn() }))
+vi.mock('../../routines/services/routines-api', () => ({ completeOccurrence: vi.fn(), correctOccurrence: vi.fn() }))
 vi.mock('../services/today-api', () => ({ getToday: vi.fn() }))
 
 const actionable = {
@@ -22,6 +24,14 @@ const blocked = {
   id: '00000000-0000-0000-0000-000000000112', title: 'کار منتظر', isBlocked: true,
   blockedBy: [{ id: actionable.id, title: actionable.title, status: 'ACTIVE', version: 3 }],
 }
+const routineId = '00000000-0000-0000-0000-000000000200'
+const slot = (id: string, time: string | null, status: string, version = 1) => ({
+  id, routineId, routineTitle: 'دارو', scheduledLocalDate: '2026-09-28', scheduledLocalTime: time,
+  status, resolvedAt: status === 'PENDING' ? null : '2026-09-28T05:00:00Z', version,
+})
+const missed = slot('00000000-0000-0000-0000-000000000201', '08:00:00', 'MISSED', 2)
+const done = slot('00000000-0000-0000-0000-000000000202', '12:00:00', 'DONE', 2)
+const pending = slot('00000000-0000-0000-0000-000000000203', '16:00:00', 'PENDING')
 
 function renderToday() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -32,16 +42,52 @@ describe('TodayView', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('keeps blocked sequence work as context and completes only actionable work', async () => {
-    vi.mocked(getToday).mockResolvedValue({ localDate: '2026-09-28', tasks: [actionable, blocked] })
+    vi.mocked(getToday).mockResolvedValue({ localDate: '2026-09-28', tasks: [actionable, blocked], routineOccurrences: [] })
     vi.mocked(completeTask).mockResolvedValue({
       ...actionable, status: 'COMPLETED', version: 4, completedForLocalDate: '2026-09-28', terminalAt: '2026-09-28T01:00:00Z',
     })
     renderToday()
     expect(await screen.findByText('کار منتظر')).toBeInTheDocument()
     expect(screen.getByText('منتظر تکمیل کارهای پیشین')).toBeInTheDocument()
+    expect(screen.queryByText('روتین‌های امروز')).not.toBeInTheDocument()
     const buttons = screen.getAllByRole('button', { name: /^تکمیل کار/ })
     expect(buttons[1]).toBeDisabled()
     fireEvent.click(buttons[0])
     await waitFor(() => expect(completeTask).toHaveBeenCalledWith(actionable.id, 3, '2026-09-28'))
+  })
+
+  it('shows one Routine with a row per slot, each with its own state and action', async () => {
+    vi.mocked(getToday).mockResolvedValue({ localDate: '2026-09-28', tasks: [], routineOccurrences: [missed, done, pending] })
+    vi.mocked(completeOccurrence).mockResolvedValue({ ...pending, status: 'DONE', version: 2 })
+    vi.mocked(correctOccurrence).mockResolvedValue({ ...missed, status: 'DONE', version: 3 })
+    renderToday()
+    const section = within(await screen.findByRole('region', { name: 'روتین‌های امروز' }))
+    expect(section.getAllByRole('heading', { name: 'دارو' })).toHaveLength(1)
+    expect(section.getAllByRole('listitem')).toHaveLength(4)
+    expect(section.getByText('۰۸:۰۰')).toBeInTheDocument()
+    expect(section.getByText('انجام‌نشده')).toBeInTheDocument()
+    expect(section.getByText('انجام‌شده')).toBeInTheDocument()
+    expect(screen.queryByText('برای امروز کاری نمانده است.')).not.toBeInTheDocument()
+
+    // Only the pending slot can be marked done; the missed one is corrected, never carried.
+    expect(section.getAllByRole('button', { name: /^انجام شد:/ })).toHaveLength(1)
+    fireEvent.click(section.getByRole('button', { name: 'انجام شد: دارو، ۱۶:۰۰' }))
+    await waitFor(() => expect(completeOccurrence).toHaveBeenCalledWith(pending.id, 1))
+    fireEvent.click(section.getByRole('button', { name: 'انجام داده بودم' }))
+    await waitFor(() => expect(correctOccurrence).toHaveBeenCalledWith(missed.id, 2, 'DONE'))
+  })
+
+  it('labels an untimed occurrence by the day and shows the empty state only with no work at all', async () => {
+    vi.mocked(getToday).mockResolvedValueOnce({
+      localDate: '2026-09-28', tasks: [],
+      routineOccurrences: [slot('00000000-0000-0000-0000-000000000204', null, 'PENDING')],
+    })
+    const view = renderToday()
+    expect(await screen.findByRole('button', { name: 'انجام شد: دارو، امروز' })).toBeInTheDocument()
+    view.unmount()
+
+    vi.mocked(getToday).mockResolvedValueOnce({ localDate: '2026-09-28', tasks: [], routineOccurrences: [] })
+    renderToday()
+    expect(await screen.findByText('برای امروز کاری نمانده است.')).toBeInTheDocument()
   })
 })

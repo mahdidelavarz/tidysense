@@ -4,9 +4,9 @@ TidySense helps a user plan an intention, execute through Today and adapt throug
 
 Canonical work records are Goal, Project, Task, Routine and RoutineOccurrence. PlanningFact and CaptureItem are durable supporting records; Task sequence is metadata. Backlog and dedicated crisis UX are removed. Discussions 023–026 override older contradictory projections.
 
-Implementation has started. The M1 foundation includes canonical Guid identity, temporal types, JWT-cookie plus `sessionEpoch`, Kavenegar boundary, `/api/v1`, owner-scoped Project read, generated OpenAPI transport and passing real-PostgreSQL integration evidence. PostgreSQL/Npgsql is canonical again; the temporary SQL Server provider was removed before further domain development. Goal, Task, Routine, Today, Reconcile and AI features have not been implemented. Pilot/release are not ready.
+Implementation has started. The M1 foundation includes canonical Guid identity, temporal types, JWT-cookie plus `sessionEpoch`, Kavenegar boundary, `/api/v1`, owner-scoped Project read, generated OpenAPI transport and passing real-PostgreSQL integration evidence. PostgreSQL/Npgsql is canonical again; the temporary SQL Server provider was removed before further domain development. Authentication, the delivery contracts, Goal, Project, Task, Today and Routine/RoutineOccurrence execution are implemented. Capture, Reconcile, Planning and AI features have not been implemented. Pilot/release are not ready.
 
-Execution state is tracked in `development-steps.md`: local/technical stabilization is DONE, authentication completion is IN_PROGRESS, and later steps have not started.
+Execution state is tracked in `development-steps.md`: STEP-01 through STEP-06 are DONE and later steps have not started.
 
 ## Related Mind Map
 

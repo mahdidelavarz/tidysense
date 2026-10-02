@@ -50,13 +50,18 @@ describe('ProjectReadView', () => {
     vi.mocked(getProject).mockResolvedValue(project)
     vi.mocked(previewProjectTerminal).mockResolvedValue({
       entityId: project.id, entityType: 'Project', currentStatus: 'ACTIVE', targetStatus: 'COMPLETED',
-      expectedVersion: 1, canApply: true, blockers: [], previewHash: 'a'.repeat(64),
+      expectedVersion: 1, canApply: true, blockers: [],
+      cascades: [{ resourceType: 'Routine', resourceId: '00000000-0000-0000-0000-000000000040', resultingStatus: 'STOPPED', version: 1 }],
+      previewHash: 'a'.repeat(64),
     })
     vi.mocked(terminateProject).mockResolvedValue({ ...project, status: 'COMPLETED', version: 2 })
     renderProject()
     expect(await screen.findByRole('heading', { name: 'پروژه آزمایشی' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'تکمیل پروژه' }))
     expect(await screen.findByRole('heading', { name: 'تأیید تکمیل پروژه' })).toBeInTheDocument()
+    // The Routines this confirmation will stop are shown before the user decides.
+    expect(screen.getByText('روتین‌های فعال این پروژه با تأیید شما متوقف می‌شوند:')).toBeInTheDocument()
+    expect(screen.getByText('مشاهده روتین')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'تأیید تکمیل پروژه' }))
     await waitFor(() => expect(terminateProject).toHaveBeenCalled())
     expect(await screen.findByText('تکمیل‌شده')).toBeInTheDocument()

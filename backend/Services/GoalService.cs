@@ -171,12 +171,17 @@ public sealed class GoalService(
             .OrderBy(x => x.Id)
             .Select(x => new TerminalBlockerDto("Task", x.Id, x.Status, x.Version))
             .ToListAsync(ct);
-        return projects.Concat(tasks).ToList();
+        var routines = await context.Routines.AsNoTracking()
+            .Where(x => x.GoalId == id && x.UserId == userId && x.Status == RoutineStatuses.Active)
+            .OrderBy(x => x.Id)
+            .Select(x => new TerminalBlockerDto("Routine", x.Id, x.Status, x.Version))
+            .ToListAsync(ct);
+        return projects.Concat(tasks).Concat(routines).ToList();
     }
 
     private static TerminalPreviewDto Preview(Goal goal, string target, IReadOnlyList<TerminalBlockerDto> blockers) =>
-        new(goal.Id, "Goal", goal.Status, target, goal.Version, blockers.Count == 0, blockers,
-            ParentCommandSupport.PreviewHash(goal.Id, "Goal", goal.Status, target, goal.Version, blockers));
+        new(goal.Id, "Goal", goal.Status, target, goal.Version, blockers.Count == 0, blockers, [],
+            ParentCommandSupport.PreviewHash(goal.Id, "Goal", goal.Status, target, goal.Version, blockers, []));
 
     private static void RequireGoalTerminal(string status)
     {

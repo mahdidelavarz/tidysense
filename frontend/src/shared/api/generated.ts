@@ -666,6 +666,552 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/routine-occurrences/{id}/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CompleteOccurrenceRequest"];
+                    "text/json": components["schemas"]["CompleteOccurrenceRequest"];
+                    "application/*+json": components["schemas"]["CompleteOccurrenceRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RoutineOccurrenceDto"];
+                        "application/json": components["schemas"]["RoutineOccurrenceDto"];
+                        "text/json": components["schemas"]["RoutineOccurrenceDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routine-occurrences/{id}/correct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CorrectOccurrenceRequest"];
+                    "text/json": components["schemas"]["CorrectOccurrenceRequest"];
+                    "application/*+json": components["schemas"]["CorrectOccurrenceRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RoutineOccurrenceDto"];
+                        "application/json": components["schemas"]["RoutineOccurrenceDto"];
+                        "text/json": components["schemas"]["RoutineOccurrenceDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    cursor?: string;
+                    limit?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CursorPageDtoOfRoutineDto"];
+                        "application/json": components["schemas"]["CursorPageDtoOfRoutineDto"];
+                        "text/json": components["schemas"]["CursorPageDtoOfRoutineDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateRoutineRequest"];
+                    "text/json": components["schemas"]["CreateRoutineRequest"];
+                    "application/*+json": components["schemas"]["CreateRoutineRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RoutineDto"];
+                        "application/json": components["schemas"]["RoutineDto"];
+                        "text/json": components["schemas"]["RoutineDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RoutineDto"];
+                        "application/json": components["schemas"]["RoutineDto"];
+                        "text/json": components["schemas"]["RoutineDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRoutineRequest"];
+                    "text/json": components["schemas"]["UpdateRoutineRequest"];
+                    "application/*+json": components["schemas"]["UpdateRoutineRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RoutineDto"];
+                        "application/json": components["schemas"]["RoutineDto"];
+                        "text/json": components["schemas"]["RoutineDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StopRoutineRequest"];
+                    "text/json": components["schemas"]["StopRoutineRequest"];
+                    "application/*+json": components["schemas"]["StopRoutineRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RoutineDto"];
+                        "application/json": components["schemas"]["RoutineDto"];
+                        "text/json": components["schemas"]["RoutineDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines/{id}/continuation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateRoutineRequest"];
+                    "text/json": components["schemas"]["CreateRoutineRequest"];
+                    "application/*+json": components["schemas"]["CreateRoutineRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RoutineDto"];
+                        "application/json": components["schemas"]["RoutineDto"];
+                        "text/json": components["schemas"]["RoutineDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines/{id}/occurrences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: string;
+                    limit?: number | string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CursorPageDtoOfRoutineOccurrenceDto"];
+                        "application/json": components["schemas"]["CursorPageDtoOfRoutineOccurrenceDto"];
+                        "text/json": components["schemas"]["CursorPageDtoOfRoutineOccurrenceDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks": {
         parameters: {
             query?: never;
@@ -1326,11 +1872,20 @@ export interface components {
             /** Format: int64 */
             currentVersion: null | number | string;
         };
+        CompleteOccurrenceRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
         CompleteTaskRequest: {
             /** Format: int64 */
             expectedVersion: number | string;
             /** Format: date */
             completedForLocalDate: string;
+        };
+        CorrectOccurrenceRequest: {
+            targetStatus: string;
+            /** Format: int64 */
+            expectedVersion: number | string;
         };
         CreateGoalRequest: {
             title: string;
@@ -1349,6 +1904,18 @@ export interface components {
             targetDate: null | string;
             /** Format: date */
             reviewDate: null | string;
+        };
+        CreateRoutineRequest: {
+            title: string;
+            description: null | string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            recurrence: components["schemas"]["RecurrenceDto"];
+            timesOfDay: null | string[];
+            /** Format: date */
+            effectiveFromLocalDate: null | string;
         };
         CreateTaskRequest: {
             title: string;
@@ -1379,6 +1946,14 @@ export interface components {
         };
         CursorPageDtoOfProjectDto: {
             items: components["schemas"]["ProjectDto"][];
+            page: components["schemas"]["PageInfoDto"];
+        };
+        CursorPageDtoOfRoutineDto: {
+            items: components["schemas"]["RoutineDto"][];
+            page: components["schemas"]["PageInfoDto"];
+        };
+        CursorPageDtoOfRoutineOccurrenceDto: {
+            items: components["schemas"]["RoutineOccurrenceDto"][];
             page: components["schemas"]["PageInfoDto"];
         };
         CursorPageDtoOfTaskDto: {
@@ -1439,6 +2014,12 @@ export interface components {
             /** Format: date-time */
             terminalAt: null | string;
         };
+        RecurrenceDto: {
+            type: string;
+            daysOfWeek: null | (number | string)[];
+            /** Format: int32 */
+            dayOfMonth: null | number | string;
+        };
         RequestOtpDto: {
             phoneNumber: string;
             purpose: string;
@@ -1448,6 +2029,57 @@ export interface components {
             expectedVersion: number | string;
             /** Format: date */
             plannedDate: null | string;
+        };
+        RoutineDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            /** Format: uuid */
+            continuationOfRoutineId: null | string;
+            /** Format: uuid */
+            continuedByRoutineId: null | string;
+            title: string;
+            description: null | string;
+            status: string;
+            recurrence: components["schemas"]["RecurrenceDto"];
+            timesOfDay: string[];
+            recurrenceTimezone: string;
+            /** Format: date */
+            effectiveFromLocalDate: string;
+            /** Format: date */
+            effectiveUntilLocalDate: null | string;
+            source: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            stoppedAt: null | string;
+        };
+        RoutineOccurrenceDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            routineId: string;
+            routineTitle: string;
+            /** Format: date */
+            scheduledLocalDate: string;
+            /** Format: time */
+            scheduledLocalTime: null | string;
+            status: string;
+            /** Format: date-time */
+            resolvedAt: null | string;
+            /** Format: int64 */
+            version: number | string;
+        };
+        StopRoutineRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
         };
         TaskDependencyDto: {
             /** Format: uuid */
@@ -1497,6 +2129,14 @@ export interface components {
             /** Format: int64 */
             version: number | string;
         };
+        TerminalCascadeDto: {
+            resourceType: string;
+            /** Format: uuid */
+            resourceId: string;
+            resultingStatus: string;
+            /** Format: int64 */
+            version: number | string;
+        };
         TerminalCommandRequest: {
             targetStatus: string;
             /** Format: int64 */
@@ -1513,6 +2153,7 @@ export interface components {
             expectedVersion: number | string;
             canApply: boolean;
             blockers: components["schemas"]["TerminalBlockerDto"][];
+            cascades: components["schemas"]["TerminalCascadeDto"][];
             previewHash: string;
         };
         TerminalPreviewRequest: {
@@ -1524,6 +2165,7 @@ export interface components {
             /** Format: date */
             localDate: string;
             tasks: components["schemas"]["TaskDto"][];
+            routineOccurrences: components["schemas"]["RoutineOccurrenceDto"][];
         };
         UpdateGoalRequest: {
             title: string;
@@ -1544,6 +2186,18 @@ export interface components {
             targetDate: null | string;
             /** Format: date */
             reviewDate: null | string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
+        UpdateRoutineRequest: {
+            title: string;
+            description: null | string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            recurrence: components["schemas"]["RecurrenceDto"];
+            timesOfDay: null | string[];
             /** Format: int64 */
             expectedVersion: number | string;
         };

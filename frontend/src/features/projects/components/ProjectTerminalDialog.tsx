@@ -25,6 +25,11 @@ export function ProjectTerminalDialog({ preview, pending, onCancel, onConfirm }:
         id: blocker.resourceId,
         label: <Link className="text-link" to="/tasks/$taskId" params={{ taskId: blocker.resourceId }}>مشاهده کار فعال</Link>,
       }))}
+      consequencesIntro="روتین‌های فعال این پروژه با تأیید شما متوقف می‌شوند:"
+      consequences={preview.cascades.map(cascade => ({
+        id: cascade.resourceId,
+        label: <Link className="text-link" to="/routines/$routineId" params={{ routineId: cascade.resourceId }}>مشاهده روتین</Link>,
+      }))}
       onCancel={onCancel}
       onConfirm={onConfirm}
     />

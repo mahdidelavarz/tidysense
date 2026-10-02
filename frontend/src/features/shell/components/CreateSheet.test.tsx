@@ -28,11 +28,15 @@ describe('CreateSheet', () => {
     vi.mocked(listTasks).mockResolvedValue(empty)
   })
 
-  it('renders nothing until a create flow is requested, then offers the three kinds', () => {
+  it('renders nothing until a create flow is requested, then offers the four kinds', () => {
     const view = renderSheet()
     expect(view.container).toBeEmptyDOMElement()
     act(() => useUiStore.getState().openCreate('menu'))
     expect(screen.getByRole('dialog', { name: 'چه چیزی اضافه می‌کنید؟' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^روتین/ })).toBeInTheDocument()
+    act(() => useUiStore.getState().openCreate('routine'))
+    expect(screen.getByRole('dialog', { name: 'روتین جدید' })).toBeInTheDocument()
+    act(() => useUiStore.getState().openCreate('menu'))
     fireEvent.click(screen.getByRole('button', { name: /^هدف/ }))
     expect(useUiStore.getState().createTarget).toBe('goal')
     expect(screen.getByRole('dialog', { name: 'هدف جدید' })).toBeInTheDocument()

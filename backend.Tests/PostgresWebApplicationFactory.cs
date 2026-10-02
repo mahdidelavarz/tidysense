@@ -16,6 +16,9 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
     private readonly string _databaseName = $"tidysense_tests_{Guid.NewGuid():N}";
     private HttpClient? _client;
 
+    /// <summary>The application clock. Real time unless a test pins it to an instant.</summary>
+    public TestClock Clock { get; } = new();
+
     public string ConnectionString
     {
         get
@@ -60,6 +63,8 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
                         item.ValueKind == System.Text.Json.JsonValueKind.String &&
                         item.GetString() is "title"))));
             services.AddControllers().AddApplicationPart(typeof(DeliveryContractTestController).Assembly);
+            services.RemoveAll<TimeProvider>();
+            services.AddSingleton<TimeProvider>(Clock);
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(ConnectionString));
@@ -80,4 +85,17 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
         _client?.Dispose();
         await base.DisposeAsync();
     }
+}
+
+public sealed class TestClock : TimeProvider
+{
+    private DateTimeOffset? _pinned;
+
+    public override DateTimeOffset GetUtcNow() => _pinned ?? DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Pins the clock. Use instants at or after the real time: command idempotency expiry is
+    /// checked against the real clock.
+    /// </summary>
+    public void Pin(DateTimeOffset instant) => _pinned = instant.ToUniversalTime();
 }

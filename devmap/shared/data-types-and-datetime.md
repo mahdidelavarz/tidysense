@@ -12,6 +12,8 @@ Do not use ambiguous local `DateTime` for canonical fields or store a planner da
 
 Goal/Project `reviewDate`, Task `plannedDate`/`deadline` and target dates are different local-date concepts. Task has no review date. Routine occurrence identity uses local date plus an optional slot.
 
+Routine scheduling compares local dates and wall-clock times only, never instants, so a DST shift cannot move, duplicate or drop a slot: a slot inside a skipped hour is reached once the wall clock passes it, and a slot inside a repeated hour is reached on the first pass. Monthly Routine recurrence is the one rule evaluated on the Persian calendar; its definition says so explicitly.
+
 Persian/Jalali is presentation; persisted/API dates remain ISO Gregorian values representing the same local day. A later per-user IANA zone changes zone selection, not these types or meanings. Prototype `DateTime` data requires an explicit interpretation/conversion migration.
 
 ## Related Mind Map

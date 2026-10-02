@@ -14,6 +14,8 @@ public sealed class AppDbContext(
     public DbSet<Goal> Goals => Set<Goal>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
+    public DbSet<Routine> Routines => Set<Routine>();
+    public DbSet<RoutineOccurrence> RoutineOccurrences => Set<RoutineOccurrence>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<CommandResult> CommandResults => Set<CommandResult>();
     public DbSet<DomainEvent> DomainEvents => Set<DomainEvent>();
@@ -148,6 +150,72 @@ public sealed class AppDbContext(
                 t.HasCheckConstraint("CK_Tasks_SequencePair", "(\"SequenceId\" IS NULL AND \"SequenceOrder\" IS NULL) OR (\"SequenceId\" IS NOT NULL AND \"SequenceOrder\" IS NOT NULL AND \"SequenceOrder\" > 0)");
                 t.HasCheckConstraint("CK_Tasks_Deadline", "\"Deadline\" IS NULL OR \"PlannedDate\" IS NULL OR \"PlannedDate\" <= \"Deadline\"");
                 t.HasCheckConstraint("CK_Tasks_TerminalState", "(\"Status\" = 'ACTIVE' AND \"TerminalAt\" IS NULL AND \"CompletedForLocalDate\" IS NULL) OR (\"Status\" = 'COMPLETED' AND \"TerminalAt\" IS NOT NULL AND \"CompletedForLocalDate\" IS NOT NULL) OR (\"Status\" = 'DROPPED' AND \"TerminalAt\" IS NOT NULL AND \"CompletedForLocalDate\" IS NULL)");
+            });
+        });
+
+        modelBuilder.Entity<Routine>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.RecurrenceDefinition).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.RecurrenceTimezone).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.TimesOfDay).IsRequired();
+            entity.Property(x => x.Source).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt, x.Id });
+            entity.HasIndex(x => new { x.UserId, x.Status });
+            entity.HasIndex(x => new { x.UserId, x.GoalId, x.Status });
+            entity.HasIndex(x => new { x.UserId, x.ProjectId, x.Status });
+            entity.HasIndex(x => x.ContinuationOfRoutineId)
+                .IsUnique().HasFilter("\"ContinuationOfRoutineId\" IS NOT NULL");
+            entity.HasOne(x => x.User).WithMany(x => x.Routines).HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Goal).WithMany(x => x.Routines)
+                .HasForeignKey(x => new { x.GoalId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Project).WithMany(x => x.Routines)
+                .HasForeignKey(x => new { x.ProjectId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ContinuationOf).WithMany()
+                .HasForeignKey(x => x.ContinuationOfRoutineId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Routines_Status", "\"Status\" IN ('ACTIVE', 'STOPPED')");
+                t.HasCheckConstraint("CK_Routines_Source", "\"Source\" IN ('MANUAL', 'AI_ASSISTED', 'SYSTEM_MIGRATED')");
+                t.HasCheckConstraint("CK_Routines_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_Routines_ParentExclusive", "NOT (\"GoalId\" IS NOT NULL AND \"ProjectId\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_Routines_RecurrenceObject", "jsonb_typeof(\"RecurrenceDefinition\") = 'object'");
+                // A Routine stopped before its first eligible date has an empty range: until = from - 1.
+                t.HasCheckConstraint("CK_Routines_EffectiveRange", "\"EffectiveUntilLocalDate\" IS NULL OR \"EffectiveUntilLocalDate\" >= \"EffectiveFromLocalDate\" - 1");
+                t.HasCheckConstraint("CK_Routines_StoppedState", "(\"Status\" = 'ACTIVE' AND \"StoppedAt\" IS NULL AND \"EffectiveUntilLocalDate\" IS NULL) OR (\"Status\" = 'STOPPED' AND \"StoppedAt\" IS NOT NULL AND \"EffectiveUntilLocalDate\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_Routines_ContinuationNotSelf", "\"ContinuationOfRoutineId\" IS NULL OR \"ContinuationOfRoutineId\" <> \"Id\"");
+            });
+        });
+
+        modelBuilder.Entity<RoutineOccurrence>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.RoutineId, x.ScheduledLocalDate, x.ScheduledLocalTime })
+                .IsUnique().HasFilter("\"ScheduledLocalTime\" IS NOT NULL")
+                .HasDatabaseName("IX_RoutineOccurrences_TimedIdentity");
+            entity.HasIndex(x => new { x.RoutineId, x.ScheduledLocalDate })
+                .IsUnique().HasFilter("\"ScheduledLocalTime\" IS NULL")
+                .HasDatabaseName("IX_RoutineOccurrences_UntimedIdentity");
+            entity.HasIndex(x => new { x.Status, x.ScheduledLocalDate });
+            entity.HasOne(x => x.Routine).WithMany(x => x.Occurrences).HasForeignKey(x => x.RoutineId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_RoutineOccurrences_Status", "\"Status\" IN ('PENDING', 'DONE', 'MISSED')");
+                t.HasCheckConstraint("CK_RoutineOccurrences_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_RoutineOccurrences_Resolution", "(\"Status\" = 'PENDING' AND \"ResolvedAt\" IS NULL) OR (\"Status\" IN ('DONE', 'MISSED') AND \"ResolvedAt\" IS NOT NULL)");
             });
         });
 

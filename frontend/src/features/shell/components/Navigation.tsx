@@ -1,7 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import { FolderKanban, ListChecks, type LucideIcon, Sun, Target } from 'lucide-react'
+import { FolderKanban, ListChecks, type LucideIcon, Repeat, Sun, Target } from 'lucide-react'
 
-type Destination = { to: '/today' | '/tasks' | '/projects' | '/goals'; label: string; icon: LucideIcon }
+type Destination = {
+  to: '/today' | '/tasks' | '/routines' | '/projects' | '/goals'
+  label: string
+  icon: LucideIcon
+  /** False keeps a destination out of the four-slot phone tab bar; it stays in the sidebar and drawer. */
+  tab?: false
+}
 
 /**
  * The primary destinations, in order of daily use. Add an entry only when
@@ -10,6 +16,8 @@ type Destination = { to: '/today' | '/tasks' | '/projects' | '/goals'; label: st
 export const destinations: Destination[] = [
   { to: '/today', label: 'امروز', icon: Sun },
   { to: '/tasks', label: 'کارها', icon: ListChecks },
+  // Routines are executed from Today, so their management page does not need a tab.
+  { to: '/routines', label: 'روتین‌ها', icon: Repeat, tab: false },
   { to: '/projects', label: 'پروژه‌ها', icon: FolderKanban },
   { to: '/goals', label: 'هدف‌ها', icon: Target },
 ]

@@ -44,19 +44,19 @@ public sealed class TaskService(
         return (await ToDtosAsync([item], cancellationToken))[0];
     }
 
-    public async Task<TodayDto> TodayAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<TaskDto>> TodayTasksAsync(DateOnly today,
+        CancellationToken cancellationToken)
     {
-        var today = dates.Today;
         var rows = await db.Tasks.AsNoTracking()
             .Where(x => x.UserId == currentUser.UserId && x.Status == TaskStatuses.Active &&
                 x.PlannedDate == today)
             .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
         var items = await ToDtosAsync(rows, cancellationToken);
-        return new TodayDto(today, items.OrderBy(x => x.IsBlocked)
+        return items.OrderBy(x => x.IsBlocked)
             .ThenBy(x => x.SequenceId.HasValue ? 0 : 1)
             .ThenBy(x => x.SequenceOrder ?? int.MaxValue)
-            .ThenBy(x => x.CreatedAt).ThenBy(x => x.Id).ToArray());
+            .ThenBy(x => x.CreatedAt).ThenBy(x => x.Id).ToArray();
     }
 
     public async Task<TaskDto> CreateAsync(CreateTaskRequest request, string idempotencyKey,
@@ -313,33 +313,11 @@ public sealed class TaskService(
             throw new ArgumentException("plannedDate cannot be after deadline.");
     }
 
-    private static async Task LockParentsAsync(AppDbContext context, Guid owner,
+    private static Task LockParentsAsync(AppDbContext context, Guid owner,
         IEnumerable<(Guid? GoalId, Guid? ProjectId)> scopes, Guid? requestedGoalId,
-        Guid? requestedProjectId, CancellationToken cancellationToken)
-    {
-        var scopeList = scopes.Distinct().ToArray();
-        var projectIds = scopeList.Select(x => x.ProjectId).OfType<Guid>().Distinct().Order().ToArray();
-        var projects = projectIds.Length == 0
-            ? []
-            : await context.Projects.AsNoTracking()
-                .Where(x => x.UserId == owner && projectIds.Contains(x.Id))
-                .ToListAsync(cancellationToken);
-        if (projects.Count != projectIds.Length)
-            throw new ResourceNotFoundException("Project", projectIds.First(x => projects.All(p => p.Id != x)));
-        var goalIds = scopeList.Select(x => x.GoalId).OfType<Guid>()
-            .Concat(projects.Select(x => x.GoalId).OfType<Guid>()).Distinct().Order().ToArray();
-        var lockedGoals = new Dictionary<Guid, Goal>();
-        foreach (var goalId in goalIds)
-            lockedGoals[goalId] = await GoalService.LockOwnedAsync(context, goalId, owner, cancellationToken);
-        var lockedProjects = new Dictionary<Guid, Project>();
-        foreach (var projectId in projectIds)
-            lockedProjects[projectId] = await ProjectService.LockOwnedAsync(context, projectId, owner, cancellationToken);
-        if (requestedGoalId is { } requestedGoal && lockedGoals[requestedGoal].Status != ParentStatuses.Active)
-            throw new CommandRejectedException("PARENT_NOT_ACTIVE");
-        if (requestedProjectId is { } requestedProject &&
-            lockedProjects[requestedProject].Status != ParentStatuses.Active)
-            throw new CommandRejectedException("PARENT_NOT_ACTIVE");
-    }
+        Guid? requestedProjectId, CancellationToken cancellationToken) =>
+        ParentCommandSupport.LockParentsAsync(context, owner, scopes, requestedGoalId,
+            requestedProjectId, cancellationToken);
 
     private static async Task LockSequencesAsync(AppDbContext context, IEnumerable<Guid> sequenceIds,
         CancellationToken cancellationToken)
@@ -375,5 +353,5 @@ public sealed class TaskService(
             x.Status != TaskStatuses.Completed, cancellationToken);
 
     private static string Scope(Guid? goalId, Guid? projectId) =>
-        projectId is not null ? "PROJECT" : goalId is not null ? "GOAL" : "STANDALONE";
+        ParentCommandSupport.ParentScope(goalId, projectId);
 }

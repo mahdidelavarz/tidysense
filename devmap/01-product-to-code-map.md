@@ -8,7 +8,7 @@ This routes accepted concepts; it does not redefine behavior.
 | Goal | 012/019A/026 | Guid aggregate, ownership, review snapshot | feature list/detail/create | not canonical yet |
 | Project | 012/019A/026 | Guid user-owned aggregate replacing prototype | feature list/detail/create | ownership-safe read proof only; module incomplete |
 | Task/Today | 015/019A/025/026 | Task, sequence rules, Today query/events | Task/Today features | not implemented |
-| Routine/occurrence | 015/019A/024 | multi-slot local scheduling/generation | Routine/Today features | not implemented |
+| Routine/occurrence | 015/015B/019A–C/024 | `RoutineService`, `RoutineSchedule`, `TodayService`; multi-slot local scheduling and lazy generation | `features/routines`, Today routine groups | implemented in STEP-06 |
 | PlanningFact/Planning | 013–014A/020/023/026 | attempts/drafts/facts/context/apply | chat/draft/review/apply | not implemented |
 | CaptureItem | 026 | capture lifecycle/resolution/events | Quick Capture and Reconcile lane | not implemented |
 | Reconcile | 016–018A/020/025/026 | deterministic facts/grouping first, optional AI | overview/session/review/apply | not implemented |

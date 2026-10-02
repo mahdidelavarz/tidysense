@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
+import { routineKeys } from '../../routines/hooks/routine-hooks'
 import {
   createProject,
   getProject,
@@ -96,7 +97,11 @@ export function useProjectTerminal(projectId: string) {
     onSuccess: async data => {
       client.setQueryData(projectKeys.detail(projectId), data)
       setPreview(null)
-      await client.invalidateQueries({ queryKey: projectKeys.list })
+      await Promise.all([
+        client.invalidateQueries({ queryKey: projectKeys.list }),
+        // The terminal transition stops the Project's Routines in the same command.
+        client.invalidateQueries({ queryKey: routineKeys.all }),
+      ])
     },
   })
 

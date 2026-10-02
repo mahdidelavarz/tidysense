@@ -9,7 +9,7 @@ import { destinations } from './Navigation'
  */
 export function TabBar() {
   const openCreate = useUiStore(state => state.openCreate)
-  const [first, second, third, fourth] = destinations.map(({ to, label, icon: Icon }) => (
+  const [first, second, third, fourth] = destinations.filter(item => item.tab !== false).map(({ to, label, icon: Icon }) => (
     <Link key={to} className="tab-item" to={to}>
       <Icon size={22} aria-hidden="true" />
       {label}

@@ -5,7 +5,7 @@ import { create } from 'zustand'
 // it); this store exists because pages, the tab bar and the sidebar all need
 // to open the same overlays.
 
-export type CreateTarget = 'menu' | 'task' | 'project' | 'goal'
+export type CreateTarget = 'menu' | 'task' | 'routine' | 'project' | 'goal'
 export type Toast = { id: number; message: string }
 
 type UiState = {

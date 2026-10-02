@@ -12,6 +12,8 @@
 - UI follows `frontend/design-system.md`: no top bar; sidebar on desktop, tab bar + drawer on phones; create/edit in sheets; one primary action per page; Jalali dates and Persian digits; Lucide icons; Vazirmatn.
 - Cursor pagination with stable ordering and allowlisted feature filters/sorts.
 - Goal and Project use persisted review snapshots, explicit terminal transitions and owner-scoped versions. Goal terminal and Project attach/reparent serialize on the Goal; later child modules must extend the same blocker preview before permitting child creation.
+- A command that deterministically changes other aggregates returns them as `CascadeEvents`: one event per changed child, actor `SYSTEM_DETERMINISTIC`, sharing the parent's transaction id. Deterministic system work outside a user command (Routine occurrence creation and Missed resolution) writes its own `SYSTEM_DETERMINISTIC` event and outbox row in the same transaction as the change.
+- Routine occurrences are materialized lazily under a Routine row lock, never past the current local date; schedule edits are prospective. See `step-06-routine-acceptance.md`.
 - PostgreSQL/Npgsql is canonical; domain/application/API contracts remain provider-neutral.
 - xUnit + real PostgreSQL (Testcontainers or configured local instance) + WebApplicationFactory; Vitest/Testing Library/Playwright.
 - Local backend secrets use .NET User Secrets; real-PostgreSQL tests use user/process-scoped `TIDYSENSE_TEST_POSTGRES`. Use root `dev.ps1` commands; Vite proxies `/api` to backend HTTPS without broad local CORS.

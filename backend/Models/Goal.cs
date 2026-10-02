@@ -19,4 +19,5 @@ public sealed class Goal
     public User User { get; set; } = null!;
     public ICollection<Project> Projects { get; set; } = [];
     public ICollection<TaskItem> Tasks { get; set; } = [];
+    public ICollection<Routine> Routines { get; set; } = [];
 }

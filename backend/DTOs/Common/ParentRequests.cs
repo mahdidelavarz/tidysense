@@ -19,6 +19,10 @@ public sealed record TerminalPreviewDto(
     long ExpectedVersion,
     bool CanApply,
     IReadOnlyList<TerminalBlockerDto> Blockers,
+    IReadOnlyList<TerminalCascadeDto> Cascades,
     string PreviewHash);
 
 public sealed record TerminalBlockerDto(string ResourceType, Guid ResourceId, string Status, long Version);
+
+/// <summary>A child the confirmed terminal transition will change by itself, shown before confirmation.</summary>
+public sealed record TerminalCascadeDto(string ResourceType, Guid ResourceId, string ResultingStatus, long Version);

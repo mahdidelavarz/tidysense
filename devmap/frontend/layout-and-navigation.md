@@ -22,15 +22,16 @@ This is two layouts, not one scaled layout: the tab bar, drawer and bottom sheet
 
 ### Destinations
 
-Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/Navigation.tsx), in order of daily use: **Today → Tasks → Projects → Goals**. Add a destination only when its product step ships. The tab bar holds at most four destinations plus create; a fifth destination (for example Routines in STEP-06) needs a decision: replace a tab, or live in the drawer and sidebar only.
+Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/Navigation.tsx), in order of daily use: **Today → Tasks → Routines → Projects → Goals**. Add a destination only when its product step ships. The tab bar holds at most four destinations plus create. Routines (STEP-06) is marked `tab: false`: it lives in the sidebar and drawer only, because Routines are executed from Today. Any further destination needs the same decision: replace a tab, or stay out of the tab bar.
 
 ## Routes
 
 | Route | Page | Width |
 |---|---|---|
 | `/` | redirects to `/today` | — |
-| `/today` | Today: tasks for the local date, ready first, waiting below | narrow |
+| `/today` | Today: tasks for the local date, ready first, waiting below, then the date's Routines with a row per slot | narrow |
 | `/tasks`, `/tasks/$taskId` | Task list, Task detail | narrow |
+| `/routines`, `/routines/$routineId` | Routine list, Routine detail with occurrence history | narrow |
 | `/projects`, `/projects/$projectId` | Project list, Project detail | wide list, narrow detail |
 | `/goals`, `/goals/$goalId` | Goal list, Goal detail | wide list, narrow detail |
 | `/first-entry` | welcome after first sign-in | narrow |
@@ -57,7 +58,7 @@ Detail pages start with `BackLink` instead, then:
 
 ## Creating and editing
 
-There is **one create flow**, owned by the shell (`CreateSheet`) and opened through the UI store (`openCreate`). The tab-bar button and the sidebar button open a chooser (Task / Project / Goal); a page's own "new" button and its empty state open that page's form directly. Creating something therefore looks the same from everywhere.
+There is **one create flow**, owned by the shell (`CreateSheet`) and opened through the UI store (`openCreate`). The tab-bar button and the sidebar button open a chooser (Task / Routine / Project / Goal); a page's own "new" button and its empty state open that page's form directly. Creating something therefore looks the same from everywhere.
 
 | Need | Use |
 |---|---|

@@ -56,13 +56,14 @@ public sealed class CommandExecutionService(
             eventPayloadValidator.Validate(mutation.EventType, mutation.EventVersion, mutation.PayloadJson);
             var result = NewResult(record, "SUCCEEDED", now, mutation.AggregateType,
                 mutation.AggregateId, mutation.AggregateVersion, null, null);
+            var transactionId = Guid.NewGuid();
             var domainEvent = new DomainEvent
             {
                 EventId = Guid.NewGuid(), EventType = mutation.EventType,
                 EventVersion = mutation.EventVersion, OccurredAt = mutation.OccurredAt,
                 RecordedAt = DateTimeOffset.UtcNow, UserId = request.UserId, Actor = "USER",
                 AggregateType = mutation.AggregateType, AggregateId = mutation.AggregateId,
-                AggregateVersion = mutation.AggregateVersion, TransactionId = Guid.NewGuid(),
+                AggregateVersion = mutation.AggregateVersion, TransactionId = transactionId,
                 CorrelationId = request.CorrelationId, CommandResultId = result.Id,
                 PayloadJson = mutation.PayloadJson
             };
@@ -72,6 +73,27 @@ public sealed class CommandExecutionService(
             {
                 Id = Guid.NewGuid(), EventId = domainEvent.EventId, CreatedAt = DateTimeOffset.UtcNow
             });
+            foreach (var cascade in mutation.CascadeEvents ?? [])
+            {
+                eventPayloadValidator.Validate(cascade.EventType, cascade.EventVersion, cascade.PayloadJson);
+                // The user confirmed the parent command, not each consequence.
+                var cascadeEvent = new DomainEvent
+                {
+                    EventId = Guid.NewGuid(), EventType = cascade.EventType,
+                    EventVersion = cascade.EventVersion, OccurredAt = mutation.OccurredAt,
+                    RecordedAt = DateTimeOffset.UtcNow, UserId = request.UserId,
+                    Actor = "SYSTEM_DETERMINISTIC", AggregateType = cascade.AggregateType,
+                    AggregateId = cascade.AggregateId, AggregateVersion = cascade.AggregateVersion,
+                    TransactionId = transactionId, CorrelationId = request.CorrelationId,
+                    CausationId = domainEvent.EventId, CommandResultId = result.Id,
+                    PayloadJson = cascade.PayloadJson
+                };
+                db.DomainEvents.Add(cascadeEvent);
+                db.OutboxMessages.Add(new OutboxMessage
+                {
+                    Id = Guid.NewGuid(), EventId = cascadeEvent.EventId, CreatedAt = DateTimeOffset.UtcNow
+                });
+            }
             record.Status = "SUCCEEDED";
             record.ResultId = result.Id;
             record.CompletedAt = DateTimeOffset.UtcNow;

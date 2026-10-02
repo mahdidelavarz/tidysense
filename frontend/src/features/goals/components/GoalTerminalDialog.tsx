@@ -20,12 +20,14 @@ export function GoalTerminalDialog({ preview, pending, onCancel, onConfirm }: {
       pendingLabel="در حال ثبت…"
       pending={pending}
       canApply={preview.canApply}
-      blockersIntro="ابتدا پروژه‌های فعال و کارهای مستقیم زیر را تعیین تکلیف کنید:"
+      blockersIntro="ابتدا پروژه‌های فعال و کارها و روتین‌های مستقیم زیر را تعیین تکلیف کنید:"
       blockers={preview.blockers.map(blocker => ({
         id: blocker.resourceId,
         label: blocker.resourceType === 'Task'
           ? <Link className="text-link" to="/tasks/$taskId" params={{ taskId: blocker.resourceId }}>مشاهده کار فعال</Link>
-          : <Link className="text-link" to="/projects/$projectId" params={{ projectId: blocker.resourceId }}>مشاهده پروژه فعال</Link>,
+          : blocker.resourceType === 'Routine'
+            ? <Link className="text-link" to="/routines/$routineId" params={{ routineId: blocker.resourceId }}>مشاهده روتین فعال</Link>
+            : <Link className="text-link" to="/projects/$projectId" params={{ projectId: blocker.resourceId }}>مشاهده پروژه فعال</Link>,
       }))}
       onCancel={onCancel}
       onConfirm={onConfirm}

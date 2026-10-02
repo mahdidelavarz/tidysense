@@ -35,3 +35,8 @@ export function formatLongDate(value: string): string {
 export function formatNumber(value: number): string {
   return numberFormatter.format(value)
 }
+
+/** Formats an API local wall-clock time (`HH:mm` or `HH:mm:ss`) as «۰۸:۳۰». */
+export function formatTime(value: string): string {
+  return value.slice(0, 5).replace(/\d/g, digit => numberFormatter.format(Number(digit)))
+}
