@@ -10,6 +10,7 @@ import { FormError } from '../../../shared/ui/FormUi'
 import { BackLink } from '../../../shared/ui/PageHeader'
 import { Sheet } from '../../../shared/ui/Sheet'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
+import { PlanningFactsSection } from '../../planning/components/PlanningFactsSection'
 import { useGoal, useGoalTerminal, useUpdateGoal } from '../hooks/goal-hooks'
 import type { UpdateGoalRequest } from '../types/goal.types'
 import { GoalForm } from './GoalForm'
@@ -82,6 +83,8 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
           </div>
         </section>
       )}
+
+      {data.status === 'ACTIVE' && <PlanningFactsSection scope={{ goalId }} />}
 
       <div className="mt-4 space-y-3">
         <FormError error={terminal.previewError} />

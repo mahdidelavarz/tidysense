@@ -22,6 +22,11 @@ public sealed class AppDbContext(
     public DbSet<RuleMatch> RuleMatches => Set<RuleMatch>();
     public DbSet<ReconcilePrompt> ReconcilePrompts => Set<ReconcilePrompt>();
     public DbSet<ActionConfirmation> ActionConfirmations => Set<ActionConfirmation>();
+    public DbSet<PlanningAttempt> PlanningAttempts => Set<PlanningAttempt>();
+    public DbSet<PlanningDraft> PlanningDrafts => Set<PlanningDraft>();
+    public DbSet<PlanningDraftRevision> PlanningDraftRevisions => Set<PlanningDraftRevision>();
+    public DbSet<PlanningFact> PlanningFacts => Set<PlanningFact>();
+    public DbSet<AiInvocation> AiInvocations => Set<AiInvocation>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<CommandResult> CommandResults => Set<CommandResult>();
     public DbSet<DomainEvent> DomainEvents => Set<DomainEvent>();
@@ -327,12 +332,167 @@ public sealed class AppDbContext(
             entity.HasIndex(x => new { x.UserId, x.CreatedAt });
             entity.HasIndex(x => new { x.Status, x.ExpiresAt });
             entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.PlanningDraftId);
             entity.HasOne(x => x.Session).WithMany().HasForeignKey(x => x.ReconcileSessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<PlanningDraft>().WithMany().HasForeignKey(x => x.PlanningDraftId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_ActionConfirmations_Status", "\"Status\" IN ('CREATED', 'SUBMITTED', 'RESOLVED', 'EXPIRED', 'CANCELLED')");
                 t.HasCheckConstraint("CK_ActionConfirmations_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
+                // A confirmation previews exactly one thing: a Reconcile action or one planning draft revision.
+                t.HasCheckConstraint("CK_ActionConfirmations_Subject", "(\"ReconcileSessionId\" IS NOT NULL AND \"PlanningDraftId\" IS NULL AND \"PlanningDraftRevision\" IS NULL) OR (\"ReconcileSessionId\" IS NULL AND \"PlanningDraftId\" IS NOT NULL AND \"PlanningDraftRevision\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<PlanningAttempt>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ClientAttemptId).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.RequestHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Intention).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.GeneratorKey).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ContextBuilderVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ContextFingerprint).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ContextManifestJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.FailureCode).HasMaxLength(64);
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.HasIndex(x => new { x.UserId, x.ClientAttemptId }).IsUnique();
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt });
+            // One generation in flight per user is the database backstop for the collision check.
+            entity.HasIndex(x => x.UserId).IsUnique().HasFilter("\"Status\" IN ('QUEUED', 'RUNNING')")
+                .HasDatabaseName("IX_PlanningAttempts_OneInFlightPerUser");
+            entity.Property(x => x.Outcome).HasMaxLength(16);
+            entity.Property(x => x.ClarificationJson).HasColumnType("jsonb");
+            entity.Property(x => x.AnswersJson).HasColumnType("jsonb");
+            // A clarification is answered by at most one following attempt.
+            entity.HasIndex(x => x.PreviousAttemptId).IsUnique().HasFilter("\"PreviousAttemptId\" IS NOT NULL");
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<PlanningAttempt>().WithMany().HasForeignKey(x => x.PreviousAttemptId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_PlanningAttempts_Status", "\"Status\" IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED')");
+                t.HasCheckConstraint("CK_PlanningAttempts_ContextExclusive", "NOT (\"ContextGoalId\" IS NOT NULL AND \"ContextProjectId\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_PlanningAttempts_ManifestObject", "jsonb_typeof(\"ContextManifestJson\") = 'object'");
+                t.HasCheckConstraint("CK_PlanningAttempts_Completion", "(\"Status\" IN ('QUEUED', 'RUNNING')) = (\"CompletedAt\" IS NULL)");
+                // Only a draft outcome has a draft; a clarification or a blocked input has its questions or reason instead.
+                t.HasCheckConstraint("CK_PlanningAttempts_Outcome", "(\"Status\" = 'SUCCEEDED') = (\"Outcome\" IS NOT NULL) AND (COALESCE(\"Outcome\", '') = 'DRAFT') = (\"DraftId\" IS NOT NULL) AND (COALESCE(\"Outcome\", '') IN ('CLARIFICATION', 'INPUT_BLOCKED')) = (\"ClarificationJson\" IS NOT NULL) AND (\"Status\" = 'FAILED') = (\"FailureCode\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_PlanningAttempts_OutcomeValue", "\"Outcome\" IS NULL OR \"Outcome\" IN ('DRAFT', 'CLARIFICATION', 'INPUT_BLOCKED')");
+                t.HasCheckConstraint("CK_PlanningAttempts_ClarificationTurn", "\"ClarificationTurn\" BETWEEN 0 AND 3 AND (\"ClarificationTurn\" > 0) = (\"PreviousAttemptId\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<AiInvocation>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Family).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ConfigurationKey).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ProviderKey).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Model).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.PromptVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.SchemaVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ContextBuilderVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.RepairPolicyVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Outcome).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.FailureClass).HasMaxLength(32);
+            entity.Property(x => x.Gate).HasMaxLength(16);
+            entity.Property(x => x.RepairRulesJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.RetryReason).HasMaxLength(32);
+            entity.Property(x => x.ContextReduction).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.HasIndex(x => new { x.Family, x.StartedAt });
+            entity.HasIndex(x => x.PlanningAttemptId);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            // The diagnostic row outlives the temporary attempt it describes.
+            entity.HasOne<PlanningAttempt>().WithMany().HasForeignKey(x => x.PlanningAttemptId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.ToTable(t =>
+            {
+                // At most two physical calls per operation; 0 records an operation that never reached the provider.
+                t.HasCheckConstraint("CK_AiInvocations_Sequence", "\"Sequence\" BETWEEN 0 AND 2");
+                t.HasCheckConstraint("CK_AiInvocations_Outcome", "\"Outcome\" IN ('SUCCEEDED', 'FAILED', 'REJECTED', 'BLOCKED', 'CANCELLED')");
+                t.HasCheckConstraint("CK_AiInvocations_RepairRulesArray", "jsonb_typeof(\"RepairRulesJson\") = 'array'");
+            });
+        });
+
+        modelBuilder.Entity<PlanningDraft>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.SchemaVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ContextFingerprint).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => x.AttemptId).IsUnique();
+            entity.HasIndex(x => new { x.Status, x.ExpiresAt });
+            // One unapproved draft per user: a new flow must explicitly replace the previous one.
+            entity.HasIndex(x => x.UserId).IsUnique().HasFilter("\"Status\" = 'REVIEWABLE'")
+                .HasDatabaseName("IX_PlanningDrafts_OneReviewablePerUser");
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<PlanningAttempt>().WithMany().HasForeignKey(x => x.AttemptId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                // CONFIRMED is deliberately absent: whether a draft was applied is a command result, not a draft state.
+                t.HasCheckConstraint("CK_PlanningDrafts_Status", "\"Status\" IN ('REVIEWABLE', 'SUPERSEDED', 'EXPIRED', 'CANCELLED')");
+                t.HasCheckConstraint("CK_PlanningDrafts_Revision", "\"CurrentRevision\" > 0");
+                t.HasCheckConstraint("CK_PlanningDrafts_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_PlanningDrafts_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
+                t.HasCheckConstraint("CK_PlanningDrafts_ContextExclusive", "NOT (\"ContextGoalId\" IS NOT NULL AND \"ContextProjectId\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<PlanningDraftRevision>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Origin).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ContentJson).HasColumnType("jsonb").IsRequired();
+            entity.HasIndex(x => new { x.DraftId, x.Revision }).IsUnique();
+            entity.HasOne(x => x.Draft).WithMany(x => x.Revisions).HasForeignKey(x => x.DraftId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_PlanningDraftRevisions_Revision", "\"Revision\" > 0");
+                t.HasCheckConstraint("CK_PlanningDraftRevisions_Origin", "\"Origin\" IN ('GENERATED', 'USER_EDIT')");
+                t.HasCheckConstraint("CK_PlanningDraftRevisions_ContentObject", "jsonb_typeof(\"ContentJson\") = 'object'");
+            });
+        });
+
+        modelBuilder.Entity<PlanningFact>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.FactType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Strength).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ValueJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.Source).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.UserId, x.GoalId, x.Status });
+            entity.HasIndex(x => new { x.UserId, x.ProjectId, x.Status });
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Goal>().WithMany()
+                .HasForeignKey(x => new { x.GoalId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Project>().WithMany()
+                .HasForeignKey(x => new { x.ProjectId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_PlanningFacts_OneScope", "(\"GoalId\" IS NOT NULL) <> (\"ProjectId\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_PlanningFacts_FactType", "\"FactType\" IN ('UNAVAILABLE_WEEKDAY', 'UNAVAILABLE_DATE', 'UNAVAILABLE_DATE_RANGE', 'AVAILABLE_DEVICE', 'CURRENT_LEVEL', 'LEARNING_FOCUS', 'EXCLUDED_PATH')");
+                // HARD is a closed vocabulary: only what can be checked against a date.
+                t.HasCheckConstraint("CK_PlanningFacts_Strength", "\"Strength\" IN ('SOFT', 'INFORMATIONAL') OR (\"Strength\" = 'HARD' AND \"FactType\" IN ('UNAVAILABLE_WEEKDAY', 'UNAVAILABLE_DATE', 'UNAVAILABLE_DATE_RANGE'))");
+                t.HasCheckConstraint("CK_PlanningFacts_Source", "\"Source\" IN ('USER_EXPLICIT', 'USER_CONFIRMED_AI_EXTRACTION')");
+                t.HasCheckConstraint("CK_PlanningFacts_Status", "\"Status\" IN ('ACTIVE', 'EXPIRED', 'REMOVED')");
+                t.HasCheckConstraint("CK_PlanningFacts_ValueObject", "jsonb_typeof(\"ValueJson\") = 'object'");
+                t.HasCheckConstraint("CK_PlanningFacts_Version", "\"Version\" > 0");
+                t.HasCheckConstraint("CK_PlanningFacts_Lifecycle", "(\"Status\" = 'REMOVED') = (\"RemovedAt\" IS NOT NULL) AND (\"Status\" = 'EXPIRED') = (\"ExpiredAt\" IS NOT NULL)");
             });
         });
 

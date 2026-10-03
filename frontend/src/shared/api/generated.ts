@@ -736,6 +736,823 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/planning/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningActiveDto"];
+                        "application/json": components["schemas"]["PlanningActiveDto"];
+                        "text/json": components["schemas"]["PlanningActiveDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartPlanningAttemptRequest"];
+                    "text/json": components["schemas"]["StartPlanningAttemptRequest"];
+                    "application/*+json": components["schemas"]["StartPlanningAttemptRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningAttemptDto"];
+                        "application/json": components["schemas"]["PlanningAttemptDto"];
+                        "text/json": components["schemas"]["PlanningAttemptDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/attempts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningAttemptDto"];
+                        "application/json": components["schemas"]["PlanningAttemptDto"];
+                        "text/json": components["schemas"]["PlanningAttemptDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/attempts/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningAttemptDto"];
+                        "application/json": components["schemas"]["PlanningAttemptDto"];
+                        "text/json": components["schemas"]["PlanningAttemptDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/drafts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningDraftDto"];
+                        "application/json": components["schemas"]["PlanningDraftDto"];
+                        "text/json": components["schemas"]["PlanningDraftDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/drafts/{id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RevisePlanningDraftRequest"];
+                    "text/json": components["schemas"]["RevisePlanningDraftRequest"];
+                    "application/*+json": components["schemas"]["RevisePlanningDraftRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningDraftDto"];
+                        "application/json": components["schemas"]["PlanningDraftDto"];
+                        "text/json": components["schemas"]["PlanningDraftDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/drafts/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PlanningDraftRevisionRequest"];
+                    "text/json": components["schemas"]["PlanningDraftRevisionRequest"];
+                    "application/*+json": components["schemas"]["PlanningDraftRevisionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningDraftDto"];
+                        "application/json": components["schemas"]["PlanningDraftDto"];
+                        "text/json": components["schemas"]["PlanningDraftDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/drafts/{id}/previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PlanningDraftRevisionRequest"];
+                    "text/json": components["schemas"]["PlanningDraftRevisionRequest"];
+                    "application/*+json": components["schemas"]["PlanningDraftRevisionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningConfirmationDto"];
+                        "application/json": components["schemas"]["PlanningConfirmationDto"];
+                        "text/json": components["schemas"]["PlanningConfirmationDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/confirmations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningConfirmationDto"];
+                        "application/json": components["schemas"]["PlanningConfirmationDto"];
+                        "text/json": components["schemas"]["PlanningConfirmationDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/confirmations/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SubmitPlanningConfirmationRequest"];
+                    "text/json": components["schemas"]["SubmitPlanningConfirmationRequest"];
+                    "application/*+json": components["schemas"]["SubmitPlanningConfirmationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningApplyResultDto"];
+                        "application/json": components["schemas"]["PlanningApplyResultDto"];
+                        "text/json": components["schemas"]["PlanningApplyResultDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/facts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    goalId?: string;
+                    projectId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningFactDto"][];
+                        "application/json": components["schemas"]["PlanningFactDto"][];
+                        "text/json": components["schemas"]["PlanningFactDto"][];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/facts/{id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RemovePlanningFactRequest"];
+                    "text/json": components["schemas"]["RemovePlanningFactRequest"];
+                    "application/*+json": components["schemas"]["RemovePlanningFactRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningFactDto"];
+                        "application/json": components["schemas"]["PlanningFactDto"];
+                        "text/json": components["schemas"]["PlanningFactDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -3023,6 +3840,228 @@ export interface components {
             nextCursor: null | string;
             hasMore: boolean;
         };
+        PlanningActiveDto: {
+            attempt: null | components["schemas"]["PlanningAttemptDto"];
+            draft: null | components["schemas"]["PlanningDraftDto"];
+            clarification?: null | components["schemas"]["PlanningAttemptDto"];
+            /** @default false */
+            sampleGenerator: boolean;
+        };
+        PlanningAnswer: {
+            questionId: string;
+            text: string;
+        };
+        PlanningApplyResultDto: {
+            /** Format: uuid */
+            confirmationId: string;
+            status: string;
+            /** Format: uuid */
+            goalId: null | string;
+            projectIds: string[];
+            taskIds: string[];
+            routineIds: string[];
+            /** Format: int32 */
+            factCount: number | string;
+        };
+        PlanningAttemptDto: {
+            /** Format: uuid */
+            id: string;
+            clientAttemptId: string;
+            status: string;
+            intention: string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            failureCode: null | string;
+            /** Format: uuid */
+            draftId: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            outcome?: null | string;
+            clarification?: null | components["schemas"]["PlanningClarificationDto"];
+        };
+        PlanningClarificationDto: {
+            questions: components["schemas"]["PlanningQuestion"][];
+            blockReason: null | string;
+            message: null | string;
+            /** Format: int32 */
+            turn: number | string;
+        };
+        PlanningConfirmationDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            draftId: string;
+            /** Format: int32 */
+            revision: number | string;
+            status: string;
+            items: components["schemas"]["PlanningPreviewItemDto"][];
+            facts: components["schemas"]["PlanningPreviewFactDto"][];
+            warnings: components["schemas"]["PlanningWarningDto"][];
+            noFactsRemembered: boolean;
+            previewHash: string;
+            /** Format: date-time */
+            expiresAt: string;
+            result: null | components["schemas"]["PlanningApplyResultDto"];
+        };
+        PlanningContextRefDto: {
+            type: string;
+            /** Format: uuid */
+            id: string;
+            title: string;
+        };
+        PlanningDraftDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            attemptId: string;
+            status: string;
+            /** Format: int32 */
+            revision: number | string;
+            /** Format: date-time */
+            expiresAt: string;
+            context: null | components["schemas"]["PlanningContextRefDto"];
+            summary: string;
+            /** Format: date */
+            windowStart: string;
+            /** Format: date */
+            windowEnd: string;
+            proposals: components["schemas"]["PlanningProposalViewDto"][];
+            facts: components["schemas"]["PlanningFactViewDto"][];
+            assumptions: components["schemas"]["PlanningNote"][];
+            unresolvedQuestions: components["schemas"]["PlanningNote"][];
+            draftIssues: components["schemas"]["PlanningIssueDto"][];
+            firstWeek: components["schemas"]["PlanningFirstWeekEntryDto"][];
+            canApply: boolean;
+            /** Format: uuid */
+            linkedConfirmationId: null | string;
+        };
+        PlanningDraftRevisionRequest: {
+            /** Format: int32 */
+            expectedRevision: number | string;
+        };
+        PlanningFactDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            factType: string;
+            category: string;
+            strength: string;
+            value: components["schemas"]["PlanningFactValue"];
+            source: string;
+            status: string;
+            /** Format: int64 */
+            version: number | string;
+            /** Format: date-time */
+            capturedAt: string;
+            /** Format: date-time */
+            lastConfirmedAt: string;
+        };
+        PlanningFactProposal: {
+            draftId: string;
+            factType: string;
+            strength: string;
+            value: components["schemas"]["PlanningFactValue"];
+            scopeDraftId: null | string;
+            included: boolean;
+        };
+        PlanningFactValue: {
+            weekdays: null | (number | string)[];
+            /** Format: date */
+            localDate: null | string;
+            /** Format: date */
+            startLocalDate: null | string;
+            /** Format: date */
+            endLocalDate: null | string;
+            text: null | string;
+        };
+        PlanningFactViewDto: {
+            fact: components["schemas"]["PlanningFactProposal"];
+            category: string;
+            state: string;
+            excludedByAncestor: boolean;
+            issues: components["schemas"]["PlanningIssueDto"][];
+        };
+        PlanningFirstWeekEntryDto: {
+            draftId: string;
+            /** Format: date */
+            date: string;
+        };
+        PlanningIssueDto: {
+            code: string;
+            severity: string;
+            origin: string;
+        };
+        PlanningNote: {
+            draftId: null | string;
+            text: string;
+        };
+        PlanningPreviewFactDto: {
+            draftId: string;
+            factType: string;
+            strength: string;
+        };
+        PlanningPreviewItemDto: {
+            draftId: string;
+            entityType: string;
+            title: string;
+            parentDraftId: null | string;
+            underContext: boolean;
+        };
+        PlanningProposal: {
+            draftId: string;
+            entityType: string;
+            title: string;
+            description: null | string;
+            parentDraftId: null | string;
+            underContext: boolean;
+            source: string;
+            confidence: string;
+            included: boolean;
+            desiredOutcome: null | string;
+            completionMeaning: null | string;
+            /** Format: date */
+            targetDate: null | string;
+            /** Format: date */
+            reviewDate: null | string;
+            reviewDateSource: null | string;
+            /** Format: date */
+            plannedDate: null | string;
+            /** Format: date */
+            deadline: null | string;
+            recurrence: null | components["schemas"]["PlanningRecurrence"];
+            timesOfDay: null | string[];
+            /** Format: date */
+            effectiveFromLocalDate: null | string;
+        };
+        PlanningProposalViewDto: {
+            proposal: components["schemas"]["PlanningProposal"];
+            state: string;
+            excludedByAncestor: boolean;
+            issues: components["schemas"]["PlanningIssueDto"][];
+        };
+        PlanningQuestion: {
+            id: string;
+            text: string;
+        };
+        PlanningRecurrence: {
+            type: string;
+            daysOfWeek: null | (number | string)[];
+            /** Format: int32 */
+            dayOfMonth: null | number | string;
+        };
+        PlanningWarningDto: {
+            warningId: string;
+            code: string;
+            affectedDraftIds: string[];
+            warningHash: string;
+        };
         ProjectDto: {
             /** Format: uuid */
             id: string;
@@ -3189,6 +4228,10 @@ export interface components {
             /** Format: int32 */
             dayOfMonth: null | number | string;
         };
+        RemovePlanningFactRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
         RequestOtpDto: {
             phoneNumber: string;
             purpose: string;
@@ -3243,6 +4286,12 @@ export interface components {
             /** Format: int64 */
             expectedVersion: number | string;
         };
+        RevisePlanningDraftRequest: {
+            /** Format: int32 */
+            expectedRevision: number | string;
+            proposals: components["schemas"]["PlanningProposal"][];
+            facts: components["schemas"]["PlanningFactProposal"][];
+        };
         RoutineDto: {
             /** Format: uuid */
             id: string;
@@ -3290,11 +4339,28 @@ export interface components {
             /** Format: int64 */
             version: number | string;
         };
+        StartPlanningAttemptRequest: {
+            clientAttemptId: string;
+            intention: string;
+            /** Format: uuid */
+            goalId: null | string;
+            /** Format: uuid */
+            projectId: null | string;
+            replaceActive: boolean;
+            /** Format: uuid */
+            previousAttemptId?: null | string;
+            answers?: null | components["schemas"]["PlanningAnswer"][];
+            /** @default false */
+            draftNow: boolean;
+        };
         StopRoutineRequest: {
             /** Format: int64 */
             expectedVersion: number | string;
         };
         SubmitConfirmationRequest: {
+            acknowledgedWarnings: null | components["schemas"]["AcknowledgedWarningDto"][];
+        };
+        SubmitPlanningConfirmationRequest: {
             acknowledgedWarnings: null | components["schemas"]["AcknowledgedWarningDto"][];
         };
         TaskDependencyDto: {

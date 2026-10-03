@@ -235,9 +235,9 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Completion criteria:** The entire planning contract is usable and testable without a provider; invalid output cannot become canonical; explicit apply is authoritative.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:** [Step 8 acceptance contract, recorded deviations and verification record](step-08-planning-acceptance.md), [Planning API](../backend/Controllers/PlanningController.cs), [Planning service](../backend/Services/PlanningService.cs), [draft rules](../backend/Services/PlanningDraftRules.cs), [fact vocabulary](../backend/Services/PlanningFactCatalog.cs), [context builder](../backend/Services/PlanningContextBuilder.cs), [attempt runner](../backend/Services/PlanningAttemptRunner.cs), [deterministic mock](../backend/Services/DeterministicPlanningGenerator.cs), [schema migration](../backend/Migrations/20261003142533_Step8PlanningFoundation.cs), [rule tests](../backend.Tests/PlanningDraftRulesTests.cs), [Planning PostgreSQL/API tests](../backend.Tests/PlanningModuleTests.cs), [generated OpenAPI](../backend/openapi/TidySense.json), [Planning page](../frontend/src/features/planning/components/PlanningPage.tsx), [draft review](../frontend/src/features/planning/components/PlanningDraftReview.tsx), [browser acceptance](../frontend/e2e/planning.spec.ts). Verified 2026-10-03: `./dev.ps1 check` passed (123 backend, 47 frontend tests, typecheck/lint/build/OpenAPI) against local PostgreSQL 18; `./auth-e2e.ps1` passed all 10 Chrome scenarios on an isolated PostgreSQL database, including "an intention becomes a reviewed draft and only the confirmed plan is created"; EF reported no pending model changes. The deviations in the acceptance contract (no clarification conversation, recurrence limited to the STEP-06 types, applied draft ends as `EXPIRED`, sidebar/drawer placement) were chosen during implementation and confirmed with the owner on 2026-10-03. The Planning and confirmation freeze-register rows stay `DRAFT` until their reviewers approve.
 
 ---
 
@@ -261,9 +261,9 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Completion criteria:** Real AI Planning can create only reviewable drafts through strict gates, cannot mutate canonical state, and failure always preserves a usable manual path.
 
-**Status:** `NOT_STARTED`
+**Status:** `IN_PROGRESS` — implemented and verified against a scripted provider; the reviewed real-provider smoke evidence required by the verification line is still missing (no provider key was available on 2026-10-03).
 
-**Evidence:** None.
+**Evidence:** [Step 9 acceptance contract, recorded deviations and verification record](step-09-ai-planning-acceptance.md), [AI generator and runtime controls](../backend/Services/Ai/AiPlanningGenerator.cs), [runtime state, invocation log and switch audit](../backend/Services/Ai/AiRuntime.cs), [output gate](../backend/Services/Ai/PlanningOutputGate.cs), [prompt renderer](../backend/Services/Ai/PlanningPromptRenderer.cs), [provider adapter](../backend/Infrastructure/Ai/OpenAiCompatibleChatClient.cs), [attempt runner](../backend/Services/PlanningAttemptRunner.cs), [schema migration](../backend/Migrations/20261003152226_Step9AiPlanningRuntime.cs), [gate tests](../backend.Tests/PlanningOutputGateTests.cs), [runtime tests](../backend.Tests/AiPlanningRuntimeTests.cs), [Planning PostgreSQL/API tests](../backend.Tests/PlanningModuleTests.cs), [questions screen](../frontend/src/features/planning/components/PlanningClarification.tsx), [browser acceptance](../frontend/e2e/planning.spec.ts). Verified 2026-10-03: `./dev.ps1 check` passed (171 backend tests with the real-provider smoke skipped, 51 frontend tests, typecheck/lint/build/OpenAPI) against local PostgreSQL 18; `./auth-e2e.ps1` passed all 11 Chrome scenarios on an isolated PostgreSQL database, including "clarifying questions are answered before a draft exists"; EF reported no pending model changes. Decisions confirmed with the owner: DeepSeek V4 Flash as the first provider; the Discussion 013 clarification turns included; kill switches and limits as configuration with an audit log line. Remaining before `DONE`: run the smoke test with `TIDYSENSE_AI_SMOKE_KEY` and one flow through the UI with the provider selected, set the provider's token prices, and review the result.
 
 ---
 

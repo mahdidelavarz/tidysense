@@ -7,6 +7,7 @@ import { GoalDetailView } from './GoalDetailView'
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
 }))
+vi.mock('../../planning/services/planning-api', () => ({ listPlanningFacts: vi.fn().mockResolvedValue([]), removePlanningFact: vi.fn() }))
 vi.mock('../services/goals-api', () => ({
   getGoal: vi.fn(), previewGoalTerminal: vi.fn(), terminateGoal: vi.fn(), updateGoal: vi.fn(),
 }))

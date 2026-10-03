@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using TidySense.Data;
 using TidySense.Common.Events;
+using TidySense.Services;
 
 namespace TidySense.Backend.Tests;
 
@@ -18,6 +19,9 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
 
     /// <summary>The application clock. Real time unless a test pins it to an instant.</summary>
     public TestClock Clock { get; } = new();
+
+    /// <summary>The planning generator every test of this factory shares.</summary>
+    public PlanningGate PlanningGate { get; } = new();
 
     public string ConnectionString
     {
@@ -65,6 +69,8 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
             services.AddControllers().AddApplicationPart(typeof(DeliveryContractTestController).Assembly);
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
+            services.RemoveAll<IPlanningGenerator>();
+            services.AddSingleton<IPlanningGenerator>(PlanningGate);
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(ConnectionString));
@@ -98,4 +104,34 @@ public sealed class TestClock : TimeProvider
     /// checked against the real clock.
     /// </summary>
     public void Pin(DateTimeOffset instant) => _pinned = instant.ToUniversalTime();
+}
+
+/// <summary>
+/// The deterministic mock, with one addition for tests: the "held" fixture waits until the test
+/// releases it, so cancellation and late results can be exercised without timing guesses.
+/// </summary>
+public sealed class PlanningGate : IPlanningGenerator
+{
+    public const string HeldFixture = "held";
+    private readonly DeterministicPlanningGenerator _inner = new();
+    private TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _calls;
+
+    public string Key => _inner.Key;
+
+    /// <summary>How many generations were started, across every attempt of this factory.</summary>
+    public int Calls => _calls;
+
+    public void Hold() => _release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public void Release() => _release.TrySetResult();
+
+    public async Task<PlanningGenerationResult> GenerateAsync(PlanningGenerationRequest request,
+        CancellationToken cancellationToken)
+    {
+        Interlocked.Increment(ref _calls);
+        if (request.Fixture != HeldFixture) return await _inner.GenerateAsync(request, cancellationToken);
+        await _release.Task.WaitAsync(cancellationToken);
+        return await _inner.GenerateAsync(request with { Fixture = null }, cancellationToken);
+    }
 }

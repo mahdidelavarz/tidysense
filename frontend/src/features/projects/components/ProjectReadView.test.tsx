@@ -9,6 +9,7 @@ import { ProjectReadView } from './ProjectReadView'
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
 }))
+vi.mock('../../planning/services/planning-api', () => ({ listPlanningFacts: vi.fn().mockResolvedValue([]), removePlanningFact: vi.fn() }))
 vi.mock('../../goals/services/goals-api', () => ({ listGoals: vi.fn() }))
 vi.mock('../services/projects-api', () => ({
   getProject: vi.fn(), previewProjectTerminal: vi.fn(), terminateProject: vi.fn(), updateProject: vi.fn(),

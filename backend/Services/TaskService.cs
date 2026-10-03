@@ -271,9 +271,9 @@ public sealed class TaskService(
     }
 
     internal static string CreatedPayload(Guid? goalId, Guid? projectId, DateOnly? plannedDate,
-        Guid? sequenceId) => JsonSerializer.Serialize(new
+        Guid? sequenceId, string source = CreationSources.Manual) => JsonSerializer.Serialize(new
     {
-        source = CreationSources.Manual,
+        source,
         parentScope = Scope(goalId, projectId),
         hasPlannedDate = plannedDate is not null,
         inSequence = sequenceId is not null

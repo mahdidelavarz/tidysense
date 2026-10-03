@@ -210,7 +210,8 @@ public sealed class ReconcileService(
         SubmitConfirmationRequest request, string idempotencyKey, CancellationToken cancellationToken)
     {
         var snapshot = await db.ActionConfirmations.AsNoTracking().SingleOrDefaultAsync(
-            x => x.Id == confirmationId && x.UserId == currentUser.UserId, cancellationToken)
+            x => x.Id == confirmationId && x.UserId == currentUser.UserId && x.ReconcileSessionId != null,
+            cancellationToken)
             ?? throw new ResourceNotFoundException("ActionConfirmation", confirmationId);
         var acknowledged = (request.AcknowledgedWarnings ?? [])
             .Select(x => (x.WarningId, Hash: x.WarningHash.ToUpperInvariant())).ToHashSet();
@@ -225,7 +226,7 @@ public sealed class ReconcileService(
             }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
         {
-            var confirmation = await context.ActionConfirmations.FromSqlInterpolated($"SELECT * FROM \"ActionConfirmations\" WHERE \"Id\" = {confirmationId} AND \"UserId\" = {owner} FOR UPDATE")
+            var confirmation = await context.ActionConfirmations.FromSqlInterpolated($"SELECT * FROM \"ActionConfirmations\" WHERE \"Id\" = {confirmationId} AND \"UserId\" = {owner} AND \"ReconcileSessionId\" IS NOT NULL FOR UPDATE")
                 .SingleOrDefaultAsync(ct) ?? throw new ResourceNotFoundException("ActionConfirmation", confirmationId);
             if (confirmation.Status != ActionConfirmationStatuses.Created)
                 throw new CommandRejectedException("CONFIRMATION_NOT_PENDING");
@@ -478,7 +479,7 @@ public sealed class ReconcileService(
         var preview = JsonSerializer.Deserialize<StoredPreview>(value.PreviewJson)!;
         var status = value.Status == ActionConfirmationStatuses.Created && value.ExpiresAt <= now
             ? ActionConfirmationStatuses.Expired : value.Status;
-        return new ActionConfirmationDto(value.Id, value.ReconcileSessionId, value.ActionType, status,
+        return new ActionConfirmationDto(value.Id, value.ReconcileSessionId!.Value, value.ActionType, status,
             preview.CanApply, preview.Items, preview.Warnings, value.PreviewHash, value.ExpiresAt);
     }
 

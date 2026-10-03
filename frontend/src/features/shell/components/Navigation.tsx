@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { FolderKanban, ListChecks, type LucideIcon, RefreshCcw, Repeat, Sun, Target } from 'lucide-react'
+import { Compass, FolderKanban, ListChecks, type LucideIcon, RefreshCcw, Repeat, Sun, Target } from 'lucide-react'
 import { formatNumber } from '../../../shared/lib/date'
 import { useReconcileOverview } from '../../reconcile/hooks/reconcile-hooks'
 
 type Destination = {
-  to: '/today' | '/tasks' | '/routines' | '/reconcile' | '/projects' | '/goals'
+  to: '/today' | '/tasks' | '/routines' | '/reconcile' | '/planning' | '/projects' | '/goals'
   label: string
   icon: LucideIcon
   /** False keeps a destination out of the four-slot phone tab bar; it stays in the sidebar and drawer. */
@@ -22,6 +22,8 @@ export const destinations: Destination[] = [
   { to: '/routines', label: 'روتین‌ها', icon: Repeat, tab: false },
   // Reconcile is offered from Today when there is something to decide, so it does not need a tab either.
   { to: '/reconcile', label: 'بازبینی', icon: RefreshCcw, tab: false },
+  // Planning is an occasional flow, also opened from a Goal or a Project, so it stays out of the tab bar.
+  { to: '/planning', label: 'برنامه‌ریزی', icon: Compass, tab: false },
   { to: '/projects', label: 'پروژه‌ها', icon: FolderKanban },
   { to: '/goals', label: 'هدف‌ها', icon: Target },
 ]

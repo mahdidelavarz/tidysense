@@ -22,7 +22,7 @@ This is two layouts, not one scaled layout: the tab bar, drawer and bottom sheet
 
 ### Destinations
 
-Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/Navigation.tsx), in order of daily use: **Today → Tasks → Routines → Reconcile → Projects → Goals**. Add a destination only when its product step ships. The tab bar holds at most four destinations plus create. Routines (STEP-06) and Reconcile (STEP-07) are marked `tab: false`: they live in the sidebar and drawer only, because Routines are executed from Today and Reconcile is offered from Today when there is something to decide. The Reconcile link carries one count badge for everything waiting in it. Any further destination needs the same decision: replace a tab, or stay out of the tab bar.
+Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/Navigation.tsx), in order of daily use: **Today → Tasks → Routines → Reconcile → Planning → Projects → Goals**. Add a destination only when its product step ships. The tab bar holds at most four destinations plus create. Routines (STEP-06), Reconcile (STEP-07) and Planning (STEP-08) are marked `tab: false`: they live in the sidebar and drawer only, because Routines are executed from Today, Reconcile is offered from Today when there is something to decide, and Planning is an occasional flow that is also opened from a Goal or Project detail page. The Reconcile link carries one count badge for everything waiting in it. Any further destination needs the same decision: replace a tab, or stay out of the tab bar.
 
 ## Routes
 
@@ -31,6 +31,7 @@ Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/
 | `/` | redirects to `/today` | — |
 | `/today` | Today: a dismissible Reconcile offer when eligible, then tasks for the local date, ready first, waiting below, then the date's Routines with a row per slot | narrow |
 | `/reconcile` | Reconcile: summary, execution lane (owner → sequence → Task), commitment-review lane, capture lane, Review & Apply dialog | narrow |
+| `/planning` | Planning: intention input, progress, draft review (hierarchy, seven-day view, planning details), final confirmation dialog, result. `?goalId=` or `?projectId=` plans inside that parent | narrow |
 | `/tasks`, `/tasks/$taskId` | Task list, Task detail | narrow |
 | `/routines`, `/routines/$routineId` | Routine list, Routine detail with occurrence history | narrow |
 | `/projects`, `/projects/$projectId` | Project list, Project detail | wide list, narrow detail |

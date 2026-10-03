@@ -17,6 +17,8 @@ public sealed class ApiExceptionHandler(
             UnauthorizedException => (StatusCodes.Status401Unauthorized, ErrorCodes.AuthenticationRequired, "Authentication required"),
             OtpRateLimitException => (StatusCodes.Status429TooManyRequests, "RATE_LIMITED", "Too many requests"),
             SmsSendException => (StatusCodes.Status503ServiceUnavailable, "DELIVERY_UNAVAILABLE", "Verification is temporarily unavailable"),
+            AiUnavailableException => (StatusCodes.Status503ServiceUnavailable, "PLANNING_AI_UNAVAILABLE", "AI planning is unavailable"),
+            AiRateLimitException => (StatusCodes.Status429TooManyRequests, "AI_RATE_LIMITED", "Too many planning requests"),
             VersionConflictException => (StatusCodes.Status409Conflict, "CONFLICT_STALE_VERSION", "The resource changed"),
             CommandConflictException commandConflict => (StatusCodes.Status409Conflict, commandConflict.ErrorCode, "The command context changed"),
             IdempotencyMismatchException => (StatusCodes.Status409Conflict, "IDEMPOTENCY_MISMATCH", "Idempotency key conflict"),
@@ -38,6 +40,12 @@ public sealed class ApiExceptionHandler(
             problem.Extensions["entityId"] = conflict.EntityId;
             problem.Extensions["expectedVersion"] = conflict.ExpectedVersion;
             problem.Extensions["currentVersion"] = conflict.CurrentVersion;
+        }
+        if (exception is AiRateLimitException limited)
+        {
+            context.Response.Headers.RetryAfter =
+                limited.RetryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            problem.Extensions["retryAfterSeconds"] = limited.RetryAfterSeconds;
         }
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext
         {

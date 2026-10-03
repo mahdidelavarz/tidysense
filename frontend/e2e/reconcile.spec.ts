@@ -52,7 +52,7 @@ test('a quick capture and an overdue sequence are resolved in Reconcile while To
   // Today offers Reconcile without standing in the way.
   const offer = page.getByRole('region', { name: 'پیشنهاد بازبینی' })
   await expect(offer).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'امروز' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'امروز', exact: true })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-07-today-offer.png', fullPage: true })
   await offer.getByRole('link', { name: 'شروع بازبینی' }).click()
   await expect(page).toHaveURL(/\/reconcile$/)

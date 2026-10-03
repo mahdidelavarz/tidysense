@@ -10,8 +10,10 @@ using TidySense.Common.Errors;
 using TidySense.Common.Events;
 using TidySense.Data;
 using TidySense.Infrastructure.Health;
+using TidySense.Infrastructure.Ai;
 using TidySense.Infrastructure.Sms;
 using TidySense.Services;
+using TidySense.Services.Ai;
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +50,7 @@ foreach (var schema in ParentEventSchemas.All()) builder.Services.AddSingleton(s
 foreach (var schema in TaskEventSchemas.All()) builder.Services.AddSingleton(schema);
 foreach (var schema in RoutineEventSchemas.All()) builder.Services.AddSingleton(schema);
 foreach (var schema in ReconcileEventSchemas.All()) builder.Services.AddSingleton(schema);
+foreach (var schema in PlanningEventSchemas.All()) builder.Services.AddSingleton(schema);
 builder.Services.AddSingleton<EventPayloadValidator>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -115,6 +118,33 @@ builder.Services.AddScoped<RoutineService>();
 builder.Services.AddScoped<TodayService>();
 builder.Services.AddScoped<CaptureService>();
 builder.Services.AddScoped<ReconcileService>();
+builder.Services.AddScoped<PlanningService>();
+builder.Services.AddScoped<PlanningContextBuilder>();
+builder.Services.AddScoped<PlanningAttemptRunner>();
+builder.Services.AddSingleton<PlanningAttemptQueue>();
+builder.Services.AddSingleton<PlanningAttemptCancellation>();
+builder.Services.AddOptions<AiOptions>().Bind(builder.Configuration.GetSection(AiOptions.SectionName));
+builder.Services.AddSingleton<AiRuntimeState>();
+builder.Services.AddSingleton<IAiInvocationLog, AiInvocationStore>();
+builder.Services.AddHostedService<AiSwitchAudit>();
+// One plain client for the provider: no resilience handler, so the runtime's single retry is the only one.
+builder.Services.AddSingleton<IAiCompletionClient>(services =>
+{
+    var planning = services.GetRequiredService<IOptions<AiOptions>>().Value.Planning;
+    return new OpenAiCompatibleChatClient(new HttpClient(new SocketsHttpHandler
+    {
+        ConnectTimeout = TimeSpan.FromSeconds(planning.ConnectionTimeoutSeconds),
+        AllowAutoRedirect = false
+    }) { Timeout = Timeout.InfiniteTimeSpan }, services.GetRequiredService<IOptionsMonitor<AiOptions>>());
+});
+// "mock" keeps the deterministic generator; any other value names a configured provider.
+var planningProvider = builder.Configuration[$"{AiOptions.SectionName}:Planning:Provider"];
+if (string.IsNullOrWhiteSpace(planningProvider) ||
+    planningProvider.Equals(AiPlanningOptions.MockProvider, StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddSingleton<IPlanningGenerator, DeterministicPlanningGenerator>();
+else
+    builder.Services.AddSingleton<IPlanningGenerator, AiPlanningGenerator>();
+builder.Services.AddHostedService<PlanningAttemptWorker>();
 builder.Services.AddScoped<ApplicationDateService>();
 builder.Services.AddScoped<CommandExecutionService>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -133,6 +163,20 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") &&
     (app.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>()?.Length ?? 0) == 0)
     throw new InvalidOperationException("Security:AllowedOrigins must be configured in production.");
+if (app.Services.GetRequiredService<IPlanningGenerator>() is AiPlanningGenerator)
+{
+    var ai = app.Services.GetRequiredService<IOptions<AiOptions>>().Value;
+    // A selected provider must be callable, and outside local work its prices must be known: the budget is computed from them.
+    if (!ai.Providers.TryGetValue(ai.Planning.Provider, out var selected) ||
+        string.IsNullOrWhiteSpace(selected.BaseUrl) || string.IsNullOrWhiteSpace(selected.ApiKey) ||
+        string.IsNullOrWhiteSpace(selected.Model))
+        throw new InvalidOperationException(
+            $"Ai:Providers:{ai.Planning.Provider} needs BaseUrl, ApiKey and Model when it is the planning provider.");
+    if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") &&
+        (selected.InputPricePerMillionTokens <= 0 || selected.OutputPricePerMillionTokens <= 0))
+        throw new InvalidOperationException(
+            $"Ai:Providers:{ai.Planning.Provider} needs its token prices so the daily budget can be enforced.");
+}
 if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Database:MigrateOnStart"))
 {
     using var scope = app.Services.CreateScope();

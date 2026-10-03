@@ -12,6 +12,7 @@ import { BackLink } from '../../../shared/ui/PageHeader'
 import { Sheet } from '../../../shared/ui/Sheet'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { useGoalOptions } from '../../goals/hooks/goal-hooks'
+import { PlanningFactsSection } from '../../planning/components/PlanningFactsSection'
 import { useProject, useProjectTerminal, useUpdateProject } from '../hooks/project-hooks'
 import type { UpdateProjectRequest } from '../types/project.types'
 import { ProjectForm } from './ProjectForm'
@@ -94,6 +95,8 @@ export function ProjectReadView({ projectId }: { projectId: string }) {
           </div>
         </section>
       )}
+
+      {data.status === 'ACTIVE' && <PlanningFactsSection scope={{ projectId }} ownsFacts={!data.goalId} />}
 
       <div className="mt-4 space-y-3">
         <FormError error={terminal.previewError} />

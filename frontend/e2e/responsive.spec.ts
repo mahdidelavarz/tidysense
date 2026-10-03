@@ -59,6 +59,7 @@ test('phone layout uses the tab bar, drawer and bottom sheet instead of the side
   await expect(drawer.getByRole('link', { name: 'هدف‌ها' })).toBeVisible()
   // Routines has no tab: on a phone it is reached through the drawer.
   await expect(drawer.getByRole('link', { name: 'روتین‌ها' })).toBeVisible()
+  await expect(drawer.getByRole('link', { name: 'برنامه‌ریزی' })).toBeVisible()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-phone-drawer.png' })
   await drawer.getByRole('link', { name: 'هدف‌ها' }).click()
@@ -93,6 +94,7 @@ test('desktop layout uses the sidebar and has no tab bar', async ({ page }) => {
   const sidebar = page.getByRole('navigation', { name: 'ناوبری اصلی' })
   await expect(sidebar.getByRole('link', { name: 'امروز' })).toHaveAttribute('aria-current', 'page')
   await expect(sidebar.getByRole('link', { name: 'روتین‌ها' })).toBeVisible()
+  await expect(sidebar.getByRole('link', { name: 'برنامه‌ریزی' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'باز کردن منو' })).toBeHidden()
   await expect(page.getByRole('heading', { name: 'در انتظار کارهای پیشین' })).toBeVisible()
   await settle(page)

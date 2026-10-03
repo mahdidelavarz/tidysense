@@ -39,6 +39,12 @@ namespace TidySense.Migrations
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("PlanningDraftId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("PlanningDraftRevision")
+                        .HasColumnType("integer");
+
                     b.Property<string>("PreviewHash")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -48,7 +54,7 @@ namespace TidySense.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<Guid>("ReconcileSessionId")
+                    b.Property<Guid?>("ReconcileSessionId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("RequestJson")
@@ -73,6 +79,8 @@ namespace TidySense.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PlanningDraftId");
+
                     b.HasIndex("ReconcileSessionId");
 
                     b.HasIndex("Status", "ExpiresAt");
@@ -84,6 +92,136 @@ namespace TidySense.Migrations
                             t.HasCheckConstraint("CK_ActionConfirmations_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
 
                             t.HasCheckConstraint("CK_ActionConfirmations_Status", "\"Status\" IN ('CREATED', 'SUBMITTED', 'RESOLVED', 'EXPIRED', 'CANCELLED')");
+
+                            t.HasCheckConstraint("CK_ActionConfirmations_Subject", "(\"ReconcileSessionId\" IS NOT NULL AND \"PlanningDraftId\" IS NULL AND \"PlanningDraftRevision\" IS NULL) OR (\"ReconcileSessionId\" IS NULL AND \"PlanningDraftId\" IS NOT NULL AND \"PlanningDraftRevision\" IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.AiInvocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConfigurationKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ContextBuilderVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ContextReduction")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<long>("EstimatedCostMicros")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("EstimatedInputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FailureClass")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Family")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Gate")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int?>("InputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LatencyMs")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxOutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int?>("OutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PlanningAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PromptVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ProviderKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("RepairPolicyVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("RepairRulesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("RetryReason")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanningAttemptId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Family", "StartedAt");
+
+                    b.ToTable("AiInvocations", t =>
+                        {
+                            t.HasCheckConstraint("CK_AiInvocations_Outcome", "\"Outcome\" IN ('SUCCEEDED', 'FAILED', 'REJECTED', 'BLOCKED', 'CANCELLED')");
+
+                            t.HasCheckConstraint("CK_AiInvocations_RepairRulesArray", "jsonb_typeof(\"RepairRulesJson\") = 'array'");
+
+                            t.HasCheckConstraint("CK_AiInvocations_Sequence", "\"Sequence\" BETWEEN 0 AND 2");
                         });
                 });
 
@@ -554,6 +692,352 @@ namespace TidySense.Migrations
                     b.ToTable("OutboxMessages", t =>
                         {
                             t.HasCheckConstraint("CK_OutboxMessages_AttemptCount", "\"AttemptCount\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AnswersJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ClarificationJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("ClarificationTurn")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ClientAttemptId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContextBuilderVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ContextFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("ContextGoalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContextManifestJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("ContextProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DraftId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("DraftNow")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("GeneratorKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Intention")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid?>("PreviousAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PreviousAttemptId")
+                        .IsUnique()
+                        .HasFilter("\"PreviousAttemptId\" IS NOT NULL");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PlanningAttempts_OneInFlightPerUser")
+                        .HasFilter("\"Status\" IN ('QUEUED', 'RUNNING')");
+
+                    b.HasIndex("UserId", "ClientAttemptId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("PlanningAttempts", t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningAttempts_ClarificationTurn", "\"ClarificationTurn\" BETWEEN 0 AND 3 AND (\"ClarificationTurn\" > 0) = (\"PreviousAttemptId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningAttempts_Completion", "(\"Status\" IN ('QUEUED', 'RUNNING')) = (\"CompletedAt\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningAttempts_ContextExclusive", "NOT (\"ContextGoalId\" IS NOT NULL AND \"ContextProjectId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningAttempts_ManifestObject", "jsonb_typeof(\"ContextManifestJson\") = 'object'");
+
+                            t.HasCheckConstraint("CK_PlanningAttempts_Outcome", "(\"Status\" = 'SUCCEEDED') = (\"Outcome\" IS NOT NULL) AND (COALESCE(\"Outcome\", '') = 'DRAFT') = (\"DraftId\" IS NOT NULL) AND (COALESCE(\"Outcome\", '') IN ('CLARIFICATION', 'INPUT_BLOCKED')) = (\"ClarificationJson\" IS NOT NULL) AND (\"Status\" = 'FAILED') = (\"FailureCode\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningAttempts_OutcomeValue", "\"Outcome\" IS NULL OR \"Outcome\" IN ('DRAFT', 'CLARIFICATION', 'INPUT_BLOCKED')");
+
+                            t.HasCheckConstraint("CK_PlanningAttempts_Status", "\"Status\" IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED')");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContextFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("ContextGoalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ContextProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CurrentRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LinkedConfirmationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttemptId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PlanningDrafts_OneReviewablePerUser")
+                        .HasFilter("\"Status\" = 'REVIEWABLE'");
+
+                    b.HasIndex("Status", "ExpiresAt");
+
+                    b.ToTable("PlanningDrafts", t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningDrafts_ContextExclusive", "NOT (\"ContextGoalId\" IS NOT NULL AND \"ContextProjectId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningDrafts_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
+
+                            t.HasCheckConstraint("CK_PlanningDrafts_Revision", "\"CurrentRevision\" > 0");
+
+                            t.HasCheckConstraint("CK_PlanningDrafts_Status", "\"Status\" IN ('REVIEWABLE', 'SUPERSEDED', 'EXPIRED', 'CANCELLED')");
+
+                            t.HasCheckConstraint("CK_PlanningDrafts_Version", "\"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningDraftRevision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DraftId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DraftId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("PlanningDraftRevisions", t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningDraftRevisions_ContentObject", "jsonb_typeof(\"ContentJson\") = 'object'");
+
+                            t.HasCheckConstraint("CK_PlanningDraftRevisions_Origin", "\"Origin\" IN ('GENERATED', 'USER_EDIT')");
+
+                            t.HasCheckConstraint("CK_PlanningDraftRevisions_Revision", "\"Revision\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningFact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CapturedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ExpiredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FactType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("GoalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("LastConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("SourcePlanningAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Strength")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ValueJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GoalId", "UserId");
+
+                    b.HasIndex("ProjectId", "UserId");
+
+                    b.HasIndex("UserId", "GoalId", "Status");
+
+                    b.HasIndex("UserId", "ProjectId", "Status");
+
+                    b.ToTable("PlanningFacts", t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningFacts_FactType", "\"FactType\" IN ('UNAVAILABLE_WEEKDAY', 'UNAVAILABLE_DATE', 'UNAVAILABLE_DATE_RANGE', 'AVAILABLE_DEVICE', 'CURRENT_LEVEL', 'LEARNING_FOCUS', 'EXCLUDED_PATH')");
+
+                            t.HasCheckConstraint("CK_PlanningFacts_Lifecycle", "(\"Status\" = 'REMOVED') = (\"RemovedAt\" IS NOT NULL) AND (\"Status\" = 'EXPIRED') = (\"ExpiredAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningFacts_OneScope", "(\"GoalId\" IS NOT NULL) <> (\"ProjectId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningFacts_Source", "\"Source\" IN ('USER_EXPLICIT', 'USER_CONFIRMED_AI_EXTRACTION')");
+
+                            t.HasCheckConstraint("CK_PlanningFacts_Status", "\"Status\" IN ('ACTIVE', 'EXPIRED', 'REMOVED')");
+
+                            t.HasCheckConstraint("CK_PlanningFacts_Strength", "\"Strength\" IN ('SOFT', 'INFORMATIONAL') OR (\"Strength\" = 'HARD' AND \"FactType\" IN ('UNAVAILABLE_WEEKDAY', 'UNAVAILABLE_DATE', 'UNAVAILABLE_DATE_RANGE'))");
+
+                            t.HasCheckConstraint("CK_PlanningFacts_ValueObject", "jsonb_typeof(\"ValueJson\") = 'object'");
+
+                            t.HasCheckConstraint("CK_PlanningFacts_Version", "\"Version\" > 0");
                         });
                 });
 
@@ -1174,11 +1658,15 @@ namespace TidySense.Migrations
 
             modelBuilder.Entity("TidySense.Models.ActionConfirmation", b =>
                 {
+                    b.HasOne("TidySense.Models.PlanningDraft", null)
+                        .WithMany()
+                        .HasForeignKey("PlanningDraftId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("TidySense.Models.ReconcileSession", "Session")
                         .WithMany()
                         .HasForeignKey("ReconcileSessionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("TidySense.Models.User", null)
                         .WithMany()
@@ -1187,6 +1675,20 @@ namespace TidySense.Migrations
                         .IsRequired();
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("TidySense.Models.AiInvocation", b =>
+                {
+                    b.HasOne("TidySense.Models.PlanningAttempt", null)
+                        .WithMany()
+                        .HasForeignKey("PlanningAttemptId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TidySense.Models.CaptureItem", b =>
@@ -1235,6 +1737,67 @@ namespace TidySense.Migrations
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningAttempt", b =>
+                {
+                    b.HasOne("TidySense.Models.PlanningAttempt", null)
+                        .WithMany()
+                        .HasForeignKey("PreviousAttemptId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningDraft", b =>
+                {
+                    b.HasOne("TidySense.Models.PlanningAttempt", null)
+                        .WithMany()
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningDraftRevision", b =>
+                {
+                    b.HasOne("TidySense.Models.PlanningDraft", "Draft")
+                        .WithMany("Revisions")
+                        .HasForeignKey("DraftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Draft");
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningFact", b =>
+                {
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TidySense.Models.Goal", null)
+                        .WithMany()
+                        .HasForeignKey("GoalId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TidySense.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("TidySense.Models.Project", b =>
@@ -1375,6 +1938,11 @@ namespace TidySense.Migrations
                     b.Navigation("Routines");
 
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningDraft", b =>
+                {
+                    b.Navigation("Revisions");
                 });
 
             modelBuilder.Entity("TidySense.Models.Project", b =>

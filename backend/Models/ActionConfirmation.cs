@@ -1,14 +1,17 @@
 namespace TidySense.Models;
 
 /// <summary>
-/// A server-generated, version-bound preview of one deterministic Reconcile command. The client
-/// submits only its identity and warning acknowledgements; the server re-derives everything else.
+/// A server-generated, version-bound preview of one deterministic command: a Reconcile action or
+/// the application of one planning draft revision. The client submits only its identity and
+/// warning acknowledgements; the server re-derives everything else.
 /// </summary>
 public sealed class ActionConfirmation
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
-    public Guid ReconcileSessionId { get; set; }
+    public Guid? ReconcileSessionId { get; set; }
+    public Guid? PlanningDraftId { get; set; }
+    public int? PlanningDraftRevision { get; set; }
     public string ActionType { get; set; } = string.Empty;
     public string RequestJson { get; set; } = "{}";
     public string PreviewJson { get; set; } = "{}";
@@ -18,7 +21,7 @@ public sealed class ActionConfirmation
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? ResolvedAt { get; set; }
     public string RetentionClass { get; set; } = "R2";
-    public ReconcileSession Session { get; set; } = null!;
+    public ReconcileSession? Session { get; set; }
 }
 
 public static class ActionConfirmationStatuses
