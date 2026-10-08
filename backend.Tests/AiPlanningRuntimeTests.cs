@@ -41,6 +41,13 @@ public sealed class AiPlanningRuntimeTests
         foreach (var forbidden in new[] { "tools", "functions", "tool_choice", "function_call", "plugins" })
             Assert.False(body.RootElement.TryGetProperty(forbidden, out _), forbidden);
         Assert.False(body.RootElement.GetProperty("stream").GetBoolean());
+        // Reasoning is switched off only for a provider configured that way.
+        Assert.False(body.RootElement.TryGetProperty("thinking", out _));
+        var quick = new Harness(x => x.Providers[Provider].DisableThinking = true);
+        quick.Provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
+        await quick.GenerateAsync();
+        using var quickBody = JsonDocument.Parse(quick.Provider.Calls.Single().Body);
+        Assert.Equal("disabled", quickBody.RootElement.GetProperty("thinking").GetProperty("type").GetString());
         Assert.Equal("json_object", body.RootElement.GetProperty("response_format").GetProperty("type").GetString());
         Assert.Equal("test-model", body.RootElement.GetProperty("model").GetString());
         var messages = body.RootElement.GetProperty("messages").EnumerateArray().ToArray();
@@ -394,7 +401,8 @@ public sealed class AiPlanningRuntimeTests
                 {
                     BaseUrl = Environment.GetEnvironmentVariable("TIDYSENSE_AI_SMOKE_BASEURL") ?? "https://api.deepseek.com",
                     ApiKey = key!,
-                    Model = Environment.GetEnvironmentVariable("TIDYSENSE_AI_SMOKE_MODEL") ?? "deepseek-v4-flash"
+                    Model = Environment.GetEnvironmentVariable("TIDYSENSE_AI_SMOKE_MODEL") ?? "deepseek-v4-flash",
+                    DisableThinking = true
                 }
             }
         });

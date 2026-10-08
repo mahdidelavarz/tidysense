@@ -28,18 +28,20 @@ public sealed class OpenAiCompatibleChatClient(HttpClient httpClient, IOptionsMo
         using var message = new HttpRequestMessage(HttpMethod.Post,
             $"{provider.BaseUrl.TrimEnd('/')}/chat/completions");
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", provider.ApiKey);
-        message.Content = new StringContent(JsonSerializer.Serialize(new
+        var payload = new Dictionary<string, object>
         {
-            model = request.Model,
-            messages = new object[]
+            ["model"] = request.Model,
+            ["messages"] = new object[]
             {
                 new { role = "system", content = request.SystemPrompt },
                 new { role = "user", content = request.UserContent }
             },
-            response_format = new { type = "json_object" },
-            max_tokens = request.MaxOutputTokens,
-            stream = false
-        }), Encoding.UTF8, "application/json");
+            ["response_format"] = new { type = "json_object" },
+            ["max_tokens"] = request.MaxOutputTokens,
+            ["stream"] = false
+        };
+        if (provider.DisableThinking) payload["thinking"] = new { type = "disabled" };
+        message.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
         try
         {

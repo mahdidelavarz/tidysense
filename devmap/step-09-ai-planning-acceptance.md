@@ -1,6 +1,6 @@
 # Step 9 AI Planning Runtime Acceptance Contract
 
-**Status:** Implemented and verified with a scripted provider on 2026-10-03. The reviewed real-provider smoke evidence is still missing, so STEP-09 remains `IN_PROGRESS`. This contract applies to the model-backed planning generator, its output gate and runtime controls, the clarification turns and the AI operation record. Everything from attempt to apply stays as in `step-08-planning-acceptance.md` unless stated here.
+**Status:** Implemented and verified with a scripted provider on 2026-10-03, and against the real provider on 2026-10-08. This contract applies to the model-backed planning generator, its output gate and runtime controls, the clarification turns and the AI operation record. Everything from attempt to apply stays as in `step-08-planning-acceptance.md` unless stated here.
 
 ## Canonical behavior
 
@@ -71,6 +71,7 @@ Persian UI terms: the questions screen is «چند پرسش پیش از ساخت
 Confirmed with the owner on 2026-10-03 unless marked otherwise.
 
 - **Provider:** DeepSeek V4 Flash through its OpenAI-compatible endpoint. Model id and base URL are configuration (`deepseek-v4-flash`, `https://api.deepseek.com`).
+- **Thinking mode is switched off** for DeepSeek (`Ai:Providers:deepseek:DisableThinking`, sent as `thinking: disabled`). The field is sent only for a provider configured that way. *(Chosen during the smoke run on 2026-10-08.)*
 - **JSON mode, not schema-constrained output.** The provider guarantees syntactically valid JSON only, so the local gate is the only schema authority.
 - **Provider safeguards.** The provider has no separate moderation endpoint. Its content filter is honoured: a filtered answer is unusable. Product boundaries (no diagnosis, treatment, legal or financial strategy) are stated in the system prompt and are not otherwise enforced on the text of a draft.
 - **No `DomainSafetyClassificationPort`.** The 2026-09-19 amendment removed the dedicated classifier and crisis route.
@@ -95,10 +96,16 @@ Confirmed with the owner on 2026-10-03 unless marked otherwise.
 - [Browser acceptance](../frontend/e2e/planning.spec.ts): questions before a draft, kept across a reload, answered, then the draft.
 - Verified 2026-10-03: `./dev.ps1 check` passed with 171 backend tests (1 skipped: the real-provider smoke) and 51 frontend tests plus typecheck, lint, build and OpenAPI generation; `./auth-e2e.ps1` passed all 11 Chrome scenarios on an isolated PostgreSQL database; EF reported no pending model changes. The clarification screenshot was inspected.
 
+- Real-provider smoke, 2026-10-08, model `deepseek-v4-flash` with thinking disabled (`DisableThinking`, added that day because the provider reasons by default):
+  - The owner ran one flow through the UI: an intention, three clarifying questions, answers, then a reviewable draft. Its two `AiInvocations` rows show outcome `SUCCEEDED`, sequence 1, no repair rule, no context reduction; 1,908 input / 164 output tokens in 2.2 s for the questions and 2,100 / 758 tokens in 4.7 s for the draft; recorded cost 770 and 1,540 millionths of a dollar at the configured prices (0.3 / 1.2 USD per million tokens). The attempts carry generator `planning.standard` and outcomes `CLARIFICATION` then `DRAFT`.
+  - The env-gated test `Real_provider_smoke_returns_an_output_that_passes_the_gate` passed with the same key.
+  - `GET /planning/active` on the running backend returned `sampleGenerator: false`.
+
 ## Not covered by this evidence
 
-- **No call has been made to the real provider.** No DeepSeek key was available. The model id, the JSON-mode behaviour, the 402 spend-cap response and the quality of the prompt are therefore unverified. Run the smoke test with `TIDYSENSE_AI_SMOKE_KEY`, and one flow through the UI with `Ai:Planning:Provider = deepseek`, then review the result before marking the step `DONE`.
-- The token prices in `appsettings.json` are `0`; they must be set from the provider's price list before the daily budget means anything.
+- Against the real provider only the successful paths were exercised. Cancellation, timeouts, the retry, the circuit, the kill switches and the 402 spend-cap response are verified with the scripted provider only; the 402 mapping follows the provider's documentation.
+- The quality of drafts was judged on one flow by the owner. There is no evaluation set for the prompt.
+- The token prices in tracked `appsettings.json` are `0`; the owner's local values are in user-secrets. Every other environment must set them before the daily budget means anything.
 - The audit line for a kill-switch change and the connection timeout have no automated test.
 - Circuit state, the spend-cap latch and the concurrency limit are per process and reset on restart.
 - The `Planning Attempt/Draft/revisions` freeze-register row remains `DRAFT`.

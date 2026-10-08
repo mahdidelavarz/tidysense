@@ -50,6 +50,13 @@ public sealed class AiProviderOptions
     public string BaseUrl { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Sends <c>thinking: disabled</c>. DeepSeek reasons by default, which is slower and spends
+    /// output tokens; a provider that does not know the field should leave this off.
+    /// </summary>
+    public bool DisableThinking { get; set; }
+
     public decimal InputPricePerMillionTokens { get; set; }
     public decimal OutputPricePerMillionTokens { get; set; }
 }
