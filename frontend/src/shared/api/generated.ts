@@ -2210,6 +2210,189 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reconcile/sessions/{id}/explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileSessionDto"];
+                        "application/json": components["schemas"]["ReconcileSessionDto"];
+                        "text/json": components["schemas"]["ReconcileSessionDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/sessions/{id}/explanation/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileSessionDto"];
+                        "application/json": components["schemas"]["ReconcileSessionDto"];
+                        "text/json": components["schemas"]["ReconcileSessionDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/recommendations/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileRecommendationDispositionDto"];
+                        "application/json": components["schemas"]["ReconcileRecommendationDispositionDto"];
+                        "text/json": components["schemas"]["ReconcileRecommendationDispositionDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reconcile/sessions/{id}/previews": {
         parameters: {
             query?: never;
@@ -3740,6 +3923,8 @@ export interface components {
             /** Format: date */
             plannedDate: null | string;
             includeTaskIds: null | string[];
+            /** Format: uuid */
+            recommendationId?: null | string;
         };
         CreateRoutineRequest: {
             title: string;
@@ -4085,6 +4270,11 @@ export interface components {
             /** Format: date-time */
             terminalAt: null | string;
         };
+        ReconcileAiDto: {
+            availability: string;
+            sample: boolean;
+            explanation: null | components["schemas"]["ReconcileExplanationDto"];
+        };
         ReconcileCountsDto: {
             /** Format: int32 */
             actionableBacklogCount: number | string;
@@ -4100,6 +4290,17 @@ export interface components {
             reviewDueCount: number | string;
             /** Format: int32 */
             unresolvedCaptureCount: number | string;
+        };
+        ReconcileExplanationDto: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            failureCode: null | string;
+            isCurrent: boolean;
+            summary: null | string;
+            recommendations: components["schemas"]["ReconcileRecommendationDto"][];
+            /** Format: date-time */
+            createdAt: string;
         };
         ReconcileOverviewDto: {
             /** Format: date */
@@ -4138,6 +4339,52 @@ export interface components {
             /** Format: date */
             localDate: string;
             state: string;
+        };
+        ReconcileRecommendationDispositionDto: {
+            /** Format: uuid */
+            id: string;
+            disposition: string;
+        };
+        ReconcileRecommendationDto: {
+            /** Format: uuid */
+            id: string;
+            ruleId: string;
+            actionType: string;
+            taskIds: string[];
+            /** Format: uuid */
+            sequenceId: null | string;
+            explanation: string;
+            evidence: components["schemas"]["ReconcileRecommendationEvidenceDto"][];
+            status: string;
+            commandStatus: null | string;
+            tasks: components["schemas"]["ReconcileRecommendationTaskDto"][];
+        };
+        ReconcileRecommendationEvidenceDto: {
+            kind: string;
+            taskIds: string[];
+            /** Format: uuid */
+            sequenceId: null | string;
+            reasonCodes: string[];
+            ruleIds: string[];
+            allowedActions: string[];
+            /** Format: int32 */
+            ageDays: null | number | string;
+            /** Format: int32 */
+            carryCount: number | string;
+            isProtected: boolean;
+            /** Format: int32 */
+            daysToDeadline: null | number | string;
+            /** Format: int32 */
+            memberCount: number | string;
+            /** Format: int32 */
+            blockedMemberCount: number | string;
+            hasDroppedPredecessor: boolean;
+            evidenceQuality: string;
+        };
+        ReconcileRecommendationTaskDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
         };
         ReconcileReviewItemDto: {
             entityType: string;
@@ -4191,6 +4438,7 @@ export interface components {
             commitmentReviews: components["schemas"]["ReconcileReviewItemDto"][];
             captures: components["schemas"]["CaptureDto"][];
             ruleMatches: components["schemas"]["ReconcileRuleMatchDto"][];
+            ai: components["schemas"]["ReconcileAiDto"];
         };
         ReconcileTaskItemDto: {
             /** Format: uuid */

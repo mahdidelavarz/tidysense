@@ -58,7 +58,7 @@ public sealed class AiRuntimeState(TimeProvider time)
     }
 
     /// <summary>A null failure is a completed call. After the open period one call is let through; its failure opens the circuit again.</summary>
-    public void Report(string key, string? failureClass, AiPlanningOptions options)
+    public void Report(string key, string? failureClass, AiFamilyOptions options)
     {
         lock (_gate)
         {
@@ -134,7 +134,9 @@ public sealed class AiSwitchAudit(IOptionsMonitor<AiOptions> options, TimeProvid
         {
             ["GLOBAL"] = value.GlobalKillSwitch,
             ["PLANNING"] = value.Planning.KillSwitch,
-            ["PLANNING_RETRY"] = !value.Planning.RetryEnabled
+            ["PLANNING_RETRY"] = !value.Planning.RetryEnabled,
+            ["RECONCILE"] = value.Reconcile.KillSwitch,
+            ["RECONCILE_RETRY"] = !value.Reconcile.RetryEnabled
         };
         foreach (var (key, provider) in value.Providers) switches[$"PROVIDER:{key}"] = provider.Disabled;
         return switches;

@@ -12,6 +12,7 @@ import { useCompleteTask } from '../../tasks/hooks/task-hooks'
 import { useCompleteReconcileSession, useReconcileAction, useReconcileSession } from '../hooks/reconcile-hooks'
 import { actionTitles, severityLabels } from '../types/reconcile.format'
 import type { ReconcileActionDraft, ReconcileSessionDto } from '../types/reconcile.types'
+import { AiExplanationCard } from './AiExplanationCard'
 import { ExecutionLane } from './ExecutionLane'
 import { ReviewApplyDialog } from './ReviewApplyDialog'
 import { ReviewLane } from './ReviewLane'
@@ -100,6 +101,8 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
               <SummaryCount label="یادداشت سریع" value={captureTotal} />
             </dl>
           </section>
+
+          <AiExplanationCard session={session} onAction={action.request} onDatedAction={setDated} />
 
           <FormError error={complete.error} />
 

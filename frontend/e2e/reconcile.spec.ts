@@ -105,3 +105,59 @@ test('a quick capture and an overdue sequence are resolved in Reconcile while To
   // The one-day gap between the two members survives the move.
   expect(second.plannedDate).toBe(shiftDate(first.plannedDate, 1))
 })
+
+test('an optional explanation points at an allowed action and the change still goes through the confirmed preview', async ({ page }) => {
+  const session = await page.request.post('/api/v1/dev/test-session', { data: {}, headers: { Origin: origin } })
+  expect(session.ok()).toBeTruthy()
+  const { localDate } = await (await page.request.get('/api/v1/today')).json() as { localDate: string }
+  const title = `کار قدیمی ${Date.now()}`
+  const created = await page.request.post('/api/v1/tasks', {
+    data: {
+      title, description: null, goalId: null, projectId: null,
+      plannedDate: shiftDate(localDate, -8), deadline: null, sequenceId: null, sequenceOrder: null,
+    },
+    headers: { Origin: origin, 'Idempotency-Key': randomUUID() },
+  })
+  expect(created.ok(), await created.text()).toBeTruthy()
+  const task = await created.json() as { id: string }
+
+  await page.goto('/reconcile')
+  // The deterministic lane is complete before any explanation is asked for.
+  const execution = page.getByRole('region', { name: 'تصمیم‌های اجرایی' })
+  await expect(execution.getByRole('heading', { name: title })).toBeVisible()
+  const card = page.getByRole('region', { name: /توضیح هوش مصنوعی/ })
+  await expect(card.getByText('توضیح چیزی را تغییر نمی‌دهد.')).toBeVisible()
+  await card.getByRole('button', { name: 'توضیح بده' }).click()
+
+  const recommendation = card.getByRole('article', { name: 'پیشنهاد: انتقال به تاریخ جدید' }).filter({ hasText: title })
+  await expect(recommendation).toBeVisible()
+  await expect(recommendation.getByText(/^قاعده:/)).toBeVisible()
+  await expect(recommendation.getByText(/واقعیت‌ها:.*۸ روز گذشته/)).toBeVisible()
+  await expect(card.getByText(/تا پیش‌نمایش را تأیید نکنید چیزی تغییر نمی‌کند/)).toBeVisible()
+  await page.screenshot({ path: 'test-results/step-10-explanation.png', fullPage: true })
+  // Other old work of the shared test user may be in the same recommendation; only this Task is kept.
+  for (const box of await recommendation.getByRole('checkbox').all()) {
+    const label = await box.evaluate(node => node.closest('label')?.textContent ?? '')
+    if (!label.includes(title)) await box.uncheck()
+  }
+
+  // Nothing has changed yet: the Task is still where it was.
+  const before = await (await page.request.get(`/api/v1/tasks/${task.id}`)).json() as { plannedDate: string }
+  expect(before.plannedDate).toBe(shiftDate(localDate, -8))
+
+  await recommendation.getByRole('button', { name: 'دیدن پیش‌نمایش' }).click()
+  const dateSheet = page.getByRole('dialog', { name: 'انتقال به تاریخ جدید' })
+  await dateSheet.getByLabel('تاریخ جدید').click()
+  await dateSheet.getByRole('button', { name: 'فردا', exact: true }).click()
+  await dateSheet.getByRole('button', { name: 'دیدن پیش‌نمایش' }).click()
+  const review = page.getByRole('dialog', { name: 'انتقال به تاریخ جدید' })
+  await expect(review.getByRole('listitem')).toHaveCount(1)
+  await expect(review.getByText('منتقل می‌شود')).toBeVisible()
+  await review.getByRole('button', { name: 'تأیید و اعمال' }).click()
+  await expect(review).toBeHidden()
+  await expect(execution.getByRole('heading', { name: title })).toHaveCount(0)
+
+  const after = await (await page.request.get(`/api/v1/tasks/${task.id}`)).json() as { plannedDate: string; carryCount: number }
+  expect(after.plannedDate).toBe(shiftDate(localDate, 1))
+  expect(after.carryCount).toBe(1)
+})

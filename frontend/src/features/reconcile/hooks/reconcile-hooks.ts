@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import {
+  cancelReconcileExplanation,
   completeReconcileSession,
   createReconcilePreview,
+  dismissReconcileRecommendation,
   getReconcileOverview,
   getReconcileSession,
   openReconcileSession,
+  requestReconcileExplanation,
   resolveReconcilePrompt,
   submitReconcileConfirmation,
 } from '../services/reconcile-api'
@@ -23,6 +26,8 @@ export const reconcileKeys = {
   overview: ['reconcile', 'overview'] as const,
   session: ['reconcile', 'session'] as const,
 }
+
+const explanationPollMs = 1500
 
 /** Eligibility, severity and counts for the Today entry and the navigation badge. */
 export function useReconcileOverview() {
@@ -51,6 +56,8 @@ export function useReconcileSession() {
       const current = client.getQueryData<ReconcileSessionDto>(reconcileKeys.session)
       return current?.status === 'OPEN' ? getReconcileSession(current.id) : openReconcileSession('MANUAL')
     },
+    // Only the optional explanation is polled; the deterministic lanes are already complete.
+    refetchInterval: query => query.state.data?.ai.explanation?.status === 'RUNNING' ? explanationPollMs : false,
   })
 }
 
@@ -125,3 +132,20 @@ export function useReconcileAction(sessionId: string) {
 }
 
 export type ReconcileActionFlow = ReturnType<typeof useReconcileAction>
+
+/**
+ * The optional AI explanation of one session: ask, cancel, and decline a
+ * recommendation. Using a recommendation is not here on purpose: it goes
+ * through the same preview and confirmation as every other action.
+ */
+export function useReconcileExplanation(sessionId: string) {
+  const client = useQueryClient()
+  const show = (data: ReconcileSessionDto) => client.setQueryData(reconcileKeys.session, data)
+  const request = useMutation({ mutationFn: () => requestReconcileExplanation(sessionId), onSuccess: show })
+  const cancel = useMutation({ mutationFn: () => cancelReconcileExplanation(sessionId), onSuccess: show })
+  const dismiss = useMutation({
+    mutationFn: (recommendationId: string) => dismissReconcileRecommendation(recommendationId),
+    onSuccess: () => client.invalidateQueries({ queryKey: reconcileKeys.session }),
+  })
+  return { request, cancel, dismiss }
+}

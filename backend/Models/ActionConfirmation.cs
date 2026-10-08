@@ -12,6 +12,8 @@ public sealed class ActionConfirmation
     public Guid? ReconcileSessionId { get; set; }
     public Guid? PlanningDraftId { get; set; }
     public int? PlanningDraftRevision { get; set; }
+    /// <summary>Set when the preview was requested from an AI recommendation. It adds no authority.</summary>
+    public Guid? ReconcileRecommendationId { get; set; }
     public string ActionType { get; set; } = string.Empty;
     public string RequestJson { get; set; } = "{}";
     public string PreviewJson { get; set; } = "{}";

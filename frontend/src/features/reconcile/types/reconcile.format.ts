@@ -72,3 +72,71 @@ export function formatAge(days: number | string | null | undefined): string | nu
   if (days == null) return null
   return `${formatNumber(Number(days))} روز گذشته`
 }
+
+/** The deterministic rule a recommendation rests on, in plain words. */
+export const ruleLabels: Record<string, string> = {
+  R1: 'چند بار منتقل شده',
+  R2: 'مدت زیادی از تاریخش گذشته',
+  R3: 'مهلت نزدیک است',
+  R6: 'پیش‌نیاز کنار گذاشته شده',
+}
+
+/** Why an explanation did not arrive. Each one leaves the lanes below exactly as they were. */
+export const explanationFailureLabels: Record<string, string> = {
+  AI_UNAVAILABLE: 'دستیار هوشمند اکنون در دسترس نیست.',
+  AI_BUDGET_EXHAUSTED: 'سقف استفاده امروز از دستیار هوشمند پر شده است.',
+  CONTEXT_TOO_LARGE: 'موارد این بازبینی برای یک توضیح زیاد است.',
+  GENERATION_TIMEOUT: 'پاسخ دستیار هوشمند به‌موقع نرسید.',
+  EXPLANATION_INVALID: 'پاسخ دستیار هوشمند قابل استفاده نبود و کنار گذاشته شد.',
+  PROVIDER_ERROR: 'دستیار هوشمند پاسخ نداد.',
+  RECONCILE_AI_UNAVAILABLE: 'دستیار هوشمند اکنون خاموش است.',
+  AI_RATE_LIMITED: 'امروز به سقف درخواست توضیح رسیده‌اید.',
+  EXPLANATION_NOT_ELIGIBLE: 'دیگر موردی برای توضیح نمانده است.',
+}
+
+const recommendationStatusLabels: Record<string, string> = {
+  REJECTED: 'این پیشنهاد را نخواستید.',
+  OUTDATED: 'وضعیت این کارها تغییر کرده است و این پیشنهاد دیگر معتبر نیست.',
+  CANCELLED: 'این پیشنهاد بسته شد.',
+  EXPIRED_WITHOUT_DECISION: 'این پیشنهاد بدون تصمیم بسته شد.',
+}
+
+/**
+ * What became of a recommendation. Accepting is the user's answer; whether
+ * anything changed is said only from the command's own result.
+ */
+export function recommendationStatusText(status: string, commandStatus: string | null | undefined): string {
+  if (status !== 'ACCEPTED' && status !== 'ACCEPTED_EDITED') return recommendationStatusLabels[status] ?? status
+  const accepted = status === 'ACCEPTED_EDITED' ? 'این پیشنهاد را با تغییر پذیرفتید' : 'این پیشنهاد را پذیرفتید'
+  if (commandStatus === 'SUCCEEDED') return `${accepted} و اعمال شد.`
+  if (commandStatus) return `${accepted}، اما اعمال نشد. از فهرست پایین دوباره تصمیم بگیرید.`
+  return `${accepted}.`
+}
+
+type RecommendationFacts = {
+  kind: string
+  ageDays: number | string | null
+  carryCount: number | string
+  isProtected: boolean
+  daysToDeadline: number | string | null
+  memberCount: number | string
+  blockedMemberCount: number | string
+  hasDroppedPredecessor: boolean
+}
+
+/** The deterministic facts behind one recommended Task or sequence, as short phrases. Never model text. */
+export function formatFacts(facts: RecommendationFacts): string[] {
+  const phrases: string[] = []
+  if (facts.kind === 'SEQUENCE') phrases.push(`دنباله‌ای از ${formatNumber(Number(facts.memberCount))} کار`)
+  if (facts.hasDroppedPredecessor) phrases.push('پیش‌نیاز کنار گذاشته شده')
+  if (Number(facts.blockedMemberCount) > 0) phrases.push(`${formatNumber(Number(facts.blockedMemberCount))} کار منتظر کار پیشین`)
+  const age = formatAge(facts.ageDays)
+  if (age) phrases.push(age)
+  if (Number(facts.carryCount) > 0) phrases.push(`${formatNumber(Number(facts.carryCount))} بار منتقل شده`)
+  if (facts.daysToDeadline != null) {
+    const days = Number(facts.daysToDeadline)
+    phrases.push(days < 0 ? 'از مهلت گذشته' : days === 0 ? 'مهلت امروز است' : `${formatNumber(days)} روز تا مهلت`)
+  }
+  if (facts.isProtected) phrases.push('محافظت‌شده')
+  return phrases
+}

@@ -9,6 +9,7 @@ import type {
   ReconcileOverviewDto,
   ReconcilePromptDto,
   ReconcilePromptState,
+  ReconcileRecommendationDispositionDto,
   ReconcileSessionDto,
 } from '../types/reconcile.types'
 
@@ -59,6 +60,7 @@ export async function createReconcilePreview(sessionId: string, draft: Reconcile
       sequenceId: draft.sequenceId ?? null,
       plannedDate: draft.plannedDate ?? null,
       includeTaskIds: draft.includeTaskIds ?? null,
+      recommendationId: draft.recommendationId ?? null,
     },
   )
   return response.data
@@ -71,5 +73,23 @@ export async function submitReconcileConfirmation(id: string, warnings: Confirma
     { acknowledgedWarnings: warnings.map(({ warningId, warningHash }) => ({ warningId, warningHash })) },
     { headers: commandHeaders() },
   )
+  return response.data
+}
+
+/** Asks for the optional AI explanation of the session's rule-matched evidence. The lanes never wait for it. */
+export async function requestReconcileExplanation(sessionId: string): Promise<ReconcileSessionDto> {
+  const response = await http.post<ReconcileSessionDto>(`/reconcile/sessions/${encodeURIComponent(sessionId)}/explanation`, {})
+  return response.data
+}
+
+/** Stops a running explanation. A result that arrives anyway is discarded by the server. */
+export async function cancelReconcileExplanation(sessionId: string): Promise<ReconcileSessionDto> {
+  const response = await http.post<ReconcileSessionDto>(`/reconcile/sessions/${encodeURIComponent(sessionId)}/explanation/cancel`, {})
+  return response.data
+}
+
+/** Declines one recommendation. Nothing else changes. */
+export async function dismissReconcileRecommendation(id: string): Promise<ReconcileRecommendationDispositionDto> {
+  const response = await http.post<ReconcileRecommendationDispositionDto>(`/reconcile/recommendations/${encodeURIComponent(id)}/dismiss`, {})
   return response.data
 }

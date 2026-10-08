@@ -497,4 +497,132 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
             return ((Npgsql.PostgresException)failure.InnerException!).ConstraintName;
         }
     }
+
+    [Fact]
+    public async Task Step10_ai_reconcile_schema_round_trips_and_keeps_confirmations_and_invocations()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var hash = new string('C', 64);
+        var user = new User
+        {
+            Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000),
+            IsActive = true, SetupComplete = true, CreatedAt = now
+        };
+        var session = new ReconcileSession
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, RulesCatalogVersion = "test", Timezone = "Asia/Tehran",
+            LocalDate = DateOnly.FromDateTime(now.UtcDateTime), OpenedAt = now
+        };
+        ReconcileExplanation Explanation(Action<ReconcileExplanation> set)
+        {
+            var explanation = new ReconcileExplanation
+            {
+                Id = Guid.NewGuid(), SessionId = session.Id, UserId = user.Id,
+                Status = ReconcileExplanationStatuses.Ready, ExplainerKey = "test", ContextBuilderVersion = "test",
+                ContextFingerprint = hash, Summary = "summary", CreatedAt = now, CompletedAt = now
+            };
+            set(explanation);
+            return explanation;
+        }
+        ReconcileRecommendation Recommendation(Guid explanationId, int ordinal, Action<ReconcileRecommendation> set)
+        {
+            var recommendation = new ReconcileRecommendation
+            {
+                Id = Guid.NewGuid(), ExplanationId = explanationId, UserId = user.Id, Ordinal = ordinal,
+                RuleId = "R2", RuleVersion = "test", ActionType = "KEEP_TASKS", TaskIds = [Guid.NewGuid()],
+                EvidenceFingerprint = hash, Explanation = "explanation"
+            };
+            set(recommendation);
+            return recommendation;
+        }
+        var ready = Explanation(_ => { });
+        var recommended = Recommendation(ready.Id, 1, _ => { });
+        var unanswered = Recommendation(ready.Id, 3, x =>
+        {
+            x.Disposition = ReconcileRecommendationDispositions.ExpiredWithoutDecision;
+            x.DisposedAt = now;
+        });
+        var running = Explanation(x =>
+        {
+            x.Status = ReconcileExplanationStatuses.Running;
+            x.Summary = null;
+            x.CompletedAt = null;
+        });
+        var confirmation = new ActionConfirmation
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, ReconcileSessionId = session.Id,
+            ReconcileRecommendationId = recommended.Id, ActionType = "KEEP_TASKS", PreviewHash = hash,
+            CreatedAt = now, ExpiresAt = now.AddMinutes(15)
+        };
+        var invocation = new AiInvocation
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, ReconcileExplanationId = ready.Id, Family = "RECONCILE",
+            ConfigurationKey = "reconcile.explanation", ProviderKey = "test", Model = "test", PromptVersion = "test",
+            SchemaVersion = "test", ContextBuilderVersion = "test", RepairPolicyVersion = "test", Sequence = 1,
+            StartedAt = now, CompletedAt = now, Outcome = AiInvocationOutcomes.Succeeded
+        };
+        db.AddRange(user, session, ready, recommended, unanswered, running, confirmation, invocation);
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
+        // One explanation runs per session; text exists only when ready and a failure code only when failed.
+        db.Add(Explanation(x =>
+        {
+            x.Status = ReconcileExplanationStatuses.Running;
+            x.Summary = null;
+            x.CompletedAt = null;
+        }));
+        Assert.Equal("IX_ReconcileExplanations_OneRunningPerSession", await ConstraintAsync());
+        db.Add(Explanation(x => x.Summary = null));
+        Assert.Equal("CK_ReconcileExplanations_Outcome", await ConstraintAsync());
+        db.Add(Explanation(x => x.Status = ReconcileExplanationStatuses.Failed));
+        Assert.Equal("CK_ReconcileExplanations_Outcome", await ConstraintAsync());
+        db.Add(Explanation(x => x.Status = "PARTIAL"));
+        Assert.StartsWith("CK_ReconcileExplanations_", await ConstraintAsync());
+        // A recommendation points at work, has one place in its explanation and a disposition time only once disposed.
+        db.Add(Recommendation(ready.Id, 2, x => x.TaskIds = []));
+        Assert.Equal("CK_ReconcileRecommendations_Target", await ConstraintAsync());
+        db.Add(Recommendation(ready.Id, 1, _ => { }));
+        Assert.Equal("IX_ReconcileRecommendations_ExplanationId_Ordinal", await ConstraintAsync());
+        db.Add(Recommendation(ready.Id, 2, x => x.DisposedAt = now));
+        Assert.Equal("CK_ReconcileRecommendations_Disposed", await ConstraintAsync());
+        db.Add(Recommendation(ready.Id, 2, x => x.EvidenceJson = "{}"));
+        Assert.Equal("CK_ReconcileRecommendations_EvidenceArray", await ConstraintAsync());
+        db.Add(Recommendation(ready.Id, 2, x => x.Disposition = "APPLIED"));
+        Assert.StartsWith("CK_ReconcileRecommendations_", await ConstraintAsync());
+
+        await migrator.MigrateAsync("20261003152226_Step9AiPlanningRuntime", cancellationToken);
+        // The explanation layer is removable: the confirmation and the operation record survive without it.
+        Assert.Equal(1, await db.Database.SqlQuery<int>(
+                $"SELECT COUNT(*)::int AS \"Value\" FROM \"ActionConfirmations\" WHERE \"Id\" = {confirmation.Id}")
+            .SingleAsync(cancellationToken));
+        Assert.Equal(1, await db.Database.SqlQuery<int>(
+                $"SELECT COUNT(*)::int AS \"Value\" FROM \"AiInvocations\" WHERE \"Id\" = {invocation.Id}")
+            .SingleAsync(cancellationToken));
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        db.ChangeTracker.Clear();
+        Assert.Null((await db.ActionConfirmations.AsNoTracking().SingleAsync(x => x.Id == confirmation.Id,
+            cancellationToken)).ReconcileRecommendationId);
+        Assert.Null((await db.AiInvocations.AsNoTracking().SingleAsync(x => x.Id == invocation.Id,
+            cancellationToken)).ReconcileExplanationId);
+        Assert.Equal(0, await db.ReconcileExplanations.CountAsync(x => x.UserId == user.Id, cancellationToken));
+
+        await db.AiInvocations.Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await db.ActionConfirmations.Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await db.ReconcileSessions.Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await db.Users.Where(x => x.Id == user.Id).ExecuteDeleteAsync(cancellationToken);
+
+        async Task<string?> ConstraintAsync()
+        {
+            var failure = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(cancellationToken));
+            db.ChangeTracker.Clear();
+            return ((Npgsql.PostgresException)failure.InnerException!).ConstraintName;
+        }
+    }
 }

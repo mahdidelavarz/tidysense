@@ -13,16 +13,19 @@ public sealed class AiOptions
 
     public AiPlanningOptions Planning { get; set; } = new();
 
+    public AiReconcileOptions Reconcile { get; set; } = new();
+
     public Dictionary<string, AiProviderOptions> Providers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
-public sealed class AiPlanningOptions
+/// <summary>The switches and limits every output family has on its own.</summary>
+public class AiFamilyOptions
 {
     public const string MockProvider = "mock";
 
     public bool KillSwitch { get; set; }
 
-    /// <summary>A key of <see cref="AiOptions.Providers"/>, or "mock" for the deterministic generator.</summary>
+    /// <summary>A key of <see cref="AiOptions.Providers"/>, or "mock" for the deterministic implementation.</summary>
     public string Provider { get; set; } = MockProvider;
 
     /// <summary>The single controlled retry of a transient provider failure.</summary>
@@ -33,13 +36,32 @@ public sealed class AiPlanningOptions
     public int ConnectionTimeoutSeconds { get; set; } = 10;
     public int InvocationTimeoutSeconds { get; set; } = 45;
     public int OperationDeadlineSeconds { get; set; } = 100;
-    public int AttemptsPerUserPerHour { get; set; } = 20;
-    public int AttemptsPerUserPerDay { get; set; } = 60;
     public int MaxConcurrentInvocations { get; set; } = 4;
     public decimal DailyBudgetUsd { get; set; } = 2m;
     public int CircuitFailureThreshold { get; set; } = 5;
     public int CircuitOpenSeconds { get; set; } = 60;
     public int SpendCapLatchMinutes { get; set; } = 60;
+}
+
+public sealed class AiPlanningOptions : AiFamilyOptions
+{
+    public int AttemptsPerUserPerHour { get; set; } = 20;
+    public int AttemptsPerUserPerDay { get; set; } = 60;
+}
+
+/// <summary>Reconcile explanation: a small request over structured evidence, so its limits are tighter.</summary>
+public sealed class AiReconcileOptions : AiFamilyOptions
+{
+    public AiReconcileOptions()
+    {
+        MaxInputTokens = 6000;
+        MaxOutputTokens = 1500;
+        InvocationTimeoutSeconds = 30;
+        OperationDeadlineSeconds = 70;
+        DailyBudgetUsd = 1m;
+    }
+
+    public int ExplanationsPerUserPerDay { get; set; } = 20;
 }
 
 public sealed class AiProviderOptions

@@ -20,6 +20,8 @@ public sealed class AppDbContext(
     public DbSet<ReconcileSession> ReconcileSessions => Set<ReconcileSession>();
     public DbSet<ReconcileFact> ReconcileFacts => Set<ReconcileFact>();
     public DbSet<RuleMatch> RuleMatches => Set<RuleMatch>();
+    public DbSet<ReconcileExplanation> ReconcileExplanations => Set<ReconcileExplanation>();
+    public DbSet<ReconcileRecommendation> ReconcileRecommendations => Set<ReconcileRecommendation>();
     public DbSet<ReconcilePrompt> ReconcilePrompts => Set<ReconcilePrompt>();
     public DbSet<ActionConfirmation> ActionConfirmations => Set<ActionConfirmation>();
     public DbSet<PlanningAttempt> PlanningAttempts => Set<PlanningAttempt>();
@@ -306,6 +308,59 @@ public sealed class AppDbContext(
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<ReconcileExplanation>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.ExplainerKey).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ContextBuilderVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ContextFingerprint).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ContextManifestJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.Summary).HasMaxLength(400);
+            entity.Property(x => x.FailureCode).HasMaxLength(64);
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.HasIndex(x => new { x.SessionId, x.CreatedAt });
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt });
+            // One explanation in flight per session is the database backstop for the request check.
+            entity.HasIndex(x => x.SessionId).IsUnique().HasFilter("\"Status\" = 'RUNNING'")
+                .HasDatabaseName("IX_ReconcileExplanations_OneRunningPerSession");
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Session).WithMany().HasForeignKey(x => x.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ReconcileExplanations_Status", "\"Status\" IN ('RUNNING', 'READY', 'FAILED', 'CANCELLED')");
+                t.HasCheckConstraint("CK_ReconcileExplanations_ManifestObject", "jsonb_typeof(\"ContextManifestJson\") = 'object'");
+                // Text exists only for a ready explanation, a failure code only for a failed one.
+                t.HasCheckConstraint("CK_ReconcileExplanations_Outcome", "(\"Status\" = 'RUNNING') = (\"CompletedAt\" IS NULL) AND (\"Status\" = 'READY') = (\"Summary\" IS NOT NULL) AND (\"Status\" = 'FAILED') = (\"FailureCode\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<ReconcileRecommendation>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.RuleId).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.RuleVersion).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ActionType).HasMaxLength(48).IsRequired();
+            entity.Property(x => x.TaskIds).IsRequired();
+            entity.Property(x => x.EvidenceFingerprint).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Explanation).HasMaxLength(300).IsRequired();
+            entity.Property(x => x.Disposition).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.EvidenceJson).HasColumnType("jsonb").IsRequired();
+            entity.HasIndex(x => x.ResultingCommandResultId);
+            entity.HasIndex(x => new { x.ExplanationId, x.Ordinal }).IsUnique();
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ExplanationRecord).WithMany(x => x.Recommendations)
+                .HasForeignKey(x => x.ExplanationId).OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ReconcileRecommendations_Disposition", "\"Disposition\" IN ('PENDING', 'ACCEPTED', 'ACCEPTED_EDITED', 'REJECTED', 'CANCELLED', 'EXPIRED_WITHOUT_DECISION')");
+                t.HasCheckConstraint("CK_ReconcileRecommendations_EvidenceArray", "jsonb_typeof(\"EvidenceJson\") = 'array'");
+                t.HasCheckConstraint("CK_ReconcileRecommendations_Disposed", "(\"Disposition\" = 'PENDING') = (\"DisposedAt\" IS NULL)");
+                t.HasCheckConstraint("CK_ReconcileRecommendations_Target", "cardinality(\"TaskIds\") > 0 AND \"Ordinal\" > 0");
+            });
+        });
+
         modelBuilder.Entity<ReconcilePrompt>(entity =>
         {
             entity.HasKey(x => x.Id);
@@ -335,12 +390,16 @@ public sealed class AppDbContext(
             entity.HasIndex(x => x.PlanningDraftId);
             entity.HasOne(x => x.Session).WithMany().HasForeignKey(x => x.ReconcileSessionId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.ReconcileRecommendationId);
+            entity.HasOne<ReconcileRecommendation>().WithMany().HasForeignKey(x => x.ReconcileRecommendationId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasOne<PlanningDraft>().WithMany().HasForeignKey(x => x.PlanningDraftId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_ActionConfirmations_Status", "\"Status\" IN ('CREATED', 'SUBMITTED', 'RESOLVED', 'EXPIRED', 'CANCELLED')");
                 t.HasCheckConstraint("CK_ActionConfirmations_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
+                t.HasCheckConstraint("CK_ActionConfirmations_Recommendation", "\"ReconcileRecommendationId\" IS NULL OR \"ReconcileSessionId\" IS NOT NULL");
                 // A confirmation previews exactly one thing: a Reconcile action or one planning draft revision.
                 t.HasCheckConstraint("CK_ActionConfirmations_Subject", "(\"ReconcileSessionId\" IS NOT NULL AND \"PlanningDraftId\" IS NULL AND \"PlanningDraftRevision\" IS NULL) OR (\"ReconcileSessionId\" IS NULL AND \"PlanningDraftId\" IS NOT NULL AND \"PlanningDraftRevision\" IS NOT NULL)");
             });
@@ -405,6 +464,9 @@ public sealed class AppDbContext(
             entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
             entity.HasIndex(x => new { x.Family, x.StartedAt });
             entity.HasIndex(x => x.PlanningAttemptId);
+            entity.HasIndex(x => x.ReconcileExplanationId);
+            entity.HasOne<ReconcileExplanation>().WithMany().HasForeignKey(x => x.ReconcileExplanationId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             // The diagnostic row outlives the temporary attempt it describes.
             entity.HasOne<PlanningAttempt>().WithMany().HasForeignKey(x => x.PlanningAttemptId)

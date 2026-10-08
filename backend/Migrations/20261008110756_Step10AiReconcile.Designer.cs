@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TidySense.Data;
@@ -11,9 +12,11 @@ using TidySense.Data;
 namespace TidySense.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261008110756_Step10AiReconcile")]
+    partial class Step10AiReconcile
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1307,17 +1310,13 @@ namespace TidySense.Migrations
 
                     b.Property<string>("Disposition")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("EvidenceFingerprint")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
-
-                    b.Property<string>("EvidenceJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
 
                     b.Property<string>("Explanation")
                         .IsRequired()
@@ -1329,9 +1328,6 @@ namespace TidySense.Migrations
 
                     b.Property<int>("Ordinal")
                         .HasColumnType("integer");
-
-                    b.Property<Guid?>("ResultingCommandResultId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("RuleId")
                         .IsRequired()
@@ -1355,8 +1351,6 @@ namespace TidySense.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ResultingCommandResultId");
-
                     b.HasIndex("UserId");
 
                     b.HasIndex("ExplanationId", "Ordinal")
@@ -1366,9 +1360,7 @@ namespace TidySense.Migrations
                         {
                             t.HasCheckConstraint("CK_ReconcileRecommendations_Disposed", "(\"Disposition\" = 'PENDING') = (\"DisposedAt\" IS NULL)");
 
-                            t.HasCheckConstraint("CK_ReconcileRecommendations_Disposition", "\"Disposition\" IN ('PENDING', 'ACCEPTED', 'ACCEPTED_EDITED', 'REJECTED', 'CANCELLED', 'EXPIRED_WITHOUT_DECISION')");
-
-                            t.HasCheckConstraint("CK_ReconcileRecommendations_EvidenceArray", "jsonb_typeof(\"EvidenceJson\") = 'array'");
+                            t.HasCheckConstraint("CK_ReconcileRecommendations_Disposition", "\"Disposition\" IN ('PENDING', 'ACCEPTED', 'ACCEPTED_EDITED', 'REJECTED')");
 
                             t.HasCheckConstraint("CK_ReconcileRecommendations_Target", "cardinality(\"TaskIds\") > 0 AND \"Ordinal\" > 0");
                         });

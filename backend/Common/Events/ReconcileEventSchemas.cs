@@ -15,6 +15,9 @@ public static class ReconcileEventTypes
     public const string SessionCompleted = "RECONCILE_SESSION_COMPLETED";
     public const string PromptResolved = "RECONCILE_PROMPT_RESOLVED";
     public const string ActionConfirmed = "RECONCILE_ACTION_CONFIRMED";
+    public const string RecommendationPresented = "RECONCILE_RECOMMENDATION_PRESENTED";
+    public const string RecommendationAccepted = "RECONCILE_RECOMMENDATION_ACCEPTED";
+    public const string RecommendationRejected = "RECONCILE_RECOMMENDATION_REJECTED";
 }
 
 public static class ReconcileActionTypes
@@ -69,7 +72,22 @@ public static class ReconcileEventSchemas
                 value => value.ValueKind == JsonValueKind.String &&
                     ReconcileActionTypes.All.Contains(value.GetString()!)),
             Count("affectedCount"));
+        // Recommendation events carry classifications only; the rule is in the event's rule columns.
+        yield return new EventPayloadSchema(ReconcileEventTypes.RecommendationPresented, 1,
+            ActionType(), Count("unitCount"),
+            new EventPayloadFieldPolicy("explainer", true, IsExplainerKey));
+        yield return new EventPayloadSchema(ReconcileEventTypes.RecommendationAccepted, 1,
+            ActionType(),
+            new EventPayloadFieldPolicy("edited", true,
+                value => value.ValueKind is JsonValueKind.True or JsonValueKind.False));
+        yield return new EventPayloadSchema(ReconcileEventTypes.RecommendationRejected, 1, ActionType());
     }
+
+    private static EventPayloadFieldPolicy ActionType() => new("actionType", true,
+        value => value.ValueKind == JsonValueKind.String && ReconcileActionTypes.All.Contains(value.GetString()!));
+
+    private static bool IsExplainerKey(JsonElement value) =>
+        value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 and <= 64 };
 
     private static EventPayloadFieldPolicy Severity() =>
         new("severity", true, value => Allowed(value, Severities));

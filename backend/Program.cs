@@ -118,6 +118,9 @@ builder.Services.AddScoped<RoutineService>();
 builder.Services.AddScoped<TodayService>();
 builder.Services.AddScoped<CaptureService>();
 builder.Services.AddScoped<ReconcileService>();
+builder.Services.AddScoped<ReconcileExplanationService>();
+builder.Services.AddScoped<ReconcileExplanationRunner>();
+builder.Services.AddSingleton<ReconcileExplanationQueue>();
 builder.Services.AddScoped<PlanningService>();
 builder.Services.AddScoped<PlanningContextBuilder>();
 builder.Services.AddScoped<PlanningAttemptRunner>();
@@ -145,6 +148,14 @@ if (string.IsNullOrWhiteSpace(planningProvider) ||
 else
     builder.Services.AddSingleton<IPlanningGenerator, AiPlanningGenerator>();
 builder.Services.AddHostedService<PlanningAttemptWorker>();
+// The Reconcile explanation is selected the same way and independently of planning.
+var reconcileProvider = builder.Configuration[$"{AiOptions.SectionName}:Reconcile:Provider"];
+if (string.IsNullOrWhiteSpace(reconcileProvider) ||
+    reconcileProvider.Equals(AiFamilyOptions.MockProvider, StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddSingleton<IReconcileExplainer, DeterministicReconcileExplainer>();
+else
+    builder.Services.AddSingleton<IReconcileExplainer, AiReconcileExplainer>();
+builder.Services.AddHostedService<ReconcileExplanationWorker>();
 builder.Services.AddScoped<ApplicationDateService>();
 builder.Services.AddScoped<CommandExecutionService>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -163,19 +174,26 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") &&
     (app.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>()?.Length ?? 0) == 0)
     throw new InvalidOperationException("Security:AllowedOrigins must be configured in production.");
-if (app.Services.GetRequiredService<IPlanningGenerator>() is AiPlanningGenerator)
 {
     var ai = app.Services.GetRequiredService<IOptions<AiOptions>>().Value;
+    if (app.Services.GetRequiredService<IPlanningGenerator>() is AiPlanningGenerator)
+        RequireProvider(ai.Planning.Provider, "planning");
+    if (app.Services.GetRequiredService<IReconcileExplainer>() is AiReconcileExplainer)
+        RequireProvider(ai.Reconcile.Provider, "Reconcile explanation");
+
     // A selected provider must be callable, and outside local work its prices must be known: the budget is computed from them.
-    if (!ai.Providers.TryGetValue(ai.Planning.Provider, out var selected) ||
-        string.IsNullOrWhiteSpace(selected.BaseUrl) || string.IsNullOrWhiteSpace(selected.ApiKey) ||
-        string.IsNullOrWhiteSpace(selected.Model))
-        throw new InvalidOperationException(
-            $"Ai:Providers:{ai.Planning.Provider} needs BaseUrl, ApiKey and Model when it is the planning provider.");
-    if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") &&
-        (selected.InputPricePerMillionTokens <= 0 || selected.OutputPricePerMillionTokens <= 0))
-        throw new InvalidOperationException(
-            $"Ai:Providers:{ai.Planning.Provider} needs its token prices so the daily budget can be enforced.");
+    void RequireProvider(string key, string use)
+    {
+        if (!ai.Providers.TryGetValue(key, out var selected) ||
+            string.IsNullOrWhiteSpace(selected.BaseUrl) || string.IsNullOrWhiteSpace(selected.ApiKey) ||
+            string.IsNullOrWhiteSpace(selected.Model))
+            throw new InvalidOperationException(
+                $"Ai:Providers:{key} needs BaseUrl, ApiKey and Model when it is the {use} provider.");
+        if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") &&
+            (selected.InputPricePerMillionTokens <= 0 || selected.OutputPricePerMillionTokens <= 0))
+            throw new InvalidOperationException(
+                $"Ai:Providers:{key} needs its token prices so the daily budget can be enforced.");
+    }
 }
 if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Database:MigrateOnStart"))
 {

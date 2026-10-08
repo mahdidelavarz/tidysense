@@ -32,6 +32,8 @@ $previous = @{
     Otp__HashingKey = $env:Otp__HashingKey
     Database__MigrateOnStart = $env:Database__MigrateOnStart
     VITE_API_PROXY_TARGET = $env:VITE_API_PROXY_TARGET
+    Ai__Planning__Provider = $env:Ai__Planning__Provider
+    Ai__Reconcile__Provider = $env:Ai__Reconcile__Provider
 }
 $backendProcess = $null
 $databaseCreated = $false
@@ -54,6 +56,9 @@ try {
     $env:Otp__HashingKey = 'auth-e2e-hashing-key-at-least-32-characters'
     $env:Database__MigrateOnStart = 'true'
     $env:VITE_API_PROXY_TARGET = 'https://127.0.0.1:7076'
+    # Browser tests run against the deterministic samples, whatever provider the developer's user-secrets select.
+    $env:Ai__Planning__Provider = 'mock'
+    $env:Ai__Reconcile__Provider = 'mock'
     Write-Host 'Building isolated backend...'
     & dotnet build (Join-Path $repoRoot 'backend\TidySense.csproj') --no-restore -p:OutputPath=bin/auth-e2e/ -p:OpenApiGenerateDocuments=false
     if ($LASTEXITCODE -ne 0) { throw 'Backend build failed.' }

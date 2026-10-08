@@ -11,6 +11,11 @@ export type ActionConfirmationDto = components['schemas']['ActionConfirmationDto
 export type ConfirmationWarningDto = components['schemas']['ConfirmationWarningDto']
 export type ConfirmationResultDto = components['schemas']['ConfirmationResultDto']
 export type ReconcilePromptDto = components['schemas']['ReconcilePromptDto']
+export type ReconcileAiDto = components['schemas']['ReconcileAiDto']
+export type ReconcileExplanationDto = components['schemas']['ReconcileExplanationDto']
+export type ReconcileRecommendationDto = components['schemas']['ReconcileRecommendationDto']
+export type ReconcileRecommendationEvidenceDto = components['schemas']['ReconcileRecommendationEvidenceDto']
+export type ReconcileRecommendationDispositionDto = components['schemas']['ReconcileRecommendationDispositionDto']
 
 export type ReconcilePromptState = 'DISMISSED' | 'SKIPPED'
 
@@ -30,4 +35,6 @@ export type ReconcileActionDraft = {
   sequenceId?: string
   plannedDate?: string
   includeTaskIds?: string[]
+  /** Set when the action was started from an AI recommendation. The server still builds and checks the preview. */
+  recommendationId?: string
 }

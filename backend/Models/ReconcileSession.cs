@@ -96,3 +96,71 @@ public static class ReconcilePromptStates
     public const string Dismissed = "DISMISSED";
     public const string Skipped = "SKIPPED";
 }
+
+/// <summary>
+/// One optional AI explanation of a session's deterministic evidence. It is never evidence itself:
+/// removing it leaves the session, its facts and its rule matches complete.
+/// </summary>
+public sealed class ReconcileExplanation
+{
+    public Guid Id { get; set; }
+    public Guid SessionId { get; set; }
+    public Guid UserId { get; set; }
+    public string Status { get; set; } = ReconcileExplanationStatuses.Running;
+    public string ExplainerKey { get; set; } = string.Empty;
+    public string ContextBuilderVersion { get; set; } = string.Empty;
+    public string ContextFingerprint { get; set; } = string.Empty;
+    public string ContextManifestJson { get; set; } = "{}";
+    public string? Summary { get; set; }
+    public string? FailureCode { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+    public string RetentionClass { get; set; } = "R3";
+    public ReconcileSession Session { get; set; } = null!;
+    public ICollection<ReconcileRecommendation> Recommendations { get; set; } = [];
+}
+
+/// <summary>
+/// A pointer from an explanation to one action the deterministic rules already allow for the
+/// listed work. The disposition is the user's answer to the recommendation; whether anything
+/// changed is answered only by the linked confirmation and its command result.
+/// </summary>
+public sealed class ReconcileRecommendation
+{
+    public Guid Id { get; set; }
+    public Guid ExplanationId { get; set; }
+    public Guid UserId { get; set; }
+    public int Ordinal { get; set; }
+    public string RuleId { get; set; } = string.Empty;
+    public string RuleVersion { get; set; } = string.Empty;
+    public string ActionType { get; set; } = string.Empty;
+    public Guid? SequenceId { get; set; }
+    public Guid[] TaskIds { get; set; } = [];
+    public string EvidenceFingerprint { get; set; } = string.Empty;
+    public string Explanation { get; set; } = string.Empty;
+    // What the deterministic rules had found about each unit when the recommendation was made.
+    public string EvidenceJson { get; set; } = "[]";
+    public string Disposition { get; set; } = ReconcileRecommendationDispositions.Pending;
+    public DateTimeOffset? DisposedAt { get; set; }
+    // The result of the latest command submitted from this recommendation. Acceptance never implies it succeeded.
+    public Guid? ResultingCommandResultId { get; set; }
+    public ReconcileExplanation ExplanationRecord { get; set; } = null!;
+}
+
+public static class ReconcileExplanationStatuses
+{
+    public const string Running = "RUNNING";
+    public const string Ready = "READY";
+    public const string Failed = "FAILED";
+    public const string Cancelled = "CANCELLED";
+}
+
+public static class ReconcileRecommendationDispositions
+{
+    public const string Pending = "PENDING";
+    public const string Accepted = "ACCEPTED";
+    public const string AcceptedEdited = "ACCEPTED_EDITED";
+    public const string Rejected = "REJECTED";
+    public const string Cancelled = "CANCELLED";
+    public const string ExpiredWithoutDecision = "EXPIRED_WITHOUT_DECISION";
+}

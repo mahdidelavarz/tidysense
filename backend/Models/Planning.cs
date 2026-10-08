@@ -45,6 +45,7 @@ public sealed class AiInvocation
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
     public Guid? PlanningAttemptId { get; set; }
+    public Guid? ReconcileExplanationId { get; set; }
     public string Family { get; set; } = string.Empty;
     public string ConfigurationKey { get; set; } = string.Empty;
     public string ProviderKey { get; set; } = string.Empty;

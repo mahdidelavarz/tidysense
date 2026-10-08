@@ -3297,6 +3297,246 @@
         }
       }
     },
+    "/api/v1/reconcile/sessions/{id}/explanation": {
+      "post": {
+        "tags": [
+          "Reconcile"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileSessionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileSessionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileSessionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reconcile/sessions/{id}/explanation/cancel": {
+      "post": {
+        "tags": [
+          "Reconcile"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileSessionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileSessionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileSessionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reconcile/recommendations/{id}/dismiss": {
+      "post": {
+        "tags": [
+          "Reconcile"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileRecommendationDispositionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileRecommendationDispositionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileRecommendationDispositionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/reconcile/sessions/{id}/previews": {
       "post": {
         "tags": [
@@ -5860,6 +6100,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "recommendationId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -7337,6 +7584,32 @@
           }
         }
       },
+      "ReconcileAiDto": {
+        "required": [
+          "availability",
+          "sample",
+          "explanation"
+        ],
+        "type": "object",
+        "properties": {
+          "availability": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "boolean"
+          },
+          "explanation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReconcileExplanationDto"
+              }
+            ]
+          }
+        }
+      },
       "ReconcileCountsDto": {
         "required": [
           "actionableBacklogCount",
@@ -7405,6 +7678,52 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "ReconcileExplanationDto": {
+        "required": [
+          "id",
+          "status",
+          "failureCode",
+          "isCurrent",
+          "summary",
+          "recommendations",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "failureCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isCurrent": {
+            "type": "boolean"
+          },
+          "summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReconcileRecommendationDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -7557,6 +7876,210 @@
             "format": "date"
           },
           "state": {
+            "type": "string"
+          }
+        }
+      },
+      "ReconcileRecommendationDispositionDto": {
+        "required": [
+          "id",
+          "disposition"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "disposition": {
+            "type": "string"
+          }
+        }
+      },
+      "ReconcileRecommendationDto": {
+        "required": [
+          "id",
+          "ruleId",
+          "actionType",
+          "taskIds",
+          "sequenceId",
+          "explanation",
+          "evidence",
+          "status",
+          "commandStatus",
+          "tasks"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "actionType": {
+            "type": "string"
+          },
+          "taskIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "sequenceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReconcileRecommendationEvidenceDto"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "commandStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReconcileRecommendationTaskDto"
+            }
+          }
+        }
+      },
+      "ReconcileRecommendationEvidenceDto": {
+        "required": [
+          "kind",
+          "taskIds",
+          "sequenceId",
+          "reasonCodes",
+          "ruleIds",
+          "allowedActions",
+          "ageDays",
+          "carryCount",
+          "isProtected",
+          "daysToDeadline",
+          "memberCount",
+          "blockedMemberCount",
+          "hasDroppedPredecessor",
+          "evidenceQuality"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "taskIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "sequenceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "reasonCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ruleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ageDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "carryCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isProtected": {
+            "type": "boolean"
+          },
+          "daysToDeadline": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "memberCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "blockedMemberCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "hasDroppedPredecessor": {
+            "type": "boolean"
+          },
+          "evidenceQuality": {
+            "type": "string"
+          }
+        }
+      },
+      "ReconcileRecommendationTaskDto": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
             "type": "string"
           }
         }
@@ -7715,7 +8238,8 @@
           "executionGroups",
           "commitmentReviews",
           "captures",
-          "ruleMatches"
+          "ruleMatches",
+          "ai"
         ],
         "type": "object",
         "properties": {
@@ -7798,6 +8322,9 @@
             "items": {
               "$ref": "#/components/schemas/ReconcileRuleMatchDto"
             }
+          },
+          "ai": {
+            "$ref": "#/components/schemas/ReconcileAiDto"
           }
         }
       },

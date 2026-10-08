@@ -33,9 +33,9 @@ public static partial class PlanningOutputGate
     public const string GatePolicy = "POLICY";
     public const string GateSemantic = "SEMANTIC";
 
-    public const string RemoveBom = "REMOVE_UTF8_BOM";
-    public const string TrimWhitespace = "TRIM_SURROUNDING_WHITESPACE";
-    public const string RemoveCodeFence = "REMOVE_SINGLE_JSON_CODE_FENCE";
+    public const string RemoveBom = AiOutputText.RemoveBom;
+    public const string TrimWhitespace = AiOutputText.TrimWhitespace;
+    public const string RemoveCodeFence = AiOutputText.RemoveCodeFence;
     public const string NormalizeEnumCase = "NORMALIZE_KNOWN_ENUM_CASE";
     public const string NormalizeDateSeparator = "NORMALIZE_YEAR_FIRST_DATE_SEPARATOR";
     public const string PadDate = "PAD_YEAR_FIRST_MONTH_OR_DAY";
@@ -79,7 +79,7 @@ public static partial class PlanningOutputGate
             if (finishReason != "stop" || string.IsNullOrWhiteSpace(text) || text.Length > MaxOutputChars)
                 throw new GateFailure(GateTransport, AiFailureClasses.Incomplete);
 
-            var root = Parse(Unwrap(text, rules));
+            var root = AiOutputText.ParseObject(text, rules) ?? throw new GateFailure(GateParse, AiFailureClasses.Parse);
             var reader = new Reader(rules);
             reader.Only(root, "kind", "message", "blockReason", "questions", "draft");
             var kind = reader.Enum(root, "kind", Kinds) ?? throw Schema();
@@ -123,49 +123,6 @@ public static partial class PlanningOutputGate
             return new PlanningGateResult(null, null, null, failure.Gate, failure.FailureClass, rules);
         }
     }
-
-    /// <summary>The allowlisted wrapper removal: a byte-order mark, surrounding whitespace, one enclosing code fence.</summary>
-    private static string Unwrap(string text, List<string> rules)
-    {
-        if (text[0] == '﻿')
-        {
-            text = text[1..];
-            rules.Add(RemoveBom);
-        }
-        var trimmed = text.Trim();
-        if (trimmed.Length != text.Length) rules.Add(TrimWhitespace);
-        if (!trimmed.StartsWith("```", StringComparison.Ordinal)) return trimmed;
-        var firstBreak = trimmed.IndexOf('\n');
-        var opening = firstBreak < 0 ? string.Empty : trimmed[3..firstBreak].Trim();
-        if (firstBreak < 0 || !trimmed.EndsWith("```", StringComparison.Ordinal) || trimmed.Length < firstBreak + 4 ||
-            opening is not ("" or "json" or "JSON")) throw new GateFailure(GateParse, AiFailureClasses.Parse);
-        rules.Add(RemoveCodeFence);
-        return trimmed[(firstBreak + 1)..^3].Trim();
-    }
-
-    private static JsonObject Parse(string text)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(text);
-            if (document.RootElement.ValueKind != JsonValueKind.Object || HasDuplicateNames(document.RootElement))
-                throw new GateFailure(GateParse, AiFailureClasses.Parse);
-            return JsonObject.Create(document.RootElement.Clone())!;
-        }
-        catch (JsonException)
-        {
-            throw new GateFailure(GateParse, AiFailureClasses.Parse);
-        }
-    }
-
-    private static bool HasDuplicateNames(JsonElement element) => element.ValueKind switch
-    {
-        JsonValueKind.Object => element.EnumerateObject().Select(x => x.Name).Distinct(StringComparer.Ordinal).Count()
-                != element.EnumerateObject().Count() ||
-            element.EnumerateObject().Any(x => HasDuplicateNames(x.Value)),
-        JsonValueKind.Array => element.EnumerateArray().Any(HasDuplicateNames),
-        _ => false
-    };
 
     private static PlanningDraftContent Draft(Reader reader, JsonObject draft, PlanningContext context)
     {

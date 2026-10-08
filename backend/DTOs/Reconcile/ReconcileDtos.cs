@@ -92,7 +92,8 @@ public sealed record ReconcileSessionDto(
     IReadOnlyList<ReconcileOwnerGroupDto> ExecutionGroups,
     IReadOnlyList<ReconcileReviewItemDto> CommitmentReviews,
     IReadOnlyList<CaptureDto> Captures,
-    IReadOnlyList<ReconcileRuleMatchDto> RuleMatches);
+    IReadOnlyList<ReconcileRuleMatchDto> RuleMatches,
+    ReconcileAiDto Ai);
 
 public sealed record OpenReconcileSessionRequest(
     [Required, RegularExpression("^(MANUAL|PROMPT)$")] string TriggerType);
@@ -109,7 +110,8 @@ public sealed record CreateReconcilePreviewRequest(
     [MaxLength(100)] IReadOnlyList<Guid>? TaskIds,
     Guid? SequenceId,
     DateOnly? PlannedDate,
-    [MaxLength(100)] IReadOnlyList<Guid>? IncludeTaskIds);
+    [MaxLength(100)] IReadOnlyList<Guid>? IncludeTaskIds,
+    Guid? RecommendationId = null);
 
 public sealed record ReconcilePreviewItemDto(
     Guid TaskId,
@@ -150,3 +152,59 @@ public sealed record ConfirmationResultDto(
     string Status,
     string ActionType,
     int AffectedCount);
+
+/// <summary>
+/// One recommended action. <c>Status</c> is the user's disposition, or OPEN while it can still be
+/// used, or OUTDATED once the evidence it was built on has changed. It never says anything was applied.
+/// </summary>
+public sealed record ReconcileRecommendationDto(
+    Guid Id,
+    string RuleId,
+    string ActionType,
+    IReadOnlyList<Guid> TaskIds,
+    Guid? SequenceId,
+    string Explanation,
+    IReadOnlyList<ReconcileRecommendationEvidenceDto> Evidence,
+    string Status,
+    string? CommandStatus,
+    IReadOnlyList<ReconcileRecommendationTaskDto> Tasks);
+
+/// <summary>A recommended Task by name, so it stays readable after it has left the lanes.</summary>
+public sealed record ReconcileRecommendationTaskDto(Guid Id, string Title);
+
+public sealed record ReconcileExplanationDto(
+    Guid Id,
+    string Status,
+    string? FailureCode,
+    bool IsCurrent,
+    string? Summary,
+    IReadOnlyList<ReconcileRecommendationDto> Recommendations,
+    DateTimeOffset CreatedAt);
+
+/// <summary>
+/// The optional AI layer of a session. Facts, severity and rule matches never depend on it.
+/// <c>Availability</c> is AVAILABLE, NOT_ELIGIBLE (no rule matched) or DISABLED.
+/// </summary>
+public sealed record ReconcileAiDto(string Availability, bool Sample, ReconcileExplanationDto? Explanation);
+
+public sealed record ReconcileRecommendationDispositionDto(Guid Id, string Disposition);
+
+/// <summary>
+/// The deterministic facts one recommended unit had when the recommendation was made: a Task, or
+/// a sequence taken as a whole. Facts are never written by the model.
+/// </summary>
+public sealed record ReconcileRecommendationEvidenceDto(
+    string Kind,
+    IReadOnlyList<Guid> TaskIds,
+    Guid? SequenceId,
+    IReadOnlyList<string> ReasonCodes,
+    IReadOnlyList<string> RuleIds,
+    IReadOnlyList<string> AllowedActions,
+    int? AgeDays,
+    int CarryCount,
+    bool IsProtected,
+    int? DaysToDeadline,
+    int MemberCount,
+    int BlockedMemberCount,
+    bool HasDroppedPredecessor,
+    string EvidenceQuality);

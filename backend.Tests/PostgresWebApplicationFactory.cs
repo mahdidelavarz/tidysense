@@ -23,6 +23,9 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
     /// <summary>The planning generator every test of this factory shares.</summary>
     public PlanningGate PlanningGate { get; } = new();
 
+    /// <summary>The Reconcile explainer every test of this factory shares.</summary>
+    public ExplainerGate ExplainerGate { get; } = new();
+
     public string ConnectionString
     {
         get
@@ -71,6 +74,8 @@ public sealed class PostgresWebApplicationFactory : WebApplicationFactory<Progra
             services.AddSingleton<TimeProvider>(Clock);
             services.RemoveAll<IPlanningGenerator>();
             services.AddSingleton<IPlanningGenerator>(PlanningGate);
+            services.RemoveAll<IReconcileExplainer>();
+            services.AddSingleton<IReconcileExplainer>(ExplainerGate);
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(ConnectionString));
@@ -133,5 +138,48 @@ public sealed class PlanningGate : IPlanningGenerator
         if (request.Fixture != HeldFixture) return await _inner.GenerateAsync(request, cancellationToken);
         await _release.Task.WaitAsync(cancellationToken);
         return await _inner.GenerateAsync(request with { Fixture = null }, cancellationToken);
+    }
+}
+
+/// <summary>
+/// The sample explainer, with two additions for tests: it can be held until the test releases it,
+/// and its next answer can be scripted, so late, invalid and failing results need no timing guesses.
+/// </summary>
+public sealed class ExplainerGate : IReconcileExplainer
+{
+    private readonly DeterministicReconcileExplainer _inner = new();
+    private TaskCompletionSource _release = Released();
+    private Func<ReconcileExplanationRequest, ReconcileExplanationContent>? _next;
+    private int _calls;
+
+    public string Key => _inner.Key;
+
+    public int Calls => _calls;
+
+    /// <summary>The last request an explanation was asked with: everything the explainer was told.</summary>
+    public ReconcileExplanationRequest? LastRequest { get; private set; }
+
+    public void Hold() => _release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public void Release() => _release.TrySetResult();
+
+    /// <summary>Replaces the next answer only. Throwing from it is a failing explainer.</summary>
+    public void Next(Func<ReconcileExplanationRequest, ReconcileExplanationContent> answer) => _next = answer;
+
+    public async Task<ReconcileExplanationContent> ExplainAsync(ReconcileExplanationRequest request,
+        CancellationToken cancellationToken)
+    {
+        Interlocked.Increment(ref _calls);
+        LastRequest = request;
+        await _release.Task.WaitAsync(cancellationToken);
+        var scripted = Interlocked.Exchange(ref _next, null);
+        return scripted is null ? await _inner.ExplainAsync(request, cancellationToken) : scripted(request);
+    }
+
+    private static TaskCompletionSource Released()
+    {
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        source.SetResult();
+        return source;
     }
 }

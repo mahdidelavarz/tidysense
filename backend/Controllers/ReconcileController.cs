@@ -50,6 +50,32 @@ public sealed class ReconcileController(ReconcileService reconcile) : Controller
         CancellationToken cancellationToken) =>
         Ok(await reconcile.CompleteSessionAsync(id, request, idempotencyKey, cancellationToken));
 
+    /// <summary>Asks for an optional AI explanation. The session's facts are complete without it.</summary>
+    [HttpPost("sessions/{id:guid}/explanation")]
+    [ProducesResponseType<ReconcileSessionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<ReconcileSessionDto>> RequestExplanation(Guid id,
+        CancellationToken cancellationToken) =>
+        Ok(await reconcile.RequestExplanationAsync(id, cancellationToken));
+
+    [HttpPost("sessions/{id:guid}/explanation/cancel")]
+    [ProducesResponseType<ReconcileSessionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ReconcileSessionDto>> CancelExplanation(Guid id,
+        CancellationToken cancellationToken) =>
+        Ok(await reconcile.CancelExplanationAsync(id, cancellationToken));
+
+    /// <summary>Declines one recommendation. Nothing else changes.</summary>
+    [HttpPost("recommendations/{id:guid}/dismiss")]
+    [ProducesResponseType<ReconcileRecommendationDispositionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ReconcileRecommendationDispositionDto>> DismissRecommendation(Guid id,
+        CancellationToken cancellationToken) =>
+        Ok(await reconcile.DismissRecommendationAsync(id, cancellationToken));
+
     [HttpPost("sessions/{id:guid}/previews")]
     [ProducesResponseType<ActionConfirmationDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiProblemDto>(StatusCodes.Status400BadRequest)]

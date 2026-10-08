@@ -21,6 +21,7 @@ public sealed class ReconcileService(
     ICurrentUser currentUser,
     ApplicationDateService dates,
     RoutineService routines,
+    ReconcileExplanationService explanations,
     CommandExecutionService commands)
 {
     private const int ReviewChunkSize = 5;
@@ -91,6 +92,9 @@ public sealed class ReconcileService(
                     x.Status == ReconcileSessionStatuses.Open && x.LocalDate == today, ct))
                 throw new CommandRejectedException(SessionAlreadyOpen);
             // An open session from an earlier local date is closed first; one session is open per user.
+            // Recommendations it still held unanswered end with it.
+            await ReconcileExplanationService.ExpireUndecidedAsync(context.ReconcileRecommendations.Where(x =>
+                x.UserId == owner && x.ExplanationRecord.Session.Status == ReconcileSessionStatuses.Open), now, ct);
             await context.ReconcileSessions
                 .Where(x => x.UserId == owner && x.Status == ReconcileSessionStatuses.Open)
                 .ExecuteUpdateAsync(x => x
@@ -135,15 +139,15 @@ public sealed class ReconcileService(
             ParentCommandSupport.RequireSuccess(result);
             sessionId = result.AggregateId!.Value;
         }
-        return await ToDtoAsync(await OwnedSessionAsync(sessionId.Value, cancellationToken), evaluation,
+        return await ToDtoAsync(await OwnedSessionAsync(sessionId.Value, cancellationToken), evaluation, today,
             cancellationToken);
     }
 
     public async Task<ReconcileSessionDto> GetSessionAsync(Guid id, CancellationToken cancellationToken)
     {
         var session = await OwnedSessionAsync(id, cancellationToken);
-        var (evaluation, _) = await EvaluateAsync(cancellationToken);
-        return await ToDtoAsync(session, evaluation, cancellationToken);
+        var (evaluation, today) = await EvaluateAsync(cancellationToken);
+        return await ToDtoAsync(session, evaluation, today, cancellationToken);
     }
 
     /// <summary>
@@ -154,7 +158,7 @@ public sealed class ReconcileService(
         CompleteReconcileSessionRequest request, string idempotencyKey, CancellationToken cancellationToken)
     {
         await OwnedSessionAsync(id, cancellationToken);
-        var (evaluation, _) = await EvaluateAsync(cancellationToken);
+        var (evaluation, today) = await EvaluateAsync(cancellationToken);
         var now = dates.UtcNow;
         var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey,
             "COMPLETE_RECONCILE_SESSION", new { id, request.ExpectedVersion }, now);
@@ -164,6 +168,8 @@ public sealed class ReconcileService(
             VersionGuard.RequireMatch(id, request.ExpectedVersion, session.Version);
             if (session.Status != ReconcileSessionStatuses.Open)
                 throw new CommandRejectedException("RECONCILE_SESSION_NOT_OPEN");
+            await ReconcileExplanationService.ExpireUndecidedAsync(
+                context.ReconcileRecommendations.Where(x => x.ExplanationRecord.SessionId == id), now, ct);
             session.Status = ReconcileSessionStatuses.Completed;
             session.CompletedAt = now;
             session.Version++;
@@ -177,8 +183,32 @@ public sealed class ReconcileService(
                 }), now, ReconcileSessionId: id);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
-        return await ToDtoAsync(await OwnedSessionAsync(id, cancellationToken), evaluation, cancellationToken);
+        return await ToDtoAsync(await OwnedSessionAsync(id, cancellationToken), evaluation, today, cancellationToken);
     }
+
+    /// <summary>
+    /// Asks for an AI explanation of the session's rule-matched evidence. The deterministic
+    /// evaluation runs first and is the only thing the explanation is given; if it fails, nothing
+    /// is requested.
+    /// </summary>
+    public async Task<ReconcileSessionDto> RequestExplanationAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var session = await OwnedSessionAsync(id, cancellationToken);
+        var (evaluation, today) = await EvaluateAsync(cancellationToken);
+        await explanations.RequestAsync(session, evaluation, today, cancellationToken);
+        return await ToDtoAsync(session, evaluation, today, cancellationToken);
+    }
+
+    public async Task<ReconcileSessionDto> CancelExplanationAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var session = await OwnedSessionAsync(id, cancellationToken);
+        await explanations.CancelAsync(id, cancellationToken);
+        var (evaluation, today) = await EvaluateAsync(cancellationToken);
+        return await ToDtoAsync(session, evaluation, today, cancellationToken);
+    }
+
+    public Task<ReconcileRecommendationDispositionDto> DismissRecommendationAsync(Guid id,
+        CancellationToken cancellationToken) => explanations.DismissAsync(id, cancellationToken);
 
     public async Task<ActionConfirmationDto> CreatePreviewAsync(Guid sessionId,
         CreateReconcilePreviewRequest request, CancellationToken cancellationToken)
@@ -188,10 +218,18 @@ public sealed class ReconcileService(
             throw new DomainRuleException("RECONCILE_SESSION_NOT_OPEN", "The Reconcile session is not open.");
         var action = Normalize(request);
         var now = dates.UtcNow;
+        if (request.RecommendationId is { } recommendationId)
+        {
+            // A recommendation only prefills the request; the preview below is built exactly as for any other.
+            var (evaluation, today) = await EvaluateAsync(cancellationToken);
+            await explanations.RequirePreviewableAsync(session, recommendationId, action.ActionType, action.TaskIds,
+                action.SequenceId, evaluation, today, cancellationToken);
+        }
         var built = await BuildPlanAsync(db, currentUser.UserId, action, dates.Today, false, cancellationToken);
         var confirmation = new ActionConfirmation
         {
             Id = Guid.NewGuid(), UserId = currentUser.UserId, ReconcileSessionId = sessionId,
+            ReconcileRecommendationId = request.RecommendationId,
             ActionType = action.ActionType, RequestJson = JsonSerializer.Serialize(action),
             PreviewJson = JsonSerializer.Serialize(new StoredPreview(built.Plan.Items, built.Plan.Warnings,
                 built.Plan.CanApply)),
@@ -217,6 +255,7 @@ public sealed class ReconcileService(
             .Select(x => (x.WarningId, Hash: x.WarningHash.ToUpperInvariant())).ToHashSet();
         var now = dates.UtcNow;
         var today = dates.Today;
+        await explanations.AcceptAsync(snapshot, now, cancellationToken);
         var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey,
             "SUBMIT_RECONCILE_CONFIRMATION", new
             {
@@ -247,6 +286,8 @@ public sealed class ReconcileService(
                 JsonSerializer.Serialize(new { actionType = action.ActionType, affectedCount = cascades.Count }),
                 now, cascades, confirmationId, confirmation.ReconcileSessionId);
         }, cancellationToken);
+        // Succeeded, conflicted or refused: the recommendation points at whatever the command answered.
+        await explanations.LinkResultAsync(snapshot.ReconcileRecommendationId, result.Id, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         var affected = await db.DomainEvents.AsNoTracking().CountAsync(
             x => x.CommandResultId == result.Id && x.AggregateType == "Task", cancellationToken);
@@ -459,7 +500,7 @@ public sealed class ReconcileService(
     }
 
     private async Task<ReconcileSessionDto> ToDtoAsync(ReconcileSession session,
-        ReconcileEvaluation evaluation, CancellationToken cancellationToken)
+        ReconcileEvaluation evaluation, DateOnly today, CancellationToken cancellationToken)
     {
         var captures = await db.Captures.AsNoTracking()
             .Where(x => x.UserId == currentUser.UserId && x.Status == CaptureStatuses.Unresolved)
@@ -471,7 +512,8 @@ public sealed class ReconcileService(
             evaluation.Counts, evaluation.ExecutionGroups,
             // A burst of checkpoints is presented in a limited chunk; the count stays complete.
             evaluation.Reviews.Take(ReviewChunkSize).ToArray(),
-            captures.Select(CaptureService.ToDto).ToArray(), evaluation.RuleMatches);
+            captures.Select(CaptureService.ToDto).ToArray(), evaluation.RuleMatches,
+            await explanations.ViewAsync(session, evaluation, today, cancellationToken));
     }
 
     private static ActionConfirmationDto ToDto(ActionConfirmation value, DateTimeOffset now)
