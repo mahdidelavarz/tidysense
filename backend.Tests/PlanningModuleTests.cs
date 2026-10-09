@@ -880,11 +880,12 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         Assert.Equal(4, draft.Proposals.Count);
         Assert.Equal("SYSTEM_DEFAULT", draft.Proposals.Single(x => x.Proposal.DraftId == "goal").Proposal.ReviewDateSource);
 
-        // An answer that tries to do more than propose is rejected whole; the input is kept.
-        // The clock moves between operations so their records have an order.
+        // An answer that tries to do more than propose is rejected whole, asked for once more and
+        // rejected again; the input is kept. The clock moves between operations so their records have an order.
         PinLocal(Day, 11);
         var acting = PlanningOutputGateTests.Valid();
         acting["commands"] = JsonSerializer.SerializeToNode(new[] { "DROP_ALL_TASKS" });
+        provider.Reply(Completion(acting.ToJsonString()));
         provider.Reply(Completion(acting.ToJsonString()));
         var rejected = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(
             await StartAsync(client, Body("model-2", replaceActive: true)))).Id);
@@ -899,13 +900,13 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         var down = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(
             await StartAsync(client, Body("model-3")))).Id);
         Assert.Equal("PROVIDER_ERROR", down.FailureCode);
-        Assert.Equal(4, provider.Calls.Count);
+        Assert.Equal(5, provider.Calls.Count);
 
         // Cancelling abandons the call that is in flight; nothing appears later.
         PinLocal(Day, 13);
         provider.Hang();
         var held = await ReadAsync<PlanningAttemptDto>(await StartAsync(client, Body("model-4")));
-        for (var wait = 0; wait < 200 && provider.Calls.Count < 5; wait++)
+        for (var wait = 0; wait < 200 && provider.Calls.Count < 6; wait++)
             await Task.Delay(25, TestContext.Current.CancellationToken);
         Assert.Equal("CANCELLED", (await ReadAsync<PlanningAttemptDto>(await SendAsync(client, HttpMethod.Post,
             $"/api/v1/planning/attempts/{held.Id}/cancel", new { }))).Status);
@@ -917,14 +918,16 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         {
             rows = await db.AiInvocations.AsNoTracking().Where(x => x.UserId == session.UserId)
                 .OrderBy(x => x.StartedAt).ThenBy(x => x.Sequence).ToArrayAsync();
-            if (rows.Length == 5) break;
+            if (rows.Length == 6) break;
             await Task.Delay(25, TestContext.Current.CancellationToken);
         }
-        Assert.Equal(new[] { "SUCCEEDED", "REJECTED", "FAILED", "FAILED", "CANCELLED" }, rows.Select(x => x.Outcome));
-        Assert.Equal(new[] { 1, 1, 1, 2, 1 }, rows.Select(x => x.Sequence));
+        Assert.Equal(new[] { "SUCCEEDED", "REJECTED", "REJECTED", "FAILED", "FAILED", "CANCELLED" },
+            rows.Select(x => x.Outcome));
+        Assert.Equal(new[] { 1, 1, 2, 1, 2, 1 }, rows.Select(x => x.Sequence));
         Assert.Equal(done.Id, rows[0].PlanningAttemptId);
         Assert.Equal(900, rows[0].InputTokens);
         Assert.Equal("SCHEMA", rows[1].Gate);
+        Assert.Equal("SCHEMA", rows[2].RetryReason);
         Assert.All(rows, x =>
         {
             Assert.Equal("PLANNING", x.Family);

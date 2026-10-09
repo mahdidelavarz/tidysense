@@ -90,6 +90,41 @@ public sealed class PlanningOutputGateTests
     }
 
     [Fact]
+    public void A_rejection_says_where_and_what_without_repeating_the_output()
+    {
+        Assert.Null(Evaluate(Valid().ToJsonString()).Correction);
+        // An incomplete answer cannot be corrected by asking again.
+        Assert.Null(PlanningOutputGate.Evaluate(Valid().ToJsonString(), "length", Context(), true).Correction);
+
+        Assert.Contains("not exactly one JSON object", Evaluate("Here is your plan").Correction);
+        var unknown = Evaluate(With(x => Proposal(x, 1)["priorityOfTheUser"] = "متن کاربر")).Correction!;
+        Assert.StartsWith("draft.proposals[1]: has a field that is not allowed", unknown);
+        Assert.DoesNotContain("priorityOfTheUser", unknown);
+        Assert.Matches("^[\\x20-\\x7E]*$", unknown);
+        Assert.StartsWith("the top-level object: has a field", Evaluate(With(x => x["actions"] = new JsonArray())).Correction);
+        Assert.StartsWith("draft.proposals[0].confidence: must be exactly one of HIGH | MEDIUM | LOW",
+            Evaluate(With(x => Proposal(x, 0)["confidence"] = "CERTAIN")).Correction);
+        Assert.StartsWith("draft.proposals[2].plannedDate: must be a real calendar date",
+            Evaluate(With(x => Proposal(x, 2)["plannedDate"] = "tomorrow")).Correction);
+        Assert.StartsWith("draft.proposals[3].recurrence.daysOfWeek: must be a whole number",
+            Evaluate(With(x => Proposal(x, 3)["recurrence"]!["daysOfWeek"] = new JsonArray("MONDAY"))).Correction);
+        Assert.StartsWith("draft.proposals[3].timesOfDay: must be an array of 24-hour",
+            Evaluate(With(x => Proposal(x, 3)["timesOfDay"] = new JsonArray("7:30"))).Correction);
+        Assert.StartsWith("draft.proposals[0].title: is required",
+            Evaluate(With(x => Proposal(x, 0).Remove("title"))).Correction);
+        Assert.StartsWith("draft.facts[0].value: must be an object",
+            Evaluate(With(x => x["draft"]!["facts"]![0]!.AsObject().Remove("value"))).Correction);
+        Assert.StartsWith("draft.warnings[0].code: must be exactly one of",
+            Evaluate(With(x => x["draft"]!["warnings"]![0]!["code"] = "TIME_CONFLICT")).Correction);
+        Assert.StartsWith("draft.summary: is required", Evaluate(With(x => x["draft"]!.AsObject().Remove("summary"))).Correction);
+        // A structural rule is named in words the model can act on.
+        Assert.Contains("\"parentDraftId\" must be the draftId of another proposal",
+            Evaluate(With(x => Proposal(x, 2)["parentDraftId"] = "missing")).Correction);
+        Assert.Contains("\"draftId\" that is null or the draftId of a proposal or fact",
+            Evaluate(With(x => x["draft"]!["assumptions"]![0]!["draftId"] = "nowhere")).Correction);
+    }
+
+    [Fact]
     public void An_enum_is_normalised_only_when_it_differs_in_letter_case()
     {
         var normalised = Evaluate(With(x =>

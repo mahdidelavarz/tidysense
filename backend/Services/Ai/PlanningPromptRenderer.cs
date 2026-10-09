@@ -15,7 +15,7 @@ public sealed record PlanningPrompt(string System, string User, string ContextRe
 /// </summary>
 public static class PlanningPromptRenderer
 {
-    public const string PromptVersion = "2026-10-03.1";
+    public const string PromptVersion = "2026-10-09.1";
     public const string DataOpen = "<planning_request_data>";
     public const string DataClose = "</planning_request_data>";
 
@@ -47,6 +47,20 @@ public static class PlanningPromptRenderer
 
     /// <summary>A deliberately high estimate: Persian text rarely needs more than one token per two characters.</summary>
     public static int EstimateTokens(PlanningPrompt prompt) => (prompt.System.Length + prompt.User.Length + 1) / 2;
+
+    /// <summary>
+    /// The instructions of the one resend after a rejected answer: the same instructions followed by
+    /// what the output gate rejected. The correction is the gate's own wording and holds no text
+    /// from the answer or the user, so it may stand among the instructions.
+    /// </summary>
+    public static string Corrected(string system, string correction) => $"""
+        {system}
+
+        CORRECTION
+        Your previous answer to this same request was rejected by the validating program and discarded. The reason:
+        - {correction}
+        Answer the request again from the start. Return the complete JSON object described under OUTPUT, follow every rule above, and make sure this reason no longer applies. Do not mention the rejection in the output.
+        """;
 
     private static string User(PlanningGenerationRequest request, string reduction)
     {
@@ -126,6 +140,17 @@ public static class PlanningPromptRenderer
           } or null
         }
 
+        EXACT SHAPE
+        The validating program rejects the whole output for any deviation, so follow the shape literally:
+        - Every object holds only the fields shown for it above. Never add a field of your own (no reviewDate, priority, duration, estimate, status, notes, tags, id, reason, or any other name), at any level.
+        - Every value written between double quotes above is a closed list: use one of the listed values exactly, in capitals, and never invent a new one. This includes "code" in warnings: if none of the five codes fits, do not add a warning.
+        - "draftId", "title", "summary" and every "text" are JSON strings and are never null or missing where the shape does not say "or null". "kind", "entityType", "source", "confidence", "factType", "strength", "severity" and "code" are always present.
+        - A date is a JSON string "YYYY-MM-DD" in the Gregorian calendar, like the dates in the input, with four-digit year and two-digit month and day. Never a time, a weekday name, a Persian-calendar date or a relative word.
+        - "timesOfDay" items are 24-hour "HH:mm" strings with two digits each, such as "07:30"; never "7:30", "07:30:00" or a word.
+        - "daysOfWeek", "weekdays" and "dayOfMonth" hold JSON whole numbers, never strings or names. "underContext" is true or false.
+        - "questions", "proposals", "facts", "assumptions", "warnings" and "unresolvedQuestions" are JSON arrays, empty when there is nothing to put in them.
+        - "draftId" inside assumptions, warnings and unresolvedQuestions is null or the draftId of a proposal or fact in this same output. "parentDraftId" and "scopeDraftId" are null or the draftId of a proposal in this same output.
+
         KIND
         - DRAFT: "draft" is an object; "questions" is empty; "blockReason" is null.
         - CLARIFICATION: allowed only when clarificationAllowed is true. "draft" is null; "questions" has 1 to 3 items with ids q1, q2, q3, each at most 300 characters. "message" may state a boundary in at most 500 characters.
@@ -136,7 +161,7 @@ public static class PlanningPromptRenderer
 
         STRUCTURE
         - draftId: unique within the output, letters, digits, "-" or "_", at most 40 characters. Never output an id from the planner.
-        - At most 1 GOAL, 5 PROJECTs, 15 TASKs, 5 ROUTINEs, 20 proposals, 10 facts, 10 assumptions, 10 warnings, 5 unresolvedQuestions. Summary at most 1000 characters, title at most 200, notes at most 300.
+        - At most 1 GOAL, 5 PROJECTs, 15 TASKs, 5 ROUTINEs, 20 proposals, 10 facts, 10 assumptions, 10 warnings, 5 unresolvedQuestions. Summary 1 to 1000 characters, title 1 to 200, "description", "desiredOutcome" and "completionMeaning" at most 2000 each, each "text" in assumptions and unresolvedQuestions 1 to 300.
         - Parents: a PROJECT may have a GOAL parent; a TASK or ROUTINE may have a GOAL or PROJECT parent. A proposal has "parentDraftId", or "underContext": true, or neither; never both. A GOAL has no parent.
         - "underContext": true attaches the proposal to planningContext and is allowed only when planningContext is not null. Inside a GOAL context propose no new GOAL. Inside a PROJECT context propose only TASKs and ROUTINEs under the context.
         - Do not build structure for its own sake: a narrow request gets only the Task, Routine or Project asked for.
@@ -146,7 +171,7 @@ public static class PlanningPromptRenderer
         - Only fill fields that belong to the entity type; leave the others null.
 
         PLANNING DETAILS ("facts")
-        Propose a fact only for something the user stated that later planning needs and that has no field of its own. UNAVAILABLE_* types use weekdays, localDate, or startLocalDate with endLocalDate, and are HARD or SOFT. The other types use "text" (at most 120 characters) and are SOFT or INFORMATIONAL. "scopeDraftId" is the draftId of a proposed GOAL or of a proposed PROJECT without a parent, or null for planningContext. Do not repeat anything in confirmedPlanningDetails. Respect every HARD detail: never plan a Task on a date, or a Routine on a weekday, that it rules out.
+        Propose a fact only for something the user stated that later planning needs and that has no field of its own. UNAVAILABLE_WEEKDAY uses "weekdays" (one or more different ISO numbers 1-7), UNAVAILABLE_DATE uses "localDate", UNAVAILABLE_DATE_RANGE uses "startLocalDate" with an "endLocalDate" that is not earlier; these three are HARD or SOFT, never INFORMATIONAL. The other types use "text" (1 to 120 characters) and are SOFT or INFORMATIONAL, never HARD. Every fact has its own "draftId" and a "value" object. "scopeDraftId" is the draftId of a proposed GOAL or of a proposed PROJECT without a parent, or null for planningContext. Do not repeat anything in confirmedPlanningDetails. Respect every HARD detail: never plan a Task on a date, or a Routine on a weekday, that it rules out.
 
         BOUNDARIES
         You organise what the user chooses to do. You do not diagnose, prescribe, recommend treatment or medication, or give legal or financial strategy; you do not infer motivation, capacity, emotional state or a clinical condition from history, and you do not present guesses about causes as facts. For such a request state the boundary in "message" and offer to organise the user's own actions, appointments or questions. Use previousSevenDays and reasonCodes only to keep the plan realistic.

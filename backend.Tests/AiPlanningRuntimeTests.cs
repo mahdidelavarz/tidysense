@@ -121,22 +121,77 @@ public sealed class AiPlanningRuntimeTests
         Assert.Single(harness.Provider.Calls);
     }
 
+    private const string Malformed = """{"kind":"DRAFT","draft":{"summary":"x","proposals":"none"}}""";
+
     [Fact]
-    public async Task Rejected_output_is_not_retried_and_does_not_open_the_circuit()
+    public async Task A_rejected_answer_is_asked_for_once_more_with_the_gates_correction()
+    {
+        var harness = new Harness();
+        harness.Provider.Reply(Completion(Malformed));
+        harness.Provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
+
+        var result = await harness.GenerateAsync();
+
+        Assert.Equal(4, result.Draft!.Proposals.Count);
+        Assert.Equal(2, harness.Provider.Calls.Count);
+        var (firstSystem, firstUser) = Messages(harness.Provider.Calls[0]);
+        var (secondSystem, secondUser) = Messages(harness.Provider.Calls[1]);
+        // The same request again: only the correction is added, and only to the instructions.
+        Assert.Equal(firstUser, secondUser);
+        Assert.DoesNotContain("CORRECTION", firstSystem);
+        Assert.StartsWith(firstSystem, secondSystem);
+        Assert.Contains("CORRECTION", secondSystem);
+        Assert.Contains("draft.proposals: must be an array", secondSystem);
+        Assert.Equal(new[] { 1, 2 }, harness.Log.Rows.Select(x => x.Sequence));
+        Assert.Equal(new[] { AiInvocationOutcomes.Rejected, AiInvocationOutcomes.Succeeded },
+            harness.Log.Rows.Select(x => x.Outcome));
+        Assert.Equal(PlanningOutputGate.GateSchema, harness.Log.Rows[0].Gate);
+        Assert.Equal(AiFailureClasses.Schema, harness.Log.Rows[1].RetryReason);
+        Assert.Single(harness.Log.Rows.Select(x => (x.Model, x.PromptVersion, x.SchemaVersion, x.RepairPolicyVersion)).Distinct());
+    }
+
+    [Fact]
+    public async Task A_second_rejected_answer_ends_the_operation_and_rejections_do_not_open_the_circuit()
     {
         var harness = new Harness(x => x.Planning.CircuitFailureThreshold = 2);
-        for (var i = 0; i < 4; i++)
+        for (var i = 0; i < 3; i++)
         {
-            harness.Provider.Reply(Completion("""{"kind":"DRAFT","draft":{"summary":"x","proposals":"none"}}"""));
+            harness.Provider.Reply(Completion(Malformed));
+            harness.Provider.Reply(Completion(Malformed));
             Assert.Equal(PlanningFailureCodes.DraftInvalid, await harness.FailureAsync());
         }
-        // Every operation reached the provider exactly once: local rejections say nothing about its health.
-        Assert.Equal(4, harness.Provider.Calls.Count);
+        // Every operation reached the provider twice and no more: local rejections say nothing about its health.
+        Assert.Equal(6, harness.Provider.Calls.Count);
         Assert.All(harness.Log.Rows, x =>
         {
             Assert.Equal(AiInvocationOutcomes.Rejected, x.Outcome);
             Assert.Equal(PlanningOutputGate.GateSchema, x.Gate);
         });
+    }
+
+    [Fact]
+    public async Task The_resend_shares_the_two_call_limit_and_the_retry_switch()
+    {
+        // The one retry was already spent on a transient failure.
+        var spent = new Harness();
+        spent.Provider.Reply(HttpStatusCode.ServiceUnavailable);
+        spent.Provider.Reply(Completion(Malformed));
+        Assert.Equal(PlanningFailureCodes.DraftInvalid, await spent.FailureAsync());
+        Assert.Equal(2, spent.Provider.Calls.Count);
+
+        var off = new Harness(x => x.Planning.RetryEnabled = false);
+        off.Provider.Reply(Completion(Malformed));
+        Assert.Equal(PlanningFailureCodes.DraftInvalid, await off.FailureAsync());
+        Assert.Single(off.Provider.Calls);
+
+        // A correction that no longer fits the input budget is not sent.
+        var full = new Harness();
+        var request = new PlanningGenerationRequest(Guid.NewGuid(), Intention, full.Context, null);
+        full.Options.CurrentValue.Planning.MaxInputTokens =
+            PlanningPromptRenderer.EstimateTokens(PlanningPromptRenderer.Render(request, int.MaxValue)!);
+        full.Provider.Reply(Completion(Malformed));
+        Assert.Equal(PlanningFailureCodes.DraftInvalid, await full.FailureAsync());
+        Assert.Single(full.Provider.Calls);
     }
 
     [Fact]
@@ -303,10 +358,16 @@ public sealed class AiPlanningRuntimeTests
         var obeyed = PlanningOutputGateTests.Valid();
         obeyed["actions"] = JsonSerializer.SerializeToNode(new[] { new { tool = "delete_all_tasks" } });
         harness.Provider.Reply(Completion(obeyed.ToJsonString()));
+        harness.Provider.Reply(Completion(obeyed.ToJsonString()));
 
         Assert.Equal(PlanningFailureCodes.DraftInvalid, await harness.FailureAsync(hostile, context));
 
-        using var body = JsonDocument.Parse(harness.Provider.Calls.Single().Body);
+        Assert.Equal(2, harness.Provider.Calls.Count);
+        // The correction names what was wrong in the gate's words; nothing the answer held is repeated as an instruction.
+        var (corrected, _) = Messages(harness.Provider.Calls[1]);
+        Assert.Contains("the top-level object: has a field that is not allowed", corrected);
+        Assert.DoesNotContain("delete_all_tasks", corrected);
+        using var body = JsonDocument.Parse(harness.Provider.Calls[0].Body);
         var messages = body.RootElement.GetProperty("messages").EnumerateArray().ToArray();
         Assert.DoesNotContain("delete_all_tasks", messages[0].GetProperty("content").GetString());
         var user = messages[1].GetProperty("content").GetString()!;
@@ -328,9 +389,12 @@ public sealed class AiPlanningRuntimeTests
         Assert.Null(result.Draft);
         Assert.Equal("q1", result.Clarification!.Questions.Single().Id);
 
+        // Asked although it may not: told so once, and a second question ends the attempt.
+        harness.Provider.Reply(Completion(asking));
         harness.Provider.Reply(Completion(asking));
         Assert.Equal(PlanningFailureCodes.DraftInvalid, await harness.FailureAsync());
         Assert.Equal(PlanningOutputGate.GatePolicy, harness.Log.Rows[^1].Gate);
+        Assert.Contains("clarificationAllowed is false", Messages(harness.Provider.Calls[^1]).System);
         // Finished turns are part of the request data.
         var turns = new[] { new PlanningTurn([new PlanningQuestion("q1", "چند روز؟")], [new PlanningAnswer("q1", "سه روز")]) };
         harness.Provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
@@ -451,6 +515,13 @@ public sealed class AiPlanningRuntimeTests
                 .ToArray();
             Assert.DoesNotContain(reachable, used => forbidden.Any(x => x.IsAssignableFrom(used)));
         }
+    }
+
+    private static (string System, string User) Messages(ProviderCall call)
+    {
+        using var body = JsonDocument.Parse(call.Body);
+        var messages = body.RootElement.GetProperty("messages");
+        return (messages[0].GetProperty("content").GetString()!, messages[1].GetProperty("content").GetString()!);
     }
 
     private static HttpResponseMessage Completion(string content, string finishReason = "stop") =>

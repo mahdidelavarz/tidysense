@@ -5,8 +5,9 @@ namespace TidySense.Services.Ai;
 /// <summary>
 /// The model-backed planning generator. The model receives one rendered request and no tool; its
 /// text is usable only after the output gate. The call discipline (two calls at most, the checks
-/// before each, the record of each) is <see cref="AiOperationRunner"/>'s. A failure ends the
-/// attempt with a bounded code and changes nothing else.
+/// before each, the record of each) is <see cref="AiOperationRunner"/>'s. An answer the gate
+/// rejects is asked for once more with the gate's correction. A failure ends the attempt with a
+/// bounded code and changes nothing else.
 /// </summary>
 public sealed class AiPlanningGenerator(
     IAiCompletionClient client,
@@ -26,7 +27,8 @@ public sealed class AiPlanningGenerator(
     public async Task<PlanningGenerationResult> GenerateAsync(PlanningGenerationRequest request,
         CancellationToken cancellationToken)
     {
-        var rendered = PlanningPromptRenderer.Render(request, options.CurrentValue.Planning.MaxInputTokens);
+        var maxInputTokens = options.CurrentValue.Planning.MaxInputTokens;
+        var rendered = PlanningPromptRenderer.Render(request, maxInputTokens);
         var spec = new AiOperationSpec(Family, ConfigurationKey, PlanningPromptRenderer.PromptVersion,
             PlanningJson.SchemaVersion, request.Context.BuilderVersion, PlanningOutputGate.RepairPolicyVersion,
             request.UserId, PlanningAttemptId: request.AttemptId);
@@ -39,8 +41,11 @@ public sealed class AiPlanningGenerator(
                     var evaluated = PlanningOutputGate.Evaluate(result.Text, result.FinishReason, request.Context,
                         request.AllowClarification);
                     return new AiGateVerdict<PlanningGateResult>(evaluated.Passed ? evaluated : null, evaluated.Gate,
-                        evaluated.FailureClass, evaluated.RepairRules);
-                }, cancellationToken);
+                        evaluated.FailureClass, evaluated.RepairRules) { Correction = evaluated.Correction };
+                }, cancellationToken,
+                // The resend is the same request with the correction added to the instructions, if it still fits.
+                (first, correction) => first with { System = PlanningPromptRenderer.Corrected(first.System, correction) }
+                    is { } corrected && corrected.EstimatedTokens <= maxInputTokens ? corrected : null);
             return new PlanningGenerationResult(gate.Draft, request.Context.Fingerprint)
             {
                 Outcome = gate.Outcome!, Clarification = gate.Clarification

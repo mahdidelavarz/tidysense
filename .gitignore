@@ -27,6 +27,7 @@
 # Local environment and secrets
 .env
 .env.*
+*.env
 !.env.example
 secrets.json
 secrets.*.json

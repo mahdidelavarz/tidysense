@@ -28,7 +28,11 @@ public sealed record AiOperationSpec(
 
 /// <summary>What an output gate decided about one answer. A null value is a rejection.</summary>
 public sealed record AiGateVerdict<T>(T? Value, string? Gate, string? FailureClass, IReadOnlyList<string> RepairRules)
-    where T : class;
+    where T : class
+{
+    /// <summary>What a rejected answer got wrong, in the gate's own words. Null when asking again cannot help.</summary>
+    public string? Correction { get; init; }
+}
 
 /// <summary>An operation that ended without a usable result. The class is internal; callers map it to a bounded code.</summary>
 public sealed class AiOperationFailedException(string failureClass) : Exception(failureClass)
@@ -40,7 +44,9 @@ public sealed class AiOperationFailedException(string failureClass) : Exception(
 /// Runs one logical AI operation for any output family: at most two provider calls under one
 /// pinned configuration, each preceded by the kill-switch, spend-cap, circuit and budget checks,
 /// run under its own timeout inside the operation deadline and recorded as metadata. The answer
-/// is usable only through the supplied gate; a rejected answer is never asked for again.
+/// is usable only through the supplied gate. The second call follows a transient failure or, for
+/// a family that supplies a correction, an answer its gate rejected; that answer passes the same
+/// gate or the operation fails.
 /// </summary>
 public sealed class AiOperationRunner(
     IAiCompletionClient client,
@@ -53,8 +59,13 @@ public sealed class AiOperationRunner(
     private const int MaxInvocations = 2;
 
     /// <param name="prompt">Null when the mandatory context alone does not fit: nothing is sent and nothing is truncated.</param>
+    /// <param name="correct">
+    /// Builds the request that is sent again after a rejected answer, from the first request and the
+    /// gate's correction. Null, or a null result, means a rejected answer ends the operation.
+    /// </param>
     public async Task<T> RunAsync<T>(AiOperationSpec spec, Func<AiOptions, AiFamilyOptions> family, AiPrompt? prompt,
-        Func<AiCompletionResult, AiGateVerdict<T>> gate, CancellationToken cancellationToken) where T : class
+        Func<AiCompletionResult, AiGateVerdict<T>> gate, CancellationToken cancellationToken,
+        Func<AiPrompt, string, AiPrompt?>? correct = null) where T : class
     {
         // Provider, model and limits are pinned here and stay fixed through the retry.
         var pinned = options.CurrentValue;
@@ -72,14 +83,15 @@ public sealed class AiOperationRunner(
             await RecordAsync(overflow);
             throw new AiOperationFailedException(AiFailureClasses.Context);
         }
-        var estimatedTokens = prompt.EstimatedTokens;
-        var estimatedCost = Cost(provider, estimatedTokens, settings.MaxOutputTokens);
+        var first = prompt;
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(settings.OperationDeadlineSeconds));
         string? retryReason = null;
         for (var sequence = 1; ; sequence++)
         {
+            var estimatedTokens = prompt.EstimatedTokens;
+            var estimatedCost = Cost(provider, estimatedTokens, settings.MaxOutputTokens);
             var startedAt = time.GetUtcNow();
             if (await BlockedAsync(spec.Family, family, providerKey, circuit, estimatedCost, startedAt) is { } blocked)
             {
@@ -151,8 +163,22 @@ public sealed class AiOperationRunner(
                 row.FailureClass = verdict.FailureClass;
                 row.RepairRulesJson = JsonSerializer.Serialize(verdict.RepairRules.Distinct());
                 await RecordAsync(row);
-                // An output the gate rejects is never repaired by asking again.
-                return verdict.Value ?? throw new AiOperationFailedException(verdict.FailureClass!);
+                if (verdict.Value is not null) return verdict.Value;
+                if (verdict.Correction is not null)
+                    logger.LogInformation(
+                        "AI output rejected. Family: {Family}, Gate: {Gate}, Sequence: {Sequence}, AttemptId: {AttemptId}, ExplanationId: {ExplanationId}, Detail: {Detail}",
+                        spec.Family, verdict.Gate, sequence, spec.PlanningAttemptId, spec.ReconcileExplanationId,
+                        verdict.Correction);
+                // A rejected answer is never repaired or used in part. The request is sent once more with
+                // what the gate rejected, and that answer passes the same gate or the operation fails.
+                if (sequence < MaxInvocations && verdict.Correction is { } correction &&
+                    correct?.Invoke(first, correction) is { } corrected && family(options.CurrentValue).RetryEnabled)
+                {
+                    prompt = corrected;
+                    retryReason = verdict.FailureClass;
+                    continue;
+                }
+                throw new AiOperationFailedException(verdict.FailureClass!);
             }
 
             state.Report(circuit, failure, settings);
