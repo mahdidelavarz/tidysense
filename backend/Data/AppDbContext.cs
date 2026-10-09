@@ -24,6 +24,7 @@ public sealed class AppDbContext(
     public DbSet<ReconcileRecommendation> ReconcileRecommendations => Set<ReconcileRecommendation>();
     public DbSet<ReconcilePrompt> ReconcilePrompts => Set<ReconcilePrompt>();
     public DbSet<ReconcileExposure> ReconcileExposures => Set<ReconcileExposure>();
+    public DbSet<PilotFeedbackResponse> PilotFeedbackResponses => Set<PilotFeedbackResponse>();
     public DbSet<ActionConfirmation> ActionConfirmations => Set<ActionConfirmation>();
     public DbSet<PlanningAttempt> PlanningAttempts => Set<PlanningAttempt>();
     public DbSet<PlanningDraft> PlanningDrafts => Set<PlanningDraft>();
@@ -56,8 +57,15 @@ public sealed class AppDbContext(
             entity.HasKey(x => x.Id);
             entity.Property(x => x.PhoneNumber).HasMaxLength(16).IsRequired();
             entity.Property(x => x.DisplayName).HasMaxLength(200);
+            entity.Property(x => x.AiConsentProvider).HasMaxLength(64);
+            entity.Property(x => x.AiConsentNoticeVersion).HasMaxLength(16);
             entity.HasIndex(x => x.PhoneNumber).IsUnique();
-            entity.ToTable(t => t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0"));
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0");
+                // Consent names a provider, a notice version and a time together, or nothing at all.
+                t.HasCheckConstraint("CK_Users_AiConsent", "(\"AiConsentProvider\" IS NULL) = (\"AiConsentNoticeVersion\" IS NULL) AND (\"AiConsentProvider\" IS NULL) = (\"AiConsentAt\" IS NULL)");
+            });
         });
 
         modelBuilder.Entity<OtpChallenge>(entity =>
@@ -390,6 +398,25 @@ public sealed class AppDbContext(
                 "\"Severity\" IN ('NONE', 'LIGHT', 'MEDIUM', 'RECOVERY')"));
         });
 
+        modelBuilder.Entity<PilotFeedbackResponse>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Instrument).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            // One answer per account, question and subject: answering again is not a second answer.
+            entity.HasIndex(x => new { x.UserId, x.Instrument, x.SubjectId }).IsUnique();
+            entity.HasIndex(x => new { x.Instrument, x.SubjectId });
+            entity.HasIndex(x => x.CreatedAt);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_PilotFeedbackResponses_Instrument",
+                    "\"Instrument\" IN ('H1_USEFULNESS', 'H2_UNDERSTANDING')");
+                t.HasCheckConstraint("CK_PilotFeedbackResponses_Answer", "\"Answer\" BETWEEN 1 AND 5");
+                t.HasCheckConstraint("CK_PilotFeedbackResponses_InstrumentVersion", "\"InstrumentVersion\" > 0");
+            });
+        });
+
         modelBuilder.Entity<ActionConfirmation>(entity =>
         {
             entity.HasKey(x => x.Id);
@@ -654,7 +681,7 @@ public sealed class AppDbContext(
             entity.HasIndex(x => new { x.Kind, x.CreatedAt });
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_OperationsRecords_Kind", "\"Kind\" IN ('MAINTENANCE_RUN', 'USER_ERASURE')");
+                t.HasCheckConstraint("CK_OperationsRecords_Kind", "\"Kind\" IN ('MAINTENANCE_RUN', 'USER_ERASURE', 'ALERT_DIGEST')");
                 t.HasCheckConstraint("CK_OperationsRecords_Outcome", "\"Outcome\" IN ('SUCCEEDED', 'FAILED')");
                 t.HasCheckConstraint("CK_OperationsRecords_DetailsObject", "jsonb_typeof(\"DetailsJson\") = 'object'");
             });

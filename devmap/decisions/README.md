@@ -10,9 +10,7 @@ None. Documentation conflicts `CON-001` through `CON-013` are resolved. Prototyp
 
 ## Open / deferred decisions
 
-| ID | Status | Scope | Current constraint |
-|---|---|---|---|
-| `DEC-011` | `DEFERRED` | local orchestration, CI provider, deployment pipeline, broader orchestration | Resolve when implementation needs concrete automation. It does not block domain work. Secrets must never be committed; configuration boundaries and secret cleanup are required now. |
+None. `DEC-011` was resolved on 2026-10-09 (see "Resolved decisions").
 
 ## Resolved conflicts
 
@@ -49,6 +47,7 @@ None. Documentation conflicts `CON-001` through `CON-013` are resolved. Prototyp
 | `DEC-012` | UUID / .NET `Guid` canonical identities. | [data types](../shared/data-types-and-datetime.md) | [ADR-002](ADR-002-canonical-uuid-identity.md) |
 | `DEC-013` | `DateTimeOffset` instants and `DateOnly` local dates. | [data types](../shared/data-types-and-datetime.md) | [ADR-003](ADR-003-temporal-representation.md) |
 | `DEC-014` | Existing EF/PostgreSQL identifier convention; no new provider-driven naming strategy. | [domain/persistence](../backend/domain-model-and-persistence.md) | — |
+| `DEC-011` | Pilot deployment: one server, Docker Compose, a single backend instance, hand-run release gate, daily alert digest and one external uptime check, 30-day logs and backups. | [deployment](../operations/deployment.md) | [ADR-007](ADR-007-pilot-deployment-topology.md) |
 
 ## Superseded decisions
 

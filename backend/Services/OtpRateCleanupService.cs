@@ -20,7 +20,7 @@ public sealed class OtpRateCleanupService(IServiceScopeFactory scopes, ILogger<O
             }
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
-                logger.LogWarning(exception, "OTP rate event cleanup failed.");
+                logger.LogWarning("OTP rate event cleanup failed. ExceptionType: {ExceptionType}", exception.GetType().Name);
             }
         }
     }

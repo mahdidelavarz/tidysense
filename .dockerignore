@@ -1,0 +1,14 @@
+# The build context of the deployment images is the repository root (deploy/*.Dockerfile).
+.git
+.dotnet_home
+.nuget
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/test-results
+**/playwright-report
+backend.Tests
+devmap
+mindmap
+deploy/.env

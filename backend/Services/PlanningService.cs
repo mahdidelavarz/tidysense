@@ -28,6 +28,7 @@ public sealed partial class PlanningService(
     PlanningAttemptCancellation cancellations,
     IPlanningGenerator generator,
     IOptionsMonitor<AiOptions> ai,
+    AiConsentPolicy consent,
     IHostEnvironment environment)
 {
     private const string ApplyActionType = "APPLY_PLANNING_DRAFT";
@@ -95,6 +96,8 @@ public sealed partial class PlanningService(
         // A switched-off AI path is said plainly before anything is stored; manual creation is unaffected.
         var settings = ai.CurrentValue;
         if (settings.GlobalKillSwitch || settings.Planning.KillSwitch) throw new AiUnavailableException();
+        // No text is stored for, or sent to, a provider the user has not agreed to.
+        await AiConsentService.RequireAsync(db, consent, owner, cancellationToken);
         var context = await contexts.BuildAsync(owner, goalId, projectId, cancellationToken);
 
         var now = dates.UtcNow;

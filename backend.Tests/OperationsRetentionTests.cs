@@ -126,7 +126,16 @@ public sealed class OperationsRetentionTests(PostgresWebApplicationFactory facto
             new ReconcileExposure { Id = Guid.NewGuid(), UserId = user.Id, LocalDate = Date(now.AddDays(-181)), FirstSeenAt = now.AddDays(-181) },
             new ReconcileExposure { Id = Guid.NewGuid(), UserId = user.Id, LocalDate = Date(now.AddDays(-179)), FirstSeenAt = now.AddDays(-179) },
             new ReconcilePrompt { Id = Guid.NewGuid(), UserId = user.Id, LocalDate = Date(now.AddDays(-200)), UpdatedAt = now },
-            new ReconcilePrompt { Id = Guid.NewGuid(), UserId = user.Id, LocalDate = Date(now.AddDays(-5)), UpdatedAt = now });
+            new ReconcilePrompt { Id = Guid.NewGuid(), UserId = user.Id, LocalDate = Date(now.AddDays(-5)), UpdatedAt = now },
+            // A pilot answer is R2 on its own date; an alert digest is R4 like a maintenance run.
+            Answer(user.Id, now.AddDays(-181)), Answer(user.Id, now.AddDays(-179)),
+            new OperationsRecord { Id = Guid.NewGuid(), Kind = OperationsRecordKinds.AlertDigest, CreatedAt = now.AddDays(-91) },
+            new OperationsRecord { Id = Guid.NewGuid(), Kind = OperationsRecordKinds.AlertDigest, CreatedAt = now.AddDays(-89) },
+            new OperationsRecord
+            {
+                Id = Guid.NewGuid(), Kind = OperationsRecordKinds.UserErasure, Operator = "retention-test",
+                ReasonCode = "TEST", CreatedAt = now.AddDays(-400), RetentionClass = "R1"
+            });
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
 
@@ -163,6 +172,13 @@ public sealed class OperationsRetentionTests(PostgresWebApplicationFactory facto
         Assert.Equal(1, counts["reconcilePrompts"]);
         Assert.Equal(1, counts["reconcileExposures"]);
         Assert.Equal(1, await db.ReconcileExposures.CountAsync(x => x.UserId == user.Id));
+        Assert.Equal(1, counts["pilotFeedbackResponses"]);
+        Assert.Equal(1, await db.PilotFeedbackResponses.CountAsync(x => x.UserId == user.Id));
+        // The old digest went with the diagnostics; an erasure record stays however old it is.
+        Assert.Equal(1, await db.OperationsRecords.CountAsync(x =>
+            x.Kind == OperationsRecordKinds.AlertDigest && x.CreatedAt < now.AddDays(-80)));
+        Assert.True(await db.OperationsRecords.AnyAsync(x =>
+            x.Kind == OperationsRecordKinds.UserErasure && x.Operator == "retention-test"));
         Assert.Equal(new[] { recentSession.Id, openSession.Id }.Order(), (await db.ReconcileSessions
             .Where(x => x.UserId == user.Id).Select(x => x.Id).ToArrayAsync()).Order());
         Assert.Equal(0, await db.ReconcileRecommendations.CountAsync(x => x.Id == recommendation.Id));
@@ -329,6 +345,12 @@ public sealed class OperationsRetentionTests(PostgresWebApplicationFactory facto
     {
         Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000), IsActive = true,
         SetupComplete = true, CreatedAt = now.AddDays(-500)
+    };
+
+    private static PilotFeedbackResponse Answer(Guid userId, DateTimeOffset at) => new()
+    {
+        Id = Guid.NewGuid(), UserId = userId, Instrument = PilotInstruments.ReconcileUnderstanding,
+        InstrumentVersion = PilotInstruments.Version, SubjectId = Guid.NewGuid(), Answer = 3, CreatedAt = at
     };
 
     private static AiInvocation Invocation(Guid userId, DateTimeOffset at) => new()

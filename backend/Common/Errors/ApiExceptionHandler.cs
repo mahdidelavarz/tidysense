@@ -19,6 +19,7 @@ public sealed class ApiExceptionHandler(
             SmsSendException => (StatusCodes.Status503ServiceUnavailable, "DELIVERY_UNAVAILABLE", "Verification is temporarily unavailable"),
             AiUnavailableException unavailable => (StatusCodes.Status503ServiceUnavailable, unavailable.ErrorCode, "AI assistance is unavailable"),
             AiRateLimitException => (StatusCodes.Status429TooManyRequests, "AI_RATE_LIMITED", "Too many AI requests"),
+            AiConsentRequiredException => (StatusCodes.Status403Forbidden, AiConsentRequiredException.ErrorCode, "Consent is required"),
             VersionConflictException => (StatusCodes.Status409Conflict, "CONFLICT_STALE_VERSION", "The resource changed"),
             CommandConflictException commandConflict => (StatusCodes.Status409Conflict, commandConflict.ErrorCode, "The command context changed"),
             IdempotencyMismatchException => (StatusCodes.Status409Conflict, "IDEMPOTENCY_MISMATCH", "Idempotency key conflict"),

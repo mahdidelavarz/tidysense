@@ -8,7 +8,7 @@ No product-document conflict was reopened by restoring PostgreSQL. The M1 founda
 
 ## Open decision
 
-`DEC-011` remains deferred: Docker Compose/local orchestration, CI provider, full deployment pipeline and broader orchestration. It does not block domain implementation. `DEC-015` and ADR-006 are superseded historical evidence; PostgreSQL/Npgsql is canonical again.
+None. `DEC-011` was resolved for the pilot on 2026-10-09 by [ADR-007](ADR-007-pilot-deployment-topology.md) (one server, Docker Compose, single backend instance). `DEC-015` and ADR-006 are superseded historical evidence; PostgreSQL/Npgsql is canonical again.
 
 ## First-slice blockers
 

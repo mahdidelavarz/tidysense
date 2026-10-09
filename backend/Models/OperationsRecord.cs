@@ -1,8 +1,8 @@
 namespace TidySense.Models;
 
 /// <summary>
-/// What an operational procedure did: a maintenance run or the erasure of one account. It holds
-/// counts and codes only; never a phone number, a title or any other user text.
+/// What an operational procedure did: a maintenance run, a daily alert digest or the erasure of
+/// one account. It holds counts and codes only; never a phone number, a title or any other user text.
 /// </summary>
 public sealed class OperationsRecord
 {
@@ -20,6 +20,7 @@ public static class OperationsRecordKinds
 {
     public const string MaintenanceRun = "MAINTENANCE_RUN";
     public const string UserErasure = "USER_ERASURE";
+    public const string AlertDigest = "ALERT_DIGEST";
 }
 
 public static class OperationsRecordOutcomes

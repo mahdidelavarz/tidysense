@@ -37,17 +37,24 @@ public sealed class OperationsMaintenance(
             await transaction.CommitAsync(cancellationToken);
         }
 
-        db.OperationsRecords.Add(new OperationsRecord
+        var record = new OperationsRecord
         {
             Id = Guid.NewGuid(), Kind = OperationsRecordKinds.MaintenanceRun, CreatedAt = now,
             DetailsJson = JsonSerializer.Serialize(new { retentionEnabled = retention.Enabled, counts })
-        });
+        };
+        db.OperationsRecords.Add(record);
         await db.SaveChangesAsync(cancellationToken);
 
-        foreach (var alert in (await health.HealthAsync(cancellationToken)).Alerts)
+        // Evaluated after the run is recorded, because the maintenance rules read that record.
+        var alerts = (await health.HealthAsync(cancellationToken)).Alerts;
+        foreach (var alert in alerts)
             logger.LogWarning(
                 "OPS_ALERT. Rule: {Rule}, Severity: {Severity}, Scope: {Scope}, Value: {Value}, Threshold: {Threshold}",
                 alert.Rule, alert.Severity, alert.Scope, alert.Value, alert.Threshold);
+        // The run keeps what it raised, so the daily digest can report alerts that have cleared since.
+        record.DetailsJson = JsonSerializer.Serialize(new { retentionEnabled = retention.Enabled, counts, alerts },
+            OperationsAlertDigest.Json);
+        await db.SaveChangesAsync(cancellationToken);
         return counts;
     }
 
@@ -64,8 +71,9 @@ public sealed class OperationsMaintenance(
             .OrderBy(x => x.CreatedAt).Take(batch).ExecuteDeleteAsync(cancellationToken);
         counts["otpChallenges"] = await db.OtpChallenges.Where(x => x.CreatedAt < before)
             .OrderBy(x => x.CreatedAt).Take(batch).ExecuteDeleteAsync(cancellationToken);
+        // Maintenance runs and alert digests; an erasure record is kept.
         counts["maintenanceRuns"] = await db.OperationsRecords
-            .Where(x => x.Kind == OperationsRecordKinds.MaintenanceRun && x.CreatedAt < before)
+            .Where(x => x.Kind != OperationsRecordKinds.UserErasure && x.CreatedAt < before)
             .OrderBy(x => x.CreatedAt).Take(batch).ExecuteDeleteAsync(cancellationToken);
     }
 
@@ -99,7 +107,7 @@ public sealed class OperationsMaintenance(
             .ExecuteDeleteAsync(cancellationToken);
     }
 
-    /// <summary>R2: closed sessions with their facts, rule matches, explanations, recommendations and confirmations.</summary>
+    /// <summary>R2: closed sessions with their facts, rule matches, explanations, recommendations and confirmations; pilot answers.</summary>
     private async Task PurgeSessionsAsync(DateTimeOffset before, int batch, Dictionary<string, int> counts,
         CancellationToken cancellationToken)
     {
@@ -116,6 +124,8 @@ public sealed class OperationsMaintenance(
             .OrderBy(x => x.LocalDate).Take(batch).ExecuteDeleteAsync(cancellationToken);
         counts["reconcileExposures"] = await db.ReconcileExposures.Where(x => x.FirstSeenAt < before)
             .OrderBy(x => x.FirstSeenAt).Take(batch).ExecuteDeleteAsync(cancellationToken);
+        counts["pilotFeedbackResponses"] = await db.PilotFeedbackResponses.Where(x => x.CreatedAt < before)
+            .OrderBy(x => x.CreatedAt).Take(batch).ExecuteDeleteAsync(cancellationToken);
     }
 }
 

@@ -60,6 +60,10 @@ public sealed class OperationsHealthService(
             .Where(x => x.Kind == OperationsRecordKinds.MaintenanceRun)
             .OrderByDescending(x => x.CreatedAt).Select(x => new { x.CreatedAt, x.Outcome })
             .FirstOrDefaultAsync(cancellationToken);
+        // The daily e-mail is the only path out of the application; a failed send is itself an alert.
+        var lastDigestOutcome = await db.OperationsRecords.AsNoTracking()
+            .Where(x => x.Kind == OperationsRecordKinds.AlertDigest)
+            .OrderByDescending(x => x.CreatedAt).Select(x => x.Outcome).FirstOrDefaultAsync(cancellationToken);
         var lastHour = await db.AiInvocations.AsNoTracking()
             .Where(x => x.Sequence > 0 && x.StartedAt >= hourAgo)
             .GroupBy(x => x.Family)
@@ -78,7 +82,9 @@ public sealed class OperationsHealthService(
                 hour?.Failed ?? 0);
         }).ToArray();
         var alerts = OperationsAlertRules.Evaluate(new AlertInput(now, ai.CurrentValue.GlobalKillSwitch, families,
-            stuckExplanations, stuckAttempts, lastRun?.CreatedAt, lastRun?.Outcome), options.CurrentValue.Alerts);
+            stuckExplanations, stuckAttempts, lastRun?.CreatedAt, lastRun?.Outcome,
+            options.CurrentValue.AlertDigest.Enabled && lastDigestOutcome == OperationsRecordOutcomes.Failed),
+            options.CurrentValue.Alerts);
         return new OperationsHealthDto(alerts, lastRun?.CreatedAt, lastRun?.Outcome, stuckExplanations,
             stuckAttempts, await db.OutboxMessages.CountAsync(x => x.Status == "PENDING", cancellationToken));
     }

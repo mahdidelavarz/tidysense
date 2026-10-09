@@ -1,0 +1,37 @@
+# Local rehearsal of the pilot stack on a developer machine. Use together with the main file:
+#   docker compose --env-file local.env -f docker-compose.yml -f docker-compose.local.yml up --detach --build
+# Differences from the server: the Development environment (no SMS is sent; the login form
+# shows the code itself), a local mail catcher for the daily digest, and a certificate issued
+# by Caddy's own local authority. See devmap/operations/docker-guide.md.
+services:
+  migrate:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+  backend:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # Any hour is "due", so the digest arrives about two minutes after start.
+      Operations__AlertDigest__HourUtc: "0"
+      Operations__AlertDigest__SmtpTls: "false"
+      # Lets the login form read the code through the proxy. Development only; never on a server.
+      Development__ShowLoginCode: "true"
+    depends_on:
+      mail:
+        condition: service_started
+
+  web:
+    build:
+      args:
+        VITE_SHOW_LOGIN_CODE: "true"
+
+  # Catches the digest instead of delivering it. Read it at http://localhost:8025.
+  mail:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - internal
+    logging:
+      driver: ${LOG_DRIVER:-journald}

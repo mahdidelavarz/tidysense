@@ -204,7 +204,12 @@ public sealed class AuthenticationCompletionTests : IClassFixture<PostgresWebApp
                     ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Database=unused;Username=unused;Password=unused",
                     ["Jwt:SigningKey"] = "production-profile-test-signing-key-32-chars",
                     ["Otp:HashingKey"] = "production-profile-test-hashing-key-32-chars",
-                    ["Security:AllowedOrigins:0"] = "https://app.example"
+                    ["Security:AllowedOrigins:0"] = "https://app.example",
+                    ["Pilot:SupportContact"] = "support@app.example",
+                    ["Operations:AlertDigest:Enabled"] = "true",
+                    ["Operations:AlertDigest:To"] = "operator@app.example",
+                    ["Operations:AlertDigest:From"] = "alerts@app.example",
+                    ["Operations:AlertDigest:SmtpHost"] = "smtp.app.example"
                 }));
         });
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

@@ -50,12 +50,14 @@ export const failureLabels: Record<string, string> = {
   AI_UNAVAILABLE: 'دستیار برنامه‌ریزی فعلاً در دسترس نیست.',
   AI_BUDGET_EXHAUSTED: 'سقف استفاده از دستیار برنامه‌ریزی برای امروز پر شده است.',
   CONTEXT_TOO_LARGE: 'این برنامه‌ریزی برای یک پیش‌نویس بیش از حد بزرگ است. آن را از داخل یک پروژه یا با درخواستی کوچک‌تر شروع کنید.',
+  AI_CONSENT_REQUIRED: 'اجازه استفاده از هوش مصنوعی پس گرفته شده بود و چیزی برای آن فرستاده نشد.',
 }
 
 /** Why an attempt could not even be started. Nothing was stored or changed in any of these cases. */
 export const startErrorLabels: Record<string, string> = {
   PLANNING_AI_UNAVAILABLE: 'دستیار برنامه‌ریزی فعلاً در دسترس نیست. چیزی تغییر نکرد؛ می‌توانید بعداً دوباره تلاش کنید یا همین حالا دستی بسازید.',
   AI_RATE_LIMITED: 'تعداد درخواست‌های برنامه‌ریزی از حد مجاز گذشته است. چیزی تغییر نکرد؛ کمی بعد دوباره تلاش کنید یا دستی بسازید.',
+  AI_CONSENT_REQUIRED: 'برای برنامه‌ریزی با هوش مصنوعی اجازه شما لازم است. چیزی فرستاده نشد و چیزی تغییر نکرد.',
   CLARIFICATION_ALREADY_ANSWERED: 'به این پرسش‌ها قبلاً پاسخ داده شده است.',
   CLARIFICATION_NOT_PENDING: 'این پرسش‌ها دیگر منتظر پاسخ نیستند.',
 }

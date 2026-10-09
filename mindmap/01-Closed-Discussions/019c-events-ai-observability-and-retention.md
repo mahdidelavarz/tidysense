@@ -2,6 +2,8 @@
 
 > **Canonical amendment (2026-09-19):** Discussions 023–026 amend events/retention for PlanningFact, sequence and CaptureItem and retire Backlog events. Dedicated crisis-product records are removed.
 
+> **Amendment (2026-10-09, STEP-11, decided by the owner):** the stored `ActionConfirmation` is R2 or R3 with its subject, not R1 (§20), because its preview holds Task titles and an R1 record is never removed; the durable decision evidence is the R1 event and command result. Pilot retention durations and the erasure limit are fixed (§19, §22), access for the pilot is one operator with a recorded read-only role (§25), and two record types are added to §20. Details are in each section.
+
 ## Status
 
 Accepted and closed after GPT × Claude review and incorporation of the accepted AI context-scope observability amendment.
@@ -707,6 +709,8 @@ Previously exposed occurrences preserve identity and receive an explicit invalid
 
 Retention classes define purpose and access boundaries. Exact durations remain subject to legal/security review.
 
+**Pilot durations (amendment 2026-10-09).** For the pilot the owner fixed: R2 180 days after a session closed (or the record was made), R3 30 days after a draft ended, R4 90 days. R1 and canonical work are kept until the account is erased; R1 history then stays without the account. These durations are told to users in the in-app privacy notice, which reads them from the running configuration. No legal review has been held; the owner decided them as the accountable person for the pilot, and a later review may shorten them.
+
 ```txt
 R1 — CANONICAL_AUDIT
 R2 — PRODUCT_SESSION_HISTORY
@@ -750,7 +754,7 @@ Every persisted record type must have an explicit retention class.
 |---|---|---|
 | Canonical lifecycle event | R1 | Durable user/account history |
 | Material semantic field-change event | R1 | Redacted where necessary |
-| ActionConfirmation | R1 | Decision and preview linkage |
+| ActionConfirmation | R2 or R3 | **Amended 2026-10-09** (was R1). Removed with its subject: R2 with its Reconcile session, R3 with its planning draft. The stored preview holds Task titles, so it cannot be kept forever and still be erasable; the decision and its linkage survive as the R1 confirmation event and command result, which hold codes and counts only |
 | Confirmation invalidation | R1 | Preserves stale-consent history |
 | ProposalItemDecision linked to committed mutation | R1 | User decision evidence |
 | ProposalItemDecision without commit | R2 | Product interaction history |
@@ -775,6 +779,8 @@ Every persisted record type must have an explicit retention class.
 | RoutineOccurrence exposure event | R1 | Affects deletion/invalidation policy |
 | Exposure projection | R1 or R2 | Must remain derivable from exposure event |
 | Analytics aggregate | Separate governed dataset | Versioned definition and no canonical authority |
+| AI-provider consent decision | R1 | **Added 2026-10-09.** Event `AI_CONSENT_CHANGED`: granted or withdrawn, provider key, notice version. The current state is on the account and is erased with it |
+| Pilot feedback response | R2 | **Added 2026-10-09.** A number on a fixed scale about one applied plan or completed session; no text; removed after the R2 duration and on erasure |
 
 No persisted record may remain without an assigned retention class.
 
@@ -816,6 +822,8 @@ historical event preserved
 ```
 
 Exact legal basis, duration, and deletion mechanics remain subject to legal/security review.
+
+**Pilot mechanics (amendment 2026-10-09).** Erasure is an operator command run on a verified request that reaches the operator through the contact channel named in the privacy notice; there is no user-facing deletion in the pilot. The live database is erased at once. Backups and logs are not rewritten: both are kept no longer than 30 days, and users are told that erasure is complete everywhere within 30 days.
 
 ---
 
@@ -914,6 +922,10 @@ Every access must be logged and purpose-scoped.
 ### Raw-content debugging access
 
 May access R6 only through explicit, temporary, audited authorization.
+
+### Pilot access (amendment 2026-10-09)
+
+For the pilot one person, the operator, holds every access class above. Direct database access uses a read-only role and is written into an access record kept with the incident records (who, when, purpose, tables, whether user text was read). Separate roles per class, de-identified views and a database-side access log are deferred until a second person needs access; the in-app operator page stays aggregate-only. No R5 or R6 record exists in the product.
 
 ---
 

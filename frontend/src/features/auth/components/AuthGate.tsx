@@ -13,6 +13,8 @@ export function AuthGate() {
   const location = useLocation()
   const auth = useCurrentUser()
   const onLogin = location.pathname === '/login'
+  // The privacy notice is readable before signing in.
+  const onPublicPage = onLogin || location.pathname === '/privacy'
 
   if (auth.isPending) {
     return <main className="min-h-dvh bg-canvas p-4 text-text-primary sm:p-8"><div className="mx-auto max-w-md pt-16"><LoadingState text="در حال بررسی نشست…" /></div></main>
@@ -22,7 +24,7 @@ export function AuthGate() {
       <ErrorState title="بررسی نشست ممکن نشد." description="ارتباط را بررسی کنید و دوباره تلاش کنید." onRetry={() => auth.refetch()} />
     </div></main>
   }
-  if (!auth.data && !onLogin) return <Navigate to="/login" />
+  if (!auth.data && !onPublicPage) return <Navigate to="/login" />
   if (auth.data && onLogin) return <Navigate to={auth.data.setupComplete ? '/today' : '/first-entry'} />
   if (auth.data) return <AppShell><Outlet /></AppShell>
   return <main className="min-h-dvh bg-canvas text-text-primary"><Outlet /></main>

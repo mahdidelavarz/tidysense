@@ -7,7 +7,10 @@ import { useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
+import { useCurrentUser } from '../../auth/hooks/auth-hooks'
 import { useGoal } from '../../goals/hooks/goal-hooks'
+import { AiConsentCard } from '../../pilot/components/AiConsentCard'
+import { PilotQuestion } from '../../pilot/components/PilotQuestion'
 import { useProject } from '../../projects/hooks/project-hooks'
 import {
   useCancelPlanningAttempt,
@@ -42,6 +45,9 @@ export function PlanningPage({ goalId, projectId }: PlanningScopeInput) {
   const cancelDraft = useCancelPlanningDraft()
   const revise = useRevisePlanningDraft()
   const openCreate = useUiStore(state => state.openCreate)
+  // The server refuses to send text without consent; this only decides what the page offers.
+  const user = useCurrentUser().data
+  const needsConsent = user?.aiConsentRequired === true && !user.aiConsentGranted
 
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [draftId, setDraftId] = useState<string | null>(null)
@@ -138,7 +144,7 @@ export function PlanningPage({ goalId, projectId }: PlanningScopeInput) {
     </div>
   )
 
-  if (apply.result) return frame(<PlanningResult result={apply.result} onAgain={restart} />)
+  if (apply.result) return frame(<PlanningResult result={apply.result} draftId={currentDraftId} onAgain={restart} />)
   if (!detached && active.isPending) return frame(<LoadingState text="در حال آماده‌سازی برنامه‌ریزی…" />)
   if ((!detached && active.isError) || attempt.isError || draft.isError) {
     return frame(
@@ -290,11 +296,14 @@ export function PlanningPage({ goalId, projectId }: PlanningScopeInput) {
     )
   }
 
+  // Asked where a new text would be written. A draft already made stays reviewable above.
+  if (needsConsent) return frame(<AiConsentCard onManual={manual} />)
+
   return frame(
     <div className="space-y-4">
       <p className="notice">
         {active.data?.sampleGenerator === false
-          ? 'پیش‌نویس با کمک هوش مصنوعی ساخته می‌شود. برای این کار نوشته شما و خلاصه‌ای از کارهای همین برنامه برای سرویس هوش مصنوعی فرستاده می‌شود؛ هوش مصنوعی فقط پیشنهاد می‌دهد و چیزی را تغییر نمی‌دهد.'
+          ? 'پیش‌نویس با کمک هوش مصنوعی و با اجازه‌ای که داده‌اید ساخته می‌شود: نوشته شما و خلاصه‌ای از همین حساب برای سرویس هوش مصنوعی بیرون از ایران فرستاده می‌شود. هوش مصنوعی فقط پیشنهاد می‌دهد و چیزی را تغییر نمی‌دهد.'
           : 'در این نسخه پیش‌نویس به‌صورت نمونه و بدون هوش مصنوعی ساخته می‌شود تا مسیر مرور و تأیید قابل استفاده باشد.'}
       </p>
       {replace && <p className="notice">با ساخت پیش‌نویس تازه، پیش‌نویس قبلی کنار گذاشته می‌شود.</p>}
@@ -325,7 +334,12 @@ function ProjectScopedForm({ projectId, render }: { projectId: string; render: (
 }
 
 /** Shown only after the command itself answered: what was actually created. */
-function PlanningResult({ result, onAgain }: { result: PlanningApplyResultDto; onAgain: () => void }) {
+function PlanningResult({ result, draftId, onAgain }: {
+  result: PlanningApplyResultDto
+  /** The applied draft: the subject of the optional usefulness question. */
+  draftId: string | null
+  onAgain: () => void
+}) {
   const counts = [
     result.goalId ? 'یک هدف' : null,
     result.projectIds.length > 0 ? `${formatNumber(result.projectIds.length)} پروژه` : null,
@@ -333,20 +347,23 @@ function PlanningResult({ result, onAgain }: { result: PlanningApplyResultDto; o
     result.routineIds.length > 0 ? `${formatNumber(result.routineIds.length)} روتین` : null,
   ].filter(Boolean)
   return (
-    <EmptyState
-      icon={CircleCheck}
-      title="برنامه ساخته شد."
-      description={[
-        counts.length > 0 ? `${counts.join('، ')} ساخته شد.` : '',
-        Number(result.factCount) > 0 ? `${formatNumber(Number(result.factCount))} مورد برای برنامه‌ریزی‌های بعدی نگه داشته شد.` : '',
-      ].filter(Boolean).join(' ')}
-      action={(
-        <div className="flex flex-wrap justify-center gap-3">
-          <Link className="primary-button" to="/today">رفتن به امروز</Link>
-          {result.goalId && <Link className="secondary-button" to="/goals/$goalId" params={{ goalId: result.goalId }}>دیدن هدف</Link>}
-          <button className="ghost-button" type="button" onClick={onAgain}>برنامه‌ریزی تازه</button>
-        </div>
-      )}
-    />
+    <>
+      <EmptyState
+        icon={CircleCheck}
+        title="برنامه ساخته شد."
+        description={[
+          counts.length > 0 ? `${counts.join('، ')} ساخته شد.` : '',
+          Number(result.factCount) > 0 ? `${formatNumber(Number(result.factCount))} مورد برای برنامه‌ریزی‌های بعدی نگه داشته شد.` : '',
+        ].filter(Boolean).join(' ')}
+        action={(
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link className="primary-button" to="/today">رفتن به امروز</Link>
+            {result.goalId && <Link className="secondary-button" to="/goals/$goalId" params={{ goalId: result.goalId }}>دیدن هدف</Link>}
+            <button className="ghost-button" type="button" onClick={onAgain}>برنامه‌ریزی تازه</button>
+          </div>
+        )}
+      />
+      {draftId && <PilotQuestion instrument="H1_USEFULNESS" subjectId={draftId} />}
+    </>
   )
 }

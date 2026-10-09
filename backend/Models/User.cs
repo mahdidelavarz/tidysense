@@ -8,6 +8,11 @@ public sealed class User
     public bool IsActive { get; set; } = true;
     public int SessionEpoch { get; set; }
     public bool SetupComplete { get; set; }
+    // The AI provider and notice version the user agreed to send their planning text to. Null: not agreed, or withdrawn.
+    public string? AiConsentProvider { get; set; }
+    public string? AiConsentNoticeVersion { get; set; }
+    public DateTimeOffset? AiConsentAt { get; set; }
+    public long AiConsentRevision { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
     public ICollection<Goal> Goals { get; set; } = [];

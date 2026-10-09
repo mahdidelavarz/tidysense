@@ -35,6 +35,11 @@ public sealed partial class UserErasureService(AppDbContext db, ApplicationDateS
         if (user is null) return null;
 
         var tombstone = Guid.NewGuid();
+        // An event about the account itself (a consent decision) names the account as its aggregate too.
+        await db.DomainEvents.Where(x => x.UserId == userId && x.AggregateId == userId)
+            .ExecuteUpdateAsync(x => x.SetProperty(e => e.AggregateId, tombstone), cancellationToken);
+        await db.CommandResults.Where(x => x.UserId == userId && x.AggregateId == userId)
+            .ExecuteUpdateAsync(x => x.SetProperty(r => r.AggregateId, tombstone), cancellationToken);
         var tombstoned = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["domainEvents"] = await db.DomainEvents.Where(x => x.UserId == userId)
@@ -55,6 +60,8 @@ public sealed partial class UserErasureService(AppDbContext db, ApplicationDateS
         deleted["reconcilePrompts"] = await db.ReconcilePrompts.Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
         deleted["reconcileExposures"] = await db.ReconcileExposures.Where(x => x.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken);
+        deleted["pilotFeedbackResponses"] = await db.PilotFeedbackResponses.Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
         deleted["planningFacts"] = await db.PlanningFacts.Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
@@ -96,19 +103,28 @@ public sealed partial class UserErasureService(AppDbContext db, ApplicationDateS
 
 /// <summary>
 /// Operator procedures run from the command line instead of serving HTTP:
-/// <c>erase-user (--user &lt;id&gt; | --phone &lt;number&gt;) --operator &lt;name&gt; --reason &lt;CODE&gt;</c> and
-/// <c>run-maintenance</c>.
+/// <c>erase-user (--user &lt;id&gt; | --phone &lt;number&gt;) --operator &lt;name&gt; --reason &lt;CODE&gt;</c>,
+/// <c>run-maintenance</c> and <c>migrate</c> (applies pending schema migrations: the explicit deployment step).
 /// </summary>
 public static class OperationsCommandLine
 {
     private const string EraseUser = "erase-user";
     private const string RunMaintenance = "run-maintenance";
+    private const string Migrate = "migrate";
 
-    public static bool IsCommand(string[] args) => args.Length > 0 && args[0] is EraseUser or RunMaintenance;
+    public static bool IsCommand(string[] args) => args.Length > 0 && args[0] is EraseUser or RunMaintenance or Migrate;
 
     public static async Task<int> RunAsync(IServiceProvider services, string[] args)
     {
         await using var scope = services.CreateAsyncScope();
+        if (args[0] == Migrate)
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>().Database;
+            var pending = (await database.GetPendingMigrationsAsync()).ToArray();
+            await database.MigrateAsync();
+            Console.WriteLine(JsonSerializer.Serialize(new { applied = pending }));
+            return 0;
+        }
         if (args[0] == RunMaintenance)
         {
             var counts = await scope.ServiceProvider.GetRequiredService<OperationsMaintenance>()

@@ -856,6 +856,9 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
             });
         });
         using var client = Client(session.Token, host);
+        // Text goes to a provider only for an account that agreed to it.
+        (await SendAsync(client, HttpMethod.Put, "/api/v1/users/me/ai-consent",
+            new { granted = true, noticeVersion = AiConsentPolicy.NoticeVersion }, "model-consent")).EnsureSuccessStatusCode();
         var output = PlanningOutputGateTests.Valid();
         output["draft"]!["proposals"]![2]!["plannedDate"] =
             Day.AddDays(1).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);

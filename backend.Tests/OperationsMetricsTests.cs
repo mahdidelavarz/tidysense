@@ -59,6 +59,8 @@ public sealed class OperationsMetricsTests(PostgresWebApplicationFactory factory
         Expect(result.Primary, "H1.APPLY_SUBMISSIONS", ("CONFLICTED", 1, 3), ("SUCCEEDED", 2, 3));
         Expect(result.Primary, "H1.NON_TRIVIAL_PLAN", ("", 1, 2));
         Expect(result.Primary, "H1.REVERSAL_7D", ("", 1, 2));
+        // An applied plan nobody answered about is its own row, never an answer.
+        Expect(result.Primary, "H1.USEFULNESS_RESPONSE", ("4", 1, 2), ("NO_RESPONSE", 1, 2));
 
         // H2: every band on its own; acceptance and application are separate rows.
         // An eligible day counts once, whether or not a session followed.
@@ -76,6 +78,9 @@ public sealed class OperationsMetricsTests(PostgresWebApplicationFactory factory
         Expect(result.Primary, "H2.MANUAL_ESCAPE", ("MEDIUM", 1, 1), ("RECOVERY", 0, 1));
         Expect(result.Primary, "H2.UNRESOLVED_WORK_REDUCTION", ("MEDIUM", 5, 6));
         Expect(result.Primary, "H2.DECISION_COMPRESSION", ("", 5, 2));
+        // Answers stay apart by band and by whether the session had a ready explanation.
+        Expect(result.Primary, "H2.UNDERSTANDING_RESPONSE", ("MEDIUM:DETERMINISTIC:2", 1, 1),
+            ("MEDIUM:EXPLAINED:5", 1, 1));
         Expect(result.Primary, "H2.USER_CONTRIBUTION", ("", 3, 5));
 
         // The internal account is reported apart and appears in no primary row.
@@ -84,6 +89,7 @@ public sealed class OperationsMetricsTests(PostgresWebApplicationFactory factory
         Expect(result.Internal, "H2.SESSIONS_OPENED", ("LIGHT", 1, 1));
         Expect(result.Internal, "H2.ELIGIBLE_SESSIONS", ("LIGHT", 0, 1));
         Expect(result.Internal, "H2.ELIGIBLE_START_RATE", ("LIGHT", 1, 1));
+        Expect(result.Internal, "H2.UNDERSTANDING_RESPONSE", ("LIGHT:DETERMINISTIC:NO_RESPONSE", 1, 1));
 
         // The same definitions over the same records give the same numbers.
         var again = await service.ComputeAsync(From, To, TestContext.Current.CancellationToken);
@@ -151,7 +157,9 @@ public sealed class OperationsMetricsTests(PostgresWebApplicationFactory factory
             Event(a, "Task", task, "TASK_CREATED", appliedAt,
                 JsonSerializer.Serialize(new { source = "AI_ASSISTED", parentScope = "STANDALONE", hasPlannedDate = true, inSequence = false }),
                 confirmationId: first),
-            Event(a, "Task", task, "TASK_DROPPED", appliedAt.AddDays(2), "{}"));
+            Event(a, "Task", task, "TASK_DROPPED", appliedAt.AddDays(2), "{}"),
+            // A answered the usefulness question about this plan; B (flow 4) did not answer.
+            Feedback(a, PilotInstruments.PlanUsefulness, edited.Id, 4, appliedAt.AddMinutes(1)));
 
         // Flow 2 (A): the provider failed.
         db.Add(Attempt(a, T0.AddHours(1), T0.AddHours(1).AddSeconds(5), x =>
@@ -203,7 +211,7 @@ public sealed class OperationsMetricsTests(PostgresWebApplicationFactory factory
         db.AddRange(Confirmation(a, s1.Id, accepted.Id, t.AddMinutes(3)),
             Event(a, "ActionConfirmation", Guid.NewGuid(), "RECONCILE_ACTION_CONFIRMED", t.AddMinutes(3),
                 "{\"actionType\":\"REPLAN_TASKS\",\"affectedCount\":3}", sessionId: s1.Id),
-            Completed(a, s1, 1));
+            Completed(a, s1, 1), Feedback(a, PilotInstruments.ReconcileUnderstanding, s1.Id, 5, t.AddMinutes(11)));
 
         // S2 (A, LIGHT): nothing matched a rule. S5 (A, MEDIUM): matched, never asked for an explanation.
         db.AddRange(Session(a, "LIGHT", ReconcileSessionStatuses.Expired, t.AddDays(1), 1, matched: false),
@@ -215,7 +223,7 @@ public sealed class OperationsMetricsTests(PostgresWebApplicationFactory factory
             Confirmation(b, s3.Id, null, t.AddMinutes(6)),
             Event(b, "ActionConfirmation", Guid.NewGuid(), "RECONCILE_ACTION_CONFIRMED", t.AddMinutes(6),
                 "{\"actionType\":\"KEEP_TASKS\",\"affectedCount\":2}", sessionId: s3.Id),
-            Completed(b, s3, 0));
+            Completed(b, s3, 0), Feedback(b, PilotInstruments.ReconcileUnderstanding, s3.Id, 2, t.AddMinutes(11)));
 
         // S4 (B, RECOVERY): the explanation failed and nothing was applied.
         var s4 = Session(b, "RECOVERY", ReconcileSessionStatuses.Abandoned, t.AddDays(1), 9, matched: true);
@@ -262,6 +270,13 @@ public sealed class OperationsMetricsTests(PostgresWebApplicationFactory factory
         await db.SaveChangesAsync();
         return confirmation.Id;
     }
+
+    private static PilotFeedbackResponse Feedback(Guid userId, string instrument, Guid subjectId, int answer,
+        DateTimeOffset at) => new()
+    {
+        Id = Guid.NewGuid(), UserId = userId, Instrument = instrument, InstrumentVersion = PilotInstruments.Version,
+        SubjectId = subjectId, Answer = answer, CreatedAt = at
+    };
 
     private static User User(string phone) => new()
     {

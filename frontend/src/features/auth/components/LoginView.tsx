@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { FolderKanban, Sun, Target } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
@@ -7,6 +7,9 @@ import { useRequestOtp, useVerifyOtp } from '../hooks/auth-hooks'
 import { DevelopmentOtpToast } from './DevelopmentOtpToast'
 import { OtpStep } from './OtpStep'
 import { PhoneStep } from './PhoneStep'
+
+// Vite's dev server, or a local Docker rehearsal built with VITE_SHOW_LOGIN_CODE. Never a server build.
+const showDevelopmentCode = import.meta.env.DEV || import.meta.env.VITE_SHOW_LOGIN_CODE === 'true'
 
 const loginHighlights = [
   { icon: Sun, text: 'هر روز فقط کارهای همان روز را ببینید.' },
@@ -46,7 +49,7 @@ export function LoginView() {
       onSuccess: async response => {
         setPhone(phoneNumber)
         setResendUntil(Date.now() + response.retryAfterSeconds * 1000)
-        if (import.meta.env.DEV) {
+        if (showDevelopmentCode) {
           // Local dev convenience only; the endpoint does not exist outside
           // the Development profile, and a failure here must not block login.
           try {
@@ -125,9 +128,10 @@ export function LoginView() {
               />
             )}
           {error && <p role="alert" className="notice-attention mt-5 font-medium">{error}</p>}
+          <p className="mt-6 text-sm"><Link className="text-link" to="/privacy">حریم خصوصی و داده‌ها</Link></p>
         </div>
       </section>
-      {import.meta.env.DEV && developmentCode && (
+      {showDevelopmentCode && developmentCode && (
         <DevelopmentOtpToast code={developmentCode} onDismiss={() => setDevelopmentCode(null)} />
       )}
     </div>

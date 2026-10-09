@@ -35,6 +35,7 @@ $previous = @{
     Ai__Planning__Provider = $env:Ai__Planning__Provider
     Ai__Reconcile__Provider = $env:Ai__Reconcile__Provider
     Operations__OperatorPhones__0 = $env:Operations__OperatorPhones__0
+    Pilot__SupportContact = $env:Pilot__SupportContact
 }
 $backendProcess = $null
 $databaseCreated = $false
@@ -62,6 +63,8 @@ try {
     $env:Ai__Reconcile__Provider = 'mock'
     # The development test account is the operator of this isolated backend, so the operator page can be exercised.
     $env:Operations__OperatorPhones__0 = '+989120000000'
+    # The privacy notice names this channel; a placeholder shows that it is read from configuration.
+    $env:Pilot__SupportContact = 'support@tidysense.test'
     Write-Host 'Building isolated backend...'
     & dotnet build (Join-Path $repoRoot 'backend\TidySense.csproj') --no-restore -p:OutputPath=bin/auth-e2e/ -p:OpenApiGenerateDocuments=false
     if ($LASTEXITCODE -ne 0) { throw 'Backend build failed.' }

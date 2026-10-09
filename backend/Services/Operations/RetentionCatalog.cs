@@ -8,7 +8,7 @@ public sealed record RetentionEntry(Type Entity, string Class, string Rule);
 /// <summary>
 /// Every persisted record type with its Discussion 019C class. A type that is missing here fails
 /// the test suite: no record may exist without an assigned class. Durations are configuration
-/// (<see cref="RetentionOptions"/>) and provisional until legal and security review.
+/// (<see cref="RetentionOptions"/>), fixed for the pilot and stated in the privacy notice.
 /// </summary>
 public static class RetentionCatalog
 {
@@ -40,7 +40,9 @@ public static class RetentionCatalog
         new(typeof(ReconcileRecommendation), R2, WithSession),
         new(typeof(ReconcilePrompt), R2, "Removed R2 days after its local date."),
         new(typeof(ReconcileExposure), R2, "Removed R2 days after it was first seen."),
-        // 019C lists the confirmation as R1; here the durable decision evidence is the R1 event and command result.
+        new(typeof(PilotFeedbackResponse), R2, "Removed R2 days after it was given."),
+        // 019C §20 as amended on 2026-10-09: the stored preview holds titles, so it goes with its subject.
+        // The durable decision evidence is the R1 event and command result.
         new(typeof(ActionConfirmation), R2, "Removed with its Reconcile session or its planning draft."),
         new(typeof(PlanningDraft), R3, "A draft that is no longer reviewable is removed R3 days after it ended."),
         new(typeof(PlanningDraftRevision), R3, "Removed with its draft."),
@@ -50,6 +52,6 @@ public static class RetentionCatalog
         new(typeof(OutboxMessage), R4, "Removed R4 days after it was created. No publisher exists."),
         new(typeof(OtpChallenge), R4, "Removed R4 days after it was created."),
         new(typeof(OtpRateEvent), R4, "Removed after one day by the OTP rate cleanup."),
-        new(typeof(OperationsRecord), R4, "A maintenance run is removed R4 days after it ran. An erasure record is kept.")
+        new(typeof(OperationsRecord), R4, "A maintenance run or alert digest is removed R4 days after it ran. An erasure record is kept.")
     ];
 }

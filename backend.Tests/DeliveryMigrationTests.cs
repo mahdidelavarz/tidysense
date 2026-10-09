@@ -565,6 +565,74 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
     }
 
     [Fact]
+    public async Task Step11_pilot_gaps_round_trip_and_keep_accounts_and_earlier_operations_records()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var user = new User
+        {
+            Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000),
+            IsActive = true, SetupComplete = true, CreatedAt = now, AiConsentProvider = "deepseek",
+            AiConsentNoticeVersion = "2026-10-09.1", AiConsentAt = now, AiConsentRevision = 1
+        };
+        var run = new OperationsRecord { Id = Guid.NewGuid(), Kind = OperationsRecordKinds.MaintenanceRun, CreatedAt = now };
+        PilotFeedbackResponse Answer(Action<PilotFeedbackResponse>? set = null)
+        {
+            var answer = new PilotFeedbackResponse
+            {
+                Id = Guid.NewGuid(), UserId = user.Id, Instrument = PilotInstruments.PlanUsefulness,
+                InstrumentVersion = 1, SubjectId = user.Id, Answer = 4, CreatedAt = now
+            };
+            set?.Invoke(answer);
+            return answer;
+        }
+        db.AddRange(user, run, Answer(),
+            new OperationsRecord { Id = Guid.NewGuid(), Kind = OperationsRecordKinds.AlertDigest, CreatedAt = now });
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
+        // One answer per account, question and subject, on the scale, to a known question.
+        db.Add(Answer());
+        Assert.Equal("IX_PilotFeedbackResponses_UserId_Instrument_SubjectId", await ConstraintAsync());
+        db.Add(Answer(x => { x.SubjectId = Guid.NewGuid(); x.Answer = 6; }));
+        Assert.Equal("CK_PilotFeedbackResponses_Answer", await ConstraintAsync());
+        db.Add(Answer(x => { x.SubjectId = Guid.NewGuid(); x.Instrument = "H9_OTHER"; }));
+        Assert.Equal("CK_PilotFeedbackResponses_Instrument", await ConstraintAsync());
+        // Consent is a provider, a notice version and a time together, or nothing.
+        var half = await db.Users.SingleAsync(x => x.Id == user.Id, cancellationToken);
+        half.AiConsentAt = null;
+        Assert.Equal("CK_Users_AiConsent", await ConstraintAsync());
+
+        await migrator.MigrateAsync("20261008155127_Step11ReconcileExposure", cancellationToken);
+        // The earlier schema knows no digest record; the account and the maintenance run are untouched.
+        Assert.Equal(1, await db.Database.SqlQuery<int>(
+            $"SELECT COUNT(*)::int AS \"Value\" FROM \"OperationsRecords\" WHERE \"Id\" = {run.Id}").SingleAsync(cancellationToken));
+        Assert.Equal(0, await db.Database.SqlQuery<int>(
+            $"SELECT COUNT(*)::int AS \"Value\" FROM \"OperationsRecords\" WHERE \"Kind\" = 'ALERT_DIGEST'").SingleAsync(cancellationToken));
+        Assert.Equal(1, await db.Database.SqlQuery<int>(
+            $"SELECT COUNT(*)::int AS \"Value\" FROM \"Users\" WHERE \"Id\" = {user.Id}").SingleAsync(cancellationToken));
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        var restored = await db.Users.AsNoTracking().SingleAsync(x => x.Id == user.Id, cancellationToken);
+        Assert.Null(restored.AiConsentProvider);
+        Assert.Equal(0, restored.AiConsentRevision);
+        Assert.Equal(0, await db.PilotFeedbackResponses.CountAsync(x => x.UserId == user.Id, cancellationToken));
+        await db.OperationsRecords.Where(x => x.Id == run.Id).ExecuteDeleteAsync(cancellationToken);
+        await db.Users.Where(x => x.Id == user.Id).ExecuteDeleteAsync(cancellationToken);
+
+        async Task<string?> ConstraintAsync()
+        {
+            var failure = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(cancellationToken));
+            db.ChangeTracker.Clear();
+            return ((Npgsql.PostgresException)failure.InnerException!).ConstraintName;
+        }
+    }
+
+    [Fact]
     public async Task Step10_ai_reconcile_schema_round_trips_and_keeps_confirmations_and_invocations()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

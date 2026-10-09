@@ -6,9 +6,11 @@ import { addDays } from 'date-fns-jalali'
 import { toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { reviewGoal } from '../../goals/services/goals-api'
+import { submitPilotFeedback } from '../../pilot/services/pilot-api'
 import { completeTask } from '../../tasks/services/tasks-api'
 import {
   cancelReconcileExplanation,
+  completeReconcileSession,
   createReconcilePreview,
   dismissReconcileRecommendation,
   getReconcileSession,
@@ -34,6 +36,7 @@ vi.mock('../services/reconcile-api', () => ({
   requestReconcileExplanation: vi.fn(), cancelReconcileExplanation: vi.fn(), dismissReconcileRecommendation: vi.fn(),
 }))
 vi.mock('../../tasks/services/tasks-api', () => ({ completeTask: vi.fn() }))
+vi.mock('../../pilot/services/pilot-api', () => ({ submitPilotFeedback: vi.fn() }))
 vi.mock('../../goals/services/goals-api', () => ({ reviewGoal: vi.fn(), listGoals: vi.fn() }))
 vi.mock('../../projects/services/projects-api', () => ({ reviewProject: vi.fn(), listProjects: vi.fn() }))
 vi.mock('../../captures/services/captures-api', () => ({ discardCapture: vi.fn() }))
@@ -221,6 +224,26 @@ describe('ReconcilePage', () => {
     fireEvent.click(reviews.getByRole('button', { name: 'ادامه می‌دهم' }))
     await waitFor(() => expect(reviewGoal).toHaveBeenCalledWith(goalId, 'CONTINUE', 3))
     await waitFor(() => expect(useUiStore.getState().toasts.map(toast => toast.message)).toEqual(['هدف ادامه می‌یابد.']))
+  })
+
+  it('asks the optional understanding question only right after the user ends the session', async () => {
+    const closed = { ...session, status: 'COMPLETED', version: 2, completedAt: '2026-10-02T06:10:00Z' }
+    vi.mocked(completeReconcileSession).mockResolvedValue(closed)
+    vi.mocked(submitPilotFeedback).mockResolvedValue()
+    const view = renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'پایان بازبینی' }))
+    expect(await screen.findByText('این بازبینی بسته شد.')).toBeInTheDocument()
+    const question = within(await screen.findByRole('group', { name: 'چقدر برایتان روشن بود که هر مورد چرا در این بازبینی آمده بود؟' }))
+    fireEvent.click(question.getByRole('button', { name: '۵ از ۵، کاملاً روشن بود' }))
+    await waitFor(() => expect(submitPilotFeedback).toHaveBeenCalledWith({ instrument: 'H2_UNDERSTANDING', subjectId: sessionId, answer: 5 }))
+    expect(await screen.findByText('ممنون؛ پاسخ شما ثبت شد.')).toBeInTheDocument()
+    view.unmount()
+
+    // Coming back to a session that is already closed does not ask again.
+    vi.mocked(openReconcileSession).mockResolvedValue(closed)
+    renderPage()
+    expect(await screen.findByText('این بازبینی بسته شد.')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /چقدر برایتان روشن بود/ })).not.toBeInTheDocument()
   })
 
   it('shows a calm empty state when nothing is waiting and an explicit state when Reconcile is unavailable', async () => {

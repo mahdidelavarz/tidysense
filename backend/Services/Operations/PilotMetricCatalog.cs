@@ -21,10 +21,11 @@ public sealed record ExternalPilotMetric(string Id, string Hypothesis, string In
 /// </summary>
 public static class PilotMetricCatalog
 {
-    public const string Version = "2026-10-08.2";
+    public const string Version = "2026-10-09.1";
 
     public const string Behavioral = "BEHAVIORAL";
     public const string Operational = "OPERATIONAL";
+    public const string SelfReport = "SELF_REPORT";
 
     private const string NoSegment = "none";
     private const string Severity = "severity band stored when the session opened";
@@ -156,7 +157,7 @@ public static class PilotMetricCatalog
             GROUP BY r."Status" ORDER BY r."Status"
             """),
         new("H1.NON_TRIVIAL_PLAN", 1, "H1", Behavioral, "applied planning draft",
-            "applied drafts that created at least two entities, at least one of them a Task or a Routine (classifier v0)",
+            "applied drafts that created at least two entities, at least one of them a Task or a Routine (classifier v1)",
             "applied drafts", FlowWindow, ZeroRows, NoSegment,
             Flows + """
             SELECT '' AS "Segment",
@@ -182,6 +183,19 @@ public static class PilotMetricCatalog
                          AND undone."OccurredAt" < d."AppliedAt" + INTERVAL '7 days'))::bigint AS "Numerator",
                    COUNT(*)::bigint AS "Denominator"
             FROM drafts d WHERE d."AppliedAt" IS NOT NULL AND d."AppliedAt" + INTERVAL '7 days' <= @now
+            """),
+        new("H1.USEFULNESS_RESPONSE", 1, "H1", SelfReport, "applied planning draft",
+            "applied drafts by the answer to the in-app usefulness question (instrument H1_USEFULNESS, 1 lowest to 5 highest)",
+            "drafts applied by a succeeded command", FlowWindow,
+            "An applied draft whose question was not answered is NO_RESPONSE; it is never counted as an answer.",
+            "1, 2, 3, 4, 5, NO_RESPONSE",
+            Flows + """
+            SELECT COALESCE(f."Answer"::text, 'NO_RESPONSE') AS "Segment", COUNT(*)::bigint AS "Numerator",
+                   (SUM(COUNT(*)) OVER ())::bigint AS "Denominator"
+            FROM drafts d
+            LEFT JOIN "PilotFeedbackResponses" f ON f."Instrument" = 'H1_USEFULNESS' AND f."SubjectId" = d."DraftId"
+            WHERE d."ResultStatus" = 'SUCCEEDED'
+            GROUP BY 1 ORDER BY 1
             """),
 
         new("H2.ELIGIBLE_START_RATE", 1, "H2", Behavioral, "account and local date on which Reconcile was eligible when the account looked",
@@ -311,6 +325,23 @@ public static class PilotMetricCatalog
             FROM "DomainEvents" ev JOIN sessions s ON s."Id" = ev."ReconcileSessionId"
             WHERE ev."EventType" = 'RECONCILE_ACTION_CONFIRMED'
             """),
+        new("H2.UNDERSTANDING_RESPONSE", 1, "H2", SelfReport, "completed Reconcile session",
+            "completed sessions by the answer to the in-app understanding question (instrument H2_UNDERSTANDING, 1 lowest to 5 highest)",
+            "completed sessions of the same band and kind", SessionWindow,
+            "A completed session whose question was not answered is NO_RESPONSE; it is never counted as an answer.",
+            "<severity band>:<EXPLAINED when the session had a ready AI explanation, else DETERMINISTIC>:<1 to 5 or NO_RESPONSE>",
+            Sessions + """
+            SELECT x."Band" || ':' || x."Kind" || ':' || x."Answer" AS "Segment", COUNT(*)::bigint AS "Numerator",
+                   (SUM(COUNT(*)) OVER (PARTITION BY x."Band", x."Kind"))::bigint AS "Denominator"
+            FROM (SELECT s."Severity" AS "Band",
+                         CASE WHEN EXISTS (SELECT 1 FROM "ReconcileExplanations" e
+                             WHERE e."SessionId" = s."Id" AND e."Status" = 'READY') THEN 'EXPLAINED' ELSE 'DETERMINISTIC' END AS "Kind",
+                         COALESCE(f."Answer"::text, 'NO_RESPONSE') AS "Answer"
+                  FROM sessions s
+                  LEFT JOIN "PilotFeedbackResponses" f ON f."Instrument" = 'H2_UNDERSTANDING' AND f."SubjectId" = s."Id"
+                  WHERE s."Status" = 'COMPLETED') x
+            GROUP BY x."Band", x."Kind", x."Answer" ORDER BY 1
+            """),
         new("H2.USER_CONTRIBUTION", 1, "H2", Behavioral, "Reconcile session",
             "sessions of the single most active account", "sessions opened", SessionWindow, ZeroRows, NoSegment,
             Sessions + """
@@ -321,10 +352,10 @@ public static class PilotMetricCatalog
 
     public static readonly IReadOnlyList<ExternalPilotMetric> External =
     [
-        new("H1.USEFUL_FIRST_PLAN", "H1", "Locked usefulness question, joined to H1.APPLIED_PLAN, H1.NON_TRIVIAL_PLAN and the observation window."),
-        new("H1.TRUST_BOUNDARY_COMPREHENSION", "H1", "Comprehension check cross-checked against moderated observation."),
-        new("H1.REGRET_ATTRIBUTION", "H1", "User attribution of each H1.REVERSAL_7D reversal (regret, context changed, unclassified)."),
-        new("H2.UNDERSTANDING_SCORE", "H2", "Post-session understanding question and moderated observation."),
-        new("H2.REOPEN_OR_REGRET", "H2", "User attribution after an applied Reconcile action; no reversal reason is recorded.")
+        new("H1.USEFUL_FIRST_PLAN", "H1", "Composite set by the analysis plan: a positive H1.USEFULNESS_RESPONSE joined to H1.APPLIED_PLAN, H1.NON_TRIVIAL_PLAN and the observation window. The positive threshold is not set here."),
+        new("H1.TRUST_BOUNDARY_COMPREHENSION", "H1", "Moderated session: comprehension questions cross-checked against observed behavior (devmap/operations/pilot-research-protocol.md)."),
+        new("H1.REGRET_ATTRIBUTION", "H1", "Moderated session: the participant attributes each H1.REVERSAL_7D reversal (regret, context changed, unclassified)."),
+        new("H2.UNDERSTANDING_SCORE", "H2", "H2.UNDERSTANDING_RESPONSE cross-checked against moderated observation; the score rule is set by the analysis plan."),
+        new("H2.REOPEN_OR_REGRET", "H2", "Moderated session: the participant attributes outcomes after an applied Reconcile action; no reversal reason is recorded.")
     ];
 }

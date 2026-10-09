@@ -136,6 +136,10 @@ public sealed class OperationsApiTests(PostgresWebApplicationFactory factory)
         Assert.Equal([OperationsAlertRules.MaintenanceMissing],
             Rules(new AlertInput(now, false, [Family()], 0, 0, null, null)));
 
+        // The daily e-mail is the only way out of the application, so a failed send is raised too.
+        Assert.Equal([OperationsAlertRules.AlertDigestFailed],
+            Rules(Input(Family()) with { AlertDigestFailed = true }));
+
         var critical = OperationsAlertRules.Evaluate(Input(Family(spent: 2_000_000, latched: true)), thresholds);
         Assert.All(critical, x => Assert.Equal(OperationsAlertSeverities.Critical, x.Severity));
     }

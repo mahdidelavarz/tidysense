@@ -635,7 +635,7 @@ namespace TidySense.Migrations
                         {
                             t.HasCheckConstraint("CK_OperationsRecords_DetailsObject", "jsonb_typeof(\"DetailsJson\") = 'object'");
 
-                            t.HasCheckConstraint("CK_OperationsRecords_Kind", "\"Kind\" IN ('MAINTENANCE_RUN', 'USER_ERASURE')");
+                            t.HasCheckConstraint("CK_OperationsRecords_Kind", "\"Kind\" IN ('MAINTENANCE_RUN', 'USER_ERASURE', 'ALERT_DIGEST')");
 
                             t.HasCheckConstraint("CK_OperationsRecords_Outcome", "\"Outcome\" IN ('SUCCEEDED', 'FAILED')");
                         });
@@ -755,6 +755,56 @@ namespace TidySense.Migrations
                     b.ToTable("OutboxMessages", t =>
                         {
                             t.HasCheckConstraint("CK_OutboxMessages_AttemptCount", "\"AttemptCount\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.PilotFeedbackResponse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Answer")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Instrument")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<int>("InstrumentVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Instrument", "SubjectId");
+
+                    b.HasIndex("UserId", "Instrument", "SubjectId")
+                        .IsUnique();
+
+                    b.ToTable("PilotFeedbackResponses", t =>
+                        {
+                            t.HasCheckConstraint("CK_PilotFeedbackResponses_Answer", "\"Answer\" BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_PilotFeedbackResponses_Instrument", "\"Instrument\" IN ('H1_USEFULNESS', 'H2_UNDERSTANDING')");
+
+                            t.HasCheckConstraint("CK_PilotFeedbackResponses_InstrumentVersion", "\"InstrumentVersion\" > 0");
                         });
                 });
 
@@ -1881,6 +1931,20 @@ namespace TidySense.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("AiConsentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AiConsentNoticeVersion")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("AiConsentProvider")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("AiConsentRevision")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1912,6 +1976,8 @@ namespace TidySense.Migrations
 
                     b.ToTable("Users", t =>
                         {
+                            t.HasCheckConstraint("CK_Users_AiConsent", "(\"AiConsentProvider\" IS NULL) = (\"AiConsentNoticeVersion\" IS NULL) AND (\"AiConsentProvider\" IS NULL) = (\"AiConsentAt\" IS NULL)");
+
                             t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0");
                         });
                 });
@@ -2005,6 +2071,15 @@ namespace TidySense.Migrations
                     b.HasOne("TidySense.Models.DomainEvent", null)
                         .WithMany()
                         .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TidySense.Models.PilotFeedbackResponse", b =>
+                {
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

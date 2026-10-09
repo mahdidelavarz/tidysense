@@ -7,7 +7,11 @@ import { LoginView } from './LoginView'
 const navigate = vi.hoisted(() => vi.fn())
 vi.mock('@tanstack/react-router', async importOriginal => {
   const original = await importOriginal<typeof import('@tanstack/react-router')>()
-  return { ...original, useNavigate: () => navigate }
+  return {
+    ...original,
+    useNavigate: () => navigate,
+    Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
+  }
 })
 vi.mock('../services/auth-api', () => ({ getDevelopmentOtp: vi.fn(), requestOtp: vi.fn(), verifyOtp: vi.fn() }))
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-`WORKSTREAM_I_APPROVED — M1 CONTRACTS SLICE_LOCKED; LATER LOCK GATES REMAIN DRAFT`
+`WORKSTREAM_I_APPROVED — M1 CONTRACTS SLICE_LOCKED; LATER LOCK GATES REMAIN DRAFT, PREPARED FOR SIGN-OFF 2026-10-09`
 
 ## Freeze levels
 
@@ -26,6 +26,27 @@
 | Reconcile facts/severity/reasons | Backend owner | Backend + Product | Design, Safety, Research | M4/M7/M8 | M4 `SLICE_LOCKED`; M9 `PILOT_LOCKED` | classifier/rule tests/version | `DRAFT` |
 | H1/H2 metric dictionary | Pilot Research owner | Research + Backend | Product, Safety, Security/Privacy | M8/M9 | before collection `PILOT_LOCKED` | denominator queries/test fixtures | `DRAFT` |
 | provider safeguards, hostile-input policy and degraded/manual behavior | AI/Safety owner | Product + Backend | Security/Privacy, Research | M6/M8 | before real-user AI exposure | adversarial tests, provider review, signatures | `DRAFT` |
+
+## Pending sign-off (prepared 2026-10-09)
+
+The nine `DRAFT` rows above, and the pilot fields of the event-envelope row, have their evidence; what they lack is a signature. The roles in this register (Backend, Frontend, Product, Design, Safety, Security/Privacy, Research) were written for a team. **If one person holds all of them for the pilot, that person says so on the line below and signs each row once, after reading the acceptance contract named for it.** A signature here means "I read this contract and its 'Not covered' section and accept it as the locked behavior", not "the tests pass". Until a row is signed its state stays `DRAFT`; the metric dictionary must be signed before any pilot data is collected.
+
+Roles held by one person for the pilot: ☐ yes — name: ____________ date: ____________
+
+| Contract | Read before signing | Lock on signature | Signed (name, date) |
+|---|---|---|---|
+| command/idempotency/CommandResult | [Step 3 M1 review package](../../devmap/step-03-m1-review-package.md), [Step 5](../../devmap/development-steps.md) evidence | `SLICE_LOCKED` | |
+| Task/Today projection | STEP-05 evidence in [development steps](../../devmap/development-steps.md) | `SLICE_LOCKED` | |
+| RoutineOccurrence/local-date rules | [Step 6 acceptance](../../devmap/step-06-routine-acceptance.md) | `SLICE_LOCKED` | |
+| Planning Attempt/Draft/revisions | [Step 8 acceptance](../../devmap/step-08-planning-acceptance.md) | `SLICE_LOCKED` | |
+| preview/warning/confirmation | [Step 7](../../devmap/step-07-capture-reconcile-acceptance.md) and [Step 8](../../devmap/step-08-planning-acceptance.md) acceptance; 019C §20 amendment of 2026-10-09 | `SLICE_LOCKED` | |
+| runtime context/artifact manifest | [Step 9](../../devmap/step-09-ai-planning-acceptance.md) and [Step 10](../../devmap/step-10-ai-reconcile-acceptance.md) acceptance | `PILOT_LOCKED` | |
+| Reconcile facts/severity/reasons | [Step 7](../../devmap/step-07-capture-reconcile-acceptance.md) and [Step 10](../../devmap/step-10-ai-reconcile-acceptance.md) acceptance | `PILOT_LOCKED` | |
+| H1/H2 metric dictionary | [metric dictionary](../../devmap/operations/metric-dictionary.md) (catalog `2026-10-09.1`), [research protocol](../../devmap/operations/pilot-research-protocol.md) including the wording of the two in-app questions, [Step 11 acceptance](../../devmap/step-11-operations-acceptance.md) | `PILOT_LOCKED`, before collection | |
+| provider safeguards, hostile-input policy and degraded/manual behavior | [Step 9](../../devmap/step-09-ai-planning-acceptance.md), [Step 10](../../devmap/step-10-ai-reconcile-acceptance.md), [Step 11](../../devmap/step-11-operations-acceptance.md) acceptance, the consent notice wording, [security review](../../devmap/quality/security-review-2026-10-09.md) | before real-user AI exposure | |
+| event envelope/privacy classes, pilot fields | 019C amendment of 2026-10-09 (confirmation retention, consent event, pilot answers, durations) | `PILOT_LOCKED` | |
+
+When a row is signed, copy the signature into the "Lock evidence" column of the table above and change its "Current state".
 
 ## Change procedure
 

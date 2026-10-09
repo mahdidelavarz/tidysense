@@ -23,7 +23,7 @@ export function NavDrawer({ onClose }: { onClose: () => void }) {
           <NavList onNavigate={onClose} />
         </nav>
         <div className="mt-auto">
-          <AccountMenu />
+          <AccountMenu onNavigate={onClose} />
         </div>
       </div>
     </>

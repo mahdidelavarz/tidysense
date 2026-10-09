@@ -8,8 +8,10 @@ Use expand/migrate/contract for changes that cannot be safely deployed atomicall
 
 Backup, restore and rollback procedures are in [`runbooks.md`](runbooks.md) and are rehearsed by `ops-drill.ps1` on an isolated database: dump, restore into a new database, start a backend on the copy, roll the copy back one migration and forward again. They have not been run against a deployed environment.
 
+Outside Development a migration is applied only by the explicit command `dotnet TidySense.dll migrate`, which applies what is pending, prints the names and exits. The backend never migrates on start there.
+
 ## Deployment direction
 
-`DEFERRED DEC-011`: Docker Compose topology, CI provider, full deployment pipeline, ingress/proxy choice and broader orchestration are not locked. Health/readiness, structured logs, backups, rollback and incident procedures remain required outcomes when deployment is designed.
+`DEC-011` is resolved for the pilot by [ADR-007](../decisions/ADR-007-pilot-deployment-topology.md): one server, Docker Compose, a single backend instance, Caddy in front, an explicit migration step, a daily backup, a daily alert digest plus one external uptime check, and a release gate run by hand instead of a CI service. The definition is `deploy/`; the procedure is [`deployment.md`](deployment.md). It is defined and syntax-checked, not yet built or run on a server.
 
 Deployment order must preserve schema/application compatibility, validate readiness, smoke-test authentication and a critical owned-resource operation, and support rollback without corrupting newer data. Pilot/release authorization remains governed by Mind Map readiness gates, not a successful deployment alone.

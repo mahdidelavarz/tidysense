@@ -21,6 +21,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+// Every request body is a small JSON document; nothing legitimate comes near this limit.
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 256 * 1024);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -52,6 +54,7 @@ foreach (var schema in TaskEventSchemas.All()) builder.Services.AddSingleton(sch
 foreach (var schema in RoutineEventSchemas.All()) builder.Services.AddSingleton(schema);
 foreach (var schema in ReconcileEventSchemas.All()) builder.Services.AddSingleton(schema);
 foreach (var schema in PlanningEventSchemas.All()) builder.Services.AddSingleton(schema);
+foreach (var schema in AccountEventSchemas.All()) builder.Services.AddSingleton(schema);
 builder.Services.AddSingleton<EventPayloadValidator>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -148,6 +151,8 @@ if (string.IsNullOrWhiteSpace(planningProvider) ||
     builder.Services.AddSingleton<IPlanningGenerator, DeterministicPlanningGenerator>();
 else
     builder.Services.AddSingleton<IPlanningGenerator, AiPlanningGenerator>();
+builder.Services.AddSingleton<AiConsentPolicy>();
+builder.Services.AddScoped<AiConsentService>();
 builder.Services.AddHostedService<PlanningAttemptWorker>();
 // The Reconcile explanation is selected the same way and independently of planning.
 var reconcileProvider = builder.Configuration[$"{AiOptions.SectionName}:Reconcile:Provider"];
@@ -163,9 +168,16 @@ builder.Services.AddScoped<OperationsHealthService>();
 builder.Services.AddScoped<PilotMetricsService>();
 builder.Services.AddScoped<OperationsMaintenance>();
 builder.Services.AddScoped<UserErasureService>();
-// Tests run maintenance themselves, against a clock they control.
+builder.Services.AddOptions<PilotOptions>().Bind(builder.Configuration.GetSection(PilotOptions.SectionName));
+builder.Services.AddScoped<PilotFeedbackService>();
+builder.Services.AddSingleton<IAlertDigestSender, SmtpAlertDigestSender>();
+builder.Services.AddScoped<OperationsAlertDigest>();
+// Tests run maintenance and the digest themselves, against a clock they control.
 if (!builder.Environment.IsEnvironment("Testing"))
+{
     builder.Services.AddHostedService<OperationsMaintenanceService>();
+    builder.Services.AddHostedService<OperationsAlertDigestService>();
+}
 builder.Services.AddScoped<ApplicationDateService>();
 builder.Services.AddScoped<CommandExecutionService>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -190,6 +202,18 @@ if (OperationsCommandLine.IsCommand(args))
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") &&
     (app.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>()?.Length ?? 0) == 0)
     throw new InvalidOperationException("Security:AllowedOrigins must be configured in production.");
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+{
+    // The privacy notice names this channel as the way to ask for erasure; it cannot be empty.
+    if (string.IsNullOrWhiteSpace(app.Services.GetRequiredService<IOptions<PilotOptions>>().Value.SupportContact))
+        throw new InvalidOperationException("Pilot:SupportContact must be configured in production.");
+    // Alerts leave the application only through the daily digest.
+    var digest = app.Services.GetRequiredService<IOptions<OperationsOptions>>().Value.AlertDigest;
+    if (!digest.Enabled || string.IsNullOrWhiteSpace(digest.To) || string.IsNullOrWhiteSpace(digest.From) ||
+        string.IsNullOrWhiteSpace(digest.SmtpHost))
+        throw new InvalidOperationException(
+            "Operations:AlertDigest must be enabled with To, From and SmtpHost in production.");
+}
 {
     var ai = app.Services.GetRequiredService<IOptions<AiOptions>>().Value;
     if (app.Services.GetRequiredService<IPlanningGenerator>() is AiPlanningGenerator)
@@ -226,14 +250,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health/ready").AllowAnonymous();
 app.MapGet("/health/live", () => Results.Ok(new { status = "Healthy" })).AllowAnonymous();
-app.MapOpenApi("/openapi/{documentName}.json");
+// The API description is a development aid; a deployed backend does not publish it.
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+    app.MapOpenApi("/openapi/{documentName}.json");
 app.MapControllers();
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 {
     app.MapGet("/api/v1/dev/otp/latest", (HttpContext context, string phoneNumber, DevelopmentSmsSender sender) =>
     {
+        // Answered to the backend's own machine only, unless a local rehearsal behind a proxy asks for it
+        // explicitly. The endpoint does not exist at all outside Development and Testing.
         if (!IPAddress.IsLoopback(context.Connection.RemoteIpAddress ?? IPAddress.None) &&
-            !app.Environment.IsEnvironment("Testing")) return Results.NotFound();
+            !app.Environment.IsEnvironment("Testing") &&
+            !app.Configuration.GetValue<bool>("Development:ShowLoginCode")) return Results.NotFound();
         try
         {
             var code = sender.Latest(UserService.NormalizeIranianMobile(phoneNumber));
@@ -242,7 +271,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
         catch (ArgumentException) { return Results.NotFound(); }
     }).ExcludeFromDescription();
     app.MapPost("/api/v1/dev/test-session", async (HttpContext context, AppDbContext db,
-        JwtTokenService tokens, IOptions<JwtOptions> jwtOptions, OperatorAccess operators) =>
+        JwtTokenService tokens, IOptions<JwtOptions> jwtOptions, OperatorAccess operators, AiConsentPolicy consent) =>
     {
         if (!IPAddress.IsLoopback(context.Connection.RemoteIpAddress ?? IPAddress.None) &&
             !app.Environment.IsEnvironment("Testing")) return Results.NotFound();
@@ -264,7 +293,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
             SameSite = SameSiteMode.Lax, Path = "/", IsEssential = true,
             Expires = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.LifetimeMinutes)
         });
-        return Results.Ok(AuthService.ToDto(user, operators));
+        return Results.Ok(AuthService.ToDto(user, operators, consent));
     }).ExcludeFromDescription();
 }
 

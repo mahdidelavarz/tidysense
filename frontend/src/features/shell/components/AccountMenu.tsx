@@ -1,9 +1,10 @@
-import { ChevronUp, CircleUser, LogOut } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { ChevronUp, CircleUser, LogOut, ShieldCheck } from 'lucide-react'
 import { useId, useState } from 'react'
 import { useCurrentUser, useLogout } from '../../auth/hooks/auth-hooks'
 
-/** Account block at the foot of the sidebar/drawer: who is signed in, and the two sign-out choices. */
-export function AccountMenu() {
+/** Account block at the foot of the sidebar/drawer: who is signed in, the privacy page and the two sign-out choices. */
+export function AccountMenu({ onNavigate }: { onNavigate?: () => void }) {
   const user = useCurrentUser()
   const logout = useLogout()
   const [open, setOpen] = useState(false)
@@ -19,6 +20,10 @@ export function AccountMenu() {
     <div className="border-t border-border-subtle pt-3">
       {open && (
         <div className="mb-1 space-y-1" id={panelId}>
+          <Link className="nav-item" to="/privacy" onClick={onNavigate}>
+            <ShieldCheck size={20} aria-hidden="true" />
+            حریم خصوصی و داده‌ها
+          </Link>
           <button className="nav-item w-full" type="button" disabled={logout.isPending} onClick={() => signOut(false)}>
             <LogOut size={20} aria-hidden="true" />
             خروج از این مرورگر

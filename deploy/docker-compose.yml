@@ -1,0 +1,135 @@
+# The pilot deployment: one server, one of each container (DEC-011, resolved 2026-10-09).
+# Run from this directory with a filled-in .env:  docker compose up --detach --build
+# Procedures are in devmap/operations/deployment.md.
+name: tidysense
+
+# Container output goes to the host journal, which is limited to 30 days on the server
+# (deployment.md, "Logs"). LOG_DRIVER exists so the stack can also be started where journald is absent.
+x-logging: &logging
+  driver: ${LOG_DRIVER:-journald}
+
+x-backend: &backend
+  build:
+    context: ..
+    dockerfile: deploy/backend.Dockerfile
+  image: tidysense-backend
+  environment:
+    ConnectionStrings__DefaultConnection: Host=db;Database=tidysense;Username=tidysense;Password=${POSTGRES_PASSWORD:?}
+    Jwt__SigningKey: ${JWT_SIGNING_KEY:?}
+    Otp__HashingKey: ${OTP_HASHING_KEY:?}
+    Kavenegar__ApiKey: ${KAVENEGAR_API_KEY:?}
+    Kavenegar__Sender: ${KAVENEGAR_SENDER:?}
+    AllowedHosts: ${SITE_HOST:?}
+    Security__AllowedOrigins__0: https://${SITE_HOST:?}
+    # Only the proxy's address is trusted for X-Forwarded-For and X-Forwarded-Proto.
+    Security__KnownProxies__0: 172.30.0.10
+    Ai__Planning__Provider: ${AI_PLANNING_PROVIDER:-mock}
+    Ai__Reconcile__Provider: ${AI_RECONCILE_PROVIDER:-mock}
+    Ai__Providers__deepseek__ApiKey: ${DEEPSEEK_API_KEY:-}
+    Operations__OperatorPhones__0: ${OPERATOR_PHONE:?}
+    Operations__InternalPhones__0: ${INTERNAL_PHONE:-}
+    Operations__AlertDigest__Enabled: "true"
+    Operations__AlertDigest__To: ${ALERT_EMAIL_TO:?}
+    Operations__AlertDigest__From: ${ALERT_EMAIL_FROM:?}
+    Operations__AlertDigest__SmtpHost: ${SMTP_HOST:?}
+    Operations__AlertDigest__SmtpPort: ${SMTP_PORT:-587}
+    Operations__AlertDigest__SmtpUser: ${SMTP_USER:-}
+    Operations__AlertDigest__SmtpPassword: ${SMTP_PASSWORD:-}
+    Pilot__SupportContact: ${SUPPORT_CONTACT:?}
+  networks:
+    - internal
+  logging: *logging
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tidysense
+      POSTGRES_USER: tidysense
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username tidysense --dbname tidysense"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - internal
+    logging: *logging
+
+  # The explicit migration step: it applies pending migrations and exits. The backend starts
+  # only after it succeeded. Take a backup first when a release carries a migration.
+  migrate:
+    <<: *backend
+    command: ["migrate"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Exactly one instance: the provider circuit, the spend latch, the concurrency limit, the
+  # planning queue and the daily digest all live in this one process. Do not scale this service.
+  backend:
+    <<: *backend
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    image: tidysense-web
+    restart: unless-stopped
+    environment:
+      # The host name gets a certificate from Caddy. Override only when TLS ends in front of this server.
+      SITE_ADDRESS: ${SITE_ADDRESS:-${SITE_HOST:?}}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+    networks:
+      internal:
+        ipv4_address: 172.30.0.10
+    logging: *logging
+
+  # One dump a day, kept 30 days (the erasure limit). Dumps hold personal data: the volume
+  # is under the same access rule as the database.
+  backup:
+    image: postgres:18
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      PGHOST: db
+      PGDATABASE: tidysense
+      PGUSER: tidysense
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - backups:/backups
+      - ./backup.sh:/backup.sh:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+    logging: *logging
+
+volumes:
+  pgdata:
+  backups:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

@@ -3,6 +3,9 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { AxiosError, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUiStore } from '../../../shared/lib/ui-store'
+import { currentUser } from '../../auth/services/auth-api'
+import type { CurrentUser } from '../../auth/types/auth.types'
+import { getPilotNotice, setAiConsent, submitPilotFeedback } from '../../pilot/services/pilot-api'
 import {
   cancelPlanningAttempt,
   createPlanningPreview,
@@ -26,6 +29,10 @@ import { PlanningPage } from './PlanningPage'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
+}))
+vi.mock('../../auth/services/auth-api', () => ({ currentUser: vi.fn() }))
+vi.mock('../../pilot/services/pilot-api', () => ({
+  getPilotNotice: vi.fn(), setAiConsent: vi.fn(), submitPilotFeedback: vi.fn(),
 }))
 vi.mock('../services/planning-api', () => ({
   getPlanningActive: vi.fn(), startPlanningAttempt: vi.fn(), getPlanningAttempt: vi.fn(),
@@ -93,6 +100,11 @@ const result: PlanningApplyResultDto = {
   routineIds: [], factCount: 1,
 }
 
+const account = (overrides: Partial<CurrentUser> = {}): CurrentUser => ({
+  id: '00000000-0000-0000-0000-000000000001', phoneNumber: '+989120000000', displayName: null, setupComplete: true,
+  isOperator: false, aiConsentRequired: false, aiConsentGranted: true, ...overrides,
+})
+
 function apiError(status: number, code: string) {
   return new AxiosError('failed', undefined, undefined, undefined, { status, data: { code } } as AxiosResponse)
 }
@@ -117,6 +129,35 @@ describe('PlanningPage', () => {
     vi.clearAllMocks()
     useUiStore.setState({ toasts: [], createTarget: null })
     vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: null, sampleGenerator: true })
+    vi.mocked(currentUser).mockResolvedValue(account())
+  })
+
+  it('asks for consent that names the provider before any text can be written, and keeps the manual path', async () => {
+    vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: null, sampleGenerator: false })
+    vi.mocked(currentUser).mockResolvedValue(account({ aiConsentRequired: true, aiConsentGranted: false }))
+    vi.mocked(getPilotNotice).mockResolvedValue({
+      noticeVersion: '2026-10-09.1', aiProviderName: 'DeepSeek', sessionHistoryDays: 180, draftDays: 30,
+      diagnosticsDays: 90, erasureCompletionDays: 30, supportContact: 'support@example.test', feedbackInstrumentVersion: 1,
+    })
+    vi.mocked(setAiConsent)
+      .mockRejectedValueOnce(apiError(409, 'AI_CONSENT_NOTICE_CHANGED'))
+      .mockResolvedValueOnce(account({ aiConsentRequired: true, aiConsentGranted: true }))
+    renderPage()
+
+    const card = within((await screen.findByRole('heading', { name: 'اجازه شما برای برنامه‌ریزی با هوش مصنوعی' })).closest('section') as HTMLElement)
+    expect(card.getByText('DeepSeek')).toBeInTheDocument()
+    expect(card.getByText(/این متن از کشور خارج می‌شود/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).not.toBeInTheDocument()
+    fireEvent.click(card.getByRole('button', { name: 'خودم دستی می‌سازم' }))
+    expect(useUiStore.getState().createTarget).toBe('menu')
+
+    // A notice that changed since it was shown is not agreed to; the user is told and decides again.
+    fireEvent.click(card.getByRole('button', { name: 'موافقم، با هوش مصنوعی برنامه‌ریزی کن' }))
+    expect(await card.findByText(/این توضیح به‌روز شده است/)).toBeInTheDocument()
+    fireEvent.click(card.getByRole('button', { name: 'موافقم، با هوش مصنوعی برنامه‌ریزی کن' }))
+    await waitFor(() => expect(setAiConsent).toHaveBeenLastCalledWith(true, '2026-10-09.1'))
+    expect(await screen.findByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).toBeInTheDocument()
+    expect(startPlanningAttempt).not.toHaveBeenCalled()
   })
 
   it('starts one attempt, polls it by id and shows the validated draft as an unapproved hierarchy', async () => {
@@ -326,6 +367,15 @@ describe('PlanningPage', () => {
     await waitFor(() => expect(getPlanningConfirmation).toHaveBeenCalledWith(confirmationId))
     expect(await screen.findByText('برنامه ساخته شد.')).toBeInTheDocument()
     expect(submitPlanningConfirmation).toHaveBeenCalledTimes(1)
+
+    // The optional question is about this plan, is answered once and never blocks the way on.
+    vi.mocked(submitPilotFeedback).mockResolvedValue()
+    const question = within(screen.getByRole('group', { name: 'این برنامه چقدر برای شروع کار به دردتان می‌خورد؟' }))
+    expect(screen.getByText('رفتن به امروز')).toBeInTheDocument()
+    fireEvent.click(question.getByRole('button', { name: '۴ از ۵' }))
+    await waitFor(() => expect(submitPilotFeedback).toHaveBeenCalledWith({ instrument: 'H1_USEFULNESS', subjectId: draftId, answer: 4 }))
+    expect(await screen.findByText('ممنون؛ پاسخ شما ثبت شد.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '۴ از ۵' })).not.toBeInTheDocument()
   })
 
   it('shows the questions, sends the answers as a continuation of the same flow and then shows the draft', async () => {

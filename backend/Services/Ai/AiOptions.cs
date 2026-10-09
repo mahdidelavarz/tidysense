@@ -73,6 +73,9 @@ public sealed class AiProviderOptions
     public string ApiKey { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
 
+    /// <summary>The name users are shown when asked to agree that their text is sent to this provider.</summary>
+    public string DisplayName { get; set; } = string.Empty;
+
     /// <summary>
     /// Sends <c>thinking: disabled</c>. DeepSeek reasons by default, which is slower and spends
     /// output tokens; a provider that does not know the field should leave this off.

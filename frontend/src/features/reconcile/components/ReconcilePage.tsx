@@ -7,6 +7,7 @@ import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { CaptureLane } from '../../captures/components/CaptureLane'
+import { PilotQuestion } from '../../pilot/components/PilotQuestion'
 import { TaskCarrySheet } from '../../tasks/components/TaskCarrySheet'
 import { useCompleteTask } from '../../tasks/hooks/task-hooks'
 import { useCompleteReconcileSession, useReconcileAction, useReconcileSession } from '../hooks/reconcile-hooks'
@@ -46,6 +47,8 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
   const finish = useCompleteReconcileSession()
   // An action that needs a date waits here until the user picks one.
   const [dated, setDated] = useState<ReconcileActionDraft | null>(null)
+  // The optional question is asked once, right after the user ends the session here; never on a later visit.
+  const [justCompleted, setJustCompleted] = useState(false)
 
   const counts = session.counts
   const severity = severityLabels[session.severity] ?? severityLabels.NONE
@@ -69,6 +72,9 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
             </div>
           )}
         />
+        {justCompleted && session.status === 'COMPLETED' && (
+          <PilotQuestion instrument="H2_UNDERSTANDING" subjectId={session.id} />
+        )}
       </div>
     )
   }
@@ -135,7 +141,12 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
                 className="secondary-button"
                 type="button"
                 disabled={finish.isPending}
-                onClick={() => finish.mutate(session, { onSuccess: () => showToast('بازبینی بسته شد.') })}
+                onClick={() => finish.mutate(session, {
+                  onSuccess: () => {
+                    setJustCompleted(true)
+                    showToast('بازبینی بسته شد.')
+                  },
+                })}
               >
                 {finish.isPending ? 'در حال ثبت…' : 'پایان بازبینی'}
               </button>

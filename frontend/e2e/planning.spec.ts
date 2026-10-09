@@ -62,6 +62,11 @@ test('an intention becomes a reviewed draft and only the confirmed plan is creat
   await review.getByRole('button', { name: 'تأیید و ساخت' }).click()
   await expect(page.getByText('برنامه ساخته شد.')).toBeVisible()
   await page.screenshot({ path: 'test-results/step-08-result.png', fullPage: true })
+  // The optional pilot question sits under the result, is answered once and leaves the way on untouched.
+  const question = page.getByRole('group', { name: 'این برنامه چقدر برای شروع کار به دردتان می‌خورد؟' })
+  await question.getByRole('button', { name: '۴ از ۵' }).click()
+  await expect(page.getByText('ممنون؛ پاسخ شما ثبت شد.')).toBeVisible()
+  await expect(question).toBeHidden()
 
   const goal = (await get<Listed>('goals?limit=100')).items.find(item => item.title === intention)
   if (!goal) throw new Error('The planned Goal was not created.')
