@@ -207,6 +207,12 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
     // The privacy notice names this channel as the way to ask for erasure; it cannot be empty.
     if (string.IsNullOrWhiteSpace(app.Services.GetRequiredService<IOptions<PilotOptions>>().Value.SupportContact))
         throw new InvalidOperationException("Pilot:SupportContact must be configured in production.");
+    // Nobody can sign in without a working SMS configuration: the key, and the approved
+    // verification template or, failing that, a sender line.
+    var sms = app.Services.GetRequiredService<IOptions<KavenegarOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(sms.ApiKey) ||
+        (string.IsNullOrWhiteSpace(sms.Template) && string.IsNullOrWhiteSpace(sms.Sender)))
+        throw new InvalidOperationException("Kavenegar:ApiKey and Kavenegar:Template (or Sender) must be configured in production.");
     // Alerts leave the application only through the daily digest.
     var digest = app.Services.GetRequiredService<IOptions<OperationsOptions>>().Value.AlertDigest;
     if (!digest.Enabled || string.IsNullOrWhiteSpace(digest.To) || string.IsNullOrWhiteSpace(digest.From) ||

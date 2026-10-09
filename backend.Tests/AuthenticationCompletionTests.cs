@@ -206,6 +206,8 @@ public sealed class AuthenticationCompletionTests : IClassFixture<PostgresWebApp
                     ["Otp:HashingKey"] = "production-profile-test-hashing-key-32-chars",
                     ["Security:AllowedOrigins:0"] = "https://app.example",
                     ["Pilot:SupportContact"] = "support@app.example",
+                    ["Kavenegar:ApiKey"] = "production-profile-test-key",
+                    ["Kavenegar:Template"] = "login-code",
                     ["Operations:AlertDigest:Enabled"] = "true",
                     ["Operations:AlertDigest:To"] = "operator@app.example",
                     ["Operations:AlertDigest:From"] = "alerts@app.example",

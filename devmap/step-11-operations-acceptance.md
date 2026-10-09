@@ -150,7 +150,7 @@ The twelve gaps the first version of this contract left open, and where each sta
 | 8 | Metric dictionary lock | Prepared, **not signed** | Classifier v1 and the seven-day window accepted; catalog `2026-10-09.1`; register row prepared | The owner's signature before collection |
 | 9 | Instruments for five metrics | Built and written, **not approved, not held** | Two in-app questions with their metrics; [research protocol](operations/pilot-research-protocol.md) for the moderated sessions | Approval of the wording; the sessions themselves |
 | 10 | Freeze-register sign-offs | Prepared, **not signed** | Sign-off table with what to read per row | The owner's statement of roles and signatures |
-| 11 | Security review and screen-reader pass | Review done; pass **not done** | [Security review](quality/security-review-2026-10-09.md); [screen-reader checklist](quality/screen-reader-pass.md) | Findings 1 and 2; a person with NVDA for about an hour |
+| 11 | Security review and screen-reader pass | Review done; pass **not done** | [Security review](quality/security-review-2026-10-09.md); [screen-reader checklist](quality/screen-reader-pass.md) | Findings 1 and 2 accepted for now by the owner (2026-10-09), not fixed; a person with NVDA for about an hour |
 | 12 | Consent and data location for the AI provider | Closed in code | Server-side consent gate, consent card, privacy page, R1 decision event | Approval of the consent wording; never shown against the real provider |
 
 ## Not covered by this evidence
@@ -158,7 +158,7 @@ The twelve gaps the first version of this contract left open, and where each sta
 - **Nothing is deployed.** The stack was built and exercised on a developer machine only. No server exists: no public certificate was issued, the journal limit was never set, the backup loop never ran for more than minutes, no real SMS left a container, and the digest was never sent through a real mail server or over TLS. The 30-day promise in the privacy notice rests on two server settings nobody has yet made.
 - **A critical alert can wait a day.** The digest is daily and the uptime check sees only whether the server answers. A failed backup is a journal line and nothing else.
 - **The consent card and both pilot questions use wording nobody approved.** The consent flow was exercised by backend tests with a scripted provider and in a browser with simulated reads, never end to end against the real provider.
-- **Two security findings are open**: credentials in the first commit's history, and the guessability of a four-digit login code. Both need the owner.
+- **Two security findings are accepted, not fixed** (owner, 2026-10-09): credentials in the first commit's history, and the guessability of a four-digit login code.
 - **No signature exists** on the metric dictionary or any other `DRAFT` row of the freeze register. Collection must not start before the dictionary is signed.
 - **No moderated session was held**, so the three metrics that depend on them have no data, and the two composites have only their self-report part.
 - **No legal review** of the retention durations, the erasure mechanics or the consent text. The owner decided them for the pilot.

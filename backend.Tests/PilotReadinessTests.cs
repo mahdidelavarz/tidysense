@@ -387,6 +387,8 @@ public sealed class PilotReadinessTests(PostgresWebApplicationFactory factory)
 
     [Theory]
     [InlineData("Pilot:SupportContact")]
+    [InlineData("Kavenegar:ApiKey")]
+    [InlineData("Kavenegar:Template")]
     [InlineData("Operations:AlertDigest:Enabled")]
     [InlineData("Operations:AlertDigest:To")]
     [InlineData("Operations:AlertDigest:SmtpHost")]
@@ -399,6 +401,8 @@ public sealed class PilotReadinessTests(PostgresWebApplicationFactory factory)
             ["Otp:HashingKey"] = "production-profile-test-hashing-key-32-chars",
             ["Security:AllowedOrigins:0"] = "https://app.example",
             ["Pilot:SupportContact"] = "support@app.example",
+            ["Kavenegar:ApiKey"] = "production-profile-test-key",
+            ["Kavenegar:Template"] = "login-code",
             ["Operations:AlertDigest:Enabled"] = "true",
             ["Operations:AlertDigest:To"] = "operator@app.example",
             ["Operations:AlertDigest:From"] = "alerts@app.example",

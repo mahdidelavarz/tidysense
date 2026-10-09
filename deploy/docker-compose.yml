@@ -18,7 +18,9 @@ x-backend: &backend
     Jwt__SigningKey: ${JWT_SIGNING_KEY:?}
     Otp__HashingKey: ${OTP_HASHING_KEY:?}
     Kavenegar__ApiKey: ${KAVENEGAR_API_KEY:?}
-    Kavenegar__Sender: ${KAVENEGAR_SENDER:?}
+    # The login code goes out through Kavenegar's Verify Lookup with this approved template.
+    Kavenegar__Template: ${KAVENEGAR_VERIFY_TEMPLATE:?}
+    Kavenegar__Sender: ${KAVENEGAR_SENDER:-}
     AllowedHosts: ${SITE_HOST:?}
     Security__AllowedOrigins__0: https://${SITE_HOST:?}
     # Only the proxy's address is trusted for X-Forwarded-For and X-Forwarded-Proto.

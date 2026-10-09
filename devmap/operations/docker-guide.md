@@ -167,7 +167,7 @@ Never run a second `backend`, for example with `--scale`: the application keeps 
 | `backend` keeps restarting, log says `… must be configured in production` | the named setting is missing: the contact channel, the alert e-mail settings, or the allowed origin |
 | `migrate` exited with a code other than 0 | read `docker compose logs migrate`; the backend was not replaced |
 | the browser cannot reach the site, `web` log mentions a certificate or ACME | DNS does not point at the server yet, or port 80 is closed |
-| the login form says verification is unavailable | the SMS key or sender line is wrong, or the SMS account has no credit |
+| the login form says verification is unavailable | Kavenegar refused the message: the API key is wrong, the verification template name does not match an approved template (its text must contain `%token`), or the account has no credit |
 | every request to `/api` answers 400 | you opened the site by an address other than `SITE_HOST` (for example its IP) |
 | `logging driver … journald` error on a machine without systemd | add `LOG_DRIVER=json-file` to the env file (the local file already has it) |
 | ports 80 or 443 already in use (locally) | stop the other program, or another Compose project that uses them |
