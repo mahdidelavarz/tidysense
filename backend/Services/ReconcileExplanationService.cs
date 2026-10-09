@@ -235,13 +235,17 @@ public sealed class ReconcileExplanationService(
         db.ReconcileRecommendations.FromSqlInterpolated($"SELECT * FROM \"ReconcileRecommendations\" WHERE \"Id\" = {id} AND \"UserId\" = {currentUser.UserId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken);
 
-    private async Task CloseLostAsync(Guid sessionId, CancellationToken cancellationToken)
+    private Task CloseLostAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        CloseLostAsync(db, sessionId, dates.UtcNow, cancellationToken);
+
+    /// <summary>Fails explanations whose process was lost: those of one session, or every one when none is named.</summary>
+    public static Task<int> CloseLostAsync(AppDbContext context, Guid? sessionId, DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
-        var now = dates.UtcNow;
         var lostBefore = now - LostAfter;
-        await db.ReconcileExplanations
-            .Where(x => x.SessionId == sessionId && x.Status == ReconcileExplanationStatuses.Running &&
-                x.CreatedAt < lostBefore)
+        return context.ReconcileExplanations
+            .Where(x => (sessionId == null || x.SessionId == sessionId) &&
+                x.Status == ReconcileExplanationStatuses.Running && x.CreatedAt < lostBefore)
             .ExecuteUpdateAsync(x => x
                 .SetProperty(e => e.Status, ReconcileExplanationStatuses.Failed)
                 .SetProperty(e => e.FailureCode, ReconcileExplanationFailureCodes.GenerationTimeout)

@@ -32,6 +32,13 @@ public sealed class ReconcileService(
     public async Task<ReconcileOverviewDto> OverviewAsync(CancellationToken cancellationToken)
     {
         var (evaluation, today) = await EvaluateAsync(cancellationToken);
+        // The first eligible look of a local date is kept, so a day without a session can still be counted.
+        if (evaluation.Eligible)
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "ReconcileExposures" ("Id", "UserId", "LocalDate", "Severity", "FirstSeenAt", "RetentionClass")
+                VALUES ({Guid.NewGuid()}, {currentUser.UserId}, {today}, {evaluation.Severity}, {dates.UtcNow}, {"R2"})
+                ON CONFLICT ("UserId", "LocalDate") DO NOTHING
+                """, cancellationToken);
         var prompt = await db.ReconcilePrompts.AsNoTracking().SingleOrDefaultAsync(
             x => x.UserId == currentUser.UserId && x.LocalDate == today, cancellationToken);
         var counts = evaluation.Counts;

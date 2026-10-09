@@ -14,6 +14,7 @@ using TidySense.Infrastructure.Ai;
 using TidySense.Infrastructure.Sms;
 using TidySense.Services;
 using TidySense.Services.Ai;
+using TidySense.Services.Operations;
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
@@ -156,6 +157,15 @@ if (string.IsNullOrWhiteSpace(reconcileProvider) ||
 else
     builder.Services.AddSingleton<IReconcileExplainer, AiReconcileExplainer>();
 builder.Services.AddHostedService<ReconcileExplanationWorker>();
+builder.Services.AddOptions<OperationsOptions>().Bind(builder.Configuration.GetSection(OperationsOptions.SectionName));
+builder.Services.AddSingleton<OperatorAccess>();
+builder.Services.AddScoped<OperationsHealthService>();
+builder.Services.AddScoped<PilotMetricsService>();
+builder.Services.AddScoped<OperationsMaintenance>();
+builder.Services.AddScoped<UserErasureService>();
+// Tests run maintenance themselves, against a clock they control.
+if (!builder.Environment.IsEnvironment("Testing"))
+    builder.Services.AddHostedService<OperationsMaintenanceService>();
 builder.Services.AddScoped<ApplicationDateService>();
 builder.Services.AddScoped<CommandExecutionService>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -171,6 +181,12 @@ else
 }
 
 var app = builder.Build();
+// An operator procedure runs and exits; it never serves HTTP and starts no background work.
+if (OperationsCommandLine.IsCommand(args))
+{
+    Environment.ExitCode = await OperationsCommandLine.RunAsync(app.Services, args);
+    return;
+}
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") &&
     (app.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>()?.Length ?? 0) == 0)
     throw new InvalidOperationException("Security:AllowedOrigins must be configured in production.");
@@ -226,7 +242,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
         catch (ArgumentException) { return Results.NotFound(); }
     }).ExcludeFromDescription();
     app.MapPost("/api/v1/dev/test-session", async (HttpContext context, AppDbContext db,
-        JwtTokenService tokens, IOptions<JwtOptions> jwtOptions) =>
+        JwtTokenService tokens, IOptions<JwtOptions> jwtOptions, OperatorAccess operators) =>
     {
         if (!IPAddress.IsLoopback(context.Connection.RemoteIpAddress ?? IPAddress.None) &&
             !app.Environment.IsEnvironment("Testing")) return Results.NotFound();
@@ -248,7 +264,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
             SameSite = SameSiteMode.Lax, Path = "/", IsEssential = true,
             Expires = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.LifetimeMinutes)
         });
-        return Results.Ok(AuthService.ToDto(user));
+        return Results.Ok(AuthService.ToDto(user, operators));
     }).ExcludeFromDescription();
 }
 

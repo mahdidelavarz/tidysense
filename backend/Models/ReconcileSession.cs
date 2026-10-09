@@ -66,6 +66,20 @@ public sealed class ReconcilePrompt
     public long Version { get; set; } = 1;
 }
 
+/// <summary>
+/// The first time on a local date that Reconcile was eligible when the account looked. It exists so
+/// that an eligible day on which no session was opened can be counted; it holds no fact about work.
+/// </summary>
+public sealed class ReconcileExposure
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public DateOnly LocalDate { get; set; }
+    public string Severity { get; set; } = ReconcileSeverities.None;
+    public DateTimeOffset FirstSeenAt { get; set; }
+    public string RetentionClass { get; set; } = "R2";
+}
+
 public static class ReconcileSessionStatuses
 {
     public const string Open = "OPEN";

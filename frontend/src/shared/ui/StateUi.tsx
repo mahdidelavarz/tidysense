@@ -59,6 +59,15 @@ export function ErrorState({ title = 'دریافت اطلاعات ممکن نش�
   )
 }
 
+/** What an address that leads nowhere shows, including a page the signed-in account may not open. */
+export function NotFoundState({ action }: { action: ReactNode }) {
+  return (
+    <div className="page pt-10">
+      <ErrorState title="این صفحه پیدا نشد." description="نشانی اشتباه است یا این صفحه دیگر وجود ندارد." action={action} />
+    </div>
+  )
+}
+
 /** The loading → error → empty → content ladder every list page shares. */
 export function ResourceState({ pending, error, empty, pendingText, emptyIcon, emptyTitle, emptyDescription, emptyAction, onRetry, children }: {
   pending: boolean

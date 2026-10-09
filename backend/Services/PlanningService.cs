@@ -244,17 +244,23 @@ public sealed partial class PlanningService(
     }
 
     /// <summary>Ends what can no longer continue: drafts past their expiry and attempts that lost their worker.</summary>
-    private async Task CloseStaleAsync(Guid owner, DateTimeOffset now, CancellationToken cancellationToken)
+    private Task CloseStaleAsync(Guid owner, DateTimeOffset now, CancellationToken cancellationToken) =>
+        CloseStaleAsync(db, owner, now, cancellationToken);
+
+    /// <summary>The same closing for one user, or for every user when none is named. Returns the attempts failed.</summary>
+    public static async Task<int> CloseStaleAsync(AppDbContext context, Guid? owner, DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
-        await db.PlanningDrafts
-            .Where(x => x.UserId == owner && x.Status == PlanningDraftStatuses.Reviewable && x.ExpiresAt <= now)
+        await context.PlanningDrafts
+            .Where(x => (owner == null || x.UserId == owner) && x.Status == PlanningDraftStatuses.Reviewable &&
+                x.ExpiresAt <= now)
             .ExecuteUpdateAsync(x => x
                 .SetProperty(d => d.Status, PlanningDraftStatuses.Expired)
                 .SetProperty(d => d.UpdatedAt, now)
                 .SetProperty(d => d.Version, d => d.Version + 1), cancellationToken);
         var lost = now - StaleAttemptAfter;
-        await db.PlanningAttempts
-            .Where(x => x.UserId == owner && x.UpdatedAt < lost &&
+        return await context.PlanningAttempts
+            .Where(x => (owner == null || x.UserId == owner) && x.UpdatedAt < lost &&
                 (x.Status == PlanningAttemptStatuses.Queued || x.Status == PlanningAttemptStatuses.Running))
             .ExecuteUpdateAsync(x => x
                 .SetProperty(a => a.Status, PlanningAttemptStatuses.Failed)

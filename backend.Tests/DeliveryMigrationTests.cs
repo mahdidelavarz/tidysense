@@ -499,6 +499,72 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
     }
 
     [Fact]
+    public async Task Step11_operations_records_round_trip_and_leave_every_other_table_alone()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var user = new User
+        {
+            Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000),
+            IsActive = true, SetupComplete = true, CreatedAt = now
+        };
+        OperationsRecord Record(Action<OperationsRecord> set)
+        {
+            var record = new OperationsRecord
+            {
+                Id = Guid.NewGuid(), Kind = OperationsRecordKinds.MaintenanceRun, CreatedAt = now
+            };
+            set(record);
+            return record;
+        }
+        db.AddRange(user, Record(_ => { }), Record(x =>
+        {
+            x.Kind = OperationsRecordKinds.UserErasure;
+            x.Operator = "operator";
+            x.ReasonCode = "USER_REQUEST";
+        }));
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
+        // A record is one of the known procedures with a known outcome, and its details are an object.
+        db.Add(Record(x => x.Kind = "DEPLOYMENT"));
+        Assert.Equal("CK_OperationsRecords_Kind", await ConstraintAsync());
+        db.Add(Record(x => x.Outcome = "PARTIAL"));
+        Assert.Equal("CK_OperationsRecords_Outcome", await ConstraintAsync());
+        db.Add(Record(x => x.DetailsJson = "[]"));
+        Assert.Equal("CK_OperationsRecords_DetailsObject", await ConstraintAsync());
+        // An account has one exposure per local date.
+        ReconcileExposure Exposure() => new()
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, LocalDate = new DateOnly(2026, 10, 8), FirstSeenAt = now
+        };
+        db.Add(Exposure());
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+        db.Add(Exposure());
+        Assert.Equal("IX_ReconcileExposures_UserId_LocalDate", await ConstraintAsync());
+
+        await migrator.MigrateAsync("20261008130508_Step10RecommendationEvidence", cancellationToken);
+        Assert.Equal(1, await db.Users.AsNoTracking().CountAsync(x => x.Id == user.Id, cancellationToken));
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        Assert.Equal(0, await db.OperationsRecords.CountAsync(cancellationToken));
+        Assert.Equal(1, await db.Users.AsNoTracking().CountAsync(x => x.Id == user.Id, cancellationToken));
+        await db.Users.Where(x => x.Id == user.Id).ExecuteDeleteAsync(cancellationToken);
+
+        async Task<string?> ConstraintAsync()
+        {
+            var failure = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(cancellationToken));
+            db.ChangeTracker.Clear();
+            return ((Npgsql.PostgresException)failure.InnerException!).ConstraintName;
+        }
+    }
+
+    [Fact]
     public async Task Step10_ai_reconcile_schema_round_trips_and_keeps_confirmations_and_invocations()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

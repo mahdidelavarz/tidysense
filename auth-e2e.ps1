@@ -34,6 +34,7 @@ $previous = @{
     VITE_API_PROXY_TARGET = $env:VITE_API_PROXY_TARGET
     Ai__Planning__Provider = $env:Ai__Planning__Provider
     Ai__Reconcile__Provider = $env:Ai__Reconcile__Provider
+    Operations__OperatorPhones__0 = $env:Operations__OperatorPhones__0
 }
 $backendProcess = $null
 $databaseCreated = $false
@@ -59,6 +60,8 @@ try {
     # Browser tests run against the deterministic samples, whatever provider the developer's user-secrets select.
     $env:Ai__Planning__Provider = 'mock'
     $env:Ai__Reconcile__Provider = 'mock'
+    # The development test account is the operator of this isolated backend, so the operator page can be exercised.
+    $env:Operations__OperatorPhones__0 = '+989120000000'
     Write-Host 'Building isolated backend...'
     & dotnet build (Join-Path $repoRoot 'backend\TidySense.csproj') --no-restore -p:OutputPath=bin/auth-e2e/ -p:OpenApiGenerateDocuments=false
     if ($LASTEXITCODE -ne 0) { throw 'Backend build failed.' }

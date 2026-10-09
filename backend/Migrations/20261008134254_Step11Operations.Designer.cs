@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TidySense.Data;
@@ -11,9 +12,11 @@ using TidySense.Data;
 namespace TidySense.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261008134254_Step11Operations")]
+    partial class Step11Operations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1257,44 +1260,6 @@ namespace TidySense.Migrations
                         });
                 });
 
-            modelBuilder.Entity("TidySense.Models.ReconcileExposure", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("FirstSeenAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateOnly>("LocalDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("RetentionClass")
-                        .IsRequired()
-                        .HasMaxLength(2)
-                        .HasColumnType("character varying(2)");
-
-                    b.Property<string>("Severity")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FirstSeenAt");
-
-                    b.HasIndex("UserId", "LocalDate")
-                        .IsUnique();
-
-                    b.ToTable("ReconcileExposures", t =>
-                        {
-                            t.HasCheckConstraint("CK_ReconcileExposures_Severity", "\"Severity\" IN ('NONE', 'LIGHT', 'MEDIUM', 'RECOVERY')");
-                        });
-                });
-
             modelBuilder.Entity("TidySense.Models.ReconcileFact", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2104,15 +2069,6 @@ namespace TidySense.Migrations
                         .IsRequired();
 
                     b.Navigation("Session");
-                });
-
-            modelBuilder.Entity("TidySense.Models.ReconcileExposure", b =>
-                {
-                    b.HasOne("TidySense.Models.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("TidySense.Models.ReconcileFact", b =>

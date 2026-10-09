@@ -23,6 +23,7 @@ public sealed class AppDbContext(
     public DbSet<ReconcileExplanation> ReconcileExplanations => Set<ReconcileExplanation>();
     public DbSet<ReconcileRecommendation> ReconcileRecommendations => Set<ReconcileRecommendation>();
     public DbSet<ReconcilePrompt> ReconcilePrompts => Set<ReconcilePrompt>();
+    public DbSet<ReconcileExposure> ReconcileExposures => Set<ReconcileExposure>();
     public DbSet<ActionConfirmation> ActionConfirmations => Set<ActionConfirmation>();
     public DbSet<PlanningAttempt> PlanningAttempts => Set<PlanningAttempt>();
     public DbSet<PlanningDraft> PlanningDrafts => Set<PlanningDraft>();
@@ -33,6 +34,7 @@ public sealed class AppDbContext(
     public DbSet<CommandResult> CommandResults => Set<CommandResult>();
     public DbSet<DomainEvent> DomainEvents => Set<DomainEvent>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<OperationsRecord> OperationsRecords => Set<OperationsRecord>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -375,6 +377,19 @@ public sealed class AppDbContext(
             });
         });
 
+        modelBuilder.Entity<ReconcileExposure>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Severity).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            // One exposure per account and local date: looking again is not a second exposure.
+            entity.HasIndex(x => new { x.UserId, x.LocalDate }).IsUnique();
+            entity.HasIndex(x => x.FirstSeenAt);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t => t.HasCheckConstraint("CK_ReconcileExposures_Severity",
+                "\"Severity\" IN ('NONE', 'LIGHT', 'MEDIUM', 'RECOVERY')"));
+        });
+
         modelBuilder.Entity<ActionConfirmation>(entity =>
         {
             entity.HasKey(x => x.Id);
@@ -625,6 +640,24 @@ public sealed class AppDbContext(
             entity.HasOne<DomainEvent>().WithMany().HasForeignKey(x => x.EventId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.ToTable(t => t.HasCheckConstraint("CK_OutboxMessages_AttemptCount", "\"AttemptCount\" >= 0"));
+        });
+
+        modelBuilder.Entity<OperationsRecord>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Kind).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Operator).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ReasonCode).HasMaxLength(64);
+            entity.Property(x => x.Outcome).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.DetailsJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.HasIndex(x => new { x.Kind, x.CreatedAt });
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_OperationsRecords_Kind", "\"Kind\" IN ('MAINTENANCE_RUN', 'USER_ERASURE')");
+                t.HasCheckConstraint("CK_OperationsRecords_Outcome", "\"Outcome\" IN ('SUCCEEDED', 'FAILED')");
+                t.HasCheckConstraint("CK_OperationsRecords_DetailsObject", "jsonb_typeof(\"DetailsJson\") = 'object'");
+            });
         });
     }
 

@@ -736,6 +736,154 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/operations/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    days?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OperationsMetricsDto"];
+                        "application/json": components["schemas"]["OperationsMetricsDto"];
+                        "text/json": components["schemas"]["OperationsMetricsDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    days?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OperationsAiDto"];
+                        "application/json": components["schemas"]["OperationsAiDto"];
+                        "text/json": components["schemas"]["OperationsAiDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OperationsHealthDto"];
+                        "application/json": components["schemas"]["OperationsHealthDto"];
+                        "text/json": components["schemas"]["OperationsHealthDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/planning/active": {
         parameters: {
             query?: never;
@@ -3812,6 +3960,43 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        AiCallSummaryDto: {
+            family: string;
+            /** Format: int32 */
+            calls: number | string;
+            /** Format: int32 */
+            latencyP50Ms: number | string;
+            /** Format: int32 */
+            latencyP95Ms: number | string;
+            /** Format: int64 */
+            inputTokens: number | string;
+            /** Format: int64 */
+            outputTokens: number | string;
+            /** Format: int64 */
+            costMicros: number | string;
+        };
+        AiFamilyStateDto: {
+            family: string;
+            provider: string;
+            sample: boolean;
+            killSwitch: boolean;
+            retryEnabled: boolean;
+            providerDisabled: boolean;
+            circuitOpen: boolean;
+            spendLatched: boolean;
+            /** Format: int64 */
+            spentTodayMicros: number | string;
+            /** Format: int64 */
+            dailyBudgetMicros: number | string;
+        };
+        AiOutcomeDto: {
+            family: string;
+            outcome: string;
+            failureClass: null | string;
+            gate: null | string;
+            /** Format: int32 */
+            count: number | string;
+        };
         ApiProblemDto: {
             type: string;
             title: string;
@@ -3962,6 +4147,7 @@ export interface components {
             phoneNumber: string;
             displayName: null | string;
             setupComplete: boolean;
+            isOperator: boolean;
         };
         CursorPageDtoOfCaptureDto: {
             items: components["schemas"]["CaptureDto"][];
@@ -3995,6 +4181,11 @@ export interface components {
             /** Format: int64 */
             expectedVersion: number | string;
         };
+        ExternalMetricDto: {
+            id: string;
+            hypothesis: string;
+            instrument: string;
+        };
         GoalDto: {
             /** Format: uuid */
             id: string;
@@ -4018,8 +4209,66 @@ export interface components {
             /** Format: date-time */
             terminalAt: null | string;
         };
+        MetricResultDto: {
+            id: string;
+            /** Format: int32 */
+            definitionVersion: number | string;
+            hypothesis: string;
+            metricClass: string;
+            numerator: string;
+            denominator: string;
+            rows: components["schemas"]["MetricRowDto"][];
+        };
+        MetricRowDto: {
+            segment: string;
+            /** Format: int64 */
+            numerator: number | string;
+            /** Format: int64 */
+            denominator: number | string;
+        };
         OpenReconcileSessionRequest: {
             triggerType: string;
+        };
+        OperationsAiDto: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            globalKillSwitch: boolean;
+            families: components["schemas"]["AiFamilyStateDto"][];
+            calls: components["schemas"]["AiCallSummaryDto"][];
+            outcomes: components["schemas"]["AiOutcomeDto"][];
+        };
+        OperationsAlertDto: {
+            rule: string;
+            severity: string;
+            scope: string;
+            /** Format: int64 */
+            value: number | string;
+            /** Format: int64 */
+            threshold: number | string;
+        };
+        OperationsHealthDto: {
+            alerts: components["schemas"]["OperationsAlertDto"][];
+            /** Format: date-time */
+            lastMaintenanceAt: null | string;
+            lastMaintenanceOutcome: null | string;
+            /** Format: int32 */
+            stuckExplanations: number | string;
+            /** Format: int32 */
+            stuckPlanningAttempts: number | string;
+            /** Format: int32 */
+            pendingOutboxMessages: number | string;
+        };
+        OperationsMetricsDto: {
+            catalogVersion: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            primary: components["schemas"]["MetricResultDto"][];
+            internal: components["schemas"]["MetricResultDto"][];
+            external: components["schemas"]["ExternalMetricDto"][];
         };
         PageInfoDto: {
             nextCursor: null | string;

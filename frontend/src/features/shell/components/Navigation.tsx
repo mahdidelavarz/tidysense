@@ -1,14 +1,17 @@
 import { Link } from '@tanstack/react-router'
-import { Compass, FolderKanban, ListChecks, type LucideIcon, RefreshCcw, Repeat, Sun, Target } from 'lucide-react'
+import { Activity, Compass, FolderKanban, ListChecks, type LucideIcon, RefreshCcw, Repeat, Sun, Target } from 'lucide-react'
 import { formatNumber } from '../../../shared/lib/date'
+import { useCurrentUser } from '../../auth/hooks/auth-hooks'
 import { useReconcileOverview } from '../../reconcile/hooks/reconcile-hooks'
 
 type Destination = {
-  to: '/today' | '/tasks' | '/routines' | '/reconcile' | '/planning' | '/projects' | '/goals'
+  to: '/today' | '/tasks' | '/routines' | '/reconcile' | '/planning' | '/projects' | '/goals' | '/operations'
   label: string
   icon: LucideIcon
   /** False keeps a destination out of the four-slot phone tab bar; it stays in the sidebar and drawer. */
   tab?: false
+  /** True shows the destination to operator accounts only. */
+  operatorOnly?: true
 }
 
 /**
@@ -26,6 +29,8 @@ export const destinations: Destination[] = [
   { to: '/planning', label: 'برنامه‌ریزی', icon: Compass, tab: false },
   { to: '/projects', label: 'پروژه‌ها', icon: FolderKanban },
   { to: '/goals', label: 'هدف‌ها', icon: Target },
+  // Operational evidence is for operator accounts; nobody else is shown that it exists.
+  { to: '/operations', label: 'عملیات', icon: Activity, tab: false, operatorOnly: true },
 ]
 
 /** Product mark and name. Links home (Today). */
@@ -43,9 +48,10 @@ export function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const overview = useReconcileOverview()
   // One compact count for everything waiting in Reconcile; its lanes stay separate on the page.
   const attention = Number(overview.data?.attentionCount ?? 0)
+  const isOperator = useCurrentUser().data?.isOperator === true
   return (
     <ul className="space-y-1">
-      {destinations.map(({ to, label, icon: Icon }) => (
+      {destinations.filter(x => !x.operatorOnly || isOperator).map(({ to, label, icon: Icon }) => (
         <li key={to}>
           {/* The router marks the active link with aria-current="page", which the nav-item style keys on. */}
           <Link className="nav-item" to={to} onClick={onNavigate}>

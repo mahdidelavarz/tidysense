@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FirstEntryRouteImport } from './routes/first-entry'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as TodayRouteImport } from './routes/today'
 import { Route as GoalsIndexRouteImport } from './routes/goals/index'
 import { Route as GoalsGoalIdRouteImport } from './routes/goals/$goalId'
@@ -37,6 +38,11 @@ const FirstEntryRoute = FirstEntryRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperationsRoute = OperationsRouteImport.update({
+  id: '/operations',
+  path: '/operations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TodayRoute = TodayRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/first-entry': typeof FirstEntryRoute
   '/login': typeof LoginRoute
+  '/operations': typeof OperationsRoute
   '/today': typeof TodayRoute
   '/goals/$goalId': typeof GoalsGoalIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/first-entry': typeof FirstEntryRoute
   '/login': typeof LoginRoute
+  '/operations': typeof OperationsRoute
   '/today': typeof TodayRoute
   '/goals/$goalId': typeof GoalsGoalIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/first-entry': typeof FirstEntryRoute
   '/login': typeof LoginRoute
+  '/operations': typeof OperationsRoute
   '/today': typeof TodayRoute
   '/goals/$goalId': typeof GoalsGoalIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/'
     | '/first-entry'
     | '/login'
+    | '/operations'
     | '/today'
     | '/goals/$goalId'
     | '/projects/$projectId'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/'
     | '/first-entry'
     | '/login'
+    | '/operations'
     | '/today'
     | '/goals/$goalId'
     | '/projects/$projectId'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/'
     | '/first-entry'
     | '/login'
+    | '/operations'
     | '/today'
     | '/goals/$goalId'
     | '/projects/$projectId'
@@ -199,6 +211,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FirstEntryRoute: typeof FirstEntryRoute
   LoginRoute: typeof LoginRoute
+  OperationsRoute: typeof OperationsRoute
   TodayRoute: typeof TodayRoute
   GoalsGoalIdRoute: typeof GoalsGoalIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -233,6 +246,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operations': {
+      id: '/operations'
+      path: '/operations'
+      fullPath: '/operations'
+      preLoaderRoute: typeof OperationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/today': {
@@ -319,6 +339,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FirstEntryRoute: FirstEntryRoute,
   LoginRoute: LoginRoute,
+  OperationsRoute: OperationsRoute,
   TodayRoute: TodayRoute,
   GoalsGoalIdRoute: GoalsGoalIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,

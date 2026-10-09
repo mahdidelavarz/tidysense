@@ -3,6 +3,7 @@ using TidySense.Common.Auth;
 using TidySense.Common.Exceptions;
 using TidySense.Data;
 using TidySense.DTOs.Auth;
+using TidySense.Services.Operations;
 
 namespace TidySense.Services;
 
@@ -11,7 +12,8 @@ public sealed class AuthService(
     OtpService otp,
     JwtTokenService tokens,
     AppDbContext dbContext,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    OperatorAccess operators)
 {
     public Task<int> RequestOtpAsync(string phoneNumber, string ip, CancellationToken cancellationToken) =>
         otp.RequestAsync(phoneNumber, ip, cancellationToken);
@@ -38,6 +40,8 @@ public sealed class AuthService(
                 .SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow), cancellationToken);
     }
 
-    public static CurrentUserDto ToDto(Models.User user) =>
-        new(user.Id, user.PhoneNumber, user.DisplayName, user.SetupComplete);
+    public CurrentUserDto ToDto(Models.User user) => ToDto(user, operators);
+
+    public static CurrentUserDto ToDto(Models.User user, OperatorAccess operators) =>
+        new(user.Id, user.PhoneNumber, user.DisplayName, user.SetupComplete, operators.IsOperator(user.PhoneNumber));
 }

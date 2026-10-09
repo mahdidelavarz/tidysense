@@ -1137,6 +1137,183 @@
         }
       }
     },
+    "/api/v1/operations/metrics": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 28
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsMetricsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsMetricsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsMetricsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/operations/ai": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 28
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsAiDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsAiDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsAiDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/operations/health": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsHealthDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsHealthDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsHealthDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/planning/active": {
       "get": {
         "tags": [
@@ -5650,6 +5827,166 @@
           }
         }
       },
+      "AiCallSummaryDto": {
+        "required": [
+          "family",
+          "calls",
+          "latencyP50Ms",
+          "latencyP95Ms",
+          "inputTokens",
+          "outputTokens",
+          "costMicros"
+        ],
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string"
+          },
+          "calls": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "latencyP50Ms": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "latencyP95Ms": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "inputTokens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "outputTokens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "costMicros": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "AiFamilyStateDto": {
+        "required": [
+          "family",
+          "provider",
+          "sample",
+          "killSwitch",
+          "retryEnabled",
+          "providerDisabled",
+          "circuitOpen",
+          "spendLatched",
+          "spentTodayMicros",
+          "dailyBudgetMicros"
+        ],
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "boolean"
+          },
+          "killSwitch": {
+            "type": "boolean"
+          },
+          "retryEnabled": {
+            "type": "boolean"
+          },
+          "providerDisabled": {
+            "type": "boolean"
+          },
+          "circuitOpen": {
+            "type": "boolean"
+          },
+          "spendLatched": {
+            "type": "boolean"
+          },
+          "spentTodayMicros": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "dailyBudgetMicros": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "AiOutcomeDto": {
+        "required": [
+          "family",
+          "outcome",
+          "failureClass",
+          "gate",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "failureClass": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "gate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ApiProblemDto": {
         "required": [
           "type",
@@ -6244,7 +6581,8 @@
           "id",
           "phoneNumber",
           "displayName",
-          "setupComplete"
+          "setupComplete",
+          "isOperator"
         ],
         "type": "object",
         "properties": {
@@ -6262,6 +6600,9 @@
             ]
           },
           "setupComplete": {
+            "type": "boolean"
+          },
+          "isOperator": {
             "type": "boolean"
           }
         }
@@ -6406,6 +6747,25 @@
           }
         }
       },
+      "ExternalMetricDto": {
+        "required": [
+          "id",
+          "hypothesis",
+          "instrument"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "hypothesis": {
+            "type": "string"
+          },
+          "instrument": {
+            "type": "string"
+          }
+        }
+      },
       "GoalDto": {
         "required": [
           "id",
@@ -6486,6 +6846,78 @@
           }
         }
       },
+      "MetricResultDto": {
+        "required": [
+          "id",
+          "definitionVersion",
+          "hypothesis",
+          "metricClass",
+          "numerator",
+          "denominator",
+          "rows"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "definitionVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "hypothesis": {
+            "type": "string"
+          },
+          "metricClass": {
+            "type": "string"
+          },
+          "numerator": {
+            "type": "string"
+          },
+          "denominator": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricRowDto"
+            }
+          }
+        }
+      },
+      "MetricRowDto": {
+        "required": [
+          "segment",
+          "numerator",
+          "denominator"
+        ],
+        "type": "object",
+        "properties": {
+          "segment": {
+            "type": "string"
+          },
+          "numerator": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "denominator": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "OpenReconcileSessionRequest": {
         "required": [
           "triggerType"
@@ -6494,6 +6926,183 @@
         "properties": {
           "triggerType": {
             "type": "string"
+          }
+        }
+      },
+      "OperationsAiDto": {
+        "required": [
+          "from",
+          "to",
+          "globalKillSwitch",
+          "families",
+          "calls",
+          "outcomes"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "globalKillSwitch": {
+            "type": "boolean"
+          },
+          "families": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiFamilyStateDto"
+            }
+          },
+          "calls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiCallSummaryDto"
+            }
+          },
+          "outcomes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiOutcomeDto"
+            }
+          }
+        }
+      },
+      "OperationsAlertDto": {
+        "required": [
+          "rule",
+          "severity",
+          "scope",
+          "value",
+          "threshold"
+        ],
+        "type": "object",
+        "properties": {
+          "rule": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "threshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "OperationsHealthDto": {
+        "required": [
+          "alerts",
+          "lastMaintenanceAt",
+          "lastMaintenanceOutcome",
+          "stuckExplanations",
+          "stuckPlanningAttempts",
+          "pendingOutboxMessages"
+        ],
+        "type": "object",
+        "properties": {
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OperationsAlertDto"
+            }
+          },
+          "lastMaintenanceAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastMaintenanceOutcome": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stuckExplanations": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "stuckPlanningAttempts": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendingOutboxMessages": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "OperationsMetricsDto": {
+        "required": [
+          "catalogVersion",
+          "from",
+          "to",
+          "primary",
+          "internal",
+          "external"
+        ],
+        "type": "object",
+        "properties": {
+          "catalogVersion": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "primary": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricResultDto"
+            }
+          },
+          "internal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricResultDto"
+            }
+          },
+          "external": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExternalMetricDto"
+            }
           }
         }
       },
@@ -9662,6 +10271,9 @@
     },
     {
       "name": "Goals"
+    },
+    {
+      "name": "Operations"
     },
     {
       "name": "Planning"

@@ -22,7 +22,7 @@ This is two layouts, not one scaled layout: the tab bar, drawer and bottom sheet
 
 ### Destinations
 
-Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/Navigation.tsx), in order of daily use: **Today → Tasks → Routines → Reconcile → Planning → Projects → Goals**. Add a destination only when its product step ships. The tab bar holds at most four destinations plus create. Routines (STEP-06), Reconcile (STEP-07) and Planning (STEP-08) are marked `tab: false`: they live in the sidebar and drawer only, because Routines are executed from Today, Reconcile is offered from Today when there is something to decide, and Planning is an occasional flow that is also opened from a Goal or Project detail page. The Reconcile link carries one count badge for everything waiting in it. Any further destination needs the same decision: replace a tab, or stay out of the tab bar.
+Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/Navigation.tsx), in order of daily use: **Today → Tasks → Routines → Reconcile → Planning → Projects → Goals**. Add a destination only when its product step ships. The tab bar holds at most four destinations plus create. Routines (STEP-06), Reconcile (STEP-07) and Planning (STEP-08) are marked `tab: false`: they live in the sidebar and drawer only, because Routines are executed from Today, Reconcile is offered from Today when there is something to decide, and Planning is an occasional flow that is also opened from a Goal or Project detail page. The Reconcile link carries one count badge for everything waiting in it. Any further destination needs the same decision: replace a tab, or stay out of the tab bar. A destination marked `operatorOnly` (Operations, STEP-11) is listed last and rendered only when the current user is an operator.
 
 ## Routes
 
@@ -36,6 +36,7 @@ Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/
 | `/routines`, `/routines/$routineId` | Routine list, Routine detail with occurrence history | narrow |
 | `/projects`, `/projects/$projectId` | Project list, Project detail | wide list, narrow detail |
 | `/goals`, `/goals/$goalId` | Goal list, Goal detail | wide list, narrow detail |
+| `/operations` | operator accounts only: alerts and maintenance, AI runtime, H1/H2 tables (numerator and denominator columns). Read-only. Anyone else sees the not-found state | wide |
 | `/first-entry` | welcome after first sign-in | narrow |
 | `/login` | two-step OTP sign-in (outside the frame) | split on desktop |
 | anything else | not-found state with a link to Today | narrow |

@@ -105,7 +105,7 @@ Confirmed with the owner on 2026-10-03 unless marked otherwise.
 
 - Against the real provider only the successful paths were exercised. Cancellation, timeouts, the retry, the circuit, the kill switches and the 402 spend-cap response are verified with the scripted provider only; the 402 mapping follows the provider's documentation.
 - The quality of drafts was judged on one flow by the owner. There is no evaluation set for the prompt.
-- The token prices in tracked `appsettings.json` are `0`; the owner's local values are in user-secrets. Every other environment must set them before the daily budget means anything.
+- The token prices in tracked `appsettings.json` were `0` until 2026-10-08; they are now the DeepSeek prices of this run (0.3 / 1.2 USD per million tokens). An environment with another provider or other prices must set its own before the daily budget means anything.
 - The audit line for a kill-switch change and the connection timeout have no automated test.
 - Circuit state, the spend-cap latch and the concurrency limit are per process and reset on restart.
 - The `Planning Attempt/Draft/revisions` freeze-register row remains `DRAFT`.
