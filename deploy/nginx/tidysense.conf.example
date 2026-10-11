@@ -1,0 +1,46 @@
+# Site file for the shared Nginx that ends TLS in front of TidySense
+# (docker-compose.shared-proxy.yml). Copy it into that Nginx's conf.d, replace
+# tidysense.example.com with SITE_HOST and point the two ssl_ lines at its certificate.
+# The Nginx container must be attached to the same Docker network as tidysense-web.
+
+server {
+    listen 80;
+    server_name tidysense.example.com www.tidysense.example.com;
+
+    return 301 https://tidysense.example.com$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name www.tidysense.example.com;
+
+    ssl_certificate     /etc/nginx/ssl/tidysense/fullchain.crt;
+    ssl_certificate_key /etc/nginx/ssl/tidysense/private.key;
+
+    return 301 https://tidysense.example.com$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name tidysense.example.com;
+
+    ssl_certificate     /etc/nginx/ssl/tidysense/fullchain.crt;
+    ssl_certificate_key /etc/nginx/ssl/tidysense/private.key;
+
+    client_max_body_size 10m;
+
+    location / {
+        # Resolved per request, so Nginx starts and reloads also while TidySense is down.
+        resolver 127.0.0.11 valid=30s;
+        set $tidysense http://tidysense-web:80;
+        proxy_pass $tidysense;
+        proxy_http_version 1.1;
+
+        # Host must stay SITE_HOST: the backend refuses any other.
+        proxy_set_header Host $host;
+        # The client's address only, not what the client sent. The per-address login limits use it.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        # Without this the backend sees plain HTTP and redirects every API call.
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

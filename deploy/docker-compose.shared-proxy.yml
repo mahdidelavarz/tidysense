@@ -1,0 +1,23 @@
+# For a server where another reverse proxy already owns ports 80 and 443 and ends TLS.
+# Use together with the main file, by putting this line in .env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.shared-proxy.yml
+# The web container then publishes nothing on the host; the front proxy reaches it as
+# http://tidysense-web:80 over the shared Docker network. Everything else stays on the
+# internal network. See devmap/operations/deployment.md, "Behind a shared proxy".
+# Needs Docker Compose 2.24 or newer (the !reset tag).
+services:
+  web:
+    environment:
+      SITE_ADDRESS: ":80"
+      # Forwarded headers are believed only from the shared network, where the front proxy is.
+      TRUSTED_PROXIES: ${PROXY_SUBNET:?}
+    ports: !reset []
+    networks:
+      web-proxy:
+        aliases:
+          - tidysense-web
+
+networks:
+  web-proxy:
+    external: true
+    name: ${PROXY_NETWORK:-web-proxy}

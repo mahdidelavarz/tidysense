@@ -1,3 +1,13 @@
+{
+	# Behind another proxy (docker-compose.shared-proxy.yml) this is that proxy's network: its
+	# X-Forwarded-Proto is kept and the client address is read from its X-Forwarded-For, from
+	# the right, so a client cannot supply its own. The default trusts nobody.
+	servers {
+		trusted_proxies static {$TRUSTED_PROXIES:127.0.0.1/32}
+		trusted_proxies_strict
+	}
+}
+
 # SITE_ADDRESS is the public host name (Caddy obtains its certificate), or ":80" behind another TLS terminator.
 {$SITE_ADDRESS} {
 	encode zstd gzip
@@ -14,7 +24,10 @@
 	# Only the API and the two health endpoints reach the backend; its OpenAPI document does not.
 	@backend path /api/* /health/ready /health/live
 	handle @backend {
-		reverse_proxy backend:8080
+		reverse_proxy backend:8080 {
+			# The backend reads one address: the client's, never a proxy's in front of this one.
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 
 	handle {

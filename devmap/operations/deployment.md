@@ -16,6 +16,16 @@ How the pilot runs. Decided on 2026-10-09 ([ADR-007](../decisions/ADR-007-pilot-
 
 The backend trusts `X-Forwarded-For` and `X-Forwarded-Proto` only from the `web` container's fixed address. Without that, every client would share one address and the per-address OTP limits would lock everybody out together.
 
+## Behind a shared proxy
+
+On a server where another reverse proxy already owns ports 80 and 443, add [`docker-compose.shared-proxy.yml`](../../deploy/docker-compose.shared-proxy.yml) by setting `COMPOSE_FILE`, `PROXY_NETWORK` and `PROXY_SUBNET` in `deploy/.env` (see [`.env.example`](../../deploy/.env.example)). What changes:
+
+- `web` publishes no host port and obtains no certificate. It joins the proxy's external Docker network under the name `tidysense-web` and answers plain HTTP on 80 there. The other containers stay on the internal network only.
+- The front proxy ends TLS and passes every request for `SITE_HOST` to `http://tidysense-web:80`, with the `Host` header unchanged, `X-Forwarded-Proto: https` and the client's address in `X-Forwarded-For`. [`deploy/nginx/tidysense.conf.example`](../../deploy/nginx/tidysense.conf.example) is that site file for Nginx.
+- Caddy believes forwarded headers only from `PROXY_SUBNET` and hands the backend one address, the client's. A wrong subnet shows as every `/api` call being redirected (the backend sees HTTP) and all clients sharing the login limits.
+
+Start order: the external network must exist, then `docker compose up --detach --build`, then test and reload the front proxy. Any container on the shared network can reach `tidysense-web` and is believed about the client address, so only projects of the same operator belong on it.
+
 ## Single instance (constraint)
 
 The pilot runs **exactly one `backend` container**. The provider circuit, the 402 spend latch, the per-family concurrency limit, the planning and explanation queues and the once-a-day alert digest are state of that one process. Two instances would each keep their own, so limits would be per instance and the digest could be sent twice. Do not scale the service or run a second copy against the same database. Lifting this needs that state moved into the database first; it is not a configuration change.

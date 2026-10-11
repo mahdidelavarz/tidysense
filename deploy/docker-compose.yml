@@ -89,6 +89,7 @@ services:
     environment:
       # The host name gets a certificate from Caddy. Override only when TLS ends in front of this server.
       SITE_ADDRESS: ${SITE_ADDRESS:-${SITE_HOST:?}}
+    # On a server that already has a proxy on these ports, add docker-compose.shared-proxy.yml.
     ports:
       - "80:80"
       - "443:443"
