@@ -1,28 +1,28 @@
 # Site file for the shared Nginx that ends TLS in front of TidySense
-# (docker-compose.shared-proxy.yml). Copy it into that Nginx's conf.d, replace
-# tidysense.example.com with SITE_HOST and point the two ssl_ lines at its certificate.
+# (docker-compose.shared-proxy.yml). Copy it into that Nginx's conf.d as tidysense.ir.conf.
+# The host name must equal SITE_HOST and the two ssl_ lines must point at its certificate.
 # The Nginx container must be attached to the same Docker network as tidysense-web.
 
 server {
     listen 80;
-    server_name tidysense.example.com www.tidysense.example.com;
+    server_name tidysense.ir www.tidysense.ir;
 
-    return 301 https://tidysense.example.com$request_uri;
+    return 301 https://tidysense.ir$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name www.tidysense.example.com;
+    server_name www.tidysense.ir;
 
     ssl_certificate     /etc/nginx/ssl/tidysense/fullchain.crt;
     ssl_certificate_key /etc/nginx/ssl/tidysense/private.key;
 
-    return 301 https://tidysense.example.com$request_uri;
+    return 301 https://tidysense.ir$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name tidysense.example.com;
+    server_name tidysense.ir;
 
     ssl_certificate     /etc/nginx/ssl/tidysense/fullchain.crt;
     ssl_certificate_key /etc/nginx/ssl/tidysense/private.key;
