@@ -53,10 +53,17 @@ export function CaptureTaskSheet({ capture, onClose }: { capture: CaptureDto; on
       <form className="form-stack" onSubmit={submit} noValidate aria-busy={resolve.isPending}>
         <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
         <FormField label="عنوان کار" name="title" required maxLength={200} registration={form.register('title')} error={errors.title?.message} />
-        <TaskParentSelect
-          goals={goals.data?.items ?? []}
-          projects={projects.data?.items ?? []}
-          registration={form.register('parentScope')}
+        <Controller
+          control={form.control}
+          name="parentScope"
+          render={({ field }) => (
+            <TaskParentSelect
+              goals={goals.data?.items ?? []}
+              projects={projects.data?.items ?? []}
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
         />
         <div className="form-grid">
           <Controller

@@ -1,8 +1,10 @@
+import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { formatLocalDate, formatLongDate } from '../../../shared/lib/date'
 import { EntityLabel } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
 import { slotsLabel } from '../../routines/types/routine.format'
+import { DateLeaf } from '../../tasks/components/DateLeaf'
 import {
   entityKinds,
   factTypeLabels,
@@ -75,7 +77,7 @@ export function PlanningDraftReview({ draft, busy, error, onEdit, onApprove, onC
                 onToggle={() => editProposal({ ...item.proposal, included: !item.proposal.included })}
                 onEdit={() => setEditing(item.proposal)}
               />
-              {children.length > 0 && <div className="ms-3 mt-3 border-s-2 border-border-subtle ps-3 sm:ms-5 sm:ps-5">{renderBranch(children)}</div>}
+              {children.length > 0 && <div className="ms-3 mt-3 border-s-2 border-accent/25 ps-3 sm:ms-5 sm:ps-5">{renderBranch(children)}</div>}
             </li>
           )
         })}
@@ -85,10 +87,10 @@ export function PlanningDraftReview({ draft, busy, error, onEdit, onApprove, onC
 
   return (
     <div className="space-y-8" aria-busy={busy}>
-      <section className="card" aria-labelledby="planning-summary">
+      <section className="rounded-3xl border border-accent/20 bg-linear-to-bl from-accent-tint via-surface to-surface p-4 shadow-sm sm:p-6" aria-labelledby="planning-summary">
         <h2 className="sr-only" id="planning-summary">خلاصه پیش‌نویس</h2>
         <p className="status-badge status-neutral">پیش‌نویس تأییدنشده</p>
-        <p className="mt-3 font-bold">{draft.summary}</p>
+        <p className="mt-3 text-lg font-bold leading-8">{draft.summary}</p>
         <p className="mt-1 text-sm text-text-secondary">
           برنامه دقیق فقط برای هفت روز است: از {formatLocalDate(draft.windowStart)} تا {formatLocalDate(draft.windowEnd)}.
           {draft.context && <> موارد تازه زیر «{draft.context.title}» ساخته می‌شوند.</>}
@@ -108,22 +110,25 @@ export function PlanningDraftReview({ draft, busy, error, onEdit, onApprove, onC
       <FormError error={error} />
 
       {roots.length > 0 && (
-        <section aria-labelledby="planning-structure">
-          <h2 className="section-title" id="planning-structure">ساختار پیشنهادی</h2>
-          <div className="mt-3">{renderBranch(roots)}</div>
+        <section className="lane" aria-labelledby="planning-structure">
+          <h2 className="lane-title" id="planning-structure">ساختار پیشنهادی</h2>
+          <div className="mt-4">{renderBranch(roots)}</div>
         </section>
       )}
 
       {days.length > 0 && (
-        <section aria-labelledby="planning-week">
-          <h2 className="section-title" id="planning-week">هفت روز پیش رو</h2>
-          <ul className="card mt-3 space-y-3">
+        <section className="lane" aria-labelledby="planning-week">
+          <h2 className="lane-title" id="planning-week">هفت روز پیش رو</h2>
+          <ul className="decision-card mt-4 divide-y divide-border-subtle">
             {days.map(day => (
-              <li key={day}>
-                <p className="text-sm font-bold"><time dateTime={day}>{formatLongDate(day)}</time></p>
-                <p className="text-sm text-text-secondary">
-                  {draft.firstWeek.filter(entry => entry.date === day).map(entry => titles.get(entry.draftId)).join('، ')}
-                </p>
+              <li key={day} className="flex items-center gap-3 p-3 sm:px-4">
+                <DateLeaf date={day} when="later" />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold"><time dateTime={day}>{formatLongDate(day)}</time></p>
+                  <p className="text-sm text-text-secondary">
+                    {draft.firstWeek.filter(entry => entry.date === day).map(entry => titles.get(entry.draftId)).join('، ')}
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
@@ -131,15 +136,15 @@ export function PlanningDraftReview({ draft, busy, error, onEdit, onApprove, onC
       )}
 
       {draft.facts.length > 0 && (
-        <section aria-labelledby="planning-facts">
-          <h2 className="section-title" id="planning-facts">جزئیات برای برنامه‌ریزی‌های بعدی</h2>
-          <p className="mt-1 text-sm text-text-secondary">
+        <section className="lane" aria-labelledby="planning-facts">
+          <h2 className="lane-title" id="planning-facts">جزئیات برای برنامه‌ریزی‌های بعدی</h2>
+          <p className="lane-hint">
             فقط مواردی که انتخاب کنید نگه داشته می‌شوند. این انتخاب از تأیید کارها جداست.
           </p>
           <ul className="mt-3 space-y-3">
             {draft.facts.map(item => (
-              <li key={item.fact.draftId} className="card">
-                <label className="flex items-start gap-3">
+              <li key={item.fact.draftId} className="decision-card p-4">
+                <label className="flex cursor-pointer items-start gap-3">
                   <input
                     className="mt-1 size-5 shrink-0 accent-accent"
                     type="checkbox"
@@ -162,7 +167,7 @@ export function PlanningDraftReview({ draft, busy, error, onEdit, onApprove, onC
         </section>
       )}
 
-      <section className="border-t border-border-subtle pt-6" aria-label="تأیید یا لغو پیش‌نویس">
+      <section className="lane" aria-label="تأیید یا لغو پیش‌نویس">
         {!draft.canApply && (
           <p className="notice-attention mb-4" role="status">
             {draft.proposals.length === 0 && draft.facts.length === 0
@@ -208,14 +213,19 @@ function ProposalCard({ item, owner, placements, assumptions, busy, onToggle, on
   const proposal = item.proposal
   const defaultReview = proposal.reviewDateSource === 'SYSTEM_DEFAULT' ? ' (پیش‌فرض)' : ''
   return (
-    <article className="card" aria-label={proposal.title}>
+    <article
+      className={`proposal-card entity-${entityKinds[proposal.entityType] ?? 'task'}`}
+      data-excluded={item.state === 'EXCLUDED' || item.excludedByAncestor}
+      aria-label={proposal.title}
+    >
+      <div className="p-4">
       <div className="flex flex-wrap items-center gap-2">
         <EntityLabel entity={entityKinds[proposal.entityType] ?? 'task'} />
         <span className={`status-badge ${stateTones[item.state] ?? 'status-neutral'}`}>{stateLabels[item.state] ?? item.state}</span>
       </div>
-      <h3 className="mt-3 wrap-break-word font-bold">{proposal.title}</h3>
+      <h3 className="mt-3 wrap-break-word font-bold leading-7">{proposal.title}</h3>
       <p className="text-sm text-text-secondary">{owner}</p>
-      <ul className="mt-2 space-y-1 text-sm text-text-secondary">
+      <ul className="mt-2 space-y-1 text-sm leading-6 text-text-secondary">
         {proposal.desiredOutcome && <li>نتیجه مطلوب: {proposal.desiredOutcome}</li>}
         {proposal.completionMeaning && <li>معنای تکمیل: {proposal.completionMeaning}</li>}
         {proposal.targetDate && <li>تاریخ هدف: {formatLocalDate(proposal.targetDate)}</li>}
@@ -238,9 +248,10 @@ function ProposalCard({ item, owner, placements, assumptions, busy, onToggle, on
         <p className="notice mt-3">این مورد مشکلی ندارد؛ کافی است مورد بالاتر اصلاح شود.</p>
       )}
       {item.state !== 'EXCLUDED' && <IssueList issues={item.issues} />}
+      </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <label className="flex min-h-11 items-center gap-2 text-sm font-bold">
+      <div className="flex items-center justify-between gap-3 border-t border-border-subtle bg-canvas/60 px-4 py-2">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-bold">
           <input
             className="size-5 shrink-0 accent-accent"
             type="checkbox"
@@ -251,7 +262,8 @@ function ProposalCard({ item, owner, placements, assumptions, busy, onToggle, on
           />
           در برنامه باشد
         </label>
-        <button className="secondary-button min-h-9 px-3" type="button" disabled={busy} aria-label={`ویرایش: ${proposal.title}`} onClick={onEdit}>
+        <button className="secondary-button min-h-10 px-3" type="button" disabled={busy} aria-label={`ویرایش: ${proposal.title}`} onClick={onEdit}>
+          <Pencil size={16} aria-hidden="true" />
           ویرایش
         </button>
       </div>

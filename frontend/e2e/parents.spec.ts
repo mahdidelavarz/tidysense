@@ -23,7 +23,8 @@ test('create Goal and child Project, resolve blocker, then explicitly achieve Go
   await page.getByRole('button', { name: 'پروژه جدید' }).click()
   await page.getByLabel('عنوان پروژه').fill(projectTitle)
   await page.getByLabel('معنای تکمیل (اختیاری)').fill('تحویل خروجی محدود')
-  await page.getByLabel('هدف بالادست (اختیاری)').selectOption({ label: goalTitle })
+  await page.getByLabel('هدف بالادست (اختیاری)').click()
+  await page.getByRole('option', { name: goalTitle }).click()
   await page.getByRole('button', { name: 'ساخت پروژه' }).click()
   await expect(page.getByRole('link', { name: new RegExp(projectTitle) })).toBeVisible()
 

@@ -18,7 +18,7 @@ export function PhoneStep({ pending, onSubmit }: { pending: boolean; onSubmit: (
           inputMode="tel"
           autoComplete="tel"
           dir="ltr"
-          className="field-input text-left"
+          className="field-input min-h-13 text-left text-lg tracking-wide"
           {...form.register('phoneNumber')}
           aria-invalid={!!form.formState.errors.phoneNumber}
           aria-describedby={form.formState.errors.phoneNumber ? 'phone-error' : 'phone-hint'}
@@ -26,7 +26,7 @@ export function PhoneStep({ pending, onSubmit }: { pending: boolean; onSubmit: (
         <span className="field-hint" id="phone-hint">مثال: ۰۹۱۲۱۲۳۴۵۶۷</span>
         {form.formState.errors.phoneNumber && <span className="field-error" id="phone-error" role="alert">{form.formState.errors.phoneNumber.message}</span>}
       </div>
-      <button type="submit" className="primary-button w-full" disabled={pending}>{pending ? 'در حال ارسال…' : 'دریافت کد'}</button>
+      <button type="submit" className="primary-button min-h-13 w-full text-base" disabled={pending}>{pending ? 'در حال ارسال…' : 'دریافت کد'}</button>
     </form>
   )
 }

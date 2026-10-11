@@ -74,7 +74,7 @@ export function PlanningApplyDialog({ flow, draft }: { flow: PlanningApplyFlow; 
     >
       <ul className="space-y-2" aria-label="مواردی که ساخته می‌شوند">
         {preview.items.map(item => (
-          <li key={item.draftId} className="flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle p-3">
+          <li key={item.draftId} className="flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-canvas/60 p-3">
             <EntityLabel entity={entityKinds[item.entityType] ?? 'task'} />
             <span className="min-w-0 wrap-break-word font-bold">{item.title}</span>
           </li>

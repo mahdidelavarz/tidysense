@@ -1,23 +1,27 @@
-import type { UseFormRegisterReturn } from 'react-hook-form'
+import { SelectField } from '../../../shared/ui/SelectField'
 import type { TaskDto } from '../types/task.types'
 
 /** Picks where a new Task sits in a same-scope dependency sequence, or starts/skips one. Create-only; an existing Task's sequence position is immutable here. */
-export function TaskSequenceSelect({ tasks, parentScope, registration }: {
+export function TaskSequenceSelect({ tasks, parentScope, value, onChange }: {
   tasks: TaskDto[]
   parentScope: string
-  registration: UseFormRegisterReturn
+  value: string
+  onChange: (value: string) => void
 }) {
-  const options = sequenceChoices(tasks, parentScope)
+  const options = [
+    { value: 'none', label: 'بدون ترتیب' },
+    { value: 'new', label: 'شروع دنباله جدید' },
+    ...sequenceChoices(tasks, parentScope).map(option => ({ value: option.value, label: `ادامه پس از «${option.label}»` })),
+  ]
   return (
-    <label className="field-label">
-      ترتیب انجام (اختیاری)
-      <span className="field-hint">کارهای بعدی تا تکمیل همه کارهای پیشین دنباله مسدود می‌مانند.</span>
-      <select className="field-input" {...registration}>
-        <option value="none">بدون ترتیب</option>
-        <option value="new">شروع دنباله جدید</option>
-        {options.map(option => <option key={option.value} value={option.value}>ادامه پس از «{option.label}»</option>)}
-      </select>
-    </label>
+    <SelectField
+      label="ترتیب انجام (اختیاری)"
+      hint="کارهای بعدی تا تکمیل همه کارهای پیشین دنباله مسدود می‌مانند."
+      value={value}
+      options={options}
+      onChange={onChange}
+      searchPlaceholder="نام کار…"
+    />
   )
 }
 

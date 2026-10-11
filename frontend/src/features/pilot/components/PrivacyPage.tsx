@@ -1,3 +1,4 @@
+import { Database, Sparkles, Trash2 } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { type ReactNode, useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'
@@ -26,7 +27,7 @@ export function PrivacyPage() {
   const frame = (content: ReactNode) => user
     ? <div className="page"><PageHeader title={title} />{content}</div>
     : (
-      <div className="mx-auto max-w-2xl p-4 sm:p-8">
+      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-8 sm:py-12">
         <header className="mb-6">
           <h1 className="page-title">{title}</h1>
           <Link className="text-link mt-2 inline-block" to="/login">بازگشت به ورود</Link>
@@ -46,9 +47,14 @@ export function PrivacyPage() {
 
   return frame(
     <div className="space-y-4">
-      <section className="card" aria-labelledby="privacy-kept">
-        <h2 className="font-bold" id="privacy-kept">چه چیزی و تا کی نگه داشته می‌شود</h2>
-        <ul className="mt-3 list-disc space-y-2 ps-5 text-sm leading-7 text-text-secondary">
+      <section className="card rounded-3xl" aria-labelledby="privacy-kept">
+        <h2 className="flex items-center gap-3 text-lg font-bold" id="privacy-kept">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-tint text-accent-strong" aria-hidden="true">
+            <Database size={20} />
+          </span>
+          چه چیزی و تا کی نگه داشته می‌شود
+        </h2>
+        <ul className="mt-4 list-disc space-y-2 ps-5 text-sm leading-7 text-text-secondary marker:text-accent">
           <li>هدف‌ها، پروژه‌ها، کارها، روتین‌ها و یادداشت‌های سریع شما تا وقتی حساب دارید نگه داشته می‌شوند.</li>
           <li>پیش‌نویس‌های برنامه‌ریزی و نوشته‌ای که برایشان داده‌اید {days(data.draftDays)} پس از پایان پیش‌نویس پاک می‌شوند.</li>
           <li>تاریخچه هر بازبینی {days(data.sessionHistoryDays)} پس از بسته‌شدن آن پاک می‌شود؛ پاسخ‌های شما به پرسش‌های اختیاری هم همین مدت می‌مانند.</li>
@@ -57,8 +63,13 @@ export function PrivacyPage() {
         </ul>
       </section>
 
-      <section className="card" aria-labelledby="privacy-ai">
-        <h2 className="font-bold" id="privacy-ai">هوش مصنوعی</h2>
+      <section className="card rounded-3xl" aria-labelledby="privacy-ai">
+        <h2 className="flex items-center gap-3 text-lg font-bold" id="privacy-ai">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-tint text-accent-strong" aria-hidden="true">
+            <Sparkles size={20} />
+          </span>
+          هوش مصنوعی
+        </h2>
         {data.aiProviderName ? (
           <>
             <p className="mt-3 text-sm leading-7 text-text-secondary">
@@ -80,8 +91,13 @@ export function PrivacyPage() {
         )}
       </section>
 
-      <section className="card" aria-labelledby="privacy-erasure">
-        <h2 className="font-bold" id="privacy-erasure">حذف حساب و داده‌ها</h2>
+      <section className="card rounded-3xl" aria-labelledby="privacy-erasure">
+        <h2 className="flex items-center gap-3 text-lg font-bold" id="privacy-erasure">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-tint text-accent-strong" aria-hidden="true">
+            <Trash2 size={20} />
+          </span>
+          حذف حساب و داده‌ها
+        </h2>
         <p className="mt-3 text-sm leading-7 text-text-secondary">
           برای حذف حساب و همه داده‌هایتان{' '}
           {data.supportContact

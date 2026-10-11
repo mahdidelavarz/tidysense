@@ -304,7 +304,8 @@ describe('PlanningPage', () => {
     const sheet = within(screen.getByRole('dialog', { name: 'ویرایش کار پیشنهادی' }))
     fireEvent.change(sheet.getByLabelText('عنوان'), { target: { value: 'قدم تازه' } })
     // Detaching from the parent is an explicit ownership edit.
-    fireEvent.change(sheet.getByLabelText('جایگاه'), { target: { value: 'none' } })
+    fireEvent.click(sheet.getByLabelText('جایگاه'))
+    fireEvent.click(sheet.getByRole('option', { name: 'مستقل' }))
     fireEvent.click(sheet.getByRole('button', { name: 'ذخیره در پیش‌نویس' }))
 
     await waitFor(() => expect(revisePlanningDraft).toHaveBeenCalledTimes(1))

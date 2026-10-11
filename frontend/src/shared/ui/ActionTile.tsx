@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react'
+import { ChevronLeft, type LucideIcon } from 'lucide-react'
 import { useId } from 'react'
 
 const tones = {
@@ -39,10 +39,11 @@ export function ActionTile({ icon: Icon, label, description, tone = 'neutral', d
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${iconTones[tone]}`} aria-hidden="true">
         <Icon size={20} />
       </span>
-      <span className="min-w-0">
-        <span className="block font-bold">{label}</span>
-        <span className="block text-xs leading-5 text-text-secondary" id={descriptionId}>{description}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">{label}</span>
+        <span className="block text-xs font-normal leading-5 text-text-secondary" id={descriptionId}>{description}</span>
       </span>
+      <ChevronLeft size={18} className="shrink-0 text-text-tertiary" aria-hidden="true" />
     </button>
   )
 }

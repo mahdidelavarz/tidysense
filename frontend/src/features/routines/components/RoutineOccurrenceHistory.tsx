@@ -24,7 +24,7 @@ export function RoutineOccurrenceHistory({ routineId }: { routineId: string }) {
 
   return (
     <section className="mt-8" aria-labelledby="routine-history">
-      <h2 className="section-title" id="routine-history">سابقه اجرا</h2>
+      <h2 className="lane-title" id="routine-history">سابقه اجرا</h2>
       <div className="mt-3">
         <FormError error={complete.error ?? correct.error} />
       </div>
@@ -34,7 +34,7 @@ export function RoutineOccurrenceHistory({ routineId }: { routineId: string }) {
         <p className="notice">هنوز نوبتی برای این روتین ثبت نشده است.</p>
       )}
       {items.length > 0 && (
-        <ul className="divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-surface">
+        <ul className="divide-y divide-border-subtle overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
           {items.map(occurrence => (
             <li key={occurrence.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
@@ -46,7 +46,7 @@ export function RoutineOccurrenceHistory({ routineId }: { routineId: string }) {
               <StatusBadge status={occurrence.status} />
               {occurrence.status === 'PENDING' ? (
                 <button
-                  className="secondary-button"
+                  className="secondary-button min-h-10 px-3"
                   type="button"
                   disabled={complete.isPending}
                   onClick={() => complete.mutate(
@@ -58,7 +58,7 @@ export function RoutineOccurrenceHistory({ routineId }: { routineId: string }) {
                 </button>
               ) : (
                 <button
-                  className="ghost-button"
+                  className="ghost-button min-h-10 px-3"
                   type="button"
                   onClick={() => setCorrection({ occurrence, target: occurrence.status === 'DONE' ? 'MISSED' : 'DONE' })}
                 >

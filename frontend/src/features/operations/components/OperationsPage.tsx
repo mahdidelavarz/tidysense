@@ -78,8 +78,8 @@ function Section<T>({ title, query, pendingText, children }: {
   children: (data: T) => ReactNode
 }) {
   return (
-    <section className="mb-10" aria-label={title}>
-      <h2 className="section-title mb-3">{title}</h2>
+    <section className="lane mb-10" aria-label={title}>
+      <h2 className="lane-title mb-4">{title}</h2>
       {query.isPending ? <LoadingState text={pendingText} />
         : query.error || query.data === undefined
           ? <ErrorState onRetry={() => query.refetch()} description="ارتباط را بررسی کنید و دوباره تلاش کنید." />
@@ -207,27 +207,27 @@ function Table({ caption, note, head, rows, empty }: {
   empty?: string
 }) {
   return (
-    <div className="card overflow-x-auto">
+    <div className="card overflow-x-auto rounded-2xl p-0 sm:p-0">
       <table className="w-full text-sm">
-        <caption className="mb-3 text-start font-bold">
+        <caption className="px-4 pb-3 pt-4 text-start font-bold">
           {caption}
           {note && <span className="mt-1 block text-xs font-normal text-text-secondary">{note}</span>}
         </caption>
         <thead>
-          <tr className="border-b border-border text-text-secondary">
-            {head.map(label => <th key={label} scope="col" className="px-2 py-2 text-start font-medium">{label}</th>)}
+          <tr className="border-y border-border-subtle bg-surface-sunken/60 text-text-secondary">
+            {head.map(label => <th key={label} scope="col" className="px-4 py-2.5 text-start text-xs font-bold">{label}</th>)}
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 && empty && (
-            <tr><td colSpan={head.length} className="px-2 py-3 text-text-secondary">{empty}</td></tr>
+            <tr><td colSpan={head.length} className="px-4 py-4 text-text-secondary">{empty}</td></tr>
           )}
           {rows.map((row, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: rows are a fixed, ordered read of one response.
-            <tr key={index} className="border-b border-border last:border-0">
+            <tr key={index} className="border-b border-border-subtle transition-colors last:border-0 hover:bg-canvas/60">
               {row.map((cell, cellIndex) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: cells follow the column order.
-                <td key={cellIndex} className="px-2 py-2">{cell}</td>
+                <td key={cellIndex} className="px-4 py-2.5">{cell}</td>
               ))}
             </tr>
           ))}

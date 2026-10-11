@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { ShieldCheck } from 'lucide-react'
 import { toApiError } from '../../../shared/api/http'
 import { FormError } from '../../../shared/ui/FormUi'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
@@ -29,9 +30,14 @@ export function AiConsentCard({ onManual }: { onManual: () => void }) {
   const noticeVersion = notice.data.noticeVersion
   const changed = consent.error && toApiError(consent.error).code === 'AI_CONSENT_NOTICE_CHANGED'
   return (
-    <section className="card" aria-labelledby="ai-consent-title">
-      <h2 className="font-bold" id="ai-consent-title">اجازه شما برای برنامه‌ریزی با هوش مصنوعی</h2>
-      <ul className="mt-3 list-disc space-y-2 ps-5 text-sm leading-7 text-text-secondary">
+    <section className="rounded-3xl border border-accent/20 bg-linear-to-bl from-accent-tint via-surface to-surface p-5 shadow-sm sm:p-7" aria-labelledby="ai-consent-title">
+      <div className="flex items-center gap-3">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-sm" aria-hidden="true">
+          <ShieldCheck size={24} />
+        </span>
+        <h2 className="text-lg font-bold leading-7" id="ai-consent-title">اجازه شما برای برنامه‌ریزی با هوش مصنوعی</h2>
+      </div>
+      <ul className="mt-4 list-disc space-y-2 ps-5 text-sm leading-7 text-text-secondary marker:text-accent">
         <li>
           برای ساخت پیش‌نویس، نوشته شما، پاسخ‌هایتان به پرسش‌های تکمیلی و خلاصه‌ای از همین حساب (عنوان و تاریخ هدف، پروژه‌ها، کارها و روتین‌های مرتبط) برای سرویس <bdi className="font-bold text-text-primary">{provider}</bdi> فرستاده می‌شود.
         </li>
@@ -43,7 +49,7 @@ export function AiConsentCard({ onManual }: { onManual: () => void }) {
       {changed
         ? <p className="notice-attention mt-4" role="alert">این توضیح به‌روز شده است. متن تازه را بخوانید و دوباره تصمیم بگیرید.</p>
         : <div className="mt-4"><FormError error={consent.error} /></div>}
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border-subtle pt-5">
         <button
           className="primary-button"
           type="button"

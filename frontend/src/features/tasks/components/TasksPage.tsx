@@ -1,18 +1,43 @@
+import { addDays } from 'date-fns-jalali'
 import { ListChecks, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { formatNumber, toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { SegmentedControl, type StatusFilter, statusFilterOptions } from '../../../shared/ui/SegmentedControl'
 import { LoadMoreButton, ResourceState } from '../../../shared/ui/StateUi'
-import { useTasks } from '../hooks/task-hooks'
+import { useTaskParentTitle, useTasks } from '../hooks/task-hooks'
+import type { TaskDto } from '../types/task.types'
 import { TaskCard } from './TaskCard'
 
-/** Tasks list page: filter, list and the entry point to creating a Task. */
+/** The time buckets of the list, in the order they are shown. Wording stays neutral: an earlier date is a fact, not a failure. */
+const groups = [
+  { id: 'today', label: 'امروز' },
+  { id: 'earlier', label: 'از روزهای قبل' },
+  { id: 'tomorrow', label: 'فردا' },
+  { id: 'later', label: 'روزهای بعد' },
+  { id: 'none', label: 'بدون تاریخ' },
+  { id: 'closed', label: 'پایان‌یافته' },
+] as const
+
+type GroupId = typeof groups[number]['id']
+
+/** Tasks list page: filter, the list grouped by when each Task is planned, and the entry point to creating a Task. */
 export function TasksPage() {
   const [filter, setFilter] = useState<StatusFilter>('ACTIVE')
   const tasks = useTasks(filter === 'all' ? undefined : filter)
   const openCreate = useUiStore(state => state.openCreate)
+  const parentTitle = useTaskParentTitle()
   const items = tasks.data?.pages.flatMap(page => page.items) ?? []
+  const today = toIsoDate(new Date())
+  const tomorrow = toIsoDate(addDays(new Date(), 1))
+  const groupOf = (task: TaskDto): GroupId => {
+    if (task.status !== 'ACTIVE') return 'closed'
+    if (!task.plannedDate) return 'none'
+    if (task.plannedDate === today) return 'today'
+    if (task.plannedDate === tomorrow) return 'tomorrow'
+    return task.plannedDate < today ? 'earlier' : 'later'
+  }
 
   return (
     <div className="page">
@@ -26,7 +51,7 @@ export function TasksPage() {
           </button>
         )}
       />
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <SegmentedControl label="فیلتر وضعیت کارها" value={filter} options={statusFilterOptions} onChange={setFilter} />
         {tasks.isFetching && !tasks.isPending && <span className="text-xs text-text-secondary" role="status">در حال به‌روزرسانی…</span>}
       </div>
@@ -41,9 +66,26 @@ export function TasksPage() {
         emptyAction={<button className="secondary-button" type="button" onClick={() => openCreate('task')}>ثبت یک کار</button>}
         onRetry={() => tasks.refetch()}
       >
-        <ul className="space-y-3">
-          {items.map(task => <li key={task.id}><TaskCard task={task} /></li>)}
-        </ul>
+        <div className="space-y-8">
+          {groups.map(group => {
+            // The server's order is kept inside each bucket.
+            const members = items.filter(task => groupOf(task) === group.id)
+            if (members.length === 0) return null
+            return (
+              <section key={group.id} aria-labelledby={`tasks-${group.id}`}>
+                <h2 className="section-title flex items-center gap-2" id={`tasks-${group.id}`}>
+                  {group.label}
+                  <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs" aria-hidden="true">{formatNumber(members.length)}</span>
+                </h2>
+                <ul className="mt-3 space-y-2.5">
+                  {members.map(task => (
+                    <li key={task.id}><TaskCard task={task} today={today} parentTitle={parentTitle(task)} /></li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
         <LoadMoreButton
           visible={tasks.hasNextPage}
           loading={tasks.isFetchingNextPage}

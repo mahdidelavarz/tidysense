@@ -4,6 +4,7 @@ import { useUiStore } from '../../../shared/lib/ui-store'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { SegmentedControl, type StatusFilter, statusFilterOptions } from '../../../shared/ui/SegmentedControl'
 import { LoadMoreButton, ResourceState } from '../../../shared/ui/StateUi'
+import { useTaskParentTitle } from '../../tasks/hooks/task-hooks'
 import { useRoutines } from '../hooks/routine-hooks'
 import { RoutineCard } from './RoutineCard'
 
@@ -12,6 +13,8 @@ export function RoutinesPage() {
   const [filter, setFilter] = useState<StatusFilter>('ACTIVE')
   const routines = useRoutines(filter === 'all' ? undefined : filter)
   const openCreate = useUiStore(state => state.openCreate)
+  // Task and Routine share the exclusive Goal-or-Project parent, so they share its title lookup.
+  const parentTitle = useTaskParentTitle()
   const items = routines.data?.pages.flatMap(page => page.items) ?? []
 
   return (
@@ -26,7 +29,7 @@ export function RoutinesPage() {
           </button>
         )}
       />
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <SegmentedControl label="فیلتر وضعیت روتین‌ها" value={filter} options={statusFilterOptions} onChange={setFilter} />
         {routines.isFetching && !routines.isPending && <span className="text-xs text-text-secondary" role="status">در حال به‌روزرسانی…</span>}
       </div>
@@ -41,8 +44,8 @@ export function RoutinesPage() {
         emptyAction={<button className="secondary-button" type="button" onClick={() => openCreate('routine')}>ثبت یک روتین</button>}
         onRetry={() => routines.refetch()}
       >
-        <ul className="space-y-3">
-          {items.map(routine => <li key={routine.id}><RoutineCard routine={routine} /></li>)}
+        <ul className="space-y-2.5">
+          {items.map(routine => <li key={routine.id}><RoutineCard routine={routine} parentTitle={parentTitle(routine)} /></li>)}
         </ul>
         <LoadMoreButton
           visible={routines.hasNextPage}

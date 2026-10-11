@@ -2,7 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { DateField } from '../../../shared/ui/DateField'
-import { FormError, FormField, ValidationSummary } from '../../../shared/ui/FormUi'
+import { ChoiceField, FormError, FormField, ValidationSummary } from '../../../shared/ui/FormUi'
+import { SelectField } from '../../../shared/ui/SelectField'
 import { Sheet } from '../../../shared/ui/Sheet'
 import { weekdayOptions } from '../../routines/types/routine.format'
 import { type ProposalFields, proposalFieldsSchema } from '../types/planning.schema'
@@ -98,7 +99,7 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
     >
       <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
         <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-        <FormField label="عنوان" name="title" required maxLength={200} registration={form.register('title')} error={errors.title?.message} />
+        <FormField label="عنوان" name="title" required autoFocus maxLength={200} registration={form.register('title')} error={errors.title?.message} />
         {type === 'GOAL' && (
           <FormField label="نتیجه مطلوب" name="desiredOutcome" required multiline maxLength={2000} registration={form.register('desiredOutcome')} error={errors.desiredOutcome?.message} />
         )}
@@ -110,14 +111,22 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
         )}
 
         {type !== 'GOAL' && (
-          <label className="field-label">
-            جایگاه
-            <select className="field-input" {...form.register('parent')}>
-              <option value="none">مستقل</option>
-              {contextAllowed && draft.context && <option value="context">زیر «{draft.context.title}»</option>}
-              {parents.map(item => <option key={item.draftId} value={`draft:${item.draftId}`}>زیر «{item.title}»</option>)}
-            </select>
-          </label>
+          <Controller
+            control={form.control}
+            name="parent"
+            render={({ field }) => (
+              <SelectField
+                label="جایگاه"
+                value={field.value}
+                onChange={field.onChange}
+                options={[
+                  { value: 'none', label: 'مستقل' },
+                  ...(contextAllowed && draft.context ? [{ value: 'context', label: `زیر «${draft.context.title}»` }] : []),
+                  ...parents.map(item => ({ value: `draft:${item.draftId}`, label: `زیر «${item.title}»` })),
+                ]}
+              />
+            )}
+          />
         )}
 
         {isParent && (
@@ -134,15 +143,23 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
         )}
         {type === 'ROUTINE' && (
           <>
-            <label className="field-label">
-              تکرار
-              <select className="field-input" aria-invalid={errors.recurrenceType ? true : undefined} {...form.register('recurrenceType')}>
-                {recurrenceType === '' && <option value="">انتخاب کنید</option>}
-                <option value="DAILY">هر روز</option>
-                <option value="SPECIFIC_WEEKDAYS">روزهای مشخص هفته</option>
-                <option value="MONTHLY_ON_DAY">یک روز مشخص در هر ماه</option>
-              </select>
-            </label>
+            <Controller
+              control={form.control}
+              name="recurrenceType"
+              render={({ field }) => (
+                <ChoiceField
+                  label="تکرار"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.recurrenceType?.message}
+                  options={[
+                    { value: 'DAILY', label: 'هر روز' },
+                    { value: 'SPECIFIC_WEEKDAYS', label: 'روزهای مشخص هفته' },
+                    { value: 'MONTHLY_ON_DAY', label: 'یک روز مشخص در هر ماه' },
+                  ]}
+                />
+              )}
+            />
             {recurrenceType === 'SPECIFIC_WEEKDAYS' && (
               <Controller
                 control={form.control}
@@ -156,7 +173,7 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
                         return (
                           <button
                             key={day.value}
-                            className="segmented-option border border-border"
+                            className="choice-chip"
                             type="button"
                             aria-pressed={selected}
                             onClick={() => field.onChange(selected

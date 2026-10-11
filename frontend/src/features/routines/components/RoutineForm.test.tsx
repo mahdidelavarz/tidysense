@@ -60,11 +60,11 @@ describe('RoutineForm', () => {
   it('requires a weekday or a valid month day for those recurrence types', async () => {
     const onSubmit = renderForm()
     fireEvent.change(screen.getByLabelText('عنوان روتین'), { target: { value: 'گزارش' } })
-    fireEvent.change(screen.getByLabelText('تکرار'), { target: { value: 'SPECIFIC_WEEKDAYS' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'روزهای مشخص هفته' }))
     fireEvent.click(screen.getByRole('button', { name: 'ساخت روتین' }))
     expect((await screen.findAllByText('دست‌کم یک روز هفته را انتخاب کنید.')).length).toBeGreaterThan(0)
 
-    fireEvent.change(screen.getByLabelText('تکرار'), { target: { value: 'MONTHLY_ON_DAY' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'یک روز مشخص در هر ماه' }))
     fireEvent.change(screen.getByLabelText('روز ماه'), { target: { value: '32' } })
     fireEvent.click(screen.getByRole('button', { name: 'ساخت روتین' }))
     expect((await screen.findAllByText('روز ماه باید عددی بین ۱ و ۳۱ باشد.')).length).toBeGreaterThan(0)

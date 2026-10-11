@@ -1,5 +1,5 @@
 import { formatNumber, formatTime } from '../../../shared/lib/date'
-import type { RecurrenceDto, RoutineDto } from './routine.types'
+import type { RecurrenceDto } from './routine.types'
 
 /** ISO weekday numbers in the order of the Jalali week (Saturday first). */
 export const weekdayOptions = [
@@ -25,11 +25,4 @@ export function recurrenceLabel(recurrence: RecurrenceDto): string {
 /** The Routine's daily slots in words, such as «۰۸:۰۰ و ۲۰:۰۰», or that it has no fixed time. */
 export function slotsLabel(timesOfDay: string[]): string {
   return timesOfDay.length === 0 ? 'بدون ساعت مشخص' : timesOfDay.map(formatTime).join(' و ')
-}
-
-/** Where a Routine belongs, in words. */
-export function routineOwnerLabel(routine: Pick<RoutineDto, 'goalId' | 'projectId'>) {
-  if (routine.projectId) return 'زیر یک پروژه'
-  if (routine.goalId) return 'زیر یک هدف'
-  return 'مستقل'
 }

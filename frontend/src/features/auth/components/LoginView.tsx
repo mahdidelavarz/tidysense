@@ -90,29 +90,33 @@ export function LoginView() {
   return (
     <div className="grid min-h-dvh grid-rows-[auto_1fr] lg:grid-cols-2 lg:grid-rows-1">
       {/* Brand panel: a full half on desktop, a compact band on phones. */}
-      <aside className="flex flex-col justify-between gap-8 bg-accent px-6 py-8 text-white sm:px-10 lg:py-14">
-        <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-white text-xl font-extrabold text-accent" aria-hidden="true">ت</span>
+      <aside className="login-brand">
+        {/* Two soft discs give the panel depth without competing with the words. */}
+        <span className="pointer-events-none absolute -end-24 -top-24 size-72 rounded-full bg-white/10" aria-hidden="true" />
+        <span className="pointer-events-none absolute -bottom-32 -start-16 size-96 rounded-full bg-white/5" aria-hidden="true" />
+        <div className="relative flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-xl bg-white text-xl font-extrabold text-accent shadow-md" aria-hidden="true">ت</span>
           <span className="text-xl font-extrabold tracking-tight">تایدی‌سنس</span>
         </div>
-        <div className="hidden lg:block">
-          <p className="text-3xl font-extrabold leading-relaxed">برنامه‌ای که با زندگی واقعی شما کنار می‌آید.</p>
+        <div className="relative hidden lg:block">
+          <p className="max-w-md text-4xl font-extrabold leading-normal">برنامه‌ای که با زندگی واقعی شما کنار می‌آید.</p>
           <ul className="mt-8 space-y-4 text-white/90">
             {loginHighlights.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-3">
+              <li key={text} className="flex items-center gap-3 text-lg">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15" aria-hidden="true"><Icon size={20} /></span>
                 {text}
               </li>
             ))}
           </ul>
         </div>
-        <p className="hidden text-sm text-white/70 lg:block">هدف، پروژه و کار روزانه در یک جای آرام.</p>
+        <p className="relative hidden text-sm text-white/70 lg:block">هدف، پروژه و کار روزانه در یک جای آرام.</p>
       </aside>
 
-      <section className="flex items-start justify-center px-6 py-10 sm:px-10 lg:items-center">
-        <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-extrabold">ورود به حساب</h1>
-          <p className="mt-2 text-sm text-text-secondary">
+      <section className="flex items-start justify-center px-4 pb-10 sm:px-10 lg:items-center lg:py-10">
+        {/* On a phone the card rises over the brand band, so the form is the first thing in reach. */}
+        <div className="relative -mt-10 w-full max-w-md rounded-3xl border border-border-subtle bg-surface p-6 shadow-md sm:p-9 lg:mt-0">
+          <h1 className="text-2xl font-extrabold sm:text-[1.75rem]">ورود به حساب</h1>
+          <p className="mt-2 text-sm leading-7 text-text-secondary">
             {phone ? 'کد تأیید پیامک‌شده را وارد کنید.' : 'شماره موبایل خود را وارد کنید تا کد ورود برایتان پیامک شود.'}
           </p>
           {!phone
@@ -128,7 +132,7 @@ export function LoginView() {
               />
             )}
           {error && <p role="alert" className="notice-attention mt-5 font-medium">{error}</p>}
-          <p className="mt-6 text-sm"><Link className="text-link" to="/privacy">حریم خصوصی و داده‌ها</Link></p>
+          <p className="mt-6 border-t border-border-subtle pt-5 text-center text-sm"><Link className="text-link" to="/privacy">حریم خصوصی و داده‌ها</Link></p>
         </div>
       </section>
       {showDevelopmentCode && developmentCode && (

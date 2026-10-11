@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CircleCheck, CircleSlash, FileClock } from 'lucide-react'
+import { CircleCheck, CircleSlash, FileClock, LoaderCircle, Sparkles } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatNumber } from '../../../shared/lib/date'
@@ -38,7 +38,10 @@ const pageTitle = 'برنامه‌ریزی'
  * created until the user confirms the server's preview. Manual creation stays
  * available at every step, and every failure leaves the user's input intact.
  */
-export function PlanningPage({ goalId, projectId }: PlanningScopeInput) {
+export function PlanningPage({ goalId, projectId, initialIntention = '' }: PlanningScopeInput & {
+  /** Text written before arriving here (First Entry); it only prefills the form. */
+  initialIntention?: string
+}) {
   const active = usePlanningActive()
   const start = useStartPlanningAttempt()
   const cancelAttempt = useCancelPlanningAttempt()
@@ -54,7 +57,7 @@ export function PlanningPage({ goalId, projectId }: PlanningScopeInput) {
   // Once the user has chosen what to do, the page stops following the flow it found on arrival.
   const [detached, setDetached] = useState(false)
   const [replace, setReplace] = useState(false)
-  const [intention, setIntention] = useState('')
+  const [intention, setIntention] = useState(initialIntention)
 
   const found = detached ? undefined : active.data
   // Unanswered questions are resumed like a running attempt: by the id of the attempt that asked them.
@@ -183,9 +186,12 @@ export function PlanningPage({ goalId, projectId }: PlanningScopeInput) {
 
   if (phase === 'queued' || phase === 'running' || (currentAttemptId !== null && attempt.isPending) || (currentDraftId !== null && draft.isPending)) {
     return frame(
-      <section className="card" aria-label="ساخت پیش‌نویس">
-        <p className="font-bold" role="status">{phase === 'queued' ? 'در صف ساخت پیش‌نویس…' : 'در حال ساخت پیش‌نویس…'}</p>
-        <p className="mt-1 text-sm text-text-secondary">تا پیش‌نویس کامل و بررسی نشود چیزی نمایش داده نمی‌شود. می‌توانید صفحه را ببندید و بعداً برگردید.</p>
+      <section className="state-panel" aria-label="ساخت پیش‌نویس">
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-accent-tint text-accent-strong" aria-hidden="true">
+          <LoaderCircle size={26} className="animate-spin" />
+        </div>
+        <p className="mt-4 text-lg font-bold" role="status">{phase === 'queued' ? 'در صف ساخت پیش‌نویس…' : 'در حال ساخت پیش‌نویس…'}</p>
+        <p className="mt-1 max-w-sm text-sm text-text-secondary">تا پیش‌نویس کامل و بررسی نشود چیزی نمایش داده نمی‌شود. می‌توانید صفحه را ببندید و بعداً برگردید.</p>
         <FormError error={cancelAttempt.error} />
         {currentAttemptId !== null && attempt.data && (
           <button
@@ -301,7 +307,8 @@ export function PlanningPage({ goalId, projectId }: PlanningScopeInput) {
 
   return frame(
     <div className="space-y-4">
-      <p className="notice">
+      <p className="flex items-start gap-3 rounded-2xl border border-accent/20 bg-linear-to-bl from-accent-tint to-surface p-4 text-sm leading-7 text-text-secondary">
+        <Sparkles size={20} className="mt-1 shrink-0 text-accent" aria-hidden="true" />
         {active.data?.sampleGenerator === false
           ? 'پیش‌نویس با کمک هوش مصنوعی و با اجازه‌ای که داده‌اید ساخته می‌شود: نوشته شما و خلاصه‌ای از همین حساب برای سرویس هوش مصنوعی بیرون از ایران فرستاده می‌شود. هوش مصنوعی فقط پیشنهاد می‌دهد و چیزی را تغییر نمی‌دهد.'
           : 'در این نسخه پیش‌نویس به‌صورت نمونه و بدون هوش مصنوعی ساخته می‌شود تا مسیر مرور و تأیید قابل استفاده باشد.'}

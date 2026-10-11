@@ -30,6 +30,16 @@ export function EntityIcon({ entity }: { entity: EntityKind }) {
   )
 }
 
+/** Compact entity icon for dense places such as picker options. Decorative: the option text names the item. */
+export function EntityMark({ entity }: { entity: EntityKind }) {
+  const Icon = entities[entity].icon
+  return (
+    <span className={`entity-icon entity-${entity} size-7 rounded-lg`} aria-hidden="true">
+      <Icon size={16} />
+    </span>
+  )
+}
+
 const statusLabels: Record<string, string> = {
   ACTIVE: 'فعال',
   ACHIEVED: 'محقق‌شده',

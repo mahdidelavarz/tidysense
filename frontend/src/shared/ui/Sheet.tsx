@@ -39,10 +39,10 @@ export function Sheet({ title, description, children, onClose, locked = false }:
         aria-describedby={description ? descriptionId : undefined}
       >
         <div className="sheet-handle" aria-hidden="true" />
-        <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-4 sm:px-6 md:pt-6">
+        <div className="sheet-header">
           <div className="min-w-0">
             <h2 className="text-xl font-extrabold leading-snug" id={titleId}>{title}</h2>
-            {description && <p className="mt-1 text-sm text-text-secondary" id={descriptionId}>{description}</p>}
+            {description && <p className="mt-1 text-sm leading-6 text-text-secondary" id={descriptionId}>{description}</p>}
           </div>
           <button className="icon-button -me-2 -mt-1" type="button" onClick={onClose} disabled={locked} aria-label="بستن">
             <X size={22} aria-hidden="true" />

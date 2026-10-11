@@ -29,7 +29,7 @@ test('new user login, invalid code, reload, logout, and immediate login again', 
   await page.getByRole('button', { name: 'ورود' }).click()
   await expect(page).toHaveURL(/first-entry/)
   await page.screenshot({ path: 'test-results/auth-first-entry.png' })
-  await page.getByRole('link', { name: 'ادامه به برنامه' }).click()
+  await page.getByRole('link', { name: 'فعلاً بدون اضافه کردن چیزی وارد برنامه بشم' }).click()
   await expect(page).toHaveURL(/today/)
   await openAccountMenu(page)
   await expect(page.getByRole('button', { name: 'خروج از این مرورگر' })).toBeVisible()

@@ -1,9 +1,11 @@
 import { FolderKanban, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { SegmentedControl, type StatusFilter, statusFilterOptions } from '../../../shared/ui/SegmentedControl'
 import { LoadMoreButton, ResourceState } from '../../../shared/ui/StateUi'
+import { useGoalOptions } from '../../goals/hooks/goal-hooks'
 import { useProjects } from '../hooks/project-hooks'
 import { ProjectCard } from './ProjectCard'
 
@@ -12,6 +14,9 @@ export function ProjectsPage() {
   const [filter, setFilter] = useState<StatusFilter>('ACTIVE')
   const projects = useProjects(filter === 'all' ? undefined : filter)
   const openCreate = useUiStore(state => state.openCreate)
+  // A lookup for the cards' Goal title; a card names only the kind until it arrives.
+  const goals = useGoalOptions().data?.items
+  const today = toIsoDate(new Date())
   const items = projects.data?.pages.flatMap(page => page.items) ?? []
 
   return (
@@ -26,7 +31,7 @@ export function ProjectsPage() {
           </button>
         )}
       />
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <SegmentedControl label="فیلتر وضعیت پروژه‌ها" value={filter} options={statusFilterOptions} onChange={setFilter} />
         {projects.isFetching && !projects.isPending && <span className="text-xs text-text-secondary" role="status">در حال به‌روزرسانی…</span>}
       </div>
@@ -42,7 +47,11 @@ export function ProjectsPage() {
         onRetry={() => projects.refetch()}
       >
         <ul className="grid gap-4 md:grid-cols-2">
-          {items.map(project => <li key={project.id}><ProjectCard project={project} /></li>)}
+          {items.map(project => (
+            <li key={project.id}>
+              <ProjectCard project={project} today={today} goalTitle={goals?.find(goal => goal.id === project.goalId)?.title} />
+            </li>
+          ))}
         </ul>
         <LoadMoreButton
           visible={projects.hasNextPage}

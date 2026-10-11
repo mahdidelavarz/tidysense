@@ -67,7 +67,7 @@ export function ReviewApplyDialog({ flow }: { flow: ReconcileActionFlow }) {
     >
       <ul className="space-y-2" aria-label="موارد این اقدام">
         {preview.items.map(item => (
-          <li key={item.taskId} className="rounded-xl border border-border-subtle p-3">
+          <li key={item.taskId} className="rounded-xl border border-border-subtle bg-canvas/60 p-3">
             <p className="wrap-break-word font-bold">{item.title}</p>
             <p className={`text-sm ${blockingClassifications.has(item.classification) ? 'font-bold text-attention' : 'text-text-secondary'}`}>
               {classificationLabels[item.classification] ?? item.classification}

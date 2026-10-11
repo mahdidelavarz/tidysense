@@ -58,8 +58,9 @@
 }
 
 :root {
-  --sidebar-width: 17rem;
-  --tabbar-height: 4.25rem;
+  --sidebar-width: 17.75rem;
+  /* The floating dock plus the gap beneath it. */
+  --tabbar-height: 5rem;
   color: var(--color-text-primary);
   background: var(--color-canvas);
   font-family: var(--font-sans);
@@ -83,13 +84,6 @@ body {
   min-height: 100dvh;
   margin: 0;
   line-height: 1.75;
-}
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
 }
 
 button,
@@ -123,6 +117,14 @@ select:not(:disabled),
 }
 
 @layer base {
+  /* Kept inside a layer so component classes can still set a control's size and weight. */
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
   :focus-visible {
     outline: 3px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
     outline-offset: 2px;
@@ -136,17 +138,24 @@ select:not(:disabled),
     padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1.5rem);
   }
 
+  /* A panel floating on the canvas, not a column glued to the screen edge. */
   .sidebar {
-    @apply fixed inset-y-0 z-10 hidden flex-col gap-6 border-border-subtle bg-surface p-5;
-    inset-inline-start: 0;
-    width: var(--sidebar-width);
-    border-inline-end-width: 1px;
+    @apply fixed z-10 hidden flex-col gap-5 rounded-3xl border border-border-subtle bg-surface p-4 shadow-sm;
+    --nav-pad: 1rem;
+    inset-block: 0.75rem;
+    inset-inline-start: 0.75rem;
+    width: calc(var(--sidebar-width) - 0.75rem);
   }
 
+  /* The strip only fades the page out beneath the dock; taps pass through it. */
   .tabbar {
-    @apply fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 items-stretch border-t border-border-subtle bg-surface/95 backdrop-blur;
-    height: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
-    padding-bottom: env(safe-area-inset-bottom);
+    @apply pointer-events-none fixed inset-x-0 bottom-0 z-10 flex justify-center px-3 pt-6;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+    background: linear-gradient(to top, var(--color-canvas) 55%, transparent);
+  }
+
+  .tabbar-dock {
+    @apply pointer-events-auto grid h-16 w-full max-w-md grid-cols-5 items-stretch rounded-[1.75rem] border border-border-subtle bg-surface/90 px-1.5 shadow-md backdrop-blur-md;
   }
 
   @media (min-width: 64rem) {
@@ -164,24 +173,50 @@ select:not(:disabled),
     }
   }
 
-  .nav-item {
-    @apply flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-text-secondary transition-colors duration-200 hover:bg-surface-sunken hover:text-text-primary;
+  .nav-item,
+  .menu-item {
+    @apply relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-text-secondary transition-colors duration-200 hover:bg-surface-sunken hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .nav-item[aria-current="page"] {
     @apply bg-accent-tint font-bold text-accent-strong;
   }
 
+  /* Marks the current destination on the edge of the panel that holds the list. */
+  .nav-item[aria-current="page"]::before {
+    position: absolute;
+    inset-block: 0.625rem;
+    inset-inline-start: calc(var(--nav-pad, 0px) * -1);
+    width: 3px;
+    content: "";
+    background: var(--color-accent);
+    border-start-end-radius: 999px;
+    border-end-end-radius: 999px;
+  }
+
   .tab-item {
-    @apply flex flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium text-text-secondary transition-colors duration-200;
+    @apply flex flex-col items-center justify-center gap-0.5 rounded-2xl text-[0.6875rem] font-medium text-text-secondary transition-colors duration-200;
+  }
+
+  .tab-icon {
+    @apply flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200;
   }
 
   .tab-item[aria-current="page"] {
     @apply font-bold text-accent-strong;
   }
 
+  .tab-item[aria-current="page"] .tab-icon {
+    @apply bg-accent-tint;
+  }
+
   .tab-create {
-    @apply mx-auto -mt-5 flex size-14 items-center justify-center rounded-full bg-accent text-white shadow-md transition duration-200 hover:bg-accent-strong active:scale-95;
+    @apply m-auto flex size-12 items-center justify-center rounded-full bg-accent text-white shadow-md transition duration-200 hover:bg-accent-strong active:scale-95;
+  }
+
+  /* Opens the drawer below the desktop breakpoint. */
+  .menu-button {
+    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface text-text-primary shadow-sm transition duration-200 hover:border-border hover:shadow-md active:scale-[0.98];
   }
 
   /* ---------- Page ---------- */
@@ -206,20 +241,42 @@ select:not(:disabled),
     @apply rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm sm:p-6;
   }
 
-  .card-link {
-    @apply block h-full rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm transition duration-200 hover:border-border hover:shadow-md;
-  }
-
-  .row-link {
-    @apply flex min-h-16 items-center gap-3 rounded-2xl border border-border-subtle bg-surface px-4 py-3 shadow-sm transition duration-200 hover:border-border hover:shadow-md;
-  }
-
   .notice {
-    @apply rounded-xl bg-surface-sunken p-4 text-sm text-text-secondary;
+    @apply rounded-xl bg-surface-sunken p-4 text-sm leading-7 text-text-secondary;
+  }
+
+  /* Empty and error states: a quiet panel with a tinted corner, an icon tile and one way forward. */
+  .state-panel {
+    @apply flex flex-col items-center rounded-3xl border border-border-subtle px-6 py-12 text-center shadow-sm;
+    background: linear-gradient(160deg, var(--color-accent-tint) 0%, var(--color-surface) 45%);
+  }
+
+  .state-panel[data-tone="attention"] {
+    @apply border-attention/20;
+    background: linear-gradient(160deg, var(--color-attention-tint) 0%, var(--color-surface) 45%);
   }
 
   .notice-attention {
-    @apply rounded-xl border border-attention/30 bg-attention-tint p-4 text-sm text-text-primary;
+    @apply rounded-xl border border-attention/30 bg-attention-tint p-4 text-sm leading-7 text-text-primary;
+  }
+
+  /* Every remaining checkbox is drawn in the product's own shape and accent. */
+  input[type="checkbox"]:not(.sr-only) {
+    @apply cursor-pointer appearance-none rounded-md border-2 border-border bg-surface transition duration-200 ease-standard hover:border-accent disabled:cursor-not-allowed disabled:opacity-50;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 80%;
+  }
+
+  input[type="checkbox"]:not(.sr-only):checked {
+    @apply border-accent bg-accent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  }
+
+  /* The sign-in brand panel: a compact band on a phone, half the screen on desktop. */
+  .login-brand {
+    @apply relative flex flex-col justify-between gap-8 overflow-hidden px-6 pb-16 pt-8 text-white sm:px-10 lg:py-14;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--color-accent) 88%, white) 0%, var(--color-accent) 45%, var(--color-accent-strong) 100%);
   }
 
   /* ---------- Buttons ---------- */
@@ -291,7 +348,7 @@ select:not(:disabled),
 
   /* ---------- Segmented control ---------- */
   .segmented {
-    @apply inline-flex rounded-xl bg-surface-sunken p-1;
+    @apply inline-flex rounded-xl border border-border-subtle bg-surface-sunken p-1;
   }
 
   .segmented-option {
@@ -315,20 +372,93 @@ select:not(:disabled),
     @apply block text-sm font-bold text-text-primary;
   }
 
-  .field-hint {
-    @apply mt-1 block text-xs leading-6 text-text-secondary;
+  /* The "(optional)" part of a label: still read as part of it, visually quieter. */
+  .field-optional {
+    @apply font-normal text-text-secondary;
   }
 
+  .field-hint {
+    @apply mt-1.5 block text-xs leading-6 text-text-secondary;
+  }
+
+  /* Softly filled at rest, white with an accent halo while in use. */
   .field-input {
-    @apply mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base text-text-primary transition placeholder:text-text-tertiary hover:border-text-tertiary focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-secondary;
+    @apply mt-2 block min-h-12 w-full rounded-xl border border-border bg-canvas/60 px-3.5 py-2.5 text-base text-text-primary shadow-sm transition duration-200 ease-standard placeholder:text-text-tertiary hover:border-text-tertiary hover:bg-surface focus:border-accent focus:bg-surface focus:outline-none focus:ring-4 focus:ring-accent/15 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-secondary disabled:shadow-none;
+  }
+
+  .field-input[aria-expanded="true"] {
+    @apply border-accent bg-surface ring-4 ring-accent/15;
   }
 
   .field-input[aria-invalid="true"] {
-    @apply border-attention focus:border-attention focus:ring-attention/20;
+    @apply border-attention focus:border-attention focus:ring-attention/15;
+  }
+
+  /* Grows with what is typed instead of asking the user to drag a corner. */
+  textarea.field-input {
+    @apply max-h-60 min-h-24 resize-none;
+    field-sizing: content;
   }
 
   .field-error {
     @apply mt-1.5 block text-xs font-bold leading-6 text-attention;
+  }
+
+  /* One of a few choices (recurrence, weekdays, date shortcuts). */
+  .choice-chip {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-medium text-text-secondary shadow-sm transition duration-200 ease-standard hover:border-text-tertiary hover:text-text-primary active:scale-[0.98];
+  }
+
+  .choice-chip[aria-pressed="true"],
+  .choice-chip[aria-checked="true"] {
+    @apply border-accent bg-accent-tint font-bold text-accent-strong;
+  }
+
+  /* Options panel of SelectField, floating under its trigger. */
+  .select-panel {
+    @apply absolute inset-x-0 top-full z-20 mt-2 scroll-mb-24 overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-lg;
+    animation: var(--animate-pop-in);
+  }
+
+  .select-option {
+    @apply flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-text-primary transition-colors duration-150;
+  }
+
+  .select-option[data-active="true"] {
+    @apply bg-surface-sunken;
+  }
+
+  .select-option[aria-selected="true"] {
+    @apply bg-accent-tint font-bold text-accent-strong;
+  }
+
+  /* A checkbox drawn as a switch; the input itself stays in the accessibility tree. */
+  .switch {
+    @apply relative h-7 w-12 shrink-0 rounded-full bg-border transition-colors duration-200 ease-standard;
+  }
+
+  .switch::after {
+    @apply absolute top-1 size-5 rounded-full bg-surface shadow-sm transition-transform duration-200 ease-standard;
+    inset-inline-start: 0.25rem;
+    content: "";
+  }
+
+  input:checked + .switch {
+    @apply bg-accent;
+  }
+
+  input:checked + .switch::after {
+    transform: translateX(-1.25rem);
+  }
+
+  input:focus-visible + .switch {
+    outline: 3px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  /* Reveals the optional fields of a form. */
+  .more-toggle {
+    @apply flex min-h-12 w-full items-center gap-3 rounded-xl border border-dashed border-border px-3.5 text-start text-sm transition duration-200 ease-standard hover:border-accent hover:bg-accent-tint;
   }
 
   /* ---------- Overlays ---------- */
@@ -369,13 +499,17 @@ select:not(:disabled),
     }
   }
 
+  .sheet-header {
+    @apply flex items-start justify-between gap-4 border-b border-border-subtle px-5 pb-4 pt-4 sm:px-6 md:pt-6;
+  }
+
   .sheet-body {
-    @apply flex-1 overflow-y-auto px-5 pb-6 sm:px-6;
+    @apply flex-1 overflow-y-auto px-5 pb-6 pt-5 sm:px-6;
   }
 
   /* Keeps a form's submit row visible while the sheet body scrolls. */
   .sheet-actions {
-    @apply sticky bottom-0 -mx-5 -mb-6 mt-2 flex gap-3 border-t border-border-subtle bg-surface px-5 py-4 sm:-mx-6 sm:justify-end sm:px-6;
+    @apply sticky bottom-0 z-1 -mx-5 -mb-6 mt-2 flex gap-3 border-t border-border-subtle bg-canvas px-5 py-4 sm:-mx-6 sm:justify-end sm:px-6;
   }
 
   /* On phones the primary action takes the remaining width beside a compact cancel. */
@@ -384,16 +518,17 @@ select:not(:disabled),
   }
 
   .drawer-panel {
-    @apply fixed inset-y-0 z-50 flex flex-col gap-6 overflow-y-auto bg-surface p-5 shadow-lg;
-    inset-inline-start: 0;
-    width: min(20rem, 86vw);
-    border-start-end-radius: 1.5rem;
-    border-end-end-radius: 1.5rem;
+    @apply fixed z-50 flex flex-col gap-5 overflow-y-auto rounded-3xl bg-surface p-4 shadow-lg;
+    --nav-pad: 1rem;
+    top: calc(env(safe-area-inset-top) + 0.5rem);
+    bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+    inset-inline-start: 0.5rem;
+    width: min(20rem, calc(100vw - 3.5rem));
     animation: drawer-in 280ms var(--ease-standard);
   }
 
   @keyframes drawer-in {
-    from { transform: translateX(100%); }
+    from { transform: translateX(calc(100% + 0.5rem)); }
     to { transform: translateX(0); }
   }
 
@@ -402,12 +537,17 @@ select:not(:disabled),
   }
 
   .dialog-panel {
-    @apply relative z-50 max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-3xl bg-surface p-5 shadow-lg sm:p-7;
+    @apply relative z-50 max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-3xl bg-surface shadow-lg;
     animation: var(--animate-pop-in);
   }
 
+  /* The decision row of a dialog: stacked on a phone with the confirming button on top, in a line from tablet width. */
+  .dialog-actions {
+    @apply sticky bottom-0 flex flex-col-reverse gap-2.5 border-t border-border-subtle bg-canvas px-5 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-7;
+  }
+
   .toast {
-    @apply pointer-events-auto flex items-center gap-3 rounded-2xl bg-text-primary px-4 py-3 text-sm font-medium text-white shadow-lg;
+    @apply pointer-events-auto flex items-center gap-3 rounded-full bg-text-primary py-2 ps-2 pe-5 text-sm font-medium text-white shadow-lg;
     animation: var(--animate-pop-in);
   }
 
@@ -417,7 +557,270 @@ select:not(:disabled),
   }
 
   .check-button {
-    @apply flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-border text-transparent transition duration-200 hover:border-positive hover:bg-positive-tint hover:text-positive disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-transparent disabled:hover:text-transparent;
+    @apply flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-border bg-surface/80 text-transparent shadow-sm transition duration-200 ease-standard hover:border-positive hover:bg-positive-tint hover:text-positive active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-surface/80 disabled:hover:text-transparent;
+  }
+
+  /* ---------- Lists ---------- */
+  /* A whole-row link in a list of Tasks or Routines. */
+  .list-row {
+    @apply flex min-h-18 items-center gap-3.5 rounded-2xl border border-border-subtle bg-surface p-3 pe-3.5 shadow-sm transition duration-200 ease-standard hover:border-border hover:shadow-md active:scale-[0.995];
+  }
+
+  /* The planned date as a small calendar leaf at the start of a row. */
+  .date-leaf {
+    @apply flex size-12 shrink-0 flex-col items-center justify-center rounded-xl text-center;
+    color: color-mix(in srgb, var(--color-entity-task) 72%, black);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-entity-task) 16%, white), color-mix(in srgb, var(--color-accent) 7%, white));
+  }
+
+  .date-leaf[data-when="today"] {
+    @apply text-white shadow-sm;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-accent) 82%, white), var(--color-accent-strong));
+  }
+
+  .date-leaf[data-when="earlier"] {
+    color: color-mix(in srgb, var(--color-caution) 80%, black);
+    background: linear-gradient(160deg, var(--color-caution-tint), color-mix(in srgb, var(--color-caution) 5%, white));
+  }
+
+  .date-leaf[data-when="none"],
+  .date-leaf[data-when="closed"] {
+    @apply bg-none text-text-tertiary;
+    background: var(--color-surface-sunken);
+  }
+
+  .meta-chip {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface-sunken px-2.5 py-0.5 text-xs font-medium text-text-secondary;
+  }
+
+  /* One day of the week in a Routine's rhythm. */
+  .week-dot {
+    @apply flex size-6 items-center justify-center rounded-full bg-surface-sunken text-[0.625rem] font-bold text-text-tertiary;
+  }
+
+  .week-dot[data-on="true"] {
+    @apply text-white;
+    background: var(--color-entity-routine);
+  }
+
+  /*
+   * A Goal or Project in its grid. The entity colour washes in from one
+   * corner and fades to white, so a grid of cards stays calm.
+   */
+  .entity-card {
+    @apply block h-full rounded-3xl border p-5 shadow-sm transition duration-200 ease-standard hover:shadow-md active:scale-[0.99];
+    border-color: color-mix(in srgb, var(--entity-color) 16%, var(--color-border-subtle));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 13%, white) 0%, color-mix(in srgb, var(--entity-color) 4%, white) 40%, var(--color-surface) 72%);
+  }
+
+  /* Closed work keeps its place in the grid without asking for attention. */
+  .entity-card[data-closed="true"] {
+    @apply border-border-subtle bg-none text-text-secondary;
+    background: var(--color-surface);
+  }
+
+  /* ---------- Decisions (Reconcile) ---------- */
+  /* One item that waits for an answer: what it is on top, its possible answers in a bar underneath. */
+  .decision-card {
+    @apply overflow-hidden rounded-2xl border border-border bg-surface shadow-sm;
+  }
+
+  /* A part of the page with its own kind of decision; a rule and a strong title set it apart from the one above. */
+  .lane {
+    @apply border-t border-border pt-6;
+  }
+
+  .lane-title {
+    @apply flex scroll-mt-6 items-center gap-2.5 text-lg font-extrabold leading-7 text-text-primary;
+  }
+
+  .lane-count {
+    @apply rounded-full bg-accent-tint px-2.5 py-0.5 text-xs font-bold text-accent-strong;
+  }
+
+  /* Names the Goal or Project the cards under it belong to. */
+  .lane-owner {
+    @apply inline-flex max-w-full items-center gap-2 rounded-full bg-surface-sunken px-3 py-1.5 text-xs font-bold text-text-primary;
+  }
+
+  /*
+   * On a phone the answers are one compact toolbar row, icon over a small
+   * label; from tablet width they become ordinary bordered buttons.
+   */
+  .decision-bar {
+    @apply flex items-stretch gap-1.5 border-t border-border bg-surface-sunken/60 p-2 sm:flex-wrap sm:gap-2 sm:p-3;
+  }
+
+  .decision-button {
+    @apply inline-flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-border-subtle bg-surface px-1 text-center text-[0.6875rem] font-bold leading-4 text-text-secondary transition duration-200 ease-standard hover:bg-accent-tint hover:text-accent-strong active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:flex-none sm:flex-row sm:gap-2 sm:border-border sm:px-3.5 sm:text-sm sm:text-text-primary sm:shadow-sm sm:hover:border-accent;
+  }
+
+  .decision-button[data-tone="primary"] {
+    @apply border-transparent bg-accent text-white hover:bg-accent-strong hover:text-white sm:border-transparent sm:text-white;
+  }
+
+  .decision-button[data-tone="positive"] {
+    @apply text-positive hover:bg-positive-tint hover:text-positive sm:text-positive sm:hover:border-positive;
+  }
+
+  .decision-button[data-tone="danger"] {
+    @apply text-attention hover:bg-attention-tint hover:text-attention sm:text-attention sm:hover:border-attention/50;
+  }
+
+  /* The leaf and icon tiles step down a size on a phone, where every pixel of title width counts. */
+  .decision-card .date-leaf,
+  .decision-card .entity-icon,
+  .decision-tile {
+    @apply max-sm:size-10 max-sm:rounded-lg;
+  }
+
+  .decision-tile {
+    @apply flex size-12 shrink-0 items-center justify-center rounded-xl;
+  }
+
+  .decision-head {
+    @apply flex items-start gap-3 p-3 sm:p-4;
+  }
+
+  .decision-title {
+    @apply wrap-break-word text-[0.9375rem] font-bold leading-6 sm:text-base sm:leading-7;
+  }
+
+  .lane-hint {
+    @apply mt-1 text-xs leading-6 text-text-secondary sm:text-sm;
+  }
+
+  /* ---------- Detail pages ---------- */
+  /* What one Goal, Project, Task or Routine is: identity on top in its own corner wash, its facts underneath. */
+  .detail-card {
+    @apply rounded-3xl border p-5 shadow-sm sm:p-7;
+    border-color: color-mix(in srgb, var(--entity-color) 16%, var(--color-border-subtle));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 12%, white) 0%, color-mix(in srgb, var(--entity-color) 3%, white) 30%, var(--color-surface) 55%);
+  }
+
+  .detail-facts {
+    @apply mt-6 grid gap-5 border-t border-border-subtle pt-6 sm:grid-cols-2;
+  }
+
+  /* A proposed item in a planning draft: its entity colour in one corner, its switches in a bar underneath. */
+  .proposal-card {
+    @apply overflow-hidden rounded-2xl border shadow-sm;
+    border-color: color-mix(in srgb, var(--entity-color) 18%, var(--color-border-subtle));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 10%, white) 0%, var(--color-surface) 40%);
+  }
+
+  .proposal-card[data-excluded="true"] {
+    @apply border-border-subtle text-text-secondary;
+    background: var(--color-surface);
+  }
+
+  /* ---------- Today ---------- */
+  /* A row of day tiles: it scrolls sideways on a phone and spreads evenly once there is room. */
+  .day-strip {
+    @apply -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0;
+    scrollbar-width: none;
+  }
+
+  .day-tile {
+    @apply flex h-18 min-w-15 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border border-border-subtle bg-surface text-text-secondary shadow-sm transition duration-200 ease-standard hover:border-border hover:text-text-primary active:scale-[0.97];
+  }
+
+  .day-tile[data-today="true"] {
+    @apply text-accent-strong;
+  }
+
+  .day-tile[aria-pressed="true"] {
+    @apply border-transparent text-white shadow-md;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-accent) 82%, white), var(--color-accent-strong));
+  }
+
+  /*
+   * One item in Today. Tasks and Routines get their own light wash, the one
+   * place an entity colour tints a whole card. On a phone the face slides
+   * left over the action tray; from tablet width the tray opens under it.
+   */
+  .today-card {
+    @apply relative overflow-hidden rounded-3xl border shadow-sm transition-shadow duration-200 hover:shadow-md;
+    --wash: linear-gradient(135deg, color-mix(in srgb, var(--tone) 18%, white) 0%, color-mix(in srgb, var(--tone-2) 8%, white) 55%, color-mix(in srgb, var(--tone) 3%, white) 100%);
+    border-color: color-mix(in srgb, var(--tone) 20%, white);
+    background: color-mix(in srgb, var(--tone) 20%, white);
+  }
+
+  .today-card-task {
+    --tone: var(--color-entity-task);
+    --tone-2: var(--color-accent);
+  }
+
+  .today-card-routine {
+    --tone: var(--color-entity-routine);
+    --tone-2: var(--color-entity-project);
+  }
+
+  .today-card-face {
+    @apply relative z-1 flex items-start gap-3 p-4 transition-transform duration-300 ease-standard;
+    background: var(--wash);
+    touch-action: pan-y;
+  }
+
+  .today-card[data-open="true"] .today-card-face {
+    transform: translateX(calc(var(--tray) * -1));
+  }
+
+  .today-card-more {
+    @apply -me-2 max-md:sr-only;
+  }
+
+  .today-card-actions {
+    @apply absolute inset-y-0 right-0 flex;
+    width: var(--tray);
+  }
+
+  .today-card-actions-inner {
+    @apply flex w-full items-stretch;
+  }
+
+  .today-action {
+    @apply flex flex-1 flex-col items-center justify-center gap-1 text-xs font-bold transition-colors duration-200;
+    color: color-mix(in srgb, var(--tone) 70%, black);
+  }
+
+  .today-badge {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold;
+    color: color-mix(in srgb, var(--tone) 72%, black);
+    background: color-mix(in srgb, var(--tone) 14%, white);
+  }
+
+  @media (min-width: 48rem) {
+    .today-card {
+      background: var(--wash);
+    }
+
+    .today-card-face,
+    .today-card[data-open="true"] .today-card-face {
+      background: none;
+      transform: none;
+    }
+
+    .today-card-actions {
+      position: static;
+      display: grid;
+      width: auto;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 300ms var(--ease-standard);
+    }
+
+    .today-card[data-open="true"] .today-card-actions {
+      grid-template-rows: 1fr;
+    }
+
+    .today-card-actions-inner {
+      @apply min-h-0 items-center gap-2 overflow-hidden px-4;
+    }
+
+    .today-action {
+      @apply mb-4 min-h-10 flex-none flex-row gap-2 rounded-xl border bg-surface/70 px-3.5 text-sm hover:bg-surface;
+      border-color: color-mix(in srgb, var(--tone) 22%, white);
+    }
   }
 
   /* ---------- Date picker ---------- */

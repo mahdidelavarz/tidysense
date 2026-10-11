@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, Check, ChevronLeft, Lock, ShieldCheck, Trash2 } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, CircleDashed, FolderKanban, Hourglass, ListOrdered, Lock, Pause, ShieldCheck, Target, Trash2 } from 'lucide-react'
 import { formatLocalDate, formatNumber } from '../../../shared/lib/date'
+import { DateLeaf, leafDateText } from '../../tasks/components/DateLeaf'
 import { formatAge, reasonLabels } from '../types/reconcile.format'
 import type {
   ReconcileActionDraft,
@@ -10,6 +11,8 @@ import type {
 } from '../types/reconcile.types'
 
 type LaneActions = {
+  /** The session's local date, to tell an earlier planned date from a later one. */
+  today: string
   /** Starts an action that needs no further input; the server previews it next. */
   onAction: (draft: ReconcileActionDraft) => void
   /** Starts an action that first needs a date from the user. */
@@ -25,28 +28,42 @@ const ownerLabels: Record<string, string> = { PROJECT: 'پروژه', GOAL: 'هد
  * sequence, then by Task. A blocked Task is shown as context under its
  * sequence and never as its own decision.
  */
-export function ExecutionLane({ groups, ...actions }: { groups: ReconcileOwnerGroupDto[] } & LaneActions) {
+export function ExecutionLane({ groups, total, ...actions }: {
+  groups: ReconcileOwnerGroupDto[]
+  /** Every Task waiting for a decision, for the count beside the heading. */
+  total: number
+} & LaneActions) {
   return (
-    <section aria-labelledby="reconcile-execution">
-      <h2 className="section-title" id="reconcile-execution">تصمیم‌های اجرایی</h2>
-      <div className="mt-3 space-y-6">
-        {groups.map(group => (
-          <div key={`${group.ownerType}:${group.ownerId ?? ''}`}>
-            <h3 className="text-sm font-bold">
-              {group.ownerId
-                ? `${ownerLabels[group.ownerType]}: ${group.ownerTitle ?? ''}`
-                : 'کارهای مستقل'}
-            </h3>
-            <ul className="mt-2 space-y-3">
-              {group.sequences.map(sequence => (
-                <li key={sequence.sequenceId}><SequenceCard sequence={sequence} {...actions} /></li>
-              ))}
-              {group.tasks.map(task => (
-                <li key={task.taskId}><TaskRow task={task} {...actions} /></li>
-              ))}
-            </ul>
-          </div>
-        ))}
+    <section className="lane" aria-labelledby="reconcile-execution">
+      <h2 className="lane-title" id="reconcile-execution">
+        تصمیم‌های اجرایی
+        <span className="lane-count" aria-hidden="true">{formatNumber(total)}</span>
+      </h2>
+      <p className="lane-hint">برای هر کار یکی را انتخاب کنید.</p>
+      <div className="mt-5 space-y-8">
+        {groups.map(group => {
+          const OwnerIcon = group.ownerType === 'PROJECT' ? FolderKanban : group.ownerType === 'GOAL' ? Target : CircleDashed
+          return (
+            <div key={`${group.ownerType}:${group.ownerId ?? ''}`}>
+              <h3 className="lane-owner">
+                <OwnerIcon size={15} className="shrink-0 text-text-secondary" aria-hidden="true" />
+                <span className="truncate">
+                  {group.ownerId
+                    ? `${ownerLabels[group.ownerType]}: ${group.ownerTitle ?? ''}`
+                    : 'کارهای مستقل'}
+                </span>
+              </h3>
+              <ul className="mt-3 space-y-4">
+                {group.sequences.map(sequence => (
+                  <li key={sequence.sequenceId}><SequenceCard sequence={sequence} {...actions} /></li>
+                ))}
+                {group.tasks.map(task => (
+                  <li key={task.taskId}><TaskRow task={task} {...actions} /></li>
+                ))}
+              </ul>
+            </div>
+          )
+        })}
       </div>
     </section>
   )
@@ -57,26 +74,34 @@ function SequenceCard({ sequence, ...actions }: { sequence: ReconcileSequenceGro
   const allowed = new Set(sequence.allowedActions)
   const dropped = sequence.droppedPredecessor
   return (
-    <article className="card" aria-label="دنباله کارها">
-      <p className="font-bold">
-        دنباله‌ای از {formatNumber(sequence.items.length)} کار
-      </p>
-      <p className="text-sm text-text-secondary">
-        {dropped
-          ? 'کار پیش‌نیاز این دنباله کنار گذاشته شده است، پس کارهای بعدی قابل انجام نیستند تا درباره‌اش تصمیم بگیرید.'
-          : 'این کارها به هم وابسته‌اند؛ می‌توانید یک‌جا درباره‌شان تصمیم بگیرید یا تک‌تک.'}
-      </p>
-      {dropped && (
-        <p className="notice mt-3">
-          پیش‌نیاز کنار گذاشته‌شده:{' '}
-          <Link className="text-link" to="/tasks/$taskId" params={{ taskId: dropped.id }}>{dropped.title}</Link>
-          <span className="block">برای بازگرداندنش، صفحه همان کار را باز کنید.</span>
-        </p>
-      )}
-      <div className="mt-4 flex flex-wrap gap-2">
+    <article className="decision-card" aria-label="دنباله کارها">
+      <div className="decision-head">
+        <span className="decision-tile bg-accent-tint text-accent-strong" aria-hidden="true">
+          <ListOrdered size={22} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="decision-title">
+            دنباله‌ای از {formatNumber(sequence.items.length)} کار
+          </p>
+          <p className="text-xs leading-6 text-text-secondary sm:text-sm">
+            {dropped
+              ? 'کار پیش‌نیاز این دنباله کنار گذاشته شده است، پس کارهای بعدی قابل انجام نیستند تا درباره‌اش تصمیم بگیرید.'
+              : 'به هم وابسته‌اند؛ یک‌جا تصمیم بگیرید یا تک‌تک.'}
+          </p>
+          {dropped && (
+            <p className="notice mt-3">
+              پیش‌نیاز کنار گذاشته‌شده:{' '}
+              <Link className="text-link" to="/tasks/$taskId" params={{ taskId: dropped.id }}>{dropped.title}</Link>
+              <span className="block">برای بازگرداندنش، صفحه همان کار را باز کنید.</span>
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="decision-bar">
         {allowed.has('SEQUENCE_CARRY_ALL') && (
           <button
-            className="primary-button min-h-9 px-3"
+            className="decision-button"
+            data-tone="primary"
             type="button"
             onClick={() => actions.onDatedAction({ actionType: 'SEQUENCE_CARRY_ALL', sequenceId: sequence.sequenceId })}
           >
@@ -86,7 +111,8 @@ function SequenceCard({ sequence, ...actions }: { sequence: ReconcileSequenceGro
         )}
         {allowed.has('DETACH_DROPPED_PREDECESSOR') && (
           <button
-            className="primary-button min-h-9 px-3"
+            className="decision-button"
+            data-tone="primary"
             type="button"
             onClick={() => actions.onAction({ actionType: 'DETACH_DROPPED_PREDECESSOR', sequenceId: sequence.sequenceId })}
           >
@@ -95,16 +121,17 @@ function SequenceCard({ sequence, ...actions }: { sequence: ReconcileSequenceGro
         )}
         {allowed.has('SEQUENCE_DROP_ALL') && (
           <button
-            className="danger-button min-h-9 px-3"
+            className="decision-button"
+            data-tone="danger"
             type="button"
             onClick={() => actions.onAction({ actionType: 'SEQUENCE_DROP_ALL', sequenceId: sequence.sequenceId })}
           >
             <Trash2 size={18} aria-hidden="true" />
-            کنار گذاشتن باقی‌مانده
+            کنار گذاشتن همه
           </button>
         )}
       </div>
-      <ul className="mt-4 space-y-3 border-t border-border-subtle pt-4">
+      <ul className="space-y-2.5 border-t border-border bg-canvas p-2.5 sm:p-3">
         {sequence.items.map(task => (
           <li key={task.taskId}><TaskRow task={task} nested {...actions} /></li>
         ))}
@@ -113,88 +140,97 @@ function SequenceCard({ sequence, ...actions }: { sequence: ReconcileSequenceGro
   )
 }
 
-function TaskRow({ task, nested = false, onAction, onDatedAction, onComplete, busyTaskId }: {
+function TaskRow({ task, nested = false, today, onAction, onDatedAction, onComplete, busyTaskId }: {
   task: ReconcileTaskItemDto
   nested?: boolean
 } & LaneActions) {
   const allowed = new Set(task.allowedActions)
   const busy = busyTaskId === task.taskId
   const age = formatAge(task.ageDays)
+  const when = !task.plannedDate ? 'none' : task.plannedDate < today ? 'earlier' : task.plannedDate === today ? 'today' : 'later'
+  const hasActions = ['COMPLETE_TASK', 'REPLAN_TASKS', 'KEEP_TASKS', 'DROP_TASKS'].some(action => allowed.has(action))
   return (
-    <article className={nested ? '' : 'card'}>
-      <div className="flex items-start gap-2">
+    <article className={nested ? 'decision-card shadow-none' : 'decision-card'}>
+      <div className="decision-head">
+        <DateLeaf date={task.plannedDate} when={when} />
         <div className="min-w-0 flex-1">
-          <h4 className="wrap-break-word font-bold leading-7">{task.title}</h4>
-          <p className="flex flex-wrap items-center gap-x-3 text-xs text-text-secondary">
-            <span>{task.plannedDate ? formatLocalDate(task.plannedDate) : 'بدون تاریخ'}</span>
-            {age && <span>{age}</span>}
-            {task.deadline && <span>مهلت: {formatLocalDate(task.deadline)}</span>}
-            {Number(task.carryCount) > 0 && <span>{formatNumber(Number(task.carryCount))} بار منتقل شده</span>}
+          <h4 className="decision-title">{task.title}</h4>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className="sr-only">{leafDateText(task.plannedDate)}</span>
+            {age && (
+              <span className="meta-chip bg-caution-tint text-caution">
+                <Hourglass size={13} className="shrink-0" aria-hidden="true" />
+                {age}
+              </span>
+            )}
+            {task.deadline && <span className="meta-chip">مهلت: {formatLocalDate(task.deadline)}</span>}
+            {Number(task.carryCount) > 0 && <span className="meta-chip">{formatNumber(Number(task.carryCount))} بار منتقل شده</span>}
             {task.isProtected && (
-              <span className="flex items-center gap-1 font-bold">
-                <ShieldCheck size={12} aria-hidden="true" />
+              <span className="meta-chip">
+                <ShieldCheck size={13} className="shrink-0" aria-hidden="true" />
                 محافظت‌شده
               </span>
             )}
             {task.isBlocked && (
-              <span className="flex items-center gap-1 font-bold text-caution">
-                <Lock size={12} aria-hidden="true" />
+              <span className="meta-chip bg-caution-tint text-caution">
+                <Lock size={13} className="shrink-0" aria-hidden="true" />
                 منتظر کار پیشین
               </span>
             )}
+            {/* The age chip already says a date has passed, so that reason is not repeated in words. */}
+            {task.actionable && task.reasonCodes.filter(code => !(age && code === 'EXECUTION_OVERDUE')).map(code => (
+              <span key={code} className="meta-chip">{reasonLabels[code] ?? code}</span>
+            ))}
           </p>
-          {task.actionable && (
-            <p className="mt-1 flex flex-wrap gap-1.5">
-              {task.reasonCodes.map(code => (
-                <span key={code} className="status-badge status-neutral">{reasonLabels[code] ?? code}</span>
-              ))}
-            </p>
-          )}
         </div>
-        <Link className="icon-button -me-2 -mt-2" to="/tasks/$taskId" params={{ taskId: task.taskId }} aria-label={`جزئیات: ${task.title}`}>
+        <Link className="icon-button -me-2 -mt-1" to="/tasks/$taskId" params={{ taskId: task.taskId }} aria-label={`جزئیات: ${task.title}`}>
           <ChevronLeft size={20} aria-hidden="true" />
         </Link>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {allowed.has('COMPLETE_TASK') && (
-          <button className="secondary-button min-h-9 px-3" type="button" disabled={busy} aria-label={`انجام شد: ${task.title}`} onClick={() => onComplete(task)}>
-            <Check size={18} aria-hidden="true" />
-            {busy ? 'در حال ثبت…' : 'انجام شد'}
-          </button>
-        )}
-        {allowed.has('REPLAN_TASKS') && (
-          <button
-            className="secondary-button min-h-9 px-3"
-            type="button"
-            aria-label={`انتقال: ${task.title}`}
-            onClick={() => onDatedAction({ actionType: 'REPLAN_TASKS', taskIds: [task.taskId] })}
-          >
-            <CalendarClock size={18} aria-hidden="true" />
-            انتقال
-          </button>
-        )}
-        {allowed.has('KEEP_TASKS') && (
-          <button
-            className="ghost-button min-h-9 px-3"
-            type="button"
-            aria-label={`فعلاً بماند: ${task.title}`}
-            onClick={() => onAction({ actionType: 'KEEP_TASKS', taskIds: [task.taskId] })}
-          >
-            فعلاً بماند
-          </button>
-        )}
-        {allowed.has('DROP_TASKS') && (
-          <button
-            className="ghost-button min-h-9 px-3 text-attention"
-            type="button"
-            aria-label={`کنار گذاشتن: ${task.title}`}
-            onClick={() => onAction({ actionType: 'DROP_TASKS', taskIds: [task.taskId] })}
-          >
-            <Trash2 size={18} aria-hidden="true" />
-            کنار گذاشتن
-          </button>
-        )}
-      </div>
+      {hasActions && (
+        <div className="decision-bar">
+          {allowed.has('COMPLETE_TASK') && (
+            <button className="decision-button" data-tone="positive" type="button" disabled={busy} aria-label={`انجام شد: ${task.title}`} onClick={() => onComplete(task)}>
+              <Check size={18} aria-hidden="true" />
+              {busy ? 'در حال ثبت…' : 'انجام شد'}
+            </button>
+          )}
+          {allowed.has('REPLAN_TASKS') && (
+            <button
+              className="decision-button"
+              type="button"
+              aria-label={`انتقال: ${task.title}`}
+              onClick={() => onDatedAction({ actionType: 'REPLAN_TASKS', taskIds: [task.taskId] })}
+            >
+              <CalendarClock size={18} aria-hidden="true" />
+              انتقال
+            </button>
+          )}
+          {allowed.has('KEEP_TASKS') && (
+            <button
+              className="decision-button"
+              type="button"
+              aria-label={`فعلاً بماند: ${task.title}`}
+              onClick={() => onAction({ actionType: 'KEEP_TASKS', taskIds: [task.taskId] })}
+            >
+              <Pause size={18} aria-hidden="true" />
+              فعلاً بماند
+            </button>
+          )}
+          {allowed.has('DROP_TASKS') && (
+            <button
+              className="decision-button"
+              data-tone="danger"
+              type="button"
+              aria-label={`کنار گذاشتن: ${task.title}`}
+              onClick={() => onAction({ actionType: 'DROP_TASKS', taskIds: [task.taskId] })}
+            >
+              <Trash2 size={18} aria-hidden="true" />
+              کنار گذاشتن
+            </button>
+          )}
+        </div>
+      )}
     </article>
   )
 }

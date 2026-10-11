@@ -7,8 +7,8 @@ import { useUiStore } from '../lib/ui-store'
 export function MenuButton() {
   const openNav = useUiStore(state => state.openNav)
   return (
-    <button className="icon-button -ms-2 lg:hidden" type="button" onClick={openNav} aria-label="باز کردن منو">
-      <Menu size={24} aria-hidden="true" />
+    <button className="menu-button lg:hidden" type="button" onClick={openNav} aria-label="باز کردن منو">
+      <Menu size={20} aria-hidden="true" />
     </button>
   )
 }
@@ -26,7 +26,7 @@ export function PageHeader({ title, description, action }: {
   return (
     <header className="mb-6 lg:mb-8">
       <div className="flex min-h-11 items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-1">
+        <div className="flex min-w-0 items-center gap-3">
           <MenuButton />
           <h1 className="page-title truncate">{title}</h1>
         </div>
@@ -47,9 +47,9 @@ const backTargets = {
 /** Top row of a detail page: a clear way back to the list it belongs to. The arrow points right because the layout is RTL. */
 export function BackLink({ to }: { to: keyof typeof backTargets }) {
   return (
-    <div className="mb-4 flex min-h-11 items-center gap-1 lg:mb-6">
+    <div className="mb-4 flex min-h-11 items-center gap-2 lg:mb-6">
       <MenuButton />
-      <Link className="ghost-button -ms-2 px-2" to={to}>
+      <Link className="ghost-button px-2 lg:-ms-2" to={to}>
         <ArrowRight size={20} aria-hidden="true" />
         بازگشت به {backTargets[to]}
       </Link>

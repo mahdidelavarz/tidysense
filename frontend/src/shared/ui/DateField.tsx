@@ -1,7 +1,8 @@
 import { addDays, addMonths, getDate, getDay, getDaysInMonth, startOfMonth } from 'date-fns-jalali'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { formatLocalDate, formatNumber, parseIsoDate, toIsoDate } from '../lib/date'
+import { LabelText } from './FormUi'
 
 const weekdays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
 const monthFormatter = new Intl.DateTimeFormat('fa-IR', { month: 'long', year: 'numeric' })
@@ -56,11 +57,10 @@ export function DateField({ label, value, onChange, error, hint }: {
 
   return (
     <div>
-      <label className="field-label" htmlFor={id}>{label}</label>
-      {hint && <span className="field-hint">{hint}</span>}
+      <label className="field-label" htmlFor={id}><LabelText>{label}</LabelText></label>
       <button
         id={id}
-        className="field-input flex items-center justify-between gap-3 text-start"
+        className="field-input flex items-center gap-3 text-start"
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
@@ -68,13 +68,15 @@ export function DateField({ label, value, onChange, error, hint }: {
         aria-describedby={errorId}
         onClick={toggle}
       >
-        <span className={value ? '' : 'text-text-tertiary'}>{value ? formatLocalDate(value) : 'انتخاب تاریخ'}</span>
-        <CalendarDays size={20} className="shrink-0 text-text-secondary" aria-hidden="true" />
+        <CalendarDays size={20} className={`shrink-0 ${value ? 'text-accent' : 'text-text-tertiary'}`} aria-hidden="true" />
+        <span className={`min-w-0 flex-1 truncate ${value ? '' : 'text-text-tertiary'}`}>{value ? formatLocalDate(value) : 'انتخاب تاریخ'}</span>
+        <ChevronDown size={20} className={`shrink-0 text-text-secondary transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       {error && <span className="field-error" id={errorId} role="alert">{error}</span>}
+      {hint && <span className="field-hint">{hint}</span>}
 
       {open && (
-        <div className="mt-2 scroll-mb-24 rounded-2xl border border-border-subtle bg-surface p-3 shadow-sm" id={panelId} ref={calendar}>
+        <div className="mt-2 scroll-mb-24 animate-pop-in rounded-2xl border border-border-subtle bg-surface p-3 shadow-md" id={panelId} ref={calendar}>
           <div className="flex items-center justify-between">
             <button className="icon-button" type="button" aria-label="ماه قبل" onClick={() => setViewMonth(month => addMonths(month, -1))}>
               <ChevronRight size={20} aria-hidden="true" />
@@ -109,8 +111,8 @@ export function DateField({ label, value, onChange, error, hint }: {
             })}
           </div>
           <div className="mt-3 flex flex-wrap gap-2 border-t border-border-subtle pt-3">
-            <button className="secondary-button min-h-9 px-3" type="button" onClick={() => choose(todayIso)}>امروز</button>
-            <button className="secondary-button min-h-9 px-3" type="button" onClick={() => choose(toIsoDate(addDays(new Date(), 1)))}>فردا</button>
+            <button className="choice-chip min-h-9 px-3" type="button" onClick={() => choose(todayIso)}>امروز</button>
+            <button className="choice-chip min-h-9 px-3" type="button" onClick={() => choose(toIsoDate(addDays(new Date(), 1)))}>فردا</button>
             {value && <button className="ghost-button min-h-9 px-3" type="button" onClick={() => choose('')}>بدون تاریخ</button>}
           </div>
         </div>

@@ -49,7 +49,7 @@ export function ProjectReadView({ projectId }: { projectId: string }) {
     <div className="page">
       <BackLink to="/projects" />
 
-      <article>
+      <article className="detail-card entity-project">
         <div className="flex flex-wrap items-center gap-2">
           <EntityLabel entity="project" />
           <StatusBadge status={data.status} />
@@ -58,7 +58,7 @@ export function ProjectReadView({ projectId }: { projectId: string }) {
         {data.completionMeaning
           ? <p className="mt-3 whitespace-pre-wrap leading-8 text-text-secondary">{data.completionMeaning}</p>
           : <p className="mt-3 text-sm text-text-tertiary">معنای تکمیل برای این پروژه ثبت نشده است.</p>}
-        <dl className="card mt-6 grid gap-5 sm:grid-cols-2">
+        <dl className="detail-facts">
           <DetailTerm
             icon={Target}
             label="هدف بالادست"
@@ -73,8 +73,8 @@ export function ProjectReadView({ projectId }: { projectId: string }) {
 
       {data.status === 'ACTIVE' && (
         <section className="mt-8" aria-labelledby="project-actions">
-          <h2 className="section-title" id="project-actions">چه کاری می‌خواهید انجام دهید؟</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <h2 className="lane-title" id="project-actions">چه کاری می‌خواهید انجام دهید؟</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <ActionTile icon={Pencil} label="ویرایش پروژه" description="عنوان، معنای تکمیل، هدف یا تاریخ‌ها را تغییر دهید." onClick={() => setEditing(true)} />
             <ActionTile
               icon={CircleCheckBig}

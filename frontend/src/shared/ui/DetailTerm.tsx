@@ -15,7 +15,7 @@ export function DetailTerm({ icon: Icon, label, value, dateTime }: {
       </span>
       <div className="min-w-0">
         <dt className="text-xs text-text-secondary">{label}</dt>
-        <dd className="font-bold">{dateTime ? <time dateTime={dateTime}>{value}</time> : value}</dd>
+        <dd className="wrap-break-word font-bold leading-7">{dateTime ? <time dateTime={dateTime}>{value}</time> : value}</dd>
       </div>
     </div>
   )

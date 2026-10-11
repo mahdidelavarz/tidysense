@@ -10,7 +10,10 @@ import { TodayView } from './TodayView'
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
 }))
-vi.mock('../../tasks/services/tasks-api', () => ({ completeTask: vi.fn() }))
+vi.mock('../../tasks/services/tasks-api', () => ({ completeTask: vi.fn(), carryTask: vi.fn(), listTasks: vi.fn() }))
+// Parent titles for the badges are a lookup; these tests do not depend on them.
+vi.mock('../../goals/services/goals-api', () => ({ listGoals: vi.fn().mockResolvedValue({ items: [], page: { nextCursor: null } }) }))
+vi.mock('../../projects/services/projects-api', () => ({ listProjects: vi.fn().mockResolvedValue({ items: [], page: { nextCursor: null } }) }))
 vi.mock('../../routines/services/routines-api', () => ({ completeOccurrence: vi.fn(), correctOccurrence: vi.fn() }))
 vi.mock('../../reconcile/services/reconcile-api', () => ({ getReconcileOverview: vi.fn(), resolveReconcilePrompt: vi.fn() }))
 vi.mock('../services/today-api', () => ({ getToday: vi.fn() }))

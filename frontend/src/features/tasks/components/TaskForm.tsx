@@ -3,7 +3,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { formatNumber } from '../../../shared/lib/date'
 import { DateField } from '../../../shared/ui/DateField'
-import { FormError, FormField, ValidationSummary } from '../../../shared/ui/FormUi'
+import { FormError, FormField, MoreFields, SwitchField, ValidationSummary } from '../../../shared/ui/FormUi'
 import type { GoalDto } from '../../goals/types/goal.types'
 import type { ProjectDto } from '../../projects/types/project.types'
 import { type TaskFields, taskCreateFieldsSchema, taskFieldsSchema } from '../types/task.schema'
@@ -67,38 +67,53 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان کار" name="title" required maxLength={200} registration={form.register('title')} error={errors.title?.message} />
-      <FormField label="توضیحات (اختیاری)" name="description" multiline maxLength={2000} registration={form.register('description')} error={errors.description?.message} />
-      <TaskParentSelect
-        goals={goals}
-        projects={projects}
-        currentGoalId={task?.goalId}
-        currentProjectId={task?.projectId}
-        registration={form.register('parentScope')}
+      <FormField label="عنوان کار" name="title" required autoFocus maxLength={200} placeholder="چه کاری باید انجام شود؟" registration={form.register('title')} error={errors.title?.message} />
+      <Controller
+        control={form.control}
+        name="plannedDate"
+        render={({ field }) => <DateField label="تاریخ برنامه‌ریزی" value={field.value} onChange={field.onChange} error={errors.plannedDate?.message} />}
       />
-      <div className="form-grid">
-        <Controller
-          control={form.control}
-          name="plannedDate"
-          render={({ field }) => <DateField label="تاریخ برنامه‌ریزی" value={field.value} onChange={field.onChange} error={errors.plannedDate?.message} />}
-        />
+      <Controller
+        control={form.control}
+        name="parentScope"
+        render={({ field }) => (
+          <TaskParentSelect
+            goals={goals}
+            projects={projects}
+            currentGoalId={task?.goalId}
+            currentProjectId={task?.projectId}
+            value={field.value}
+            onChange={field.onChange}
+          />
+        )}
+      />
+      <MoreFields
+        summary={task ? 'توضیحات، مهلت و محافظت' : 'توضیحات، مهلت، ترتیب انجام و محافظت'}
+        defaultOpen={Boolean(task && (task.description || task.deadline || task.isProtected))}
+        forceOpen={Boolean(errors.description || errors.deadline)}
+      >
+        <FormField label="توضیحات (اختیاری)" name="description" multiline maxLength={2000} registration={form.register('description')} error={errors.description?.message} />
         <Controller
           control={form.control}
           name="deadline"
           render={({ field }) => <DateField label="مهلت (اختیاری)" value={field.value} onChange={field.onChange} error={errors.deadline?.message} />}
         />
-      </div>
-      {!task && <TaskSequenceSelect tasks={tasks} parentScope={form.watch('parentScope')} registration={form.register('sequenceChoice')} />}
+        {!task && (
+          <Controller
+            control={form.control}
+            name="sequenceChoice"
+            render={({ field }) => <TaskSequenceSelect tasks={tasks} parentScope={form.watch('parentScope')} value={field.value} onChange={field.onChange} />}
+          />
+        )}
+        <SwitchField
+          label="این کار محافظت شود"
+          description="در بازبینی، کنار گذاشتن کار محافظت‌شده پیشنهاد نمی‌شود."
+          registration={form.register('isProtected')}
+        />
+      </MoreFields>
       {task?.sequenceId && task.sequenceOrder != null && (
         <p className="notice">جایگاه این کار در دنباله حفظ می‌شود (ترتیب {formatNumber(Number(task.sequenceOrder))}).</p>
       )}
-      <label className="flex items-start gap-3 rounded-xl border border-border-subtle p-3.5">
-        <input className="mt-1 size-5 shrink-0 accent-accent" type="checkbox" {...form.register('isProtected')} />
-        <span>
-          <span className="block text-sm font-bold text-text-primary">این کار محافظت شود</span>
-          <span className="block text-xs leading-6 text-text-secondary">در بازبینی، کنار گذاشتن کار محافظت‌شده پیشنهاد نمی‌شود.</span>
-        </span>
-      </label>
       {capturing && (
         <p className="notice" role="status">
           بدون تاریخ و بدون هدف یا پروژه، این مورد هنوز یک کار نیست. فقط عنوانش به‌صورت یادداشت سریع ذخیره می‌شود و بعداً در «بازبینی» تعیین تکلیف می‌شود.

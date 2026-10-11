@@ -26,18 +26,18 @@ export function TodayReconcileEntry() {
   ].filter(Boolean).join(' · ')
 
   return (
-    <section className="card mb-6 border-accent/30 bg-accent-tint" aria-label="پیشنهاد بازبینی">
-      <div className="flex items-start gap-3">
-        <RefreshCcw size={22} className="mt-1 shrink-0 text-accent-strong" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <p className="font-bold">{copy}</p>
-          <p className="text-sm text-text-secondary">{detail}</p>
-        </div>
+    <section className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-caution/25 bg-linear-to-l from-caution-tint to-surface p-4 shadow-sm" aria-label="پیشنهاد بازبینی">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-caution/15 text-caution" aria-hidden="true">
+        <RefreshCcw size={20} />
+      </span>
+      <div className="min-w-0 flex-1 basis-48">
+        <p className="font-bold leading-7">{copy}</p>
+        <p className="text-sm text-text-secondary">{detail}</p>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link className="primary-button min-h-9 px-3" to="/reconcile">شروع بازبینی</Link>
+      <div className="flex gap-2">
+        <Link className="primary-button min-h-10 px-3.5" to="/reconcile">شروع بازبینی</Link>
         <button
-          className="ghost-button min-h-9 px-3"
+          className="ghost-button min-h-10 px-3"
           type="button"
           disabled={resolve.isPending}
           // A light prompt is simply dismissed; a larger one is recorded as an explicit skip.

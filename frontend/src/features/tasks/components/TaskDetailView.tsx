@@ -56,7 +56,7 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
     <div className="page">
       <BackLink to="/tasks" />
 
-      <article>
+      <article className="detail-card entity-task">
         <div className="flex flex-wrap items-center gap-2">
           <EntityLabel entity="task" />
           <StatusBadge status={data.status} />
@@ -71,7 +71,7 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
         {data.description
           ? <p className="mt-3 whitespace-pre-wrap leading-8 text-text-secondary">{data.description}</p>
           : <p className="mt-3 text-sm text-text-tertiary">توضیحی برای این کار ثبت نشده است.</p>}
-        <dl className="card mt-6 grid gap-5 sm:grid-cols-2">
+        <dl className="detail-facts">
           <DetailTerm icon={Link2} label="وابستگی" value={<ParentLink task={data} />} />
           <DetailTerm icon={CalendarDays} label="تاریخ برنامه‌ریزی" value={formatLocalDate(data.plannedDate)} dateTime={data.plannedDate} />
           <DetailTerm icon={Flag} label="مهلت" value={formatLocalDate(data.deadline)} dateTime={data.deadline} />
@@ -92,8 +92,8 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
 
       {data.status === 'ACTIVE' && (
         <section className="mt-8" aria-labelledby="task-actions">
-          <h2 className="section-title" id="task-actions">چه کاری می‌خواهید انجام دهید؟</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <h2 className="lane-title" id="task-actions">چه کاری می‌خواهید انجام دهید؟</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <ActionTile icon={Pencil} label="ویرایش کار" description="عنوان، توضیحات، وابستگی یا تاریخ‌ها را تغییر دهید." onClick={() => setEditing(true)} />
             {data.plannedDate && (
               <ActionTile
@@ -116,8 +116,8 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
       )}
       {data.status !== 'ACTIVE' && (
         <section className="mt-8" aria-labelledby="task-actions">
-          <h2 className="section-title" id="task-actions">چه کاری می‌خواهید انجام دهید؟</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <h2 className="lane-title" id="task-actions">چه کاری می‌خواهید انجام دهید؟</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <ActionTile
               icon={RotateCcw}
               label={restore.isPending ? 'در حال بازگرداندن…' : 'بازگرداندن به حالت فعال'}

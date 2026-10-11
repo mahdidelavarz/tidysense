@@ -42,7 +42,7 @@ export function AiExplanationCard({ session, onAction, onDatedAction }: { sessio
   const requestCode = request.error ? toApiError(request.error).code : null
 
   return (
-    <section className="card" aria-labelledby="reconcile-ai">
+    <section className="rounded-2xl border border-accent/20 bg-linear-to-bl from-accent-tint via-surface to-surface p-4 shadow-sm sm:p-6" aria-labelledby="reconcile-ai">
       <h2 className="flex items-center gap-2 font-bold" id="reconcile-ai">
         <Sparkles size={18} aria-hidden="true" />
         توضیح هوش مصنوعی
@@ -63,13 +63,13 @@ export function AiExplanationCard({ session, onAction, onDatedAction }: { sessio
               چیزی تغییر نکرده است و تصمیم‌های پایین همچنان در دسترس‌اند.
             </p>
           )}
-          <p className="mt-2 text-sm text-text-secondary">
+          <p className="mt-2 text-xs leading-6 text-text-secondary sm:text-sm">
             {sample
               ? 'این نسخه از یک توضیح نمونه استفاده می‌کند و چیزی به سرویس بیرونی فرستاده نمی‌شود.'
               : 'فقط کدها و شمارش‌های همین بازبینی برای دستیار هوشمند فرستاده می‌شود؛ عنوان و متن کارهای شما فرستاده نمی‌شود.'}{' '}
             توضیح چیزی را تغییر نمی‌دهد.
           </p>
-          <button className="secondary-button mt-3" type="button" disabled={request.isPending} onClick={() => request.mutate()}>
+          <button className="secondary-button mt-3 max-sm:min-h-10 max-sm:px-3" type="button" disabled={request.isPending} onClick={() => request.mutate()}>
             {request.isPending ? 'در حال درخواست…' : explanation ? 'تلاش دوباره' : 'توضیح بده'}
           </button>
         </>
@@ -158,7 +158,7 @@ function Recommendation({ recommendation, dismissing, onDismiss, onAction, onDat
   }
 
   return (
-    <article className={open ? '' : 'opacity-70'} aria-label={`پیشنهاد: ${label}`}>
+    <article className={`rounded-xl border border-border-subtle bg-surface p-3.5 ${open ? '' : 'opacity-70'}`} aria-label={`پیشنهاد: ${label}`}>
       <p className="flex flex-wrap items-center gap-1.5 text-xs">
         <span className="status-badge status-neutral">قاعده: {ruleLabels[recommendation.ruleId] ?? recommendation.ruleId}</span>
         <span className="font-bold">{label}</span>

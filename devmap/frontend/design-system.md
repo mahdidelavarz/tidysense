@@ -37,7 +37,7 @@ This document supersedes the earlier compact foundation (Tahoma, `#4f7a88` accen
 
 White text on `accent` is 5.9:1; `text-secondary` on `canvas` is above 6:1. Feature code uses these tokens through Tailwind utilities (`bg-accent`, `text-text-secondary`) and never raw hex values.
 
-Entity colours are never used as large fills. They appear only through `.entity-chip` and `.entity-icon`, which derive a 12% tint background and a darkened foreground from `--entity-color`.
+Entity colours are never used as large solid fills. They appear through `.entity-chip` and `.entity-icon`, which derive a 12% tint background and a darkened foreground from `--entity-color`. The one wider use is the Today card (`.today-card`), which carries a light gradient wash, at most 18% of the colour fading to 3%: green into teal for a Task, violet into blue for a Routine.
 
 There is no dark theme yet. Add one by redefining these tokens, not by adding per-component overrides.
 
@@ -56,7 +56,7 @@ One family: **Vazirmatn** (variable), self-hosted through `@fontsource-variable/
 | section label | 14px | 700, secondary colour | `.section-title` |
 | meta, chips, tab labels | 12px (tab labels 11px) | 500–700 | — |
 
-Inputs are 16px so mobile browsers do not zoom on focus. Numbers shown to the user use Persian digits (`formatNumber`); dates use the Jalali calendar (`formatLocalDate`, `formatLongDate` in [`shared/lib/date.ts`](../../frontend/src/shared/lib/date.ts)). API values stay ISO Gregorian.
+Buttons are 14px bold. The `font: inherit` reset for controls lives in `@layer base` in `index.css`; outside a layer it would override the size and weight of every button class. Inputs are 16px so mobile browsers do not zoom on focus. Numbers shown to the user use Persian digits (`formatNumber`); dates use the Jalali calendar (`formatLocalDate`, `formatLongDate` in [`shared/lib/date.ts`](../../frontend/src/shared/lib/date.ts)). API values stay ISO Gregorian.
 
 ## Space, shape and elevation
 
@@ -64,6 +64,7 @@ Inputs are 16px so mobile browsers do not zoom on focus. Numbers shown to the us
 - **Radius:** 12px controls and icon tiles (`rounded-xl`), 16px cards, rows and tiles (`rounded-2xl`), 24px sheets, dialogs and empty states (`rounded-3xl`), full for chips and the create button.
 - **Elevation:** `shadow-sm` resting cards, `shadow-md` hovered cards and the create button, `shadow-lg` sheets, dialogs, drawer and toasts. Borders carry most separation; shadow only signals lift.
 - **Touch targets:** at least 44×44px (`min-h-11`, `.icon-button` is 44px, inputs are 48px).
+- **Fields:** `.field-input` is softly filled (`canvas` at 60%) with a `border` outline and `shadow-sm` at rest; hover and focus turn it white, and focus adds an `accent` border with a 4px `accent` halo at 15%. An invalid field uses `attention` for both. All of it transitions in 200ms.
 - **Layers:** navigation `10`, backdrop `40`, sheet/dialog/drawer `50`, toast and skip link `60`.
 
 ## Motion

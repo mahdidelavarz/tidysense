@@ -62,9 +62,9 @@ export function TerminalDialog({
       )}
     >
       {blockers.length > 0 && (
-        <div className="rounded-lg border border-attention/40 bg-attention-tint p-4">
+        <div className="notice-attention">
           <p className="font-bold text-text-primary">{blockersIntro}</p>
-          <ul className="mt-3 list-inside list-disc space-y-2">
+          <ul className="mt-3 list-inside list-disc space-y-2 marker:text-attention">
             {blockers.map(blocker => <li key={blocker.id}>{blocker.label}</li>)}
           </ul>
         </div>
@@ -72,7 +72,7 @@ export function TerminalDialog({
       {consequences.length > 0 && (
         <div className={`notice ${blockers.length > 0 ? 'mt-3' : ''}`}>
           <p className="font-bold text-text-primary">{consequencesIntro}</p>
-          <ul className="mt-3 list-inside list-disc space-y-2">
+          <ul className="mt-3 list-inside list-disc space-y-2 marker:text-text-tertiary">
             {consequences.map(consequence => <li key={consequence.id}>{consequence.label}</li>)}
           </ul>
         </div>

@@ -46,14 +46,14 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
     <div className="page">
       <BackLink to="/goals" />
 
-      <article>
+      <article className="detail-card entity-goal">
         <div className="flex flex-wrap items-center gap-2">
           <EntityLabel entity="goal" />
           <StatusBadge status={data.status} />
         </div>
         <h1 className="page-title mt-3 wrap-break-word">{data.title}</h1>
         <p className="mt-3 whitespace-pre-wrap leading-8 text-text-secondary">{data.desiredOutcome}</p>
-        <dl className="card mt-6 grid gap-5 sm:grid-cols-2">
+        <dl className="detail-facts">
           <DetailTerm icon={CalendarDays} label="تاریخ هدف" value={formatLocalDate(data.targetDate)} dateTime={data.targetDate} />
           <DetailTerm icon={CalendarClock} label="تاریخ بازبینی" value={formatLocalDate(data.reviewDate)} dateTime={data.reviewDate} />
         </dl>
@@ -61,8 +61,8 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
 
       {data.status === 'ACTIVE' && (
         <section className="mt-8" aria-labelledby="goal-actions">
-          <h2 className="section-title" id="goal-actions">چه کاری می‌خواهید انجام دهید؟</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <h2 className="lane-title" id="goal-actions">چه کاری می‌خواهید انجام دهید؟</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <ActionTile icon={Pencil} label="ویرایش هدف" description="عنوان، نتیجه مطلوب یا تاریخ‌ها را تغییر دهید." onClick={() => setEditing(true)} />
             <ActionTile
               icon={CircleCheckBig}

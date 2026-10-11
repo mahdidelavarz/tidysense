@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <main id="main-content">
         {!online && (
-          <p className="flex items-center justify-center gap-2 bg-caution-tint px-4 py-2 text-center text-sm font-bold text-text-primary" role="status">
+          <p className="mx-4 mt-3 flex items-center justify-center gap-2 rounded-2xl border border-caution/25 bg-caution-tint px-4 py-2.5 text-center text-sm font-bold text-text-primary shadow-sm lg:mx-10" role="status">
             <WifiOff size={18} aria-hidden="true" />
             اتصال اینترنت برقرار نیست. تا اتصال دوباره، تغییرها ذخیره نمی‌شوند.
           </p>

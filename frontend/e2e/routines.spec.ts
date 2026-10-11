@@ -55,6 +55,8 @@ test('a multi-slot Routine and a Task are executed together from Today', async (
   await page.screenshot({ path: 'test-results/step-06-today-after.png', fullPage: true })
 
   // Stop the Routine from its detail page; today's slots and history remain.
+  // Today shows only the complete control; the way to the Routine is among the card's further actions.
+  await group.getByRole('button', { name: `اقدام‌های بیشتر: ${routineTitle}` }).click()
   await group.getByRole('link', { name: `جزئیات: ${routineTitle}` }).click()
   await expect(page.getByRole('heading', { name: 'سابقه اجرا' })).toBeVisible()
   await page.getByRole('button', { name: 'توقف روتین' }).click()

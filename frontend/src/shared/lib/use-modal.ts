@@ -5,14 +5,16 @@ const focusableSelector =
 
 /**
  * Shared modal behaviour for dialogs, sheets and the navigation drawer:
- * moves focus inside on open, traps Tab, closes on Escape (unless locked by a
+ * moves focus inside on open (to `[data-autofocus]` when present), traps Tab, closes on Escape (unless locked by a
  * pending action), prevents the page behind from scrolling, and restores
  * focus to the trigger on close.
  */
 export function useModal(panel: RefObject<HTMLElement | null>, onClose: () => void, locked = false) {
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    panel.current?.querySelector<HTMLElement>(focusableSelector)?.focus()
+    // A form names the field to start in; otherwise focus lands on the first control.
+    const start = panel.current?.querySelector<HTMLElement>('[data-autofocus]') ?? panel.current?.querySelector<HTMLElement>(focusableSelector)
+    start?.focus()
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {

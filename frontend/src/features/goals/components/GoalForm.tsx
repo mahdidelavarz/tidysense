@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { DateField } from '../../../shared/ui/DateField'
-import { FormError, FormField, ValidationSummary } from '../../../shared/ui/FormUi'
+import { FormError, FormField, MoreFields, ValidationSummary } from '../../../shared/ui/FormUi'
 import { type GoalFields, goalFieldsSchema } from '../types/goal.schema'
 import type { CreateGoalRequest, GoalDto, UpdateGoalRequest } from '../types/goal.types'
 
@@ -35,7 +35,7 @@ export function GoalForm({ goal, pending, error, onSubmit, onCancel }: {
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان هدف" name="title" required maxLength={200} registration={form.register('title')} error={errors.title?.message} />
+      <FormField label="عنوان هدف" name="title" required autoFocus maxLength={200} placeholder="به چه چیزی می‌خواهید برسید؟" registration={form.register('title')} error={errors.title?.message} />
       <FormField
         label="نتیجه مطلوب"
         name="desiredOutcome"
@@ -46,7 +46,11 @@ export function GoalForm({ goal, pending, error, onSubmit, onCancel }: {
         error={errors.desiredOutcome?.message}
         hint="روشن بنویسید رسیدن به این هدف برای شما چه معنایی دارد."
       />
-      <div className="form-grid">
+      <MoreFields
+        summary="تاریخ هدف و تاریخ بازبینی"
+        defaultOpen={Boolean(goal?.targetDate || goal?.reviewDate)}
+        forceOpen={Boolean(errors.targetDate || errors.reviewDate)}
+      >
         <Controller
           control={form.control}
           name="targetDate"
@@ -57,7 +61,7 @@ export function GoalForm({ goal, pending, error, onSubmit, onCancel }: {
           name="reviewDate"
           render={({ field }) => <DateField label="تاریخ بازبینی (اختیاری)" value={field.value} onChange={field.onChange} error={errors.reviewDate?.message} />}
         />
-      </div>
+      </MoreFields>
       <FormError error={error} />
       <div className="sheet-actions">
         <button className="secondary-button" type="button" disabled={pending} onClick={onCancel}>انصراف</button>

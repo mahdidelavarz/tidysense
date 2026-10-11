@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CircleCheck } from 'lucide-react'
+import { CalendarClock, CircleCheck, ListChecks, type LucideIcon, StickyNote } from 'lucide-react'
 import { useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
@@ -83,7 +83,7 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
     <div className="page">
       <PageHeader
         title="بازبینی"
-        description="اینجا درباره کارهای مانده، مرور تعهدها و یادداشت‌های سریع تصمیم می‌گیرید. هیچ تغییری بدون تأیید شما انجام نمی‌شود."
+        description="هر مورد یک تصمیم کوتاه می‌خواهد. هیچ تغییری بدون تأیید شما انجام نمی‌شود."
         action={<Link className="secondary-button shrink-0" to="/today">امروز</Link>}
       />
 
@@ -96,16 +96,19 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
         />
       ) : (
         <div className="space-y-8">
-          <section className="card" aria-labelledby="reconcile-summary">
+          <section
+            className="rounded-3xl border border-caution/20 bg-linear-to-bl from-caution-tint via-surface to-surface p-4 shadow-sm sm:p-6"
+            aria-labelledby="reconcile-summary"
+          >
             <h2 className="sr-only" id="reconcile-summary">خلاصه وضعیت</h2>
             <p className="status-badge status-neutral">شدت: {severity.badge}</p>
-            <p className="mt-3 text-lg font-bold">{severity.title}</p>
-            <p className="mt-1 text-sm text-text-secondary">{severity.description}</p>
-            <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
-              <SummaryCount label="تصمیم اجرایی" value={Number(counts.actionableBacklogCount)} />
-              <SummaryCount label="مرور تعهد" value={reviewTotal} />
-              <SummaryCount label="یادداشت سریع" value={captureTotal} />
-            </dl>
+            <p className="mt-3 font-bold leading-7 sm:text-lg sm:leading-8">{severity.title}</p>
+            <p className="mt-1 text-xs leading-6 text-text-secondary sm:text-sm">{severity.description}</p>
+            <ul className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
+              <SummaryCount icon={ListChecks} label="کار مانده" value={Number(counts.actionableBacklogCount)} target="reconcile-execution" />
+              <SummaryCount icon={CalendarClock} label="مرور تعهد" value={reviewTotal} target="reconcile-reviews" />
+              <SummaryCount icon={StickyNote} label="یادداشت سریع" value={captureTotal} target="reconcile-captures" />
+            </ul>
           </section>
 
           <AiExplanationCard session={session} onAction={action.request} onDatedAction={setDated} />
@@ -115,6 +118,8 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
           {session.executionGroups.length > 0 && (
             <ExecutionLane
               groups={session.executionGroups}
+              total={Number(counts.actionableBacklogCount)}
+              today={session.localDate}
               onAction={action.request}
               onDatedAction={setDated}
               busyTaskId={complete.isPending ? complete.variables?.taskId : undefined}
@@ -134,7 +139,7 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
           )}
           {session.captures.length > 0 && <CaptureLane captures={session.captures} total={captureTotal} />}
 
-          <section className="border-t border-border-subtle pt-6" aria-label="پایان بازبینی">
+          <section className="lane" aria-label="پایان بازبینی">
             <FormError error={finish.error} />
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -177,11 +182,26 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
   )
 }
 
-function SummaryCount({ label, value }: { label: string; value: number }) {
+/** One count of the summary. With something waiting it is also the way down to that part of the page. */
+function SummaryCount({ icon: Icon, label, value, target }: { icon: LucideIcon; label: string; value: number; target: string }) {
+  const content = (
+    <>
+      <Icon size={18} className="text-text-secondary max-sm:hidden" aria-hidden="true" />
+      <span className="block text-xl font-extrabold leading-7 sm:mt-1.5 sm:text-2xl sm:leading-8">{formatNumber(value)}</span>
+      <span className="block text-[0.6875rem] text-text-secondary sm:text-xs">{label}</span>
+    </>
+  )
   return (
-    <div className="rounded-xl bg-surface-sunken p-3">
-      <dd className="text-xl font-extrabold">{formatNumber(value)}</dd>
-      <dt className="text-xs text-text-secondary">{label}</dt>
-    </div>
+    <li>
+      {value > 0 ? (
+        <button
+          className="block w-full rounded-2xl border border-border-subtle bg-surface px-3 py-2 text-start shadow-sm sm:p-3 transition duration-200 hover:border-accent hover:bg-accent-tint active:scale-[0.98]"
+          type="button"
+          onClick={() => document.getElementById(target)?.scrollIntoView?.({ behavior: 'smooth' })}
+        >
+          {content}
+        </button>
+      ) : <div className="rounded-2xl border border-dashed border-border px-3 py-2 opacity-60 sm:p-3">{content}</div>}
+    </li>
   )
 }

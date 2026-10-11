@@ -9,6 +9,8 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
 }))
 vi.mock('../services/goals-api', () => ({ listGoals: vi.fn() }))
+// The Project count on a card is a lookup; these tests do not depend on it.
+vi.mock('../../projects/services/projects-api', () => ({ listProjects: vi.fn().mockResolvedValue({ items: [], page: { nextCursor: null, hasMore: false } }) }))
 
 const empty = { items: [], page: { nextCursor: null, hasMore: false } }
 const firstGoal = {

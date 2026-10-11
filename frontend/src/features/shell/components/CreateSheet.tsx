@@ -1,4 +1,3 @@
-import { ChevronLeft } from 'lucide-react'
 import { type CreateTarget, useUiStore } from '../../../shared/lib/ui-store'
 import { type EntityKind, EntityIcon } from '../../../shared/ui/EntityUi'
 import { Sheet } from '../../../shared/ui/Sheet'
@@ -32,20 +31,19 @@ export function CreateSheet() {
 
   return (
     <Sheet title="چه چیزی اضافه می‌کنید؟" onClose={close}>
-      <ul className="space-y-3">
+      <ul className="grid grid-cols-2 gap-3">
         {choices.map(choice => (
           <li key={choice.target}>
             <button
-              className="flex w-full items-center gap-3 rounded-2xl border border-border-subtle p-4 text-start transition duration-200 hover:border-accent hover:bg-accent-tint"
+              className={`entity-card entity-${choice.entity} flex w-full flex-col items-start gap-3 rounded-2xl p-4 text-start`}
               type="button"
               onClick={() => openCreate(choice.target)}
             >
               <EntityIcon entity={choice.entity} />
-              <span className="min-w-0 flex-1">
-                <span className="block font-bold">{choice.label}</span>
-                <span className="block text-sm text-text-secondary">{choice.description}</span>
+              <span className="min-w-0">
+                <span className="block text-base font-bold">{choice.label}</span>
+                <span className="block text-xs font-normal leading-5 text-text-secondary">{choice.description}</span>
               </span>
-              <ChevronLeft size={20} className="shrink-0 text-text-tertiary" aria-hidden="true" />
             </button>
           </li>
         ))}

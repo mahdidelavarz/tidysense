@@ -7,9 +7,15 @@ export function LoadingState({ text }: { text: string }) {
     <div role="status" aria-live="polite">
       <span className="sr-only">{text}</span>
       <div className="space-y-3" aria-hidden="true">
-        <div className="skeleton h-20" />
-        <div className="skeleton h-20 opacity-70" />
-        <div className="skeleton h-20 opacity-40" />
+        {['', 'opacity-70', 'opacity-40'].map(fade => (
+          <div key={fade} className={`flex items-center gap-3.5 rounded-2xl border border-border-subtle bg-surface p-3 ${fade}`}>
+            <div className="skeleton size-12" />
+            <div className="flex-1 space-y-2">
+              <div className="skeleton h-4 w-2/5" />
+              <div className="skeleton h-3 w-3/5" />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -23,9 +29,9 @@ export function EmptyState({ icon: Icon, title, description, action }: {
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center rounded-3xl border border-dashed border-border px-6 py-12 text-center">
+    <div className="state-panel">
       {Icon && (
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-surface text-text-secondary shadow-sm" aria-hidden="true">
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-accent-tint text-accent-strong" aria-hidden="true">
           <Icon size={26} />
         </div>
       )}
@@ -44,17 +50,23 @@ export function ErrorState({ title = 'دریافت اطلاعات ممکن نش�
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center rounded-3xl bg-attention-tint px-6 py-10 text-center" role="alert">
-      <CircleAlert size={28} className="text-attention" aria-hidden="true" />
-      <p className="mt-3 text-lg font-bold text-text-primary">{title}</p>
+    <div className="state-panel" data-tone="attention" role="alert">
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-attention-tint text-attention" aria-hidden="true">
+        <CircleAlert size={26} />
+      </div>
+      <p className="mt-4 text-lg font-bold text-text-primary">{title}</p>
       {description && <p className="mt-1 max-w-sm text-sm text-text-secondary">{description}</p>}
-      {onRetry && (
-        <button className="secondary-button mt-5" type="button" onClick={onRetry}>
-          <RefreshCw size={18} aria-hidden="true" />
-          تلاش دوباره
-        </button>
+      {(onRetry || action) && (
+        <div className="mt-6 flex flex-col items-center gap-3">
+          {onRetry && (
+            <button className="secondary-button" type="button" onClick={onRetry}>
+              <RefreshCw size={18} aria-hidden="true" />
+              تلاش دوباره
+            </button>
+          )}
+          {action}
+        </div>
       )}
-      {action && <div className="mt-5">{action}</div>}
     </div>
   )
 }

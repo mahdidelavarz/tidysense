@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { Compass } from 'lucide-react'
 import { showToast } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
 import { usePlanningFacts, useRemovePlanningFact } from '../hooks/planning-hooks'
@@ -14,9 +15,12 @@ import type { PlanningScopeInput } from '../types/planning.types'
 export function PlanningFactsSection({ scope, ownsFacts = true }: { scope: PlanningScopeInput; ownsFacts?: boolean }) {
   return (
     <section className="mt-8" aria-labelledby="planning-details">
-      <h2 className="section-title" id="planning-details">برنامه‌ریزی</h2>
-      <div className="mt-3">
-        <Link className="secondary-button" to="/planning" search={scope}>برنامه‌ریزی قدم‌های بعدی</Link>
+      <h2 className="lane-title" id="planning-details">برنامه‌ریزی</h2>
+      <div className="mt-4">
+        <Link className="secondary-button" to="/planning" search={scope}>
+          <Compass size={18} aria-hidden="true" />
+          برنامه‌ریزی قدم‌های بعدی
+        </Link>
       </div>
       {ownsFacts && <RememberedFacts scope={scope} />}
     </section>
@@ -29,14 +33,14 @@ function RememberedFacts({ scope }: { scope: PlanningScopeInput }) {
   if (!facts.data || facts.data.length === 0) return null
 
   return (
-    <div className="card mt-4">
+    <div className="decision-card mt-4 p-4 sm:p-5">
       <p className="font-bold">جزئیاتی که برای برنامه‌ریزی نگه داشته شده</p>
       <p className="text-sm text-text-secondary">این موارد در پیش‌نویس‌های بعدی به کار می‌روند. ساخت و ویرایش دستی شما را محدود نمی‌کنند.</p>
-      <ul className="mt-3 space-y-3">
+      <ul className="mt-3 divide-y divide-border-subtle">
         {facts.data.map(fact => {
           const label = `${factTypeLabels[fact.factType] ?? fact.factType}: ${factValueLabel(fact.value)}`
           return (
-            <li key={fact.id} className="flex flex-wrap items-center justify-between gap-3">
+            <li key={fact.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
               <span className="min-w-0">
                 <span className="block wrap-break-word font-bold">{label}</span>
                 <span className="block text-sm text-text-secondary">

@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { PlanningPage } from '../../features/planning/components/PlanningPage'
 
 const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
@@ -16,5 +16,11 @@ export const Route = createFileRoute('/planning/')({
 
 function PlanningRoute() {
   const { goalId, projectId } = Route.useSearch()
-  return <PlanningPage goalId={goalId} projectId={projectId} />
+  // First Entry hands over what the user wrote; it stays out of the address.
+  const intention = useRouterState({ select: state => state.location.state.intention })
+  return <PlanningPage goalId={goalId} projectId={projectId} initialIntention={intention} />
+}
+
+declare module '@tanstack/react-router' {
+  interface HistoryState { intention?: string }
 }

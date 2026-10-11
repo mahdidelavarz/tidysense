@@ -24,7 +24,7 @@ export function PlanningIntentForm({ initialIntention, scopeTitle, pending, erro
   })
 
   return (
-    <form className="card form-stack" onSubmit={form.handleSubmit(values => onSubmit(values.intention))} noValidate aria-busy={pending}>
+    <form className="card form-stack rounded-3xl shadow-md" onSubmit={form.handleSubmit(values => onSubmit(values.intention))} noValidate aria-busy={pending}>
       {scopeTitle && <p className="notice">این برنامه‌ریزی برای «{scopeTitle}» است و موارد تازه زیر همان ساخته می‌شوند.</p>}
       <FormField
         label="می‌خواهید روی چه چیزی پیش بروید؟"

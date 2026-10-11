@@ -39,15 +39,15 @@ export function PlanningClarification({ attempt, clarification, pending, error, 
   ))
 
   return (
-    <form className="card form-stack" onSubmit={submit} noValidate aria-busy={pending} aria-labelledby="planning-clarification">
+    <form className="card form-stack rounded-3xl shadow-md" onSubmit={submit} noValidate aria-busy={pending} aria-labelledby="planning-clarification">
       <div>
-        <h2 className="font-bold" id="planning-clarification">چند پرسش پیش از ساخت پیش‌نویس</h2>
+        <h2 className="text-lg font-bold" id="planning-clarification">چند پرسش پیش از ساخت پیش‌نویس</h2>
         <p className="mt-1 text-sm text-text-secondary">
           پاسخ این پرسش‌ها پیش‌نویس را دقیق‌تر می‌کند. هنوز چیزی ساخته نشده است.
           {' '}گام {formatNumber(turn)} از حداکثر {formatNumber(maxTurns)}.
         </p>
       </div>
-      <p className="notice whitespace-pre-wrap wrap-break-word">{attempt.intention}</p>
+      <p className="notice whitespace-pre-wrap wrap-break-word border-s-4 border-accent/40">{attempt.intention}</p>
       {clarification.message && <p className="notice-attention whitespace-pre-wrap wrap-break-word">{clarification.message}</p>}
       {questions.map((question, index) => (
         <FormField

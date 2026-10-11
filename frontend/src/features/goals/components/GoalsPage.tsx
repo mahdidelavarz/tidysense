@@ -1,9 +1,11 @@
 import { Plus, Target } from 'lucide-react'
 import { useState } from 'react'
+import { toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { SegmentedControl, type StatusFilter, statusFilterOptions } from '../../../shared/ui/SegmentedControl'
 import { LoadMoreButton, ResourceState } from '../../../shared/ui/StateUi'
+import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { useGoals } from '../hooks/goal-hooks'
 import { GoalCard } from './GoalCard'
 
@@ -12,6 +14,9 @@ export function GoalsPage() {
   const [filter, setFilter] = useState<StatusFilter>('ACTIVE')
   const goals = useGoals(filter === 'all' ? undefined : filter)
   const openCreate = useUiStore(state => state.openCreate)
+  // A lookup for the cards' Project count; the count is simply left out until it arrives.
+  const projects = useProjectOptions().data?.items
+  const today = toIsoDate(new Date())
   const items = goals.data?.pages.flatMap(page => page.items) ?? []
 
   return (
@@ -26,7 +31,7 @@ export function GoalsPage() {
           </button>
         )}
       />
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <SegmentedControl label="فیلتر وضعیت هدف‌ها" value={filter} options={statusFilterOptions} onChange={setFilter} />
         {goals.isFetching && !goals.isPending && <span className="text-xs text-text-secondary" role="status">در حال به‌روزرسانی…</span>}
       </div>
@@ -42,7 +47,15 @@ export function GoalsPage() {
         onRetry={() => goals.refetch()}
       >
         <ul className="grid gap-4 md:grid-cols-2">
-          {items.map(goal => <li key={goal.id}><GoalCard goal={goal} /></li>)}
+          {items.map(goal => (
+            <li key={goal.id}>
+              <GoalCard
+                goal={goal}
+                today={today}
+                projectCount={projects?.filter(project => project.goalId === goal.id && project.status === 'ACTIVE').length}
+              />
+            </li>
+          ))}
         </ul>
         <LoadMoreButton
           visible={goals.hasNextPage}

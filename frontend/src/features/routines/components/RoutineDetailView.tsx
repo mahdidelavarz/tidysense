@@ -57,7 +57,7 @@ export function RoutineDetailView({ routineId }: { routineId: string }) {
     <div className="page">
       <BackLink to="/routines" />
 
-      <article>
+      <article className="detail-card entity-routine">
         <div className="flex flex-wrap items-center gap-2">
           <EntityLabel entity="routine" />
           <StatusBadge status={data.status} />
@@ -66,7 +66,7 @@ export function RoutineDetailView({ routineId }: { routineId: string }) {
         {data.description
           ? <p className="mt-3 whitespace-pre-wrap leading-8 text-text-secondary">{data.description}</p>
           : <p className="mt-3 text-sm text-text-tertiary">توضیحی برای این روتین ثبت نشده است.</p>}
-        <dl className="card mt-6 grid gap-5 sm:grid-cols-2">
+        <dl className="detail-facts">
           <DetailTerm icon={Link2} label="وابستگی" value={<ParentLink routine={data} />} />
           <DetailTerm icon={Repeat} label="تکرار" value={recurrenceLabel(data.recurrence)} />
           <DetailTerm icon={Clock} label="ساعت‌ها" value={slotsLabel(data.timesOfDay)} />
@@ -95,8 +95,8 @@ export function RoutineDetailView({ routineId }: { routineId: string }) {
 
       {(active || !data.continuedByRoutineId) && (
         <section className="mt-8" aria-labelledby="routine-actions">
-          <h2 className="section-title" id="routine-actions">چه کاری می‌خواهید انجام دهید؟</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <h2 className="lane-title" id="routine-actions">چه کاری می‌خواهید انجام دهید؟</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {active ? (
               <>
                 <ActionTile icon={Pencil} label="ویرایش روتین" description="عنوان، وابستگی، تکرار یا ساعت‌ها را تغییر دهید." onClick={() => setEditing(true)} />

@@ -1,8 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { CircleDashed } from 'lucide-react'
 import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { DateField } from '../../../shared/ui/DateField'
-import { FormError, FormField, ValidationSummary } from '../../../shared/ui/FormUi'
+import { EntityMark } from '../../../shared/ui/EntityUi'
+import { FormError, FormField, MoreFields, ValidationSummary } from '../../../shared/ui/FormUi'
+import { SelectField } from '../../../shared/ui/SelectField'
 import type { GoalDto } from '../../goals/types/goal.types'
 import { type ProjectFields, projectFieldsSchema } from '../types/project.schema'
 import type { CreateProjectRequest, ProjectDto, UpdateProjectRequest } from '../types/project.types'
@@ -41,7 +44,7 @@ export function ProjectForm({ project, goals, pending, error, onSubmit, onCancel
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان پروژه" name="title" required maxLength={200} registration={form.register('title')} error={errors.title?.message} />
+      <FormField label="عنوان پروژه" name="title" required autoFocus maxLength={200} placeholder="این تلاش چه نامی دارد؟" registration={form.register('title')} error={errors.title?.message} />
       <FormField
         label="معنای تکمیل (اختیاری)"
         name="completionMeaning"
@@ -50,14 +53,27 @@ export function ProjectForm({ project, goals, pending, error, onSubmit, onCancel
         registration={form.register('completionMeaning')}
         hint="چه زمانی این تلاش را تمام‌شده می‌دانید؟"
       />
-      <label className="field-label">
-        هدف بالادست (اختیاری)
-        <select className="field-input" {...form.register('goalId')}>
-          <option value="">بدون هدف</option>
-          {selectableGoals.map(goal => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
-        </select>
-      </label>
-      <div className="form-grid">
+      <Controller
+        control={form.control}
+        name="goalId"
+        render={({ field }) => (
+          <SelectField
+            label="هدف بالادست (اختیاری)"
+            value={field.value}
+            onChange={field.onChange}
+            searchPlaceholder="نام هدف…"
+            options={[
+              { value: '', label: 'بدون هدف', icon: <CircleDashed size={20} className="shrink-0 text-text-tertiary" aria-hidden="true" /> },
+              ...selectableGoals.map(goal => ({ value: goal.id, label: goal.title, icon: <EntityMark entity="goal" /> })),
+            ]}
+          />
+        )}
+      />
+      <MoreFields
+        summary="تاریخ هدف و تاریخ بازبینی"
+        defaultOpen={Boolean(project?.targetDate || project?.reviewDate)}
+        forceOpen={Boolean(errors.targetDate || errors.reviewDate)}
+      >
         <Controller
           control={form.control}
           name="targetDate"
@@ -68,7 +84,7 @@ export function ProjectForm({ project, goals, pending, error, onSubmit, onCancel
           name="reviewDate"
           render={({ field }) => <DateField label="تاریخ بازبینی (اختیاری)" value={field.value} onChange={field.onChange} error={errors.reviewDate?.message} />}
         />
-      </div>
+      </MoreFields>
       <FormError error={error} />
       <div className="sheet-actions">
         <button className="secondary-button" type="button" disabled={pending} onClick={onCancel}>انصراف</button>

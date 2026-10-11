@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
+import { useGoalOptions } from '../../goals/hooks/goal-hooks'
+import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
 import { todayKey } from '../../today/hooks/today-hooks'
 import { carryTask, completeTask, createTask, dropTask, getTask, listTasks, restoreTask, updateTask } from '../services/tasks-api'
@@ -28,6 +30,15 @@ export function useTasks(status?: string) {
 /** Flat, unpaginated Task list used to offer same-scope predecessors for the sequence select. */
 export function useTaskOptions() {
   return useQuery({ queryKey: taskKeys.options, queryFn: () => listTasks(undefined, undefined, 100) })
+}
+
+/** Looks up the title of a Task's Goal or Project for its badge. Until the lists arrive the badge names only the kind. */
+export function useTaskParentTitle() {
+  const goals = useGoalOptions().data?.items
+  const projects = useProjectOptions().data?.items
+  return (task: Pick<TaskDto, 'goalId' | 'projectId'>) => task.projectId
+    ? projects?.find(project => project.id === task.projectId)?.title
+    : task.goalId ? goals?.find(goal => goal.id === task.goalId)?.title : undefined
 }
 
 /** Fetches one Task for the Task detail page. */

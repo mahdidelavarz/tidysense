@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { formatLocalDate, formatNumber } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
-import { EntityLabel } from '../../../shared/ui/EntityUi'
+import { EntityIcon } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
 import { useReviewGoal } from '../../goals/hooks/goal-hooks'
 import { useReviewProject } from '../../projects/hooks/project-hooks'
@@ -25,28 +25,37 @@ export function ReviewLane({ reviews, total, onAction, onDatedAction }: {
     : reviewProject.isPending ? reviewProject.variables?.projectId : undefined
 
   return (
-    <section aria-labelledby="reconcile-reviews">
-      <h2 className="section-title" id="reconcile-reviews">مرور تعهدها</h2>
-      <p className="mt-1 text-sm text-text-secondary">
+    <section className="lane" aria-labelledby="reconcile-reviews">
+      <h2 className="lane-title" id="reconcile-reviews">
+        مرور تعهدها
+        <span className="lane-count" aria-hidden="true">{formatNumber(total)}</span>
+      </h2>
+      <p className="lane-hint">
         زمان مرور این موارد رسیده است. این یک نقطه بازبینی است، نه کار عقب‌افتاده.
         {total > reviews.length && ` ${formatNumber(reviews.length)} مورد از ${formatNumber(total)} مورد نمایش داده شده است.`}
       </p>
       <div className="mt-3"><FormError error={reviewGoal.error ?? reviewProject.error} /></div>
-      <ul className="mt-3 space-y-3">
+      <ul className="mt-4 space-y-4">
         {reviews.map(review => {
           const isGoal = review.entityType === 'GOAL'
           const busy = busyId === review.id
           const version = Number(review.version)
           return (
             <li key={review.id}>
-              <article className="card">
-                <EntityLabel entity={isGoal ? 'goal' : 'project'} />
-                <h3 className="mt-2 wrap-break-word font-bold leading-7">{review.title}</h3>
-                <p className="text-xs text-text-secondary">
-                  تاریخ مرور: {formatLocalDate(review.reviewDate)}
-                  {review.targetDate && ` · تاریخ هدف: ${formatLocalDate(review.targetDate)}`}
-                </p>
-                {isGoal && <p className="mt-3 font-bold">آیا می‌خواهید این هدف را ادامه دهید؟</p>}
+              <article className="decision-card">
+                <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <EntityIcon entity={isGoal ? 'goal' : 'project'} />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="decision-title">{review.title}</h3>
+                    <p className="mt-1 flex flex-wrap gap-1.5">
+                      <span className="meta-chip">{isGoal ? 'هدف' : 'پروژه'}</span>
+                      <span className="meta-chip">تاریخ مرور: {formatLocalDate(review.reviewDate)}</span>
+                      {review.targetDate && <span className="meta-chip">تاریخ هدف: {formatLocalDate(review.targetDate)}</span>}
+                    </p>
+                  </div>
+                </div>
+                {isGoal && <p className="mt-3 text-sm font-bold sm:mt-4 sm:text-base">آیا می‌خواهید این هدف را ادامه دهید؟</p>}
 
                 {review.undatedTasks.length > 0 && (
                   <div className="notice mt-3">
@@ -59,11 +68,12 @@ export function ReviewLane({ reviews, total, onAction, onDatedAction }: {
                   </div>
                 )}
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                </div>
+                <div className="decision-bar">
                   {isGoal ? (
                     <>
                       <button
-                        className="primary-button min-h-9 px-3"
+                        className="decision-button" data-tone="primary"
                         type="button"
                         disabled={busy}
                         onClick={() => reviewGoal.mutate({ goalId: review.id, decision: 'CONTINUE', expectedVersion: version }, {
@@ -73,7 +83,7 @@ export function ReviewLane({ reviews, total, onAction, onDatedAction }: {
                         ادامه می‌دهم
                       </button>
                       <button
-                        className="secondary-button min-h-9 px-3"
+                        className="decision-button"
                         type="button"
                         disabled={busy}
                         onClick={() => reviewGoal.mutate({ goalId: review.id, decision: 'REVIEW_LATER', expectedVersion: version }, {
@@ -82,14 +92,14 @@ export function ReviewLane({ reviews, total, onAction, onDatedAction }: {
                       >
                         بعداً مرور می‌کنم
                       </button>
-                      <Link className="ghost-button min-h-9 px-3" to="/goals/$goalId" params={{ goalId: review.id }}>
+                      <Link className="decision-button" to="/goals/$goalId" params={{ goalId: review.id }}>
                         تصمیم دیگری دارم
                       </Link>
                     </>
                   ) : (
                     <>
                       <button
-                        className="primary-button min-h-9 px-3"
+                        className="decision-button" data-tone="primary"
                         type="button"
                         disabled={busy}
                         onClick={() => reviewProject.mutate({ projectId: review.id, expectedVersion: version }, {
@@ -98,7 +108,7 @@ export function ReviewLane({ reviews, total, onAction, onDatedAction }: {
                       >
                         ادامه با تاریخ مرور تازه
                       </button>
-                      <Link className="ghost-button min-h-9 px-3" to="/projects/$projectId" params={{ projectId: review.id }}>
+                      <Link className="decision-button" to="/projects/$projectId" params={{ projectId: review.id }}>
                         تکمیل یا توقف پروژه
                       </Link>
                     </>

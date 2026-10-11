@@ -1,3 +1,4 @@
+import { ListChecks, Repeat, StickyNote, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
@@ -29,25 +30,36 @@ export function CaptureLane({ captures, total }: {
   const close = () => setOpen(null)
 
   return (
-    <section aria-labelledby="reconcile-captures">
-      <h2 className="section-title" id="reconcile-captures">یادداشت‌های سریع</h2>
-      <p className="mt-1 text-sm text-text-secondary">
+    <section className="lane" aria-labelledby="reconcile-captures">
+      <h2 className="lane-title" id="reconcile-captures">
+        یادداشت‌های سریع
+        <span className="lane-count" aria-hidden="true">{formatNumber(total)}</span>
+      </h2>
+      <p className="lane-hint">
         این‌ها هنوز تعهد نیستند. هر کدام را به کار یا روتین تبدیل کنید یا دور بیندازید.
         {total > captures.length && ` ${formatNumber(captures.length)} مورد از ${formatNumber(total)} مورد نمایش داده شده است.`}
       </p>
-      <ul className="mt-3 space-y-3">
+      <ul className="mt-4 space-y-4">
         {captures.map(capture => (
           <li key={capture.id}>
-            <article className="card">
-              <h3 className="wrap-break-word font-bold leading-7">{capture.title}</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button className="secondary-button min-h-9 px-3" type="button" aria-label={`تبدیل به کار: ${capture.title}`} onClick={() => setOpen({ kind: 'task', capture })}>
+            <article className="decision-card">
+              <div className="decision-head items-center">
+                <span className="decision-tile bg-surface-sunken text-text-secondary" aria-hidden="true">
+                  <StickyNote size={22} />
+                </span>
+                <h3 className="decision-title min-w-0 flex-1">{capture.title}</h3>
+              </div>
+              <div className="decision-bar">
+                <button className="decision-button" type="button" aria-label={`تبدیل به کار: ${capture.title}`} onClick={() => setOpen({ kind: 'task', capture })}>
+                  <ListChecks size={18} aria-hidden="true" />
                   تبدیل به کار
                 </button>
-                <button className="secondary-button min-h-9 px-3" type="button" aria-label={`تبدیل به روتین: ${capture.title}`} onClick={() => setOpen({ kind: 'routine', capture })}>
+                <button className="decision-button" type="button" aria-label={`تبدیل به روتین: ${capture.title}`} onClick={() => setOpen({ kind: 'routine', capture })}>
+                  <Repeat size={18} aria-hidden="true" />
                   تبدیل به روتین
                 </button>
-                <button className="ghost-button min-h-9 px-3 text-attention" type="button" aria-label={`دور انداختن: ${capture.title}`} onClick={() => setOpen({ kind: 'discard', capture })}>
+                <button className="decision-button" data-tone="danger" type="button" aria-label={`دور انداختن: ${capture.title}`} onClick={() => setOpen({ kind: 'discard', capture })}>
+                  <Trash2 size={18} aria-hidden="true" />
                   دور انداختن
                 </button>
               </div>

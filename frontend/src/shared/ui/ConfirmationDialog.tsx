@@ -34,18 +34,18 @@ export function ConfirmationDialog({ title, description, children, actions, onCl
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold text-text-secondary">نیازمند تأیید</p>
-            <h2 className="mt-1 text-xl font-extrabold leading-snug" id={titleId}>{title}</h2>
-          </div>
-          <button className="icon-button -me-2 -mt-2" type="button" onClick={onClose} disabled={pending} aria-label="بستن پنجره">
+        <div className="sheet-handle sm:hidden" aria-hidden="true" />
+        <div className="flex items-start justify-between gap-4 px-5 pt-4 sm:px-7 sm:pt-7">
+          <h2 className="text-xl font-extrabold leading-snug" id={titleId}>{title}</h2>
+          <button className="icon-button -me-2 -mt-1.5" type="button" onClick={onClose} disabled={pending} aria-label="بستن پنجره">
             <X size={22} aria-hidden="true" />
           </button>
         </div>
-        {description && <p className="mt-4 text-sm text-text-secondary" id={descriptionId}>{description}</p>}
-        {children && <div className="mt-5">{children}</div>}
-        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">{actions}</div>
+        <div className="px-5 pb-5 sm:px-7 sm:pb-6">
+          {description && <p className="mt-2 text-sm leading-7 text-text-secondary" id={descriptionId}>{description}</p>}
+          {children && <div className="mt-5">{children}</div>}
+        </div>
+        <div className="dialog-actions">{actions}</div>
       </div>
     </div>
   )

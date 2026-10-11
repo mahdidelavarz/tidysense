@@ -19,7 +19,7 @@ export function OtpStep({ phone, pending, resendRemainingSeconds, onVerify, onRe
 
   return (
     <div className="mt-6">
-      <p className="rounded-lg bg-accent-tint p-3 text-sm text-accent-strong">کد ارسال‌شده به <bdi dir="ltr">{phone}</bdi> را وارد کنید.</p>
+      <p className="rounded-xl bg-accent-tint p-3.5 text-sm text-accent-strong">کد ارسال‌شده به <bdi dir="ltr">{phone}</bdi> را وارد کنید.</p>
       <form className="mt-5 space-y-5" onSubmit={form.handleSubmit(values => onVerify(values.code))} noValidate aria-busy={pending}>
         <div>
           <label className="field-label" htmlFor="code">کد تأیید</label>
@@ -29,16 +29,16 @@ export function OtpStep({ phone, pending, resendRemainingSeconds, onVerify, onRe
             autoComplete="one-time-code"
             dir="ltr"
             maxLength={4}
-            className="field-input text-center font-mono text-xl tracking-[0.5em]"
+            className="field-input min-h-14 text-center font-mono text-2xl tracking-[0.5em]"
             {...form.register('code')}
             aria-invalid={!!form.formState.errors.code}
             aria-describedby={form.formState.errors.code ? 'code-error' : undefined}
           />
           {form.formState.errors.code && <span className="field-error" id="code-error" role="alert">{form.formState.errors.code.message}</span>}
         </div>
-        <button type="submit" className="primary-button w-full" disabled={pending}>{pending ? 'در حال ورود…' : 'ورود'}</button>
+        <button type="submit" className="primary-button min-h-13 w-full text-base" disabled={pending}>{pending ? 'در حال ورود…' : 'ورود'}</button>
       </form>
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
         <button type="button" className="ghost-button" disabled={pending || !canResend} onClick={onResend}>
           {canResend ? 'ارسال دوباره کد' : `ارسال دوباره تا ${resendRemainingSeconds} ثانیه`}
         </button>

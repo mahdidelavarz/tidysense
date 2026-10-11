@@ -5,13 +5,19 @@ import { Controller, useForm } from 'react-hook-form'
 import { formatTime, toIsoDate } from '../../../shared/lib/date'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { DateField } from '../../../shared/ui/DateField'
-import { FormError, FormField, ValidationSummary } from '../../../shared/ui/FormUi'
+import { ChoiceField, FormError, FormField, LabelText, MoreFields, ValidationSummary } from '../../../shared/ui/FormUi'
 import type { GoalDto } from '../../goals/types/goal.types'
 import type { ProjectDto } from '../../projects/types/project.types'
 import { TaskParentSelect } from '../../tasks/components/TaskParentSelect'
 import { weekdayOptions } from '../types/routine.format'
 import { type RoutineFields, routineFieldsSchema } from '../types/routine.schema'
 import type { CreateRoutineRequest, RoutineDto, UpdateRoutineRequest } from '../types/routine.types'
+
+const recurrenceOptions = [
+  { value: 'DAILY', label: 'هر روز' },
+  { value: 'SPECIFIC_WEEKDAYS', label: 'روزهای مشخص هفته' },
+  { value: 'MONTHLY_ON_DAY', label: 'یک روز مشخص در هر ماه' },
+] as const
 
 /**
  * Create/edit form for a Routine, rendered as the body of a Sheet.
@@ -72,24 +78,12 @@ export function RoutineForm({ routine, source, initialTitle, goals, projects, pe
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان روتین" name="title" required maxLength={200} registration={form.register('title')} error={errors.title?.message} />
-      <FormField label="توضیحات (اختیاری)" name="description" multiline maxLength={2000} registration={form.register('description')} error={errors.description?.message} />
-      <TaskParentSelect
-        goals={goals}
-        projects={projects}
-        currentGoalId={routine?.goalId}
-        currentProjectId={routine?.projectId}
-        standaloneLabel="روتین مستقل"
-        registration={form.register('parentScope')}
+      <FormField label="عنوان روتین" name="title" required autoFocus maxLength={200} placeholder="چه کاری تکرار می‌شود؟" registration={form.register('title')} error={errors.title?.message} />
+      <Controller
+        control={form.control}
+        name="recurrenceType"
+        render={({ field }) => <ChoiceField label="تکرار" value={field.value} options={recurrenceOptions} onChange={field.onChange} />}
       />
-      <label className="field-label">
-        تکرار
-        <select className="field-input" {...form.register('recurrenceType')}>
-          <option value="DAILY">هر روز</option>
-          <option value="SPECIFIC_WEEKDAYS">روزهای مشخص هفته</option>
-          <option value="MONTHLY_ON_DAY">یک روز مشخص در هر ماه</option>
-        </select>
-      </label>
       {recurrenceType === 'SPECIFIC_WEEKDAYS' && (
         <Controller
           control={form.control}
@@ -103,7 +97,7 @@ export function RoutineForm({ routine, source, initialTitle, goals, projects, pe
                   return (
                     <button
                       key={day.value}
-                      className="segmented-option border border-border"
+                      className="choice-chip"
                       type="button"
                       aria-pressed={selected}
                       onClick={() => field.onChange(selected
@@ -136,21 +130,43 @@ export function RoutineForm({ routine, source, initialTitle, goals, projects, pe
         name="timesOfDay"
         render={({ field }) => <TimeSlotsField value={field.value} onChange={field.onChange} error={errors.timesOfDay?.message} />}
       />
-      {!routine && (
+      <MoreFields
+        summary={routine ? 'توضیحات و وابستگی' : 'توضیحات، وابستگی و تاریخ شروع'}
+        defaultOpen={Boolean(initial && (initial.description || initialGoalId || initialProjectId))}
+        forceOpen={Boolean(errors.description || errors.effectiveFrom)}
+      >
+        <FormField label="توضیحات (اختیاری)" name="description" multiline maxLength={2000} registration={form.register('description')} error={errors.description?.message} />
         <Controller
           control={form.control}
-          name="effectiveFrom"
+          name="parentScope"
           render={({ field }) => (
-            <DateField
-              label="تاریخ شروع"
-              hint="اولین روزی که این روتین می‌تواند اجرا شود."
+            <TaskParentSelect
+              goals={goals}
+              projects={projects}
+              currentGoalId={routine?.goalId}
+              currentProjectId={routine?.projectId}
+              standaloneLabel="روتین مستقل"
               value={field.value}
               onChange={field.onChange}
-              error={errors.effectiveFrom?.message}
             />
           )}
         />
-      )}
+        {!routine && (
+          <Controller
+            control={form.control}
+            name="effectiveFrom"
+            render={({ field }) => (
+              <DateField
+                label="تاریخ شروع"
+                hint="اولین روزی که این روتین می‌تواند اجرا شود."
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.effectiveFrom?.message}
+              />
+            )}
+          />
+        )}
+      </MoreFields>
       {routine && <p className="notice">تغییر در تکرار یا ساعت‌ها از فردا اعمال می‌شود؛ برنامه امروز تغییر نمی‌کند.</p>}
       <FormError error={error} />
       <div className="sheet-actions">
@@ -187,12 +203,11 @@ function TimeSlotsField({ value, onChange, error }: {
 
   return (
     <div>
-      <label className="field-label" htmlFor={id}>ساعت‌های روز (اختیاری)</label>
-      <span className="field-hint">برای چند نوبت در روز، هر ساعت را جدا اضافه کنید. بدون ساعت، روتین یک بار در روز است.</span>
+      <label className="field-label" htmlFor={id}><LabelText>ساعت‌های روز (اختیاری)</LabelText></label>
       {sorted.length > 0 && (
         <ul className="mt-2 flex flex-wrap gap-2" aria-label="ساعت‌های ثبت‌شده">
           {sorted.map(time => (
-            <li key={time} className="flex items-center gap-1 rounded-full bg-surface-sunken ps-3 text-sm font-bold">
+            <li key={time} className="flex items-center gap-1 rounded-full bg-accent-tint ps-3 text-sm font-bold text-accent-strong">
               <bdi dir="ltr">{formatTime(time)}</bdi>
               <button
                 className="icon-button size-9"
@@ -218,11 +233,12 @@ function TimeSlotsField({ value, onChange, error }: {
             setDuplicate(false)
           }}
         />
-        <button className="secondary-button shrink-0" type="button" disabled={!draft} onClick={add}>
+        <button className="secondary-button min-h-12 shrink-0" type="button" disabled={!draft} onClick={add}>
           <Plus size={18} aria-hidden="true" />
           افزودن ساعت
         </button>
       </div>
+      <span className="field-hint">برای چند نوبت در روز، هر ساعت را جدا اضافه کنید. بدون ساعت، روتین یک بار در روز است.</span>
       {duplicate && <span className="field-error" role="alert">این ساعت قبلاً اضافه شده است.</span>}
       {error && <span className="field-error" role="alert">{error}</span>}
     </div>
