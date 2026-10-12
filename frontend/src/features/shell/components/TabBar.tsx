@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { Plus } from '../../../shared/ui/icons'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { destinations } from './Navigation'
 

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, X } from 'lucide-react'
+import { Plus, X } from '../../../shared/ui/icons'
 import { useId, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { formatTime, toIsoDate } from '../../../shared/lib/date'

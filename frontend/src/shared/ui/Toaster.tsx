@@ -1,4 +1,4 @@
-import { CircleCheck } from 'lucide-react'
+import { CircleCheck } from './icons'
 import { useEffect } from 'react'
 import { type Toast, useUiStore } from '../lib/ui-store'
 

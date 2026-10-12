@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react'
+import { Sparkles } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { useReconcileExplanation } from '../hooks/reconcile-hooks'

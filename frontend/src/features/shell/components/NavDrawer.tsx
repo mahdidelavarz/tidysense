@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X } from '../../../shared/ui/icons'
 import { useRef } from 'react'
 import { useModal } from '../../../shared/lib/use-modal'
 import { AccountMenu } from './AccountMenu'

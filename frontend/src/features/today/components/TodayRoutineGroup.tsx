@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Check, Eye, LoaderCircle, Repeat } from 'lucide-react'
+import { Check, Eye, LoaderCircle, Repeat } from '../../../shared/ui/icons'
 import { formatTime } from '../../../shared/lib/date'
 import { StatusBadge } from '../../../shared/ui/EntityUi'
 import type { RoutineOccurrenceDto } from '../../routines/types/routine.types'
@@ -51,14 +51,14 @@ export function TodayRoutineGroup({ occurrences, busyId, onComplete, onCorrect }
                   >
                     {busy
                       ? <LoaderCircle size={20} className="animate-spin text-text-secondary" aria-hidden="true" />
-                      : <Check size={20} strokeWidth={3} aria-hidden="true" />}
+                      : <Check size={20} aria-hidden="true" />}
                   </button>
                 ) : (
                   <span
                     className={`flex size-11 shrink-0 items-center justify-center rounded-full ${occurrence.status === 'DONE' ? 'bg-positive text-white' : 'border-2 border-dashed border-border'}`}
                     aria-hidden="true"
                   >
-                    {occurrence.status === 'DONE' && <Check size={20} strokeWidth={3} />}
+                    {occurrence.status === 'DONE' && <Check size={20} />}
                   </span>
                 )}
                 <bdi className="font-bold" dir={occurrence.scheduledLocalTime ? 'ltr' : undefined}>{slot}</bdi>

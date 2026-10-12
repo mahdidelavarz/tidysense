@@ -1,4 +1,4 @@
-import { Pencil } from 'lucide-react'
+import { Pencil } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatLocalDate, formatLongDate } from '../../../shared/lib/date'
 import { EntityLabel } from '../../../shared/ui/EntityUi'

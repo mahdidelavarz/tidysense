@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, Flag, FolderKanban } from 'lucide-react'
+import { CalendarClock, Flag, FolderKanban } from '../../../shared/ui/icons'
 import { formatLocalDate, formatNumber } from '../../../shared/lib/date'
 import { EntityIcon, StatusBadge } from '../../../shared/ui/EntityUi'
 import type { GoalDto } from '../types/goal.types'

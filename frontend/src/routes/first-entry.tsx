@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, ChevronLeft, Compass, Languages, ListChecks, Lock, type LucideIcon, Sparkles, Square, Target } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, Compass, Languages, ListChecks, Lock, type AppIcon, Sparkles, Square, Target } from '../shared/ui/icons'
 import { type FormEvent, useRef, useState } from 'react'
 import { type CreateTarget, useUiStore } from '../shared/lib/ui-store'
 import { type EntityKind, EntityIcon, EntityLabel } from '../shared/ui/EntityUi'
 
 /** Written in the user's own voice: choosing one fills the input, where it can still be changed. */
-const examples: Array<{ text: string; icon: LucideIcon }> = [
+const examples: Array<{ text: string; icon: AppIcon }> = [
   { text: 'یه برنامه برای یادگیری زبان برام بنویس', icon: Languages },
   { text: 'برای یک هدفم برنامه بساز', icon: Target },
   { text: 'کارهام رو مرتب کن', icon: ListChecks },

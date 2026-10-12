@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { RefreshCcw } from 'lucide-react'
+import { RefreshCcw } from '../../../shared/ui/icons'
 import { formatNumber } from '../../../shared/lib/date'
 import { useReconcileOverview, useResolveReconcilePrompt } from '../hooks/reconcile-hooks'
 import { severityLabels } from '../types/reconcile.format'

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, Menu } from 'lucide-react'
+import { ArrowRight, Menu } from './icons'
 import type { ReactNode } from 'react'
 import { useUiStore } from '../lib/ui-store'
 

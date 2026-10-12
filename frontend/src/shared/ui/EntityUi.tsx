@@ -1,8 +1,8 @@
-import { FolderKanban, ListChecks, type LucideIcon, Repeat, Target } from 'lucide-react'
+import { FolderKanban, ListChecks, type AppIcon, Repeat, Target } from './icons'
 
 export type EntityKind = 'goal' | 'project' | 'task' | 'routine'
 
-const entities: Record<EntityKind, { label: string; icon: LucideIcon }> = {
+const entities: Record<EntityKind, { label: string; icon: AppIcon }> = {
   goal: { label: 'هدف', icon: Target },
   project: { label: 'پروژه', icon: FolderKanban },
   task: { label: 'کار', icon: ListChecks },

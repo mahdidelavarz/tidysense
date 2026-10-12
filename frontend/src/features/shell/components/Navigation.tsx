@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Activity, Compass, FolderKanban, ListChecks, type LucideIcon, RefreshCcw, Repeat, Sun, Target } from 'lucide-react'
+import { Activity, Compass, FolderKanban, ListChecks, type AppIcon, RefreshCcw, Repeat, Sun, Target } from '../../../shared/ui/icons'
 import { formatNumber } from '../../../shared/lib/date'
 import { useCurrentUser } from '../../auth/hooks/auth-hooks'
 import { useReconcileOverview } from '../../reconcile/hooks/reconcile-hooks'
@@ -7,7 +7,7 @@ import { useReconcileOverview } from '../../reconcile/hooks/reconcile-hooks'
 type Destination = {
   to: '/today' | '/tasks' | '/routines' | '/reconcile' | '/planning' | '/projects' | '/goals' | '/operations'
   label: string
-  icon: LucideIcon
+  icon: AppIcon
   /** Destinations with the same group sit together in the sidebar and drawer. */
   group: 'daily' | 'review' | 'structure' | 'operations'
   /** False keeps a destination out of the four-slot phone tab bar; it stays in the sidebar and drawer. */

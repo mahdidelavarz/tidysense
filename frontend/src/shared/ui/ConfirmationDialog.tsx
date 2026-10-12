@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X } from './icons'
 import { type ReactNode, useId, useRef } from 'react'
 import { useModal } from '../lib/use-modal'
 

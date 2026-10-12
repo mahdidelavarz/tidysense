@@ -1,4 +1,4 @@
-import { Plus, Repeat } from 'lucide-react'
+import { Plus, Repeat } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { PageHeader } from '../../../shared/ui/PageHeader'

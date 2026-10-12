@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { FolderKanban, Sun, Target } from 'lucide-react'
+import { FolderKanban, Sun, Target } from '../../../shared/ui/icons'
 import { useEffect, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { getDevelopmentOtp } from '../services/auth-api'

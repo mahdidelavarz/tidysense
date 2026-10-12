@@ -1,9 +1,9 @@
-import type { LucideIcon } from 'lucide-react'
+import type { AppIcon } from './icons'
 import type { ReactNode } from 'react'
 
 /** One icon + label + value fact inside an entity detail `<dl>`. Wraps `value` in `<time>` when `dateTime` is given. */
 export function DetailTerm({ icon: Icon, label, value, dateTime }: {
-  icon: LucideIcon
+  icon: AppIcon
   label: string
   value: ReactNode
   dateTime?: string | null

@@ -1,4 +1,4 @@
-import { Database, Sparkles, Trash2 } from 'lucide-react'
+import { Database, Sparkles, Trash2 } from '../../../shared/ui/icons'
 import { Link } from '@tanstack/react-router'
 import { type ReactNode, useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'

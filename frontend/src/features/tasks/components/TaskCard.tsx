@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronLeft, CircleCheckBig, CircleDashed, CircleSlash, FolderKanban, Lock, ShieldCheck, Target } from 'lucide-react'
+import { ChevronLeft, CircleCheckBig, CircleDashed, CircleSlash, FolderKanban, Lock, ShieldCheck, Target } from '../../../shared/ui/icons'
 import { StatusBadge } from '../../../shared/ui/EntityUi'
 import type { TaskDto } from '../types/task.types'
 import { DateLeaf, leafDateText } from './DateLeaf'

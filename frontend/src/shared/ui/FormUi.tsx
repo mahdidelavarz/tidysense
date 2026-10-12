@@ -1,4 +1,4 @@
-import { ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, SlidersHorizontal } from './icons'
 import { type ReactNode, useId, useState } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import { toApiError } from '../api/http'

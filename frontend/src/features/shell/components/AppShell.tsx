@@ -1,4 +1,4 @@
-import { WifiOff } from 'lucide-react'
+import { WifiOff } from '../../../shared/ui/icons'
 import type { ReactNode } from 'react'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { useOnline } from '../../../shared/lib/use-online'

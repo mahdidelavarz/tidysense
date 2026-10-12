@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from '../../../shared/ui/icons'
 import { toApiError } from '../../../shared/api/http'
 import { FormError } from '../../../shared/ui/FormUi'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'

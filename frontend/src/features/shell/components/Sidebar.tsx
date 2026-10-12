@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus } from '../../../shared/ui/icons'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { AccountMenu } from './AccountMenu'
 import { Brand, NavList } from './Navigation'

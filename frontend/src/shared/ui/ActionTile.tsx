@@ -1,4 +1,4 @@
-import { ChevronLeft, type LucideIcon } from 'lucide-react'
+import { ChevronLeft, type AppIcon } from './icons'
 import { useId } from 'react'
 
 const tones = {
@@ -19,7 +19,7 @@ const iconTones = {
  * is attached as the description.
  */
 export function ActionTile({ icon: Icon, label, description, tone = 'neutral', disabled, onClick }: {
-  icon: LucideIcon
+  icon: AppIcon
   label: string
   description: string
   tone?: keyof typeof tones

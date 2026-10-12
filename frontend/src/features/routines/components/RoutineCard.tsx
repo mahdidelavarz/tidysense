@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarDays, ChevronLeft, CircleDashed, Clock, FolderKanban, Target } from 'lucide-react'
+import { CalendarDays, ChevronLeft, CircleDashed, Clock, FolderKanban, Target } from '../../../shared/ui/icons'
 import { formatTime } from '../../../shared/lib/date'
 import { EntityIcon, StatusBadge } from '../../../shared/ui/EntityUi'
 import { recurrenceLabel, weekdayOptions } from '../types/routine.format'

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, CalendarDays, Flag, Link2, Pencil, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react'
+import { CalendarClock, CalendarDays, Flag, Link2, Pencil, RotateCcw, ShieldCheck, Trash2 } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatLocalDate, formatNumber } from '../../../shared/lib/date'

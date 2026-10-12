@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, Check, CircleDashed, Eye, FolderKanban, LoaderCircle, Lock, Target } from 'lucide-react'
+import { CalendarClock, Check, CircleDashed, Eye, FolderKanban, LoaderCircle, Lock, Target } from '../../../shared/ui/icons'
 import type { TaskDto } from '../../tasks/types/task.types'
 import { TodayCard } from './TodayCard'
 
@@ -47,7 +47,7 @@ export function TodayTaskCard({ task, parentTitle, completing = false, onComplet
         >
           {completing
             ? <LoaderCircle size={20} className="animate-spin text-text-secondary" aria-hidden="true" />
-            : <Check size={20} strokeWidth={3} aria-hidden="true" />}
+            : <Check size={20} aria-hidden="true" />}
         </button>
       )}
       <div className="min-w-0 flex-1 self-center">

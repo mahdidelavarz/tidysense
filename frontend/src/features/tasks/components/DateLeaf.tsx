@@ -1,4 +1,4 @@
-import { CalendarOff } from 'lucide-react'
+import { CalendarOff } from '../../../shared/ui/icons'
 import type { ReactNode } from 'react'
 import { parseIsoDate } from '../../../shared/lib/date'
 

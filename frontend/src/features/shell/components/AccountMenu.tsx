@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronsUpDown, LogOut, MonitorSmartphone, ShieldCheck, UserRound } from 'lucide-react'
+import { ChevronsUpDown, LogOut, MonitorSmartphone, ShieldCheck, UserRound } from '../../../shared/ui/icons'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useCurrentUser, useLogout } from '../../auth/hooks/auth-hooks'
 

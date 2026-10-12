@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, CircleDashed, Flag, Target } from 'lucide-react'
+import { CalendarClock, CircleDashed, Flag, Target } from '../../../shared/ui/icons'
 import { formatLocalDate } from '../../../shared/lib/date'
 import { EntityIcon, StatusBadge } from '../../../shared/ui/EntityUi'
 import type { ProjectDto } from '../types/project.types'

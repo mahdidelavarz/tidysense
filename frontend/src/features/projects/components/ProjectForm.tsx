@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CircleDashed } from 'lucide-react'
+import { CircleDashed } from '../../../shared/ui/icons'
 import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { DateField } from '../../../shared/ui/DateField'

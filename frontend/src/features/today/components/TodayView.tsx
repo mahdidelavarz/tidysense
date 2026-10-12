@@ -1,4 +1,4 @@
-import { CalendarDays, Plus, Sun } from 'lucide-react'
+import { CalendarDays, Plus, Sun } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatLongDate, formatNumber } from '../../../shared/lib/date'
 import { showToast, useUiStore } from '../../../shared/lib/ui-store'

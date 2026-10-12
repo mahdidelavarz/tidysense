@@ -1,4 +1,4 @@
-import { ListChecks, Repeat, StickyNote, Trash2 } from 'lucide-react'
+import { ListChecks, Repeat, StickyNote, Trash2 } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
