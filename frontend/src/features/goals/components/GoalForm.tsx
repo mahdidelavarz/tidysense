@@ -35,7 +35,7 @@ export function GoalForm({ goal, pending, error, onSubmit, onCancel }: {
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان هدف" name="title" required autoFocus maxLength={200} placeholder="به چه چیزی می‌خواهید برسید؟" registration={form.register('title')} error={errors.title?.message} />
+      <FormField label="عنوان هدف" name="title" required autoFocus prominent maxLength={200} placeholder="به چه چیزی می‌خواهید برسید؟" registration={form.register('title')} error={errors.title?.message} />
       <FormField
         label="نتیجه مطلوب"
         name="desiredOutcome"

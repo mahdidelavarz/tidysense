@@ -20,7 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-frame bg-canvas text-text-primary">
-      <a className="fixed start-4 top-3 z-60 -translate-y-20 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-white transition focus:translate-y-0" href="#main-content">
+      <a className="fixed start-4 top-3 z-60 -translate-y-20 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-on-accent transition focus:translate-y-0" href="#main-content">
         رفتن به محتوای اصلی
       </a>
       <Sidebar />

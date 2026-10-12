@@ -78,7 +78,7 @@ export function RoutineForm({ routine, source, initialTitle, goals, projects, pe
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان روتین" name="title" required autoFocus maxLength={200} placeholder="چه کاری تکرار می‌شود؟" registration={form.register('title')} error={errors.title?.message} />
+      <FormField label="عنوان روتین" name="title" required autoFocus prominent maxLength={200} placeholder="چه کاری تکرار می‌شود؟" registration={form.register('title')} error={errors.title?.message} />
       <Controller
         control={form.control}
         name="recurrenceType"

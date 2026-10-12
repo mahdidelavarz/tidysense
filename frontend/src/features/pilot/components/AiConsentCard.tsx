@@ -32,7 +32,7 @@ export function AiConsentCard({ onManual }: { onManual: () => void }) {
   return (
     <section className="rounded-3xl border border-accent/20 bg-linear-to-bl from-accent-tint via-surface to-surface p-5 shadow-sm sm:p-7" aria-labelledby="ai-consent-title">
       <div className="flex items-center gap-3">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-sm" aria-hidden="true">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent text-on-accent shadow-sm" aria-hidden="true">
           <ShieldCheck size={24} />
         </span>
         <h2 className="text-lg font-bold leading-7" id="ai-consent-title">اجازه شما برای برنامه‌ریزی با هوش مصنوعی</h2>

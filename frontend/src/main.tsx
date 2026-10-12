@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import '@fontsource-variable/vazirmatn'
+import '@fontsource/noto-naskh-arabic/arabic-700.css'
+import './shared/lib/theme'
 import './index.css'
 
 const queryClient = new QueryClient({

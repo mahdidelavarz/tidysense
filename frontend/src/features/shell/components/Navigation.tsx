@@ -39,7 +39,7 @@ export const destinations: Destination[] = [
 export function Brand() {
   return (
     <Link className="flex items-center gap-3 rounded-xl" to="/today" aria-label="تایدی‌سنس">
-      <span className="flex size-10 items-center justify-center rounded-xl bg-accent text-lg font-extrabold text-white shadow-sm" aria-hidden="true">ت</span>
+      <span className="flex size-10 items-center justify-center rounded-xl bg-accent text-lg font-extrabold text-on-accent shadow-sm" aria-hidden="true">ت</span>
       <span className="text-lg font-extrabold tracking-tight" aria-hidden="true">تایدی‌سنس</span>
     </Link>
   )

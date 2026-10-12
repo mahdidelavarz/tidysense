@@ -47,11 +47,11 @@ export function TodayTaskCard({ task, parentTitle, completing = false, onComplet
         >
           {completing
             ? <LoaderCircle size={20} className="animate-spin text-text-secondary" aria-hidden="true" />
-            : <Check size={20} aria-hidden="true" />}
+            : <Check size={16} aria-hidden="true" />}
         </button>
       )}
       <div className="min-w-0 flex-1 self-center">
-        <h2 className="wrap-break-word font-bold leading-7">{task.title}</h2>
+        <h2 className="wrap-break-word text-[0.96875rem] font-semibold leading-7">{task.title}</h2>
         <p className="today-badge mt-1.5">
           <ParentIcon size={14} className="shrink-0" aria-hidden="true" />
           <span className="truncate">{parentTitle ? `${parentKind}: ${parentTitle}` : parentKind}</span>

@@ -17,7 +17,7 @@ export function LabelText({ children }: { children: string }) {
 }
 
 /** Labelled text input or textarea wired to React Hook Form, with hint and error announced to assistive tech. */
-export function FormField({ label, name, required, multiline, type = 'text', maxLength, placeholder, autoFocus, registration, error, hint }: {
+export function FormField({ label, name, required, multiline, type = 'text', maxLength, placeholder, autoFocus, prominent, registration, error, hint }: {
   label: string
   name: string
   required?: boolean
@@ -27,6 +27,8 @@ export function FormField({ label, name, required, multiline, type = 'text', max
   placeholder?: string
   /** The field a sheet or dialog starts in when it opens. */
   autoFocus?: boolean
+  /** The title of a create/edit form: a display-type label over an underlined line. */
+  prominent?: boolean
   registration?: UseFormRegisterReturn
   error?: string
   hint?: string
@@ -48,10 +50,10 @@ export function FormField({ label, name, required, multiline, type = 'text', max
 
   return (
     <div>
-      <label className="field-label" htmlFor={id}><LabelText>{label}</LabelText></label>
+      <label className={prominent ? 'title-label' : 'field-label'} htmlFor={id}><LabelText>{label}</LabelText></label>
       {multiline
         ? <textarea {...shared} className="field-input" />
-        : <input {...shared} className="field-input" type={type} />}
+        : <input {...shared} className={prominent ? 'title-input' : 'field-input'} type={type} />}
       {error && <span className="field-error" id={errorId} role="alert">{error}</span>}
       {hint && <span className="field-hint" id={hintId}>{hint}</span>}
     </div>

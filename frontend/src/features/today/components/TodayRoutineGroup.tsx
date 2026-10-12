@@ -29,12 +29,12 @@ export function TodayRoutineGroup({ occurrences, busyId, onComplete, onCorrect }
         </Link>
       )}
     >
+      <span className="routine-tile mt-0.5" aria-hidden="true">
+        <Repeat size={22} />
+      </span>
       <div className="min-w-0 flex-1">
-        <h3 className="wrap-break-word font-bold leading-7">{first.routineTitle}</h3>
-        <p className="today-badge mt-1.5">
-          <Repeat size={14} className="shrink-0" aria-hidden="true" />
-          روتین
-        </p>
+        <h3 className="wrap-break-word text-[0.96875rem] font-semibold leading-7">{first.routineTitle}</h3>
+        <p className="today-badge">روتین</p>
         <ul className="mt-3 space-y-2">
           {occurrences.map(occurrence => {
             const slot = occurrence.scheduledLocalTime ? formatTime(occurrence.scheduledLocalTime) : 'امروز'
@@ -51,14 +51,13 @@ export function TodayRoutineGroup({ occurrences, busyId, onComplete, onCorrect }
                   >
                     {busy
                       ? <LoaderCircle size={20} className="animate-spin text-text-secondary" aria-hidden="true" />
-                      : <Check size={20} aria-hidden="true" />}
+                      : <Check size={16} aria-hidden="true" />}
                   </button>
                 ) : (
-                  <span
-                    className={`flex size-11 shrink-0 items-center justify-center rounded-full ${occurrence.status === 'DONE' ? 'bg-positive text-white' : 'border-2 border-dashed border-border'}`}
-                    aria-hidden="true"
-                  >
-                    {occurrence.status === 'DONE' && <Check size={20} />}
+                  <span className="flex size-11 shrink-0 items-center justify-center" aria-hidden="true">
+                    {occurrence.status === 'DONE'
+                      ? <span className="check-done"><Check size={16} /></span>
+                      : <span className="size-7 rounded-full border-2 border-dashed border-border" />}
                   </span>
                 )}
                 <bdi className="font-bold" dir={occurrence.scheduledLocalTime ? 'ltr' : undefined}>{slot}</bdi>
