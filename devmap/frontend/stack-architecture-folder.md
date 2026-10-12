@@ -1,6 +1,6 @@
 # Frontend Stack, Architecture, and Folders
 
-Stack: React 19, strict TypeScript, Vite 8, Tailwind 4, TanStack Router/Query, React Hook Form, Zod, Zustand only when justified, Axios, `date-fns-jalali` for Jalali calendar arithmetic, `lucide-react` icons and the self-hosted Vazirmatn font.
+Stack: React 19, strict TypeScript, Vite 8, Tailwind 4, TanStack Router/Query, React Hook Form, Zod, Zustand only when justified, Axios, `date-fns-jalali` for Jalali calendar arithmetic, Solar icons compiled at build time by `unplugin-icons` (imported only through `shared/ui/icons`), and the self-hosted Vazirmatn and Noto Naskh Arabic fonts.
 
 ```text
 frontend/src/
