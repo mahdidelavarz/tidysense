@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react'
 /**
  * Light/dark appearance. The preference ("system" unless the user chose)
  * lives only in this browser; the resolved theme is the `data-theme`
- * attribute on <html>, which index.html sets before first paint so the page
+ * attribute on <html>, which public/theme-init.js sets before first paint so the page
  * never flashes the wrong theme. Keep the storage key in step with it.
  */
 export type ThemePreference = 'system' | 'light' | 'dark'
@@ -36,6 +36,9 @@ function apply() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor[theme])
   for (const listener of listeners) listener()
 }
+
+// Also applied here, so the theme is right even if the pre-paint script did not run.
+if (typeof document !== 'undefined') apply()
 
 media?.addEventListener('change', () => {
   if (preference === 'system') apply()

@@ -49,7 +49,7 @@ Entity colours are never used as large solid fills. They appear through `.entity
 
 ### Theme
 
-The preference is `system` (the default), `light` or `dark`, chosen under «ظاهر» in the account menu and kept in this browser only (`localStorage` key `tidysense.theme`, [`shared/lib/theme.ts`](../../frontend/src/shared/lib/theme.ts)). The resolved theme is the `data-theme` attribute on `<html>`; a small script in `index.html` sets it before first paint so the page never flashes the wrong theme, and it follows the system setting live while the preference is `system`. `meta[name=theme-color]` follows the canvas. Add nothing per component for dark mode: redefine a token, or, for a drawing, add its `[data-theme="dark"]` palette.
+The preference is `system` (the default), `light` or `dark`, chosen under «ظاهر» in the account menu and kept in this browser only (`localStorage` key `tidysense.theme`, [`shared/lib/theme.ts`](../../frontend/src/shared/lib/theme.ts)). The resolved theme is the `data-theme` attribute on `<html>`; a small script, [`public/theme-init.js`](../../frontend/public/theme-init.js), loaded from `index.html` sets it before first paint so the page never flashes the wrong theme (a file, not an inline script, because the production CSP allows scripts from `self` only), and it follows the system setting live while the preference is `system`. `meta[name=theme-color]` follows the canvas. Add nothing per component for dark mode: redefine a token, or, for a drawing, add its `[data-theme="dark"]` palette.
 
 ## Typography
 

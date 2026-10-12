@@ -73,7 +73,7 @@
 /*
  * Night is not the day inverted: an ink-blue canvas (never black), surfaces
  * that get lighter as they rise, desaturated meaning colours, and the action
- * turned to moonlight. The attribute is set before first paint by index.html
+ * turned to moonlight. The attribute is set before first paint by public/theme-init.js
  * and kept by shared/lib/theme.ts.
  */
 :root[data-theme="dark"] {
