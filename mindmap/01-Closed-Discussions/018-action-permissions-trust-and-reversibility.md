@@ -1,5 +1,7 @@
 # Discussion 018 — Final Action Permissions, Trust, and Reversibility Resolution
 
+> **Amendment (2026-10-13, decided by the owner, [[01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights]] §6):** inside a Reconcile session, marking a single Task complete and Carrying a single Task to today apply on tap with an immediate undo; the item control states the consequence and the tap confirms that one action. Carry to another date, Drop, bulk/sequence actions and Goal continuation still require preview and explicit confirmation.
+
 ## Status
 
 Accepted and closed after GPT × Claude review.
@@ -115,7 +117,7 @@ This remains true even when the user says phrases such as “do whatever you thi
 
 ### Temporal and placement changes
 
-- set or change `plannedDate`
+- set or change `plannedDate` *(except a single Reconcile item Carried to today — Discussion 027 §6)*
 - set or change `reviewDate`
 - set or change `deadline`
 - set or change `targetDate`

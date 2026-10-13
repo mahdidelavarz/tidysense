@@ -1,5 +1,7 @@
 # Discussion 021 — Validation Plan and Decision Gates
 
+> **Amendment (2026-10-13, decided by the owner, [[01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights]] §5):** product-insight measures (activation, weekly activity, cohort retention, the planning funnel, items removed before acceptance, clarification-question use, execution of AI-created versus manual work, Reconcile decision mix, sampled AI-response satisfaction) are reported beside H1/H2. They do not change H1/H2 definitions, denominators or gates.
+
 > **Canonical amendment (2026-09-19):** The dedicated crisis readiness gate in this historical body is superseded. General AI safety, privacy, authorization, reliability and operational gates remain.
 
 ## Status

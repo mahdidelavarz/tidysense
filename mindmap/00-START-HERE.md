@@ -12,7 +12,7 @@ Plan → Execute → Adapt
 
 1. [[02-Decisions/accepted-decision-inventory-001-021]] — consolidated Discussions 001–026
 2. [[04-Specs/ai-native-mvp-baseline]] — current scope and model
-3. [[01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context]] through [[01-Closed-Discussions/026-backlog-removal-parent-owned-undated-tasks-and-quick-capture]] — latest product amendments
+3. [[01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context]] through [[01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights]] — latest product amendments
 4. [[01-Closed-Discussions/022-updated-mvp-implementation-plan]] — consolidated implementation sequence/status
 5. [[05-Implementation/backend-domain-package/README]] — canonical schema projection
 6. [[../devmap/README]] and [[../devmap/decisions/README]] — development architecture and technical decisions
@@ -26,11 +26,14 @@ Plan → Execute → Adapt
 - Parent-owned active Tasks may be undated; standalone active Tasks require `plannedDate`.
 - Quick Capture creates `CaptureItem`, not a Task. Resolution creates a separate Task or Routine identity.
 - Dedicated crisis UX, crisis routing and crisis-specific release gates are removed.
+- There is no AI consent step; the privacy notice discloses that planning text goes to an unnamed AI model, is not stored and leaves the country.
+- A sampled 1–5 satisfaction prompt follows AI responses, with an optional reason for low ratings; the operator sees reasons without identity in a product-insights view.
+- In Reconcile, single-item Complete and Carry-to-today apply on tap with undo; other date changes, Drop and bulk actions still need preview and confirmation.
 
 ## Safety rules that remain
 
 - AI never directly mutates canonical state or receives repository/command tools.
-- Consequential changes require preview, user confirmation, current-version revalidation and deterministic transactional mutation.
+- Consequential changes require preview, user confirmation, current-version revalidation and deterministic transactional mutation. The one-tap Reconcile item actions of Discussion 027 confirm by the tap on a control that names the consequence, keep an undo, and are still revalidated and committed deterministically.
 - Imported/hostile content is data, not instruction; context is minimized and allowlisted.
 - No diagnosis, hidden motivation/capacity inference, or inferred Goal achievement.
 - Invalid or late AI output is unusable; failures are explicit; deterministic/manual paths remain available.
