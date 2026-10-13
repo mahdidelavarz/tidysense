@@ -1,4 +1,4 @@
-# Accepted Decision Inventory — Discussions 001–027
+# Accepted Decision Inventory — Discussions 001–028
 
 Status: **Canonical consolidated projection** (2026-09-19). The filename is retained so existing links do not break. Later accepted discussions override earlier contradictory decisions.
 
@@ -9,7 +9,7 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 | Narrow legacy compatibility (mobile OTP, auth/API basics, palette) | [[../01-Closed-Discussions/001-008-legacy-surviving-decisions]] as amended by the technical DevMap |
 | AI-native direction and scope | Discussions 010–011 |
 | core/temporal model | Discussions 012–012A, amended by 023–026 |
-| Planning flow/output | Discussions 013–014A, amended by 023 and 026 |
+| Planning flow/output | Discussions 013–014A, amended by 023, 026 and 028 |
 | Task/Routine/Today | Discussions 015–015B, amended by 024–026 |
 | Reconcile | Discussions 016–017A, amended by 025–026 |
 | authority, privacy, hostile input and failure | Discussions 018–018A; dedicated crisis UX removed by 2026-09-19 consolidation; one-tap Reconcile item actions and AI disclosure amended by 027 |
@@ -22,6 +22,7 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 | Task sequences and hierarchical Reconcile | Discussion 025, as amended by 026 |
 | Backlog removal, parent-owned undated Tasks and CaptureItem | Discussion 026 |
 | AI disclosure, response feedback, product insights and one-tap Reconcile item actions | Discussion 027 |
+| clarification quick replies, the four-step planning flow, first-run guides and desktop in the pilot | Discussion 028 |
 
 ## Consolidated accepted state
 
@@ -78,6 +79,15 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 - In Reconcile, marking a single Task complete and Carrying it to today apply on tap with undo. Carry to another date, Drop and bulk/sequence actions still need preview and confirmation.
 - Reading or storing user text sent to the AI for product learning is rejected.
 - Pilot (about 30–50 accounts, one to two months): pilot questions `H1_USEFULNESS`/`H2_UNDERSTANDING` stay and are never doubled with the satisfaction prompt for one subject; the prompt follows every AI response at most once per account, surface and day, and always on an account's first draft and explanation; rates are reported per account as well as per response, with shown/answered/closed apart, a small-sample label under 10, and definitions frozen before the first pilot account.
+
+### Quick replies, first-run guides and desktop — D028
+
+- A clarification question carries text, an optional one-line reason, a `kind` (`TIMING`, `RECURRENCE`, `CONSTRAINT`, `CONTENT`, `OWNERSHIP`, `ENTITY_TYPE`, `CONTRADICTION`) and zero or two to seven model-proposed options, single or multiple choice. The product always adds «چیز دیگر…» with free text; the model never returns its own "other" option. An output breaking these rules is rejected whole.
+- One turn shows one to three related questions on one screen, each answerable on its own and each optional; no answer means `Draft now`. 013's turn limit and question rules are unchanged.
+- Measurement records only the question `kind` and the answer type (`OPTION` with position, `OTHER`, `UNANSWERED`), never option labels or answer text.
+- Every planning entry shows the same four steps: نوشتن، پرسش‌ها، مرور، تأیید. A turn without questions shows «پرسش‌ها» as passed.
+- On phones, at first open and before login, a welcome screen and three guide pages are shown once per device; never to an existing session or on desktop; nothing about them is recorded on the server. A guide's promise must hold in the measured product, otherwise its copy changes.
+- The pilot runs on phone and desktop. Desktop has its own layouts and may show more, derived from data the phone already has, but adds no behaviour.
 
 ### Safety consolidation
 

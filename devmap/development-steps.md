@@ -351,10 +351,12 @@ Added on 2026-10-13 after the owner's design phase. These steps carry [Discussio
 
 **Design source.** The canvas "Adaptive Planner — Dawn", page «در کد — پیاده‌سازی» (<https://claude.ai/artifact/AjMm5oPxveG52ZfhmHFNKe>, private to the owner). Each step names its boards. A board is the visual reference for layout, hierarchy, copy and both themes. It is not a data contract; sample data on a board is not a requirement. Behaviour still comes from the Mind Map; where a board and an accepted decision disagree, the decision wins and the gap is reported.
 
-**Product gates.** Two parts of the design rest on product behaviour no accepted discussion defines yet. The step that needs it stays `BLOCKED` until the Mind Map records it:
+**Product gates (resolved).** Two parts of the design rested on product behaviour no accepted discussion defined. [Discussion 028](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md), closed by the owner on 2026-10-13, now defines them:
 
-- **Choice-based clarification questions** (STEP-18, and the question-code rows of STEP-20). The boards show model-proposed options, single or multiple choice, a free-text «چیز دیگر…» answer and a one-line reason under each question. Discussion 013 and the 014/020c output contract define a question as text only, while 027 §5 already counts "the code of each clarification option chosen". The option format, option codes, limits and gate rules must be decided first.
-- **Welcome and first-run guides** (STEP-17). The boards add a welcome image and three guide pages before login on phones, shown once. The Day-0 path (`Login → OTP → First Entry → Today`) does not include them. The amendment must say where the "already seen" mark lives (device or account), and that each promise on the guides ("under 2 minutes", "under 5 seconds", "one tap") is checked against measured pilot behaviour.
+- **Choice-based clarification questions** (STEP-18, and the question-code rows of STEP-20): the question shape, option limits, the product-added «چیز دیگر…», up to three related questions per turn, the gate rules and the measurement codes (§2).
+- **Welcome and first-run guides** (STEP-17): phones only, before login, once per device, nothing recorded on the server, and promises that must hold in the measured product (§4).
+
+It also fixes the four-step flow on every planning entry (§3) and keeps desktop free of extra behaviour (§5).
 
 Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order their dependencies allow, then STEP-21.
 
@@ -399,7 +401,7 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Scope:** The 027 §4 prompt record (surface, subject, rating 1–5, optional reason text, instrument version, time; R2, 180 days, removed on erasure); the pilot sampling rule (every AI response, at most once per account, per surface, per local day, always the first draft and first explanation, never a subject that receives `H1_USEFULNESS` or `H2_UNDERSTANDING` in the same flow); shown, answered and closed recorded apart; the post-pilot rate as configuration; derived fields: entity type of each item removed before acceptance, Task and Routine origin (AI draft or manual) from command provenance, and an internal-account marker; the feedback card on the existing draft and explanation screens; metric dictionary and research protocol updates; frozen definitions with an instrument version.
 
-**Out of scope:** Clarification option codes (they wait on the STEP-18 product gate), the insights view (STEP-20), restyling the draft and explanation screens.
+**Out of scope:** Clarification question kinds and answer types (Discussion 028 §2.5; recorded with the new question shape in STEP-18), the insights view (STEP-20), restyling the draft and explanation screens.
 
 **Required DevMap context:** [metric dictionary](operations/metric-dictionary.md), [pilot research protocol](operations/pilot-research-protocol.md), [logging](backend/logging-observability.md), [schema change workflow](workflows/schema-change.md), [STEP-11 acceptance contract](step-11-operations-acceptance.md).
 
@@ -499,13 +501,13 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Required DevMap context:** as STEP-16, plus [auth/security](backend/auth-security-transactions.md) for the login screens.
 
-**Required Mind Map context:** [Day-0 onboarding](../mindmap/04-Specs/day-0-onboarding.md) as amended by the welcome/guide product gate, [core model](../mindmap/01-Closed-Discussions/012-core-product-model.md), [Discussion 027 §3](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md) for privacy copy.
+**Required Mind Map context:** [Day-0 onboarding](../mindmap/04-Specs/day-0-onboarding.md), [Discussion 028 §4](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md), [core model](../mindmap/01-Closed-Discussions/012-core-product-model.md), [Discussion 027 §3](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md) for privacy copy.
 
 **Design boards:** `CodeLogin`, `CodeFirstEntry`, `CodeGoals`, `CodeGoalDetail`, `CodeGoalTerminal`, `CodeProjects`, `CodeProjectDetail`, `CodePrivacy`, `CodeWelcome`, `CodeGuide1`–`CodeGuide3`.
 
-**Dependencies:** STEP-13 and STEP-15; the welcome/guide product gate recorded in the Mind Map.
+**Dependencies:** STEP-13 and STEP-15.
 
-**Implementation checklist:** Rebuild each screen; add the welcome and guides with skip and back; store the "seen" mark where the amendment says; replace the placeholder welcome image with the owner's image.
+**Implementation checklist:** Rebuild each screen; add the welcome and guides with skip and back; keep the "seen" mark on the device and record nothing on the server (028 §4.2); check each guide's promise against measurement (028 §4.3) before the pilot; replace the placeholder welcome image with the owner's image.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` with a first visit that sees the guides and a second visit that does not; screenshots in both themes.
 
@@ -527,13 +529,13 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Required DevMap context:** AI Planning route in [context routing](context/context-routing.md), [STEP-08](step-08-planning-acceptance.md) and [STEP-09](step-09-ai-planning-acceptance.md) acceptance contracts, [API contract](shared/api-contracts.md).
 
-**Required Mind Map context:** [planning conversation](../mindmap/01-Closed-Discussions/013-ai-planning-entry-and-conversation-flow.md), [output contract](../mindmap/01-Closed-Discussions/014-ai-planning-output-contract.md), [structured output](../mindmap/01-Closed-Discussions/020c-structured-output-reliability-and-cost-controls.md), [planning facts](../mindmap/01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context.md), and the choice-question product gate.
+**Required Mind Map context:** [planning conversation](../mindmap/01-Closed-Discussions/013-ai-planning-entry-and-conversation-flow.md), [output contract](../mindmap/01-Closed-Discussions/014-ai-planning-output-contract.md), [structured output](../mindmap/01-Closed-Discussions/020c-structured-output-reliability-and-cost-controls.md), [planning facts](../mindmap/01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context.md), [Discussion 028 §2–§3](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md).
 
 **Design boards:** `CodePlanning`, `CodePlanningQuestions`, `CodePlanningDraft`, `CodePlanningApply`.
 
-**Dependencies:** STEP-14 and STEP-15; the choice-question product gate recorded in the Mind Map.
+**Dependencies:** STEP-14 and STEP-15.
 
-**Implementation checklist:** Extend the question contract and gate; update the prompt and fixtures; build the four screens; keep manual fallback at every step; measure time from first word to reviewable draft.
+**Implementation checklist:** Extend the question contract and gate to 028 §2 (reason, `kind`, options, `multiple`, no model "other"); record `kind` and answer type for STEP-20; update the prompt and fixtures; build the four screens; keep manual fallback at every step; measure time from first word to reviewable draft.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1`; gate fixtures for valid, missing and hostile options; a real-provider smoke run; time to draft measured against the "under 2 minutes" promise.
 
@@ -611,7 +613,7 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Required DevMap context:** [layout and navigation](frontend/layout-and-navigation.md), [design system](frontend/design-system.md), [testing and performance](frontend/testing-performance.md).
 
-**Required Mind Map context:** Those of the phone step each screen mirrors.
+**Required Mind Map context:** [Discussion 028 §5](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md), plus those of the phone step each screen mirrors.
 
 **Design boards:** `CodeDesktopToday`, `CodeDesktopTasks`, `CodeDesktopRoutines`, `CodeDesktopGoals`, `CodeDesktopPlanningIntent`, `CodeDesktopPlanningQuestions`, `CodeDesktopPlanning`, `CodeDesktopReconcile`, `CodeInsights`.
 

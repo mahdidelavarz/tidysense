@@ -1,5 +1,7 @@
 # Discussion 013 — AI Planning Entry and Conversation Flow
 
+> **Amendment (2026-10-13, decided by the owner, [[01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop]] §2–§3):** the "structured quick replies" of §4 have a fixed shape: a question with an optional one-line reason, a `kind`, zero or two to seven model-proposed options (single or multiple choice) and a product-added «چیز دیگر…» free-text answer. One turn shows one to three related questions together, each answerable on its own and each optional; building with no answer is `Draft now`. Every planning entry shows the same four steps (نوشتن، پرسش‌ها، مرور، تأیید). §6–§7 limits are unchanged.
+
 > **Canonical amendment (2026-09-19):** The 2026-09-19 consolidation removes every dedicated crisis UX/routing requirement. General AI/provider safeguards and manual/degraded paths remain.
 
 ## Status

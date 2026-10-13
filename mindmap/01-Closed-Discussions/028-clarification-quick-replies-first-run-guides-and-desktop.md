@@ -2,17 +2,18 @@
 
 ## Status
 
-**PROPOSED — written from the owner's approved canvas designs on 2026-10-13; the points in §6 await the owner.**
+**CLOSED — written from the owner's approved canvas designs and decided by the owner on 2026-10-13 (§6).**
 
 ```txt
-STATUS = PROPOSED
-DECIDED_BY = OWNER (designs) / PENDING (points in §6)
-MIND_MAP = NOT_YET_APPLIED (index files are updated when this closes)
-DEVMAP_GATES = STEP-17 (first-run guides), STEP-18 (quick replies)
+STATUS = CLOSED
+DECIDED_BY = OWNER
+MIND_MAP = APPLIED_2026-10-13
+OPEN_QUESTIONS = 0 (§6 resolved 2026-10-13)
+DEVMAP_GATES = RESOLVED (STEP-17 first-run guides, STEP-18 quick replies)
 IMPLEMENTATION = NOT_AUTHORIZED_FROM_THIS_FILE_ALONE
 ```
 
-When closed, this discussion amends:
+This discussion is authoritative product direction. It amends:
 
 - [[01-Closed-Discussions/013-ai-planning-entry-and-conversation-flow]] — §4 interaction style: it fixes the shape of the "structured quick replies" 013 already accepted, and the number of questions shown together;
 - [[04-Specs/day-0-onboarding]] — adds a welcome screen and three guide pages before login on phones;
@@ -169,12 +170,14 @@ On a phone, at first open, before login:
 
 ---
 
-## 6. Points for the owner
+## 6. Resolved points (owner, 2026-10-13)
 
-1. **Several questions on one screen (§2.3).** Up to three related questions together, instead of 013's "one at a time". Recommended: yes, because the design and the current code already do it.
-2. **Nothing recorded about the guides (§4.2).** The alternative is anonymous device counts. They would need a new data class, and 30–50 users is too few for them to mean anything. Recommended: record nothing.
-3. **The rule for the promises (§4.3).** Recommended: change the copy, not stretch the measurement.
-4. **Desktop adds no behaviour (§5).** Recommended: yes. Otherwise every feature has to be built and tested twice.
+The owner accepted all four recommendations.
+
+1. **Several questions on one screen (§2.3).** Up to three related questions together, instead of 013's "one at a time". **Accepted.** The design and the current code already do it.
+2. **Nothing recorded about the guides (§4.2).** The alternative is anonymous device counts. They would need a new data class, and 30–50 users is too few for them to mean anything. **Accepted:** nothing is recorded.
+3. **The rule for the promises (§4.3).** **Accepted:** the copy changes; the measurement is never stretched.
+4. **Desktop adds no behaviour (§5).** **Accepted.** Otherwise every feature would be built and tested twice.
 
 ---
 
@@ -187,7 +190,7 @@ On a phone, at first open, before login:
 
 ---
 
-## 8. Affected artifacts (when closed)
+## 8. Affected artifacts
 
 - **013:** amendment note on §4.
 - **`04-Specs/day-0-onboarding.md`:** the path in §4.1.

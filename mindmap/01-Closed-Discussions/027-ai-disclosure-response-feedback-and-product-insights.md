@@ -116,6 +116,7 @@ The operator page gains a second view, "سنجش محصول", beside system heal
 - No per-user view, drill-down, search or export of individual activity.
 - Apart from §4 reason texts, no user-written text appears: no planning text, answers, titles or notes.
 - Derived fields needed: entity type of each item excluded before acceptance; origin of each Task and Routine (AI draft or manual), taken from command provenance; the code of each clarification option chosen, including "other".
+- *Defined by [[01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop]] §2.5:* the question code is its `kind`, and the option chosen is `OPTION` (with its position), `OTHER` or `UNANSWERED`. Option labels and answer text are never measured.
 
 This amends 019C §25 "the in-app operator page stays aggregate-only": it stays aggregate-only except for §4 reason texts without identity.
 
