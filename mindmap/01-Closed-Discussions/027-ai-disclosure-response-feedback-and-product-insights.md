@@ -9,7 +9,7 @@ STATUS = CLOSED
 DECIDED_BY = OWNER
 MIND_MAP = APPLIED_2026-10-13
 DEVMAP_RECONCILIATION = PENDING (consent gate, pilot questions, operator page and metric dictionary are implemented under STEP-11)
-OPEN_QUESTIONS = 2 (§8)
+OPEN_QUESTIONS = 0 (§8 resolved 2026-10-13)
 IMPLEMENTATION = NOT_AUTHORIZED_FROM_THIS_FILE_ALONE
 ```
 
@@ -150,14 +150,26 @@ This narrows 018 §4 "set or change `plannedDate`" for these two single-item cas
 
 ---
 
-## 8. Open questions
+## 8. Resolved questions (owner, 2026-10-13)
 
-1. **Relation to the pilot questions `H1_USEFULNESS` and `H2_UNDERSTANDING`.** Both are still asked after applying a plan and after closing a session. With §4 the user could be asked twice in one flow.
-   *Recommendation:* keep both, because 021 requires the usefulness response for "useful first plan" and §4 is sampled. Do not show the §4 prompt in a flow where a pilot question will also be shown for the same subject.
-2. **Sampling rate during the pilot.** A small cohort sampled at one in three gives few answers.
-   *Recommendation:* ask on every first draft and every first explanation of an account, then sample.
+The pilot is planned for one to two months with about 30–50 accounts. The owner's priority is an accurate usefulness measure.
+
+1. **Pilot questions stay.** `H1_USEFULNESS` (after applying a plan) and `H2_UNDERSTANDING` (after closing a session) are kept unchanged, because 021 builds "useful first plan" on the first. The §4 prompt is not shown for a subject that will also receive a pilot question in the same flow, so no user is asked twice about one plan or session.
+2. **Pilot sampling is coverage-first.** During the pilot the §4 prompt is shown for every AI response, limited to once per account, per surface, per local day. The first draft and first explanation of every account are always asked. After the pilot the rate returns to configuration (about one in three).
 
 ---
+
+## 10. Measurement rules for a small pilot
+
+With a few dozen accounts, a handful of very active users could otherwise decide every figure. These rules apply to the product-insights view and to H1/H2 reporting:
+
+- **Account level first.** Every rate is also reported with each account counted once (for example: accounts whose first applied plan was rated 4–5, out of accounts with an applied plan). Per-response figures are shown beside it, never alone.
+- **Shown, answered and closed are separate.** A prompt or pilot question that was shown and not answered is a non-response, never a low score. Every satisfaction figure states how many were shown and how many answered.
+- **Small denominators are marked.** A figure whose denominator is under 10 is labelled as a small sample. It is not hidden and not coloured. This is a sample-size label, not a threshold.
+- **Counts, not only percentages.** Every rate shows "x of y". No percentage appears without its denominator.
+- **Internal accounts never mix in.** Operator, internal, seeded and test accounts are excluded from every primary figure, and their count is shown.
+- **Definitions are frozen before the first pilot account.** This covers metric definitions, the instrument wording, the sampling rule and the scale labels. Any later change starts a new instrument version and is reported apart, never merged into earlier figures.
+- **Usefulness is read together with behaviour.** A positive rating counts toward "useful first plan" only when it is joined with the plan being applied, non-trivial and still applied after 7 days (021 §5). The product-insights view shows the two side by side.
 
 ## 9. Affected artifacts
 
@@ -195,3 +207,10 @@ This narrows 018 §4 "set or change `plannedDate`" for these two single-item cas
   همه‌ی عددها با مخرج‌اند، حساب‌های داخلی جدا شمرده می‌شوند و هیچ متن کاربری جز توضیح بازخورد نشان داده نمی‌شود.
 - **در بازبینی، «انجام شد» و «امروز» با یک لمس اعمال می‌شوند** و دکمه‌ی برگرداندن دارند. «روز دیگر»، «کنار بگذار» و همه‌ی کارهای گروهی همچنان پیش‌نمایش و تأیید می‌خواهند.
 - **رد شد:** خواندن یا ذخیره‌ی متن‌هایی که کاربران به هوش مصنوعی می‌دهند.
+- **پایلوت (۳۰ تا ۵۰ حساب، یک تا دو ماه):**
+  - دو پرسش پژوهشی موجود می‌مانند و برای یک موضوع دو بار سؤال پرسیده نمی‌شود.
+  - نظرسنجی بعد از هر پاسخ هوش مصنوعی پرسیده می‌شود، حداکثر روزی یک بار برای هر حساب در هر بخش. اولین پاسخ هر حساب همیشه پرسیده می‌شود.
+  - گزارش‌ها هر حساب را یک بار هم می‌شمارند.
+  - «نشان داده شد»، «جواب داده شد» و «بسته شد» جدا شمرده می‌شوند.
+  - مخرج کمتر از ۱۰ برچسب «نمونه‌ی کم» می‌گیرد.
+  - تعریف‌ها قبل از اولین کاربر قفل می‌شوند.
