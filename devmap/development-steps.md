@@ -323,7 +323,7 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Goal:** Audit—not assume—that the MVP is safe and ready for the approved pilot.
 
-**Scope:** Final contract/configuration locks, applicable M1–M8 evidence, cohort/consent/thresholds/resources/owners, security/privacy/safety/operations approvals, release checklist and signed go/no-go outcome.
+**Scope:** Final contract/configuration locks, applicable M1–M8 evidence, cohort/privacy notice/thresholds/resources/owners, security/privacy/safety/operations approvals, release checklist and signed go/no-go outcome.
 
 **Out of scope:** New features, thesis-breaking scope cuts, silent acceptance of missing evidence, automatic production launch.
 
@@ -331,7 +331,7 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Required Mind Map context:** [milestone gates](../mindmap/05-Implementation/milestone-exit-gate-plan.md), [pilot checklist](../mindmap/05-Implementation/pilot-readiness-checklist.md), [release checklist](../mindmap/05-Implementation/release-readiness-checklist.md), [contract freeze register](../mindmap/05-Implementation/contract-freeze-register.md), [risk register](../mindmap/05-Implementation/risk-contingency-register.md), [scope-cut register](../mindmap/05-Implementation/scope-cut-register.md).
 
-**Dependencies:** STEP-11 and every applicable earlier step `DONE`.
+**Dependencies:** STEP-11, STEP-13 to STEP-21 (added 2026-10-13: the pilot runs on the redesigned product, desktop included), and every applicable earlier step `DONE`.
 
 **Implementation checklist:** Review every hard gate and evidence link; resolve or explicitly block open decisions; lock operational configuration and ownership; execute final security/privacy/safety/release reviews; record signed go/no-go result.
 
@@ -342,3 +342,287 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 **Status:** `NOT_STARTED`
 
 **Evidence:** None; current product summary correctly states pilot/release are not ready.
+
+---
+
+## Pre-pilot redesign and evidence (STEP-13 to STEP-21)
+
+Added on 2026-10-13 after the owner's design phase. These steps carry [Discussion 027](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md) into code and rebuild the interface from the approved design canvas. All of them precede STEP-12: the pilot gate audits the product that will actually be piloted, desktop included (owner decision, 2026-10-13).
+
+**Design source.** The canvas "Adaptive Planner — Dawn", page «در کد — پیاده‌سازی» (<https://claude.ai/artifact/AjMm5oPxveG52ZfhmHFNKe>, private to the owner). Each step names its boards. A board is the visual reference for layout, hierarchy, copy and both themes. It is not a data contract; sample data on a board is not a requirement. Behaviour still comes from the Mind Map; where a board and an accepted decision disagree, the decision wins and the gap is reported.
+
+**Product gates.** Two parts of the design rest on product behaviour no accepted discussion defines yet. The step that needs it stays `BLOCKED` until the Mind Map records it:
+
+- **Choice-based clarification questions** (STEP-18, and the question-code rows of STEP-20). The boards show model-proposed options, single or multiple choice, a free-text «چیز دیگر…» answer and a one-line reason under each question. Discussion 013 and the 014/020c output contract define a question as text only, while 027 §5 already counts "the code of each clarification option chosen". The option format, option codes, limits and gate rules must be decided first.
+- **Welcome and first-run guides** (STEP-17). The boards add a welcome image and three guide pages before login on phones, shown once. The Day-0 path (`Login → OTP → First Entry → Today`) does not include them. The amendment must say where the "already seen" mark lives (device or account), and that each promise on the guides ("under 2 minutes", "under 5 seconds", "one tap") is checked against measured pilot behaviour.
+
+Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order their dependencies allow, then STEP-21.
+
+---
+
+## STEP-13 — AI Disclosure Without Consent
+
+**Goal:** Remove the AI consent gate and move all disclosure to the privacy notice, without naming the provider to users.
+
+**Scope:** Retire `AiConsentPolicy`, `403 AI_CONSENT_REQUIRED`, `PUT /users/me/ai-consent`, `aiConsentRequired`/`aiConsentGranted` and the consent card; stop recording `AI_CONSENT_CHANGED` while keeping existing events as R1 history; remove the provider and model name from every user-facing DTO, including the pilot notice; rewrite the privacy notice to 027 §3 (sent only to build the draft, no stored copy, servers outside Iran, phone never sent, counts-only Reconcile context, what is kept and how to erase it); notice version bump; retention catalog and runbook updates.
+
+**Out of scope:** The satisfaction prompt (STEP-14), visual redesign of the privacy page (STEP-17), any first-use disclosure line in planning (rejected by 027 §7).
+
+**Required DevMap context:** [STEP-11 acceptance contract](step-11-operations-acceptance.md), [auth/security/transactions](backend/auth-security-transactions.md), [API contract](shared/api-contracts.md), [error contract](shared/error-contract.md), [runbooks](operations/runbooks.md), [schema change workflow](workflows/schema-change.md).
+
+**Required Mind Map context:** [Discussion 027 §2–§3, §7, §9](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md), [019C §20–§21](../mindmap/01-Closed-Discussions/019c-events-ai-observability-and-retention.md), [AI guardrails](../mindmap/04-Specs/ai-guardrails.md).
+
+**Dependencies:** STEP-11.
+
+**Implementation checklist:**
+
+- [ ] Remove the consent check from attempt start and generation; prove a fresh account can plan with AI.
+- [ ] Retire the consent endpoint, fields and error code; regenerate OpenAPI and client types.
+- [ ] Decide and migrate the consent rows (retained as history or removed under their retention class), with a rollback test.
+- [ ] Remove the provider name from user-facing responses; keep it on operator surfaces and in configuration.
+- [ ] Ship the 027 §3 privacy wording with a new notice version.
+- [ ] Update `active-conventions.md` (consent rule), runbook 9, `RetentionCatalog` and the STEP-11 contract's gap table.
+
+**Verification:** `./dev.ps1 check`; `./auth-e2e.ps1`; an API test that no user-facing response carries the provider name; a migration rollback test; the manual path sends nothing to a model.
+
+**Completion criteria:** No consent prompt, endpoint or refusal remains; users learn what is sent only from the privacy notice; the provider is invisible to users and visible to operators.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-14 — AI Response Satisfaction and Measurement Capture
+
+**Goal:** Record the sampled satisfaction answer and the derived fields product insights need, under the small-pilot measurement rules.
+
+**Scope:** The 027 §4 prompt record (surface, subject, rating 1–5, optional reason text, instrument version, time; R2, 180 days, removed on erasure); the pilot sampling rule (every AI response, at most once per account, per surface, per local day, always the first draft and first explanation, never a subject that receives `H1_USEFULNESS` or `H2_UNDERSTANDING` in the same flow); shown, answered and closed recorded apart; the post-pilot rate as configuration; derived fields: entity type of each item removed before acceptance, Task and Routine origin (AI draft or manual) from command provenance, and an internal-account marker; the feedback card on the existing draft and explanation screens; metric dictionary and research protocol updates; frozen definitions with an instrument version.
+
+**Out of scope:** Clarification option codes (they wait on the STEP-18 product gate), the insights view (STEP-20), restyling the draft and explanation screens.
+
+**Required DevMap context:** [metric dictionary](operations/metric-dictionary.md), [pilot research protocol](operations/pilot-research-protocol.md), [logging](backend/logging-observability.md), [schema change workflow](workflows/schema-change.md), [STEP-11 acceptance contract](step-11-operations-acceptance.md).
+
+**Required Mind Map context:** [Discussion 027 §4, §8, §10](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md), [019C](../mindmap/01-Closed-Discussions/019c-events-ai-observability-and-retention.md), [validation gates](../mindmap/01-Closed-Discussions/021-validation-plan-and-decision-gates.md), [metrics](../mindmap/04-Specs/metrics.md).
+
+**Design boards:** the satisfaction card on `CodePlanningDraft` and `CodeReconcile`.
+
+**Dependencies:** STEP-13.
+
+**Implementation checklist:**
+
+- [ ] Persist the satisfaction record with its retention class, erasure path and instrument version.
+- [ ] Implement the sampling rule server-side; the client only asks whether to show the prompt for a subject.
+- [ ] Record shown, answered and closed as separate facts; closing is never a rating.
+- [ ] Record removed-item entity types, Task/Routine origin and the internal-account marker.
+- [ ] Add the feedback card (ratings 1–2 open the optional reason field), inside the response, never modal or blocking.
+- [ ] Freeze the definitions in the metric dictionary and research protocol.
+
+**Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` with a draft rated 2 with a reason, and a closed prompt; PostgreSQL tests for sampling limits, no double asking with H1/H2, erasure and retention purge.
+
+**Completion criteria:** Every AI response the rule selects can be rated once; non-response is distinguishable from a low score; every derived field 027 §5 needs, except option codes, is recorded.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-15 — Design System v2 and Navigation Shell
+
+**Goal:** Bring the shared visual system and app shell to the canvas, so screen steps only compose.
+
+**Scope:** Token updates from `CodeTokens`, including the moonstone AI tokens (`aiFill`, `aiGlow`, `aiIcon`, `aiInk`, `aiTint`, `aiSpark`, `aiShadow`) in both themes; no purple on buttons; shared components (buttons, chips, segmented control, sheets, entity labels and icons, status badges, feedback card, four-step stepper); the phone shell (tab bar with centre create button and drawer, `CodeDrawer`, `CodeCreateMenu`); the desktop shell (the right-side icon rail with tooltips and a floating content panel), replacing the desktop sidebar; theme follows the system until the user chooses.
+
+**Out of scope:** Page content (STEP-16 to STEP-21), product behaviour changes.
+
+**Required DevMap context:** [design system](frontend/design-system.md), [layout and navigation](frontend/layout-and-navigation.md), [components](frontend/components.md), [accessibility](frontend/design-system-accessibility.md), [testing and performance](frontend/testing-performance.md).
+
+**Required Mind Map context:** None beyond the navigation sources already linked from the design system.
+
+**Design boards:** `CodeTokens`, `CodeDrawer`, `CodeCreateMenu`, the rail on every desktop board.
+
+**Dependencies:** STEP-11.
+
+**Implementation checklist:**
+
+- [ ] Update tokens and keep one token set for both themes.
+- [ ] Rebuild the shared components and the stepper.
+- [ ] Build the phone shell and the desktop rail with keyboard, focus and tooltip behaviour.
+- [ ] Replace "sidebar on desktop" with the rail in `active-conventions.md`, `design-system.md` and `layout-and-navigation.md`.
+
+**Verification:** `./dev.ps1 check`; `./auth-e2e.ps1`; screenshots at 390 and 1440 px in both themes compared with the boards; keyboard-only rail and drawer pass.
+
+**Completion criteria:** The shell matches the boards in both themes and widths, and existing pages still work inside it.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-16 — Phone Execution Screens
+
+**Goal:** Rebuild the daily execution screens on phones to the canvas.
+
+**Scope:** Today with row actions, Tasks, Routines, Task detail, Routine detail, new Task and new Routine sheets, quick capture in one line with an optional date, and the carry sheet.
+
+**Out of scope:** Reconcile (STEP-19), desktop layouts (STEP-21), behaviour changes beyond the boards' presentation.
+
+**Required DevMap context:** frontend feature route in [context routing](context/context-routing.md), [forms and pages](frontend/forms-components-pages.md), [routing and state](frontend/routing-state-api.md), [data types and dates](shared/data-types-and-datetime.md).
+
+**Required Mind Map context:** [execution model](../mindmap/01-Closed-Discussions/015-task-and-routine-execution-model.md), [multi-time Routines](../mindmap/01-Closed-Discussions/024-multi-time-daily-routine-scheduling-and-occurrence-semantics.md), [quick capture and undated Tasks](../mindmap/01-Closed-Discussions/026-backlog-removal-parent-owned-undated-tasks-and-quick-capture.md).
+
+**Design boards:** `CodeToday`, `CodeTodayActions`, `CodeTasks`, `CodeTaskDetail`, `CodeNewTask`, `CodeRoutines`, `CodeRoutineDetail`, `CodeNewRoutine`, `CodeCarrySheet`.
+
+**Dependencies:** STEP-15.
+
+**Implementation checklist:** Rebuild each screen and sheet; keep every existing state (loading, empty, error, conflict); measure quick capture from tap to saved Task.
+
+**Verification:** `./dev.ps1 check`; `./auth-e2e.ps1`; screenshots of every board in both themes; quick capture measured under 5 seconds on a phone for a one-line Task.
+
+**Completion criteria:** The execution screens match the boards, with no lost state or action.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-17 — Entry, Structure and First-Run Screens
+
+**Goal:** Rebuild the entry and structure screens and add the first-run welcome and guides.
+
+**Scope:** Login, First Entry, Goals, Goal detail, Goal terminal confirmation, Projects, Project detail, privacy page, the welcome screen (image and «شروع» only) and three guide pages on phones, shown once.
+
+**Out of scope:** The guide pages on desktop; changing what First Entry does.
+
+**Required DevMap context:** as STEP-16, plus [auth/security](backend/auth-security-transactions.md) for the login screens.
+
+**Required Mind Map context:** [Day-0 onboarding](../mindmap/04-Specs/day-0-onboarding.md) as amended by the welcome/guide product gate, [core model](../mindmap/01-Closed-Discussions/012-core-product-model.md), [Discussion 027 §3](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md) for privacy copy.
+
+**Design boards:** `CodeLogin`, `CodeFirstEntry`, `CodeGoals`, `CodeGoalDetail`, `CodeGoalTerminal`, `CodeProjects`, `CodeProjectDetail`, `CodePrivacy`, `CodeWelcome`, `CodeGuide1`–`CodeGuide3`.
+
+**Dependencies:** STEP-13 and STEP-15; the welcome/guide product gate recorded in the Mind Map.
+
+**Implementation checklist:** Rebuild each screen; add the welcome and guides with skip and back; store the "seen" mark where the amendment says; replace the placeholder welcome image with the owner's image.
+
+**Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` with a first visit that sees the guides and a second visit that does not; screenshots in both themes.
+
+**Completion criteria:** The screens match the boards; the guides appear once and never block login.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-18 — Four-Step Planning Flow
+
+**Goal:** Give every planning entry the same four steps (نوشتن، پرسش‌ها، مرور، تأیید) with choice-based questions.
+
+**Scope:** Intent writing; clarification questions with model-proposed options, multiple choice where the product gate allows it, «چیز دیگر…» free text and a reason line; draft review; confirmation; the output contract, prompt and gate changes for options; recording the chosen option codes for STEP-20; the satisfaction card placement on the draft.
+
+**Out of scope:** Desktop planning layouts and the «مسیر تا هدف» road (STEP-21); any change to who creates canonical state.
+
+**Required DevMap context:** AI Planning route in [context routing](context/context-routing.md), [STEP-08](step-08-planning-acceptance.md) and [STEP-09](step-09-ai-planning-acceptance.md) acceptance contracts, [API contract](shared/api-contracts.md).
+
+**Required Mind Map context:** [planning conversation](../mindmap/01-Closed-Discussions/013-ai-planning-entry-and-conversation-flow.md), [output contract](../mindmap/01-Closed-Discussions/014-ai-planning-output-contract.md), [structured output](../mindmap/01-Closed-Discussions/020c-structured-output-reliability-and-cost-controls.md), [planning facts](../mindmap/01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context.md), and the choice-question product gate.
+
+**Design boards:** `CodePlanning`, `CodePlanningQuestions`, `CodePlanningDraft`, `CodePlanningApply`.
+
+**Dependencies:** STEP-14 and STEP-15; the choice-question product gate recorded in the Mind Map.
+
+**Implementation checklist:** Extend the question contract and gate; update the prompt and fixtures; build the four screens; keep manual fallback at every step; measure time from first word to reviewable draft.
+
+**Verification:** `./dev.ps1 check`; `./auth-e2e.ps1`; gate fixtures for valid, missing and hostile options; a real-provider smoke run; time to draft measured against the "under 2 minutes" promise.
+
+**Completion criteria:** One flow on every entry; options are gated like every other model output; the measured time supports the guide's promise or the promise is changed.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-19 — One-Tap Reconcile
+
+**Goal:** Apply single-item Complete and Carry-to-today on tap with undo, and rebuild Reconcile to the canvas.
+
+**Scope:** 027 §6 controls with immediate undo until the session closes; preview and confirmation kept for other dates, Drop, bulk and sequence actions and Goal continuation; the explanation card with the satisfaction prompt; the review-and-apply screen.
+
+**Out of scope:** Desktop Reconcile layout (STEP-21); changes to rules or severity.
+
+**Required DevMap context:** [STEP-07](step-07-capture-reconcile-acceptance.md) and [STEP-10](step-10-ai-reconcile-acceptance.md) acceptance contracts, [auth/security/transactions](backend/auth-security-transactions.md).
+
+**Required Mind Map context:** [Discussion 027 §6](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md), [permissions and reversibility](../mindmap/01-Closed-Discussions/018-action-permissions-trust-and-reversibility.md), [sequences and grouping](../mindmap/01-Closed-Discussions/025-task-dependency-sequences-and-hierarchical-reconcile-grouping.md), [Reconcile UI](../mindmap/04-Specs/reconcile-ui-ux-specification.md).
+
+**Design boards:** `CodeReconcile`, `CodeReviewApply`.
+
+**Dependencies:** STEP-14 and STEP-15.
+
+**Implementation checklist:** Add the single-item commands and their undo commands with events; keep revalidation; rebuild the screens; prove AI only highlights a control.
+
+**Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` with tap, undo and a stale-state refusal; PostgreSQL tests for undo after concurrent change.
+
+**Completion criteria:** The two single-item actions apply on tap and undo exactly; everything else still needs preview and confirmation.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-20 — Product Insights View
+
+**Goal:** Give the operator the «سنجش محصول» view on desktop and phone.
+
+**Scope:** The 027 §5 content (people, planning funnel, removed items, clarification questions by code, AI versus manual execution, Reconcile, satisfaction and reason texts) under the §10 rules (account level first, "x of y", small-sample label under 10, internal accounts apart, no per-user view); the operations page restyle with its tabs.
+
+**Out of scope:** Thresholds or good/bad colouring; export; per-user drill-down.
+
+**Required DevMap context:** [metric dictionary](operations/metric-dictionary.md), [STEP-11 acceptance contract](step-11-operations-acceptance.md), [logging](backend/logging-observability.md).
+
+**Required Mind Map context:** [Discussion 027 §5, §10](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md), [validation gates](../mindmap/01-Closed-Discussions/021-validation-plan-and-decision-gates.md).
+
+**Design boards:** `CodeOperations`, `CodeOperationsMobile`, `CodeInsights`, `CodeInsightsMobile`.
+
+**Dependencies:** STEP-14 and STEP-15; the question-code rows also need STEP-18.
+
+**Implementation checklist:** Add each figure as a versioned definition with numerator and denominator; build both layouts; show reason texts without identity.
+
+**Verification:** `./dev.ps1 check`; metric tests on seeded data including internal accounts and small denominators; access test for non-operators (`404`).
+
+**Completion criteria:** Every figure is reproducible from its definition, shows its denominator, and excludes internal accounts.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-21 — Desktop Layouts
+
+**Goal:** Give desktop its own layouts, with the extra information the boards add, before the pilot.
+
+**Scope:** Desktop Today, Tasks, Routines, Goals and Projects, Planning (writing, questions, draft with the «مسیر تا هدف» road), Reconcile and Insights, inside the rail shell.
+
+**Out of scope:** New product behaviour; anything a phone screen cannot also do.
+
+**Required DevMap context:** [layout and navigation](frontend/layout-and-navigation.md), [design system](frontend/design-system.md), [testing and performance](frontend/testing-performance.md).
+
+**Required Mind Map context:** Those of the phone step each screen mirrors.
+
+**Design boards:** `CodeDesktopToday`, `CodeDesktopTasks`, `CodeDesktopRoutines`, `CodeDesktopGoals`, `CodeDesktopPlanningIntent`, `CodeDesktopPlanningQuestions`, `CodeDesktopPlanning`, `CodeDesktopReconcile`, `CodeInsights`.
+
+**Dependencies:** STEP-16 to STEP-20.
+
+**Implementation checklist:** Build each layout from the same data and actions as the phone screen; keep side panels derived from data already loaded.
+
+**Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` at 1440 px; screenshots in both themes; keyboard pass.
+
+**Completion criteria:** Every desktop board is implemented, with no desktop-only behaviour.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
