@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, Check, ChevronLeft, CircleDashed, FolderKanban, Hourglass, ListOrdered, Lock, Pause, ShieldCheck, Target, Trash2 } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, CircleDashed, FolderKanban, Hourglass, ListOrdered, Lock, Pause, ShieldCheck, Target, Trash2 } from '../../../shared/ui/icons'
 import { formatLocalDate, formatNumber } from '../../../shared/lib/date'
 import { DateLeaf, leafDateText } from '../../tasks/components/DateLeaf'
 import { formatAge, reasonLabels } from '../types/reconcile.format'

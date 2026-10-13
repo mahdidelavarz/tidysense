@@ -1,4 +1,4 @@
-import { CircleCheck } from 'lucide-react'
+import { CircleCheck } from './icons'
 import { useEffect } from 'react'
 import { type Toast, useUiStore } from '../lib/ui-store'
 
@@ -26,7 +26,7 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   return (
     <div className="toast">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-positive text-white" aria-hidden="true">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-positive text-on-accent" aria-hidden="true">
         <CircleCheck size={18} />
       </span>
       {toast.message}

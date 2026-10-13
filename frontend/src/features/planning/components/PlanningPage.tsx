@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CircleCheck, CircleSlash, FileClock, LoaderCircle, Sparkles } from 'lucide-react'
+import { CircleCheck, CircleSlash, FileClock, LoaderCircle, Sparkles } from '../../../shared/ui/icons'
 import { type ReactNode, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatNumber } from '../../../shared/lib/date'

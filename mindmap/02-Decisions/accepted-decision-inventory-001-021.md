@@ -1,4 +1,4 @@
-# Accepted Decision Inventory — Discussions 001–026
+# Accepted Decision Inventory — Discussions 001–027
 
 Status: **Canonical consolidated projection** (2026-09-19). The filename is retained so existing links do not break. Later accepted discussions override earlier contradictory decisions.
 
@@ -12,15 +12,16 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 | Planning flow/output | Discussions 013–014A, amended by 023 and 026 |
 | Task/Routine/Today | Discussions 015–015B, amended by 024–026 |
 | Reconcile | Discussions 016–017A, amended by 025–026 |
-| authority, privacy, hostile input and failure | Discussions 018–018A; dedicated crisis UX removed by 2026-09-19 consolidation |
-| persistence, transactions, events and retention | Discussions 019A–019C, amended by 023–026 |
+| authority, privacy, hostile input and failure | Discussions 018–018A; dedicated crisis UX removed by 2026-09-19 consolidation; one-tap Reconcile item actions and AI disclosure amended by 027 |
+| persistence, transactions, events and retention | Discussions 019A–019C, amended by 023–027 |
 | AI/API/frontend runtime | Discussions 020A–020C, amended by current DevMap technical decisions |
-| validation and gates | Discussion 021, with crisis-specific gate removed |
+| validation and gates | Discussion 021, with crisis-specific gate removed; product-insight measures added by 027 |
 | implementation sequence | Discussion 022, amended by 023–026 and current repository evidence |
 | persistent PlanningFacts | Discussion 023 |
 | multi-time Routine scheduling | Discussion 024 |
 | Task sequences and hierarchical Reconcile | Discussion 025, as amended by 026 |
 | Backlog removal, parent-owned undated Tasks and CaptureItem | Discussion 026 |
+| AI disclosure, response feedback, product insights and one-tap Reconcile item actions | Discussion 027 |
 
 ## Consolidated accepted state
 
@@ -68,10 +69,20 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 - Quick Capture without a parent/date creates a `CaptureItem` (`UNRESOLVED | RESOLVED | DISCARDED`). Resolution creates a separate Task or Routine and correlated events; it never changes the capture row into a work entity.
 - Capture is a separate Reconcile lane/count, not execution severity.
 
+### AI disclosure, feedback and insights — D027
+
+- There is no AI consent step. AI planning is available without a gate; the manual path stays available and sends nothing to a model.
+- Disclosure lives in the privacy notice only: text goes to an AI model only to build the draft, is not stored, and leaves the country. The provider name is never shown to users or carried in user-facing responses.
+- After a planning draft or a Reconcile explanation is shown, a sampled, non-blocking prompt asks for a 1–5 rating; ratings 1–2 offer an optional reason. Answers are R2, removed after 180 days and on erasure, and reasons are shown to the operator without identity.
+- The operator page adds "Product insights": activation, weekly activity, cohorts, planning funnel, items removed before acceptance, clarification use, execution of AI-created versus manual work, Reconcile mix and satisfaction. Every figure has its denominator; internal accounts are apart; there is no per-user view and no user text except satisfaction reasons.
+- In Reconcile, marking a single Task complete and Carrying it to today apply on tap with undo. Carry to another date, Drop and bulk/sequence actions still need preview and confirmation.
+- Reading or storing user text sent to the AI for product learning is rejected.
+- Pilot (about 30–50 accounts, one to two months): pilot questions `H1_USEFULNESS`/`H2_UNDERSTANDING` stay and are never doubled with the satisfaction prompt for one subject; the prompt follows every AI response at most once per account, surface and day, and always on an account's first draft and explanation; rates are reported per account as well as per response, with shown/answered/closed apart, a small-sample label under 10, and definitions frozen before the first pilot account.
+
 ### Safety consolidation
 
 Dedicated crisis pages, gates, routing, emergency-resource screens and crisis-specific product records are removed. Remaining guardrails are: bounded provider/moderation controls, hostile-input isolation, context minimization, no diagnosis/high-risk inference, no AI mutation, explicit invalid/failure states, manual/deterministic fallback, authorization, privacy, observability, rate/cost limits and normal incident handling.
 
 ## Superseded guidance
 
-The following no longer define the product: explicit Backlog; Task review checkpoints; one occurrence per Routine/day regardless of slot; multiple daily slots as post-pilot; Task dependency graph as post-pilot; dedicated crisis UX/gate; “implementation not started”; Java/Spring as the backend stack; `/app` repository layout; integer IDs, opaque DB sessions, IPPanel, unversioned APIs or snake_case as canonical architecture.
+The following no longer define the product: explicit Backlog; Task review checkpoints; one occurrence per Routine/day regardless of slot; multiple daily slots as post-pilot; Task dependency graph as post-pilot; dedicated crisis UX/gate; “implementation not started”; an AI consent step before planning; naming the AI provider to users; Java/Spring as the backend stack; `/app` repository layout; integer IDs, opaque DB sessions, IPPanel, unversioned APIs or snake_case as canonical architecture.

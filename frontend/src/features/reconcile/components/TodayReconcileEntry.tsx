@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { RefreshCcw } from 'lucide-react'
+import { Moon } from '../../../shared/ui/icons'
 import { formatNumber } from '../../../shared/lib/date'
 import { useReconcileOverview, useResolveReconcilePrompt } from '../hooks/reconcile-hooks'
 import { severityLabels } from '../types/reconcile.format'
@@ -26,13 +26,13 @@ export function TodayReconcileEntry() {
   ].filter(Boolean).join(' · ')
 
   return (
-    <section className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-caution/25 bg-linear-to-l from-caution-tint to-surface p-4 shadow-sm" aria-label="پیشنهاد بازبینی">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-caution/15 text-caution" aria-hidden="true">
-        <RefreshCcw size={20} />
+    <section className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-3 rounded-2xl border border-moon/15 bg-moon-tint p-3.5 text-moon-strong" aria-label="پیشنهاد بازبینی">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-[0.625rem] bg-moon text-moon-tint" aria-hidden="true">
+        <Moon size={20} />
       </span>
       <div className="min-w-0 flex-1 basis-48">
         <p className="font-bold leading-7">{copy}</p>
-        <p className="text-sm text-text-secondary">{detail}</p>
+        <p className="text-sm opacity-85">{detail}</p>
       </div>
       <div className="flex gap-2">
         <Link className="primary-button min-h-10 px-3.5" to="/reconcile">شروع بازبینی</Link>

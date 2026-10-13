@@ -13,10 +13,10 @@ The authenticated frame is [`features/shell`](../../frontend/src/features/shell/
 
 This is two layouts, not one scaled layout: the tab bar, drawer and bottom sheet do not exist on desktop, and the sidebar does not exist on phones. The switch is in CSS (`.sidebar`, `.tabbar`, `.app-frame` in `index.css`), so only one navigation is ever exposed to assistive technology.
 
-- **Sidebar:** a rounded panel floating 12px off the screen edge: brand, create button, destinations in groups (daily, review, structure, operations) separated by hairlines, and the account menu pinned to the bottom. The current destination has a tinted row and an accent marker on the panel edge. Panel width 272px; the list scrolls on short screens.
-- **Tab bar:** a 64px rounded dock floating 12px above the device safe-area inset, at most 448px wide, over a strip that fades the page into the canvas. The current tab has a tinted pill behind its icon. The page reserves `--tabbar-height` so content never ends behind it.
+- **Sidebar:** a rounded panel floating 12px off the screen edge: brand, create button, destinations in groups (daily, review, structure, operations) separated by hairlines, and the account menu pinned to the bottom. The current destination has a tinted row and a `sun` marker on the panel edge. Panel width 272px; the list scrolls on short screens.
+- **Tab bar:** a 68px frosted dock (26px radius) floating 12px above the device safe-area inset, at most 448px wide, over a strip that fades the page into the canvas. The current tab is set in `accent` with a small `sun` dot under its label; the create button in the middle is a 52px ink square with 18px corners. The page reserves `--tabbar-height` so content never ends behind it.
 - **Drawer:** a rounded panel floating 8px off the edges with the brand, the same grouped destinations and the account menu. It holds what the tab bar has no room for. It closes on navigation, Escape or a tap outside.
-- **Account menu:** a card showing the signed-in phone number; pressing it opens a small menu above it with the privacy page, "sign out of this browser" and "sign out of all sessions". A press outside closes it.
+- **Account menu:** a card showing the signed-in phone number; pressing it opens a small menu above it with the privacy page, the appearance choice «ظاهر» (خودکار / روشن / تیره), "sign out of this browser" and "sign out of all sessions". A press outside closes it.
 - **Menu button:** `.menu-button`, a bordered surface square at the start of `PageHeader` and `BackLink`, shown only below 1024px.
 - **Offline banner:** appears at the top of the content area when the browser reports no connection.
 - **Toasts:** bottom-centre above the tab bar on phones, bottom corner on desktop.
@@ -30,7 +30,7 @@ Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/
 | Route | Page | Width |
 |---|---|---|
 | `/` | redirects to `/today` | — |
-| `/today` | Today: a day strip (today and the nine days after it), a dismissible Reconcile alert under it when eligible, then the local date's Tasks, ready first, waiting below, then the date's Routines with a row per slot. Each item is a `TodayCard`: its only visible control is the complete button; details and "another day" are revealed by dragging the card left below 768px or by its three-dot button from 768px. Choosing a later day shows that day's planned active Tasks read-only | narrow |
+| `/today` | Today: the **sky header** instead of `PageHeader` (below), a day strip (today and the nine days after it), a dismissible Reconcile alert under it when eligible, then the local date's Tasks, ready first, waiting below, then the date's Routines with a row per slot, each list one `.group-card` under a heading with its count. Each item is a `TodayCard` row: its only visible control is the complete button; details and "another day" are revealed by dragging the card left below 768px or by its three-dot button from 768px. Choosing a later day shows that day's planned active Tasks read-only | narrow |
 | `/reconcile` | Reconcile: a summary whose three counts jump to their lanes, the optional AI explanation, then the execution lane (owner → sequence → Task), commitment-review lane and capture lane. Every item is a decision card with its answers in a bar underneath; Review & Apply dialog | narrow |
 | `/planning` | Planning: intention input, progress, draft review (hierarchy, seven-day view, planning details), final confirmation dialog, result. `?goalId=` or `?projectId=` plans inside that parent | narrow |
 | `/tasks`, `/tasks/$taskId` | Task list grouped by when each Task is planned (today, earlier days, tomorrow, later days, undated, closed), Task detail | narrow |
@@ -43,6 +43,12 @@ Defined once in [`Navigation.tsx`](../../frontend/src/features/shell/components/
 | anything else | not-found state with a link to Today | narrow |
 
 `.page` is the narrow container (768px max) for reading and single-column lists; `.page-wide` (1024px max) is for two-column card grids.
+
+### The Today sky
+
+Today opens under a drawing of the day's sky ([`SkyHeader`](../../frontend/src/features/today/components/SkyHeader.tsx)): the menu button, the Jalali date, the title «امروز» in Naskh and the page's action as frosted glass, over a sky whose colours follow the time of day (dawn 05:00–09:30, day to 16:00, dusk to 19:30, night) in the current theme. The sun sits on a dotted arc where it is now (the moon, at night); today's timed Routine occurrences are marked on the same arc at their hour, filled once done. The clock is the browser's, refreshed each minute: the pilot runs in one time zone. The drawing is one `role="img"` with a sentence for screen readers.
+
+It is 300px tall and sticky. Scrolling down past 120px collapses it to a 150px band (it sticks with a negative `top` and slides its content into the band, so the page never jumps); scrolling up or reaching the top opens it again. On a phone it runs to the screen edges and under the safe-area inset; from 1024px it is a rounded panel in the page column.
 
 ## Page anatomy
 

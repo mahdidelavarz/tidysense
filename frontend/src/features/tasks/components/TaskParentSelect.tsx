@@ -1,4 +1,4 @@
-import { CircleDashed } from 'lucide-react'
+import { CircleDashed } from '../../../shared/ui/icons'
 import { EntityMark } from '../../../shared/ui/EntityUi'
 import { SelectField, type SelectOption } from '../../../shared/ui/SelectField'
 import type { GoalDto } from '../../goals/types/goal.types'

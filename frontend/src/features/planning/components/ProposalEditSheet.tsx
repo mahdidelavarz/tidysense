@@ -99,7 +99,7 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
     >
       <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
         <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-        <FormField label="عنوان" name="title" required autoFocus maxLength={200} registration={form.register('title')} error={errors.title?.message} />
+        <FormField label="عنوان" name="title" required autoFocus prominent maxLength={200} registration={form.register('title')} error={errors.title?.message} />
         {type === 'GOAL' && (
           <FormField label="نتیجه مطلوب" name="desiredOutcome" required multiline maxLength={2000} registration={form.register('desiredOutcome')} error={errors.desiredOutcome?.message} />
         )}

@@ -1,4 +1,4 @@
-import { FolderKanban, Plus } from 'lucide-react'
+import { FolderKanban, Plus } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'

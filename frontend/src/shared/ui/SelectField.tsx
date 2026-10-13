@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Search } from 'lucide-react'
+import { Check, ChevronDown, Search } from './icons'
 import { Fragment, type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { LabelText } from './FormUi'
 

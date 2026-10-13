@@ -19,18 +19,24 @@ export function DayStrip({ today, selected, onSelect }: {
   onSelect: (date: string) => void
 }) {
   const current = useRef<HTMLButtonElement>(null)
+  const strip = useRef<HTMLDivElement>(null)
   const start = parseIsoDate(today)
   const days = Array.from({ length: span }, (_, index) => addDays(start, index))
 
-  // On a phone the row scrolls sideways; keep the chosen day in view.
+  // On a phone the row scrolls sideways; keep the chosen day in view. Only the
+  // row scrolls: scrollIntoView would also move the browser's keyboard starting
+  // point onto the tile, so Tab from the top of the page would skip navigation.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the chosen day changes.
   useEffect(() => {
-    current.current?.scrollIntoView?.({ inline: 'center', block: 'nearest' })
+    const tile = current.current?.getBoundingClientRect()
+    const row = strip.current?.getBoundingClientRect()
+    if (!tile || !row) return
+    strip.current?.scrollBy?.({ left: tile.left + tile.width / 2 - (row.left + row.width / 2) })
   }, [selected])
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: a fieldset would add an unwanted visible legend/border here.
-    <div className="day-strip" role="group" aria-label="انتخاب روز">
+    <div className="day-strip" ref={strip} role="group" aria-label="انتخاب روز">
       {days.map(day => {
         const iso = toIsoDate(day)
         const isSelected = iso === selected

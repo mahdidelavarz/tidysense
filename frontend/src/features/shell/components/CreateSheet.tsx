@@ -35,7 +35,7 @@ export function CreateSheet() {
         {choices.map(choice => (
           <li key={choice.target}>
             <button
-              className={`entity-card entity-${choice.entity} flex w-full flex-col items-start gap-3 rounded-2xl p-4 text-start`}
+              className={`entity-${choice.entity} flex h-full w-full flex-col items-start gap-3 rounded-[1.125rem] bg-canvas p-4 text-start transition duration-200 ease-standard hover:bg-accent-tint active:scale-[0.98]`}
               type="button"
               onClick={() => openCreate(choice.target)}
             >

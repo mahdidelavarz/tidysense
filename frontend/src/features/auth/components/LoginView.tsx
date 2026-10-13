@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { FolderKanban, Sun, Target } from 'lucide-react'
+import { FolderKanban, Sun, Target } from '../../../shared/ui/icons'
 import { useEffect, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { getDevelopmentOtp } from '../services/auth-api'
@@ -95,7 +95,7 @@ export function LoginView() {
         <span className="pointer-events-none absolute -end-24 -top-24 size-72 rounded-full bg-white/10" aria-hidden="true" />
         <span className="pointer-events-none absolute -bottom-32 -start-16 size-96 rounded-full bg-white/5" aria-hidden="true" />
         <div className="relative flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-white text-xl font-extrabold text-accent shadow-md" aria-hidden="true">ت</span>
+          <span className="flex size-11 items-center justify-center login-mark rounded-xl bg-white text-xl font-extrabold shadow-md" aria-hidden="true">ت</span>
           <span className="text-xl font-extrabold tracking-tight">تایدی‌سنس</span>
         </div>
         <div className="relative hidden lg:block">

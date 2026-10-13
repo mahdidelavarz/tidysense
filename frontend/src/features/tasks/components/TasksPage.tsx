@@ -1,5 +1,5 @@
 import { addDays } from 'date-fns-jalali'
-import { ListChecks, Plus } from 'lucide-react'
+import { ListChecks, Plus } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatNumber, toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'

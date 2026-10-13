@@ -1,4 +1,4 @@
-import { Ellipsis } from 'lucide-react'
+import { Ellipsis } from '../../../shared/ui/icons'
 import { type ReactNode, type TouchEvent, useId, useRef, useState } from 'react'
 
 /**

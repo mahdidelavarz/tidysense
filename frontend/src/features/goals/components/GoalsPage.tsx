@@ -1,4 +1,4 @@
-import { Plus, Target } from 'lucide-react'
+import { Plus, Target } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'

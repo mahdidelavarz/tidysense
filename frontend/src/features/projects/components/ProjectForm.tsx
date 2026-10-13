@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CircleDashed } from 'lucide-react'
+import { CircleDashed } from '../../../shared/ui/icons'
 import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { DateField } from '../../../shared/ui/DateField'
@@ -44,7 +44,7 @@ export function ProjectForm({ project, goals, pending, error, onSubmit, onCancel
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان پروژه" name="title" required autoFocus maxLength={200} placeholder="این تلاش چه نامی دارد؟" registration={form.register('title')} error={errors.title?.message} />
+      <FormField label="عنوان پروژه" name="title" required autoFocus prominent maxLength={200} placeholder="این تلاش چه نامی دارد؟" registration={form.register('title')} error={errors.title?.message} />
       <FormField
         label="معنای تکمیل (اختیاری)"
         name="completionMeaning"

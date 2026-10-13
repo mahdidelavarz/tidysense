@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, CircleCheck, ListChecks, type LucideIcon, StickyNote } from 'lucide-react'
+import { CalendarClock, CircleCheck, ListChecks, type AppIcon, StickyNote } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
@@ -183,7 +183,7 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
 }
 
 /** One count of the summary. With something waiting it is also the way down to that part of the page. */
-function SummaryCount({ icon: Icon, label, value, target }: { icon: LucideIcon; label: string; value: number; target: string }) {
+function SummaryCount({ icon: Icon, label, value, target }: { icon: AppIcon; label: string; value: number; target: string }) {
   const content = (
     <>
       <Icon size={18} className="text-text-secondary max-sm:hidden" aria-hidden="true" />

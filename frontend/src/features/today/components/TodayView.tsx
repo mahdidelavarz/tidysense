@@ -1,9 +1,9 @@
-import { CalendarDays, Plus, Sun } from 'lucide-react'
+import { CalendarDays, Plus, Sun } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatLongDate, formatNumber } from '../../../shared/lib/date'
 import { showToast, useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
-import { PageHeader } from '../../../shared/ui/PageHeader'
+import { MenuButton, PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { TodayReconcileEntry } from '../../reconcile/components/TodayReconcileEntry'
 import { useCompleteOccurrence, useCorrectOccurrence } from '../../routines/hooks/routine-hooks'
@@ -13,6 +13,7 @@ import { useCarryTask, useCompleteTask, useTaskOptions, useTaskParentTitle } fro
 import type { TaskDto } from '../../tasks/types/task.types'
 import { useToday } from '../hooks/today-hooks'
 import { DayStrip } from './DayStrip'
+import { SkyHeader } from './SkyHeader'
 import { TodayRoutineGroup } from './TodayRoutineGroup'
 import { TodayTaskCard } from './TodayTaskCard'
 
@@ -69,22 +70,22 @@ export function TodayView() {
   )
 
   return (
-    <div className="page">
-      <PageHeader
-        title="امروز"
-        description={(
-          <>
-            <time className="font-bold text-accent-strong" dateTime={localDate}>{formatLongDate(localDate)}</time>
-            {tasks.length > 0 && <span> · {formatNumber(ready.length)} کار آماده انجام</span>}
-          </>
+    <div className="page page-sky">
+      <SkyHeader
+        start={<MenuButton />}
+        routines={routineOccurrences}
+        dateLine={(
+          <time dateTime={localDate}>{formatLongDate(localDate)}</time>
         )}
         action={(
-          <button className="secondary-button shrink-0" type="button" onClick={() => openCreate('task')}>
+          <button className="sky-action" type="button" onClick={() => openCreate('task')}>
             <Plus size={20} aria-hidden="true" />
             افزودن کار
           </button>
         )}
       />
+
+      <div className="mt-2" />
 
       <DayStrip today={localDate} selected={selected} onSelect={day => setChosenDay(day === localDate ? null : day)} />
 
@@ -108,20 +109,20 @@ export function TodayView() {
             <div className="space-y-8">
               {ready.length > 0 && (
                 <section aria-labelledby="today-ready">
-                  <h2 className="section-title" id="today-ready">آماده انجام</h2>
-                  <ul className="mt-3 space-y-3">{ready.map(renderTask)}</ul>
+                  <SectionTitle id="today-ready" count={ready.length}>آماده انجام</SectionTitle>
+                  <ul className="group-card">{ready.map(renderTask)}</ul>
                 </section>
               )}
               {waiting.length > 0 && (
                 <section aria-labelledby="today-waiting">
-                  <h2 className="section-title" id="today-waiting">در انتظار کارهای پیشین</h2>
-                  <ul className="mt-3 space-y-3">{waiting.map(renderTask)}</ul>
+                  <SectionTitle id="today-waiting" count={waiting.length}>در انتظار کارهای پیشین</SectionTitle>
+                  <ul className="group-card">{waiting.map(renderTask)}</ul>
                 </section>
               )}
               {routines.length > 0 && (
                 <section aria-labelledby="today-routines">
-                  <h2 className="section-title" id="today-routines">روتین‌های امروز</h2>
-                  <ul className="mt-3 space-y-3">
+                  <SectionTitle id="today-routines" count={routines.length}>روتین‌های امروز</SectionTitle>
+                  <ul className="group-card">
                     {routines.map(group => (
                       <li key={group[0].routineId}>
                         <TodayRoutineGroup
@@ -176,8 +177,8 @@ function PlannedDay({ date, parentTitle, onCarry }: {
   }
   return (
     <section aria-labelledby="today-planned">
-      <h2 className="section-title" id="today-planned">برنامه {formatLongDate(date)}</h2>
-      <ul className="mt-3 space-y-3">
+      <SectionTitle id="today-planned" count={planned.length}>برنامه {formatLongDate(date)}</SectionTitle>
+      <ul className="group-card">
         {planned.map(task => (
           <li key={task.id}>
             <TodayTaskCard task={task} parentTitle={parentTitle(task)} onCarry={() => onCarry(task)} />
@@ -186,6 +187,16 @@ function PlannedDay({ date, parentTitle, onCarry }: {
       </ul>
       <p className="mt-4 text-xs text-text-secondary">روتین‌های این روز در همان روز اضافه می‌شوند.</p>
     </section>
+  )
+}
+
+/** A Today list heading with its item count beside it, as in «کارها ۳». */
+function SectionTitle({ id, count, children }: { id: string; count: number; children: React.ReactNode }) {
+  return (
+    <h2 className="mb-2 flex items-baseline gap-1.5 px-2">
+      <span className="section-title" id={id}>{children}</span>
+      <span className="text-xs font-semibold text-text-secondary" aria-hidden="true">{formatNumber(count)}</span>
+    </h2>
   )
 }
 

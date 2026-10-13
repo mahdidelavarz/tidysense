@@ -1,4 +1,4 @@
-import { CircleAlert, type LucideIcon, RefreshCw } from 'lucide-react'
+import { CircleAlert, type AppIcon, RefreshCw } from './icons'
 import type { ReactNode } from 'react'
 
 /** Labelled initial-loading placeholder shaped like the list it replaces. */
@@ -23,7 +23,7 @@ export function LoadingState({ text }: { text: string }) {
 
 /** Explains an empty list and offers the one next step that fills it. */
 export function EmptyState({ icon: Icon, title, description, action }: {
-  icon?: LucideIcon
+  icon?: AppIcon
   title: string
   description?: string
   action?: ReactNode
@@ -86,7 +86,7 @@ export function ResourceState({ pending, error, empty, pendingText, emptyIcon, e
   error: unknown
   empty: boolean
   pendingText: string
-  emptyIcon?: LucideIcon
+  emptyIcon?: AppIcon
   emptyTitle: string
   emptyDescription?: string
   emptyAction?: ReactNode

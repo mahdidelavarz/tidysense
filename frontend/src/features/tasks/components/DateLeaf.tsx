@@ -1,4 +1,4 @@
-import { CalendarOff } from 'lucide-react'
+import { CalendarOff } from '../../../shared/ui/icons'
 import type { ReactNode } from 'react'
 import { parseIsoDate } from '../../../shared/lib/date'
 
@@ -25,7 +25,7 @@ export function DateLeaf({ date, when, children }: {
   const parsed = date ? parseIsoDate(date) : null
   return (
     <span className="date-leaf" data-when={when} aria-hidden="true">
-      {children ?? (parsed
+      {children || (parsed
         ? (
           <>
             <span className="text-base font-extrabold leading-5">{dayNumber.format(parsed)}</span>

@@ -1,4 +1,4 @@
-import { CalendarClock, CalendarDays, CircleCheckBig, CircleSlash, Pencil } from 'lucide-react'
+import { CalendarClock, CalendarDays, CircleCheckBig, CircleSlash, Pencil } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatLocalDate } from '../../../shared/lib/date'

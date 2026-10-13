@@ -2,6 +2,8 @@
 
 > **Canonical amendment (2026-09-19):** Discussions 023–026 amend events/retention for PlanningFact, sequence and CaptureItem and retire Backlog events. Dedicated crisis-product records are removed.
 
+> **Amendment (2026-10-13, decided by the owner, [[01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights]]):** no AI-provider consent record is created any more (§20); the pilot feedback record admits user-volunteered reason text for the sampled AI-response satisfaction prompt (§20); the operator page adds a product-insights view and may show those reason texts without identity (§25).
+
 > **Amendment (2026-10-09, STEP-11, decided by the owner):** the stored `ActionConfirmation` is R2 or R3 with its subject, not R1 (§20), because its preview holds Task titles and an R1 record is never removed; the durable decision evidence is the R1 event and command result. Pilot retention durations and the erasure limit are fixed (§19, §22), access for the pilot is one operator with a recorded read-only role (§25), and two record types are added to §20. Details are in each section.
 
 ## Status
@@ -779,8 +781,9 @@ Every persisted record type must have an explicit retention class.
 | RoutineOccurrence exposure event | R1 | Affects deletion/invalidation policy |
 | Exposure projection | R1 or R2 | Must remain derivable from exposure event |
 | Analytics aggregate | Separate governed dataset | Versioned definition and no canonical authority |
-| AI-provider consent decision | R1 | **Added 2026-10-09.** Event `AI_CONSENT_CHANGED`: granted or withdrawn, provider key, notice version. The current state is on the account and is erased with it |
+| AI-provider consent decision | R1 | **Added 2026-10-09.** Event `AI_CONSENT_CHANGED`: granted or withdrawn, provider key, notice version. The current state is on the account and is erased with it. **Retired 2026-10-13 by Discussion 027:** no consent step exists; no new events are recorded and existing ones remain R1 history |
 | Pilot feedback response | R2 | **Added 2026-10-09.** A number on a fixed scale about one applied plan or completed session; no text; removed after the R2 duration and on erasure |
+| AI-response satisfaction answer | R2 | **Added 2026-10-13 (Discussion 027 §4).** Sampled 1–5 rating of a planning draft or Reconcile explanation, with optional reason text the user wrote for the team; linked to the account only for erasure; shown to the operator without identity; removed after the R2 duration and on erasure |
 
 No persisted record may remain without an assigned retention class.
 
@@ -925,7 +928,7 @@ May access R6 only through explicit, temporary, audited authorization.
 
 ### Pilot access (amendment 2026-10-09)
 
-For the pilot one person, the operator, holds every access class above. Direct database access uses a read-only role and is written into an access record kept with the incident records (who, when, purpose, tables, whether user text was read). Separate roles per class, de-identified views and a database-side access log are deferred until a second person needs access; the in-app operator page stays aggregate-only. No R5 or R6 record exists in the product.
+For the pilot one person, the operator, holds every access class above. Direct database access uses a read-only role and is written into an access record kept with the incident records (who, when, purpose, tables, whether user text was read). Separate roles per class, de-identified views and a database-side access log are deferred until a second person needs access; the in-app operator page stays aggregate-only. **Amended 2026-10-13 (Discussion 027 §5):** it adds a product-insights view and may list AI-response satisfaction reason texts without account identity; no other user text and no per-user view. No R5 or R6 record exists in the product.
 
 ---
 

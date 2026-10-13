@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Compass } from 'lucide-react'
+import { Compass } from '../../../shared/ui/icons'
 import { showToast } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
 import { usePlanningFacts, useRemovePlanningFact } from '../hooks/planning-hooks'

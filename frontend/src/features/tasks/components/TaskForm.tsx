@@ -67,7 +67,7 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان کار" name="title" required autoFocus maxLength={200} placeholder="چه کاری باید انجام شود؟" registration={form.register('title')} error={errors.title?.message} />
+      <FormField label="عنوان کار" name="title" required autoFocus prominent maxLength={200} placeholder="چه کاری باید انجام شود؟" registration={form.register('title')} error={errors.title?.message} />
       <Controller
         control={form.control}
         name="plannedDate"

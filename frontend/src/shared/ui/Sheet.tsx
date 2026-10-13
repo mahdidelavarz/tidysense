@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X } from './icons'
 import { type ReactNode, useId, useRef } from 'react'
 import { useModal } from '../lib/use-modal'
 
@@ -41,7 +41,7 @@ export function Sheet({ title, description, children, onClose, locked = false }:
         <div className="sheet-handle" aria-hidden="true" />
         <div className="sheet-header">
           <div className="min-w-0">
-            <h2 className="text-xl font-extrabold leading-snug" id={titleId}>{title}</h2>
+            <h2 className="display-title text-[1.4375rem]" id={titleId}>{title}</h2>
             {description && <p className="mt-1 text-sm leading-6 text-text-secondary" id={descriptionId}>{description}</p>}
           </div>
           <button className="icon-button -me-2 -mt-1" type="button" onClick={onClose} disabled={locked} aria-label="بستن">
