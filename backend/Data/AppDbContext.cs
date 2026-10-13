@@ -57,15 +57,8 @@ public sealed class AppDbContext(
             entity.HasKey(x => x.Id);
             entity.Property(x => x.PhoneNumber).HasMaxLength(16).IsRequired();
             entity.Property(x => x.DisplayName).HasMaxLength(200);
-            entity.Property(x => x.AiConsentProvider).HasMaxLength(64);
-            entity.Property(x => x.AiConsentNoticeVersion).HasMaxLength(16);
             entity.HasIndex(x => x.PhoneNumber).IsUnique();
-            entity.ToTable(t =>
-            {
-                t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0");
-                // Consent names a provider, a notice version and a time together, or nothing at all.
-                t.HasCheckConstraint("CK_Users_AiConsent", "(\"AiConsentProvider\" IS NULL) = (\"AiConsentNoticeVersion\" IS NULL) AND (\"AiConsentProvider\" IS NULL) = (\"AiConsentAt\" IS NULL)");
-            });
+            entity.ToTable(t => t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0"));
         });
 
         modelBuilder.Entity<OtpChallenge>(entity =>

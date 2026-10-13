@@ -7,9 +7,7 @@ import { useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
-import { useCurrentUser } from '../../auth/hooks/auth-hooks'
 import { useGoal } from '../../goals/hooks/goal-hooks'
-import { AiConsentCard } from '../../pilot/components/AiConsentCard'
 import { PilotQuestion } from '../../pilot/components/PilotQuestion'
 import { useProject } from '../../projects/hooks/project-hooks'
 import {
@@ -48,9 +46,6 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   const cancelDraft = useCancelPlanningDraft()
   const revise = useRevisePlanningDraft()
   const openCreate = useUiStore(state => state.openCreate)
-  // The server refuses to send text without consent; this only decides what the page offers.
-  const user = useCurrentUser().data
-  const needsConsent = user?.aiConsentRequired === true && !user.aiConsentGranted
 
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [draftId, setDraftId] = useState<string | null>(null)
@@ -302,15 +297,12 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
     )
   }
 
-  // Asked where a new text would be written. A draft already made stays reviewable above.
-  if (needsConsent) return frame(<AiConsentCard onManual={manual} />)
-
   return frame(
     <div className="space-y-4">
       <p className="flex items-start gap-3 rounded-2xl border border-accent/20 bg-linear-to-bl from-accent-tint to-surface p-4 text-sm leading-7 text-text-secondary">
         <Sparkles size={20} className="mt-1 shrink-0 text-accent" aria-hidden="true" />
         {active.data?.sampleGenerator === false
-          ? 'پیش‌نویس با کمک هوش مصنوعی و با اجازه‌ای که داده‌اید ساخته می‌شود: نوشته شما و خلاصه‌ای از همین حساب برای سرویس هوش مصنوعی بیرون از ایران فرستاده می‌شود. هوش مصنوعی فقط پیشنهاد می‌دهد و چیزی را تغییر نمی‌دهد.'
+          ? 'هوش مصنوعی فقط پیشنهاد می‌دهد؛ تا پیش‌نویس را مرور و تأیید نکنید، چیزی ساخته یا تغییر داده نمی‌شود.'
           : 'در این نسخه پیش‌نویس به‌صورت نمونه و بدون هوش مصنوعی ساخته می‌شود تا مسیر مرور و تأیید قابل استفاده باشد.'}
       </p>
       {replace && <p className="notice">با ساخت پیش‌نویس تازه، پیش‌نویس قبلی کنار گذاشته می‌شود.</p>}

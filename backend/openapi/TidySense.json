@@ -5877,125 +5877,6 @@
           }
         }
       }
-    },
-    "/api/v1/users/me/ai-consent": {
-      "put": {
-        "tags": [
-          "Users"
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetAiConsentRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetAiConsentRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetAiConsentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/CurrentUserDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CurrentUserDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CurrentUserDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Entity",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiProblemDto"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -6822,9 +6703,7 @@
           "phoneNumber",
           "displayName",
           "setupComplete",
-          "isOperator",
-          "aiConsentRequired",
-          "aiConsentGranted"
+          "isOperator"
         ],
         "type": "object",
         "properties": {
@@ -6845,12 +6724,6 @@
             "type": "boolean"
           },
           "isOperator": {
-            "type": "boolean"
-          },
-          "aiConsentRequired": {
-            "type": "boolean"
-          },
-          "aiConsentGranted": {
             "type": "boolean"
           }
         }
@@ -7375,7 +7248,7 @@
       "PilotNoticeDto": {
         "required": [
           "noticeVersion",
-          "aiProviderName",
+          "aiReceivesPlanningText",
           "sessionHistoryDays",
           "draftDays",
           "diagnosticsDays",
@@ -7388,11 +7261,8 @@
           "noticeVersion": {
             "type": "string"
           },
-          "aiProviderName": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "aiReceivesPlanningText": {
+            "type": "boolean"
           },
           "sessionHistoryDays": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -9867,24 +9737,6 @@
               "string"
             ],
             "format": "int64"
-          }
-        }
-      },
-      "SetAiConsentRequest": {
-        "required": [
-          "granted",
-          "noticeVersion"
-        ],
-        "type": "object",
-        "properties": {
-          "granted": {
-            "type": "boolean"
-          },
-          "noticeVersion": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },

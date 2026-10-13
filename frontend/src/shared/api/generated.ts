@@ -4047,84 +4047,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/me/ai-consent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    "Idempotency-Key": string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SetAiConsentRequest"];
-                    "text/json": components["schemas"]["SetAiConsentRequest"];
-                    "application/*+json": components["schemas"]["SetAiConsentRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["CurrentUserDto"];
-                        "application/json": components["schemas"]["CurrentUserDto"];
-                        "text/json": components["schemas"]["CurrentUserDto"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ApiProblemDto"];
-                        "application/json": components["schemas"]["ApiProblemDto"];
-                        "text/json": components["schemas"]["ApiProblemDto"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ApiProblemDto"];
-                        "application/json": components["schemas"]["ApiProblemDto"];
-                        "text/json": components["schemas"]["ApiProblemDto"];
-                    };
-                };
-                /** @description Unprocessable Entity */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ApiProblemDto"];
-                        "application/json": components["schemas"]["ApiProblemDto"];
-                        "text/json": components["schemas"]["ApiProblemDto"];
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4335,8 +4257,6 @@ export interface components {
             displayName: null | string;
             setupComplete: boolean;
             isOperator: boolean;
-            aiConsentRequired: boolean;
-            aiConsentGranted: boolean;
         };
         CursorPageDtoOfCaptureDto: {
             items: components["schemas"]["CaptureDto"][];
@@ -4465,7 +4385,7 @@ export interface components {
         };
         PilotNoticeDto: {
             noticeVersion: string;
-            aiProviderName: null | string;
+            aiReceivesPlanningText: boolean;
             /** Format: int32 */
             sessionHistoryDays: number | string;
             /** Format: int32 */
@@ -5039,10 +4959,6 @@ export interface components {
             resolvedAt: null | string;
             /** Format: int64 */
             version: number | string;
-        };
-        SetAiConsentRequest: {
-            granted: boolean;
-            noticeVersion: null | string;
         };
         StartPlanningAttemptRequest: {
             clientAttemptId: string;

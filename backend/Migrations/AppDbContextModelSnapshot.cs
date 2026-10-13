@@ -1931,20 +1931,6 @@ namespace TidySense.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTimeOffset?>("AiConsentAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("AiConsentNoticeVersion")
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
-
-                    b.Property<string>("AiConsentProvider")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<long>("AiConsentRevision")
-                        .HasColumnType("bigint");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1976,8 +1962,6 @@ namespace TidySense.Migrations
 
                     b.ToTable("Users", t =>
                         {
-                            t.HasCheckConstraint("CK_Users_AiConsent", "(\"AiConsentProvider\" IS NULL) = (\"AiConsentNoticeVersion\" IS NULL) AND (\"AiConsentProvider\" IS NULL) = (\"AiConsentAt\" IS NULL)");
-
                             t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0");
                         });
                 });

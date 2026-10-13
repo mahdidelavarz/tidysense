@@ -151,8 +151,6 @@ if (string.IsNullOrWhiteSpace(planningProvider) ||
     builder.Services.AddSingleton<IPlanningGenerator, DeterministicPlanningGenerator>();
 else
     builder.Services.AddSingleton<IPlanningGenerator, AiPlanningGenerator>();
-builder.Services.AddSingleton<AiConsentPolicy>();
-builder.Services.AddScoped<AiConsentService>();
 builder.Services.AddHostedService<PlanningAttemptWorker>();
 // The Reconcile explanation is selected the same way and independently of planning.
 var reconcileProvider = builder.Configuration[$"{AiOptions.SectionName}:Reconcile:Provider"];
@@ -277,7 +275,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
         catch (ArgumentException) { return Results.NotFound(); }
     }).ExcludeFromDescription();
     app.MapPost("/api/v1/dev/test-session", async (HttpContext context, AppDbContext db,
-        JwtTokenService tokens, IOptions<JwtOptions> jwtOptions, OperatorAccess operators, AiConsentPolicy consent) =>
+        JwtTokenService tokens, IOptions<JwtOptions> jwtOptions, OperatorAccess operators) =>
     {
         if (!IPAddress.IsLoopback(context.Connection.RemoteIpAddress ?? IPAddress.None) &&
             !app.Environment.IsEnvironment("Testing")) return Results.NotFound();
@@ -299,7 +297,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
             SameSite = SameSiteMode.Lax, Path = "/", IsEssential = true,
             Expires = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.LifetimeMinutes)
         });
-        return Results.Ok(AuthService.ToDto(user, operators, consent));
+        return Results.Ok(AuthService.ToDto(user, operators));
     }).ExcludeFromDescription();
 }
 

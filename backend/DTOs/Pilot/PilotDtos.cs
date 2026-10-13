@@ -4,11 +4,12 @@ namespace TidySense.DTOs.Pilot;
 
 /// <summary>
 /// The facts the privacy notice states, read from the running configuration so the text cannot
-/// drift from what the system does. <c>AiProviderName</c> is null when no provider receives text.
+/// drift from what the system does. <c>AiReceivesPlanningText</c> says planning text is sent to an
+/// AI model; which model or provider is never told to users (Discussion 027 §3).
 /// </summary>
 public sealed record PilotNoticeDto(
     string NoticeVersion,
-    string? AiProviderName,
+    bool AiReceivesPlanningText,
     int SessionHistoryDays,
     int DraftDays,
     int DiagnosticsDays,

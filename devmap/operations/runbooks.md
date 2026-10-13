@@ -112,13 +112,14 @@ For the pilot only the operator can reach the database, and every direct look at
 
 An access without a record is itself an incident. Separate roles per access class, de-identified views and a database-side access log are deferred ([`deployment.md`](deployment.md#database-access)).
 
-## 9. AI provider, consent and the privacy notice
+## 9. AI provider and the privacy notice
 
-Planning text is sent to the provider only for an account that agreed to that provider and to the current notice (`AiConsentPolicy.NoticeVersion`). The server refuses otherwise (`403 AI_CONSENT_REQUIRED`), whatever the client shows. The Reconcile explanation sends codes and counts only and is not gated.
+There is no consent step (Discussion 027, retired in STEP-13). When planning is model-backed, any account's planning text, its answers and a summary of its own goals and work are sent to the configured model to build a draft. The privacy page says so without naming the model or provider; users are never told which one it is. The Reconcile explanation sends codes and counts only.
 
-- **Changing the provider** (`Ai:Planning:Provider`): consent names the provider key, so every account is asked again on its next planning attempt. Set `Ai:Providers:<key>:DisplayName`; that name is what users are shown.
-- **Changing what the notice says** (what is sent, where it goes, a retention duration, the erasure limit): edit the wording in `frontend/src/features/pilot/components/`, then change `AiConsentPolicy.NoticeVersion`. Every account is asked again. Never change the wording without the version.
-- **A user withdraws**: they do it themselves on the privacy page. Nothing already sent can be recalled; the decision is an R1 event (`AI_CONSENT_CHANGED`).
+- **Changing the provider** (`Ai:Planning:Provider`): nothing changes for users, as long as the privacy notice stays true. If the new provider's servers are not outside Iran, or it keeps text, the notice must change first (next item).
+- **Changing what the notice says** (what is sent, where it goes, a retention duration, the erasure limit): edit the wording in `frontend/src/features/pilot/components/PrivacyPage.tsx`, then change `PrivacyNotice.Version`. Never change the wording without the version.
+- **A user does not want text sent**: the manual path sends nothing; tell them so. There is no per-account switch.
+- **Consent history**: decisions recorded before STEP-13 remain R1 `AI_CONSENT_CHANGED` events and are tombstoned on erasure like any other.
 - **A user asks what was sent**: nothing sent or received is stored. The `AiInvocations` rows show when calls were made for the account, not their content.
 
 ## Incident record

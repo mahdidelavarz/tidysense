@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { currentUser } from '../../auth/services/auth-api'
 import type { CurrentUser } from '../../auth/types/auth.types'
-import { getPilotNotice, setAiConsent, submitPilotFeedback } from '../../pilot/services/pilot-api'
+import { getPilotNotice, submitPilotFeedback } from '../../pilot/services/pilot-api'
 import {
   cancelPlanningAttempt,
   createPlanningPreview,
@@ -32,7 +32,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('../../auth/services/auth-api', () => ({ currentUser: vi.fn() }))
 vi.mock('../../pilot/services/pilot-api', () => ({
-  getPilotNotice: vi.fn(), setAiConsent: vi.fn(), submitPilotFeedback: vi.fn(),
+  getPilotNotice: vi.fn(), submitPilotFeedback: vi.fn(),
 }))
 vi.mock('../services/planning-api', () => ({
   getPlanningActive: vi.fn(), startPlanningAttempt: vi.fn(), getPlanningAttempt: vi.fn(),
@@ -102,7 +102,7 @@ const result: PlanningApplyResultDto = {
 
 const account = (overrides: Partial<CurrentUser> = {}): CurrentUser => ({
   id: '00000000-0000-0000-0000-000000000001', phoneNumber: '+989120000000', displayName: null, setupComplete: true,
-  isOperator: false, aiConsentRequired: false, aiConsentGranted: true, ...overrides,
+  isOperator: false, ...overrides,
 })
 
 function apiError(status: number, code: string) {
@@ -132,32 +132,15 @@ describe('PlanningPage', () => {
     vi.mocked(currentUser).mockResolvedValue(account())
   })
 
-  it('asks for consent that names the provider before any text can be written, and keeps the manual path', async () => {
+  it('opens the intention form at once with a model behind it, without a consent step or a named provider', async () => {
     vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: null, sampleGenerator: false })
-    vi.mocked(currentUser).mockResolvedValue(account({ aiConsentRequired: true, aiConsentGranted: false }))
-    vi.mocked(getPilotNotice).mockResolvedValue({
-      noticeVersion: '2026-10-09.1', aiProviderName: 'DeepSeek', sessionHistoryDays: 180, draftDays: 30,
-      diagnosticsDays: 90, erasureCompletionDays: 30, supportContact: 'support@example.test', feedbackInstrumentVersion: 1,
-    })
-    vi.mocked(setAiConsent)
-      .mockRejectedValueOnce(apiError(409, 'AI_CONSENT_NOTICE_CHANGED'))
-      .mockResolvedValueOnce(account({ aiConsentRequired: true, aiConsentGranted: true }))
     renderPage()
 
-    const card = within((await screen.findByRole('heading', { name: 'اجازه شما برای برنامه‌ریزی با هوش مصنوعی' })).closest('section') as HTMLElement)
-    expect(card.getByText('DeepSeek')).toBeInTheDocument()
-    expect(card.getByText(/این متن از کشور خارج می‌شود/)).toBeInTheDocument()
-    expect(screen.queryByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).not.toBeInTheDocument()
-    fireEvent.click(card.getByRole('button', { name: 'خودم دستی می‌سازم' }))
-    expect(useUiStore.getState().createTarget).toBe('menu')
-
-    // A notice that changed since it was shown is not agreed to; the user is told and decides again.
-    fireEvent.click(card.getByRole('button', { name: 'موافقم، با هوش مصنوعی برنامه‌ریزی کن' }))
-    expect(await card.findByText(/این توضیح به‌روز شده است/)).toBeInTheDocument()
-    fireEvent.click(card.getByRole('button', { name: 'موافقم، با هوش مصنوعی برنامه‌ریزی کن' }))
-    await waitFor(() => expect(setAiConsent).toHaveBeenLastCalledWith(true, '2026-10-09.1'))
     expect(await screen.findByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).toBeInTheDocument()
-    expect(startPlanningAttempt).not.toHaveBeenCalled()
+    expect(screen.getByText(/هوش مصنوعی فقط پیشنهاد می‌دهد/)).toBeInTheDocument()
+    // Disclosure lives on the privacy page only (Discussion 027): no consent card, provider or data-location line here.
+    expect(screen.queryByText(/اجازه|بیرون از ایران|سرویس/)).not.toBeInTheDocument()
+    expect(getPilotNotice).not.toHaveBeenCalled()
   })
 
   it('starts one attempt, polls it by id and shows the validated draft as an unapproved hierarchy', async () => {

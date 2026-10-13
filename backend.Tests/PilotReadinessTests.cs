@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
+using TidySense.Common.Commands;
 using TidySense.Common.Events;
 using TidySense.Data;
 using TidySense.DTOs.Auth;
@@ -26,8 +27,8 @@ using TidySense.Services.Operations;
 namespace TidySense.Backend.Tests;
 
 /// <summary>
-/// What a pilot participant is asked and told: consent before planning text leaves for a provider,
-/// the privacy notice, the in-app pilot questions, and the daily alert digest.
+/// What a pilot participant is asked and told: no consent step before planning text reaches a model,
+/// a privacy notice that never names the provider, the in-app pilot questions, and the daily alert digest.
 /// </summary>
 public sealed class PilotReadinessTests(PostgresWebApplicationFactory factory)
     : IClassFixture<PostgresWebApplicationFactory>
@@ -36,125 +37,76 @@ public sealed class PilotReadinessTests(PostgresWebApplicationFactory factory)
     private static readonly string Hash = new('F', 64);
 
     [Fact]
-    public async Task Planning_text_reaches_a_provider_only_after_consent_to_that_provider_and_notice()
+    public async Task Planning_text_reaches_the_model_without_a_consent_step_and_users_are_never_told_the_provider()
     {
         var session = await CreateSessionAsync();
         var provider = new AiPlanningRuntimeTests.ScriptedProvider();
         using var host = ModelBackedHost(provider);
         using var client = Client(session.Token, host);
 
-        var me = (await client.GetFromJsonAsync<CurrentUserDto>("/api/v1/users/me"))!;
-        Assert.True(me.AiConsentRequired);
-        Assert.False(me.AiConsentGranted);
-        Assert.Equal("Scripted Provider", (await client.GetFromJsonAsync<PilotNoticeDto>("/api/v1/pilot/notice"))!
-            .AiProviderName);
+        // Nothing about consent is left on the account, and nothing user-facing names the provider or model.
+        var me = await client.GetStringAsync("/api/v1/users/me");
+        Assert.DoesNotContain("consent", me, StringComparison.OrdinalIgnoreCase);
+        var noticeJson = await client.GetStringAsync("/api/v1/pilot/notice");
+        Assert.DoesNotContain("scripted", noticeJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("test-model", noticeJson, StringComparison.OrdinalIgnoreCase);
+        var notice = JsonSerializer.Deserialize<PilotNoticeDto>(noticeJson, JsonSerializerOptions.Web)!;
+        Assert.True(notice.AiReceivesPlanningText);
+        Assert.Equal(PrivacyNotice.Version, notice.NoticeVersion);
 
-        // Without consent the attempt is refused before anything is stored or sent.
-        var refused = await StartAsync(client, "consent-1");
-        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
-        Assert.Equal("AI_CONSENT_REQUIRED", await ProblemCodeAsync(refused));
-        Assert.Empty(provider.Calls);
-        await using (var scope = host.Services.CreateAsyncScope())
-            Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().PlanningAttempts
-                .AnyAsync(x => x.UserId == session.UserId));
-        // Manual work does not depend on it.
-        (await SendAsync(client, HttpMethod.Post, "/api/v1/goals", new
-        {
-            title = "هدف دستی", desiredOutcome = "نتیجه", targetDate = (string?)null, reviewDate = (string?)null
-        }, "consent-goal")).EnsureSuccessStatusCode();
-
-        // Agreeing to a notice other than the current one is not agreement.
-        var stale = await SendAsync(client, HttpMethod.Put, "/api/v1/users/me/ai-consent",
-            new { granted = true, noticeVersion = "2020-01-01.1" }, "consent-stale");
-        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
-        Assert.Equal("AI_CONSENT_NOTICE_CHANGED", await ProblemCodeAsync(stale));
-
-        var granted = await ReadAsync<CurrentUserDto>(await SendAsync(client, HttpMethod.Put,
-            "/api/v1/users/me/ai-consent", new { granted = true, noticeVersion = AiConsentPolicy.NoticeVersion },
-            "consent-grant"));
-        Assert.True(granted.AiConsentGranted);
+        // A fresh account plans with the model at once; there is no step to agree first.
         provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
-        var accepted = await StartAsync(client, "consent-2");
+        var accepted = await StartAsync(client, "no-consent");
         Assert.Equal(HttpStatusCode.Accepted, accepted.StatusCode);
-        await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(accepted)).Id);
+        var ended = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(accepted)).Id);
+        Assert.Equal("SUCCEEDED", ended.Status);
         Assert.Single(provider.Calls);
+        var attemptJson = await client.GetStringAsync($"/api/v1/planning/attempts/{ended.Id}");
+        Assert.DoesNotContain("scripted", attemptJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("test-model", attemptJson, StringComparison.OrdinalIgnoreCase);
 
-        // The decision is audit evidence: what was agreed to, never who.
-        await using (var scope = host.Services.CreateAsyncScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var decision = await db.DomainEvents.AsNoTracking().SingleAsync(x =>
-                x.UserId == session.UserId && x.EventType == AccountEventTypes.AiConsentChanged);
-            using var payload = JsonDocument.Parse(decision.PayloadJson);
-            Assert.True(payload.RootElement.GetProperty("granted").GetBoolean());
-            Assert.Equal("scripted", payload.RootElement.GetProperty("provider").GetString());
-            Assert.Equal(AiConsentPolicy.NoticeVersion, payload.RootElement.GetProperty("noticeVersion").GetString());
-            Assert.Equal("R1", decision.RetentionClass);
-        }
-
-        // Withdrawing stops it again; consent to one provider is not consent to another.
-        var withdrawn = await ReadAsync<CurrentUserDto>(await SendAsync(client, HttpMethod.Put,
-            "/api/v1/users/me/ai-consent", new { granted = false, noticeVersion = (string?)null }, "consent-withdraw"));
-        Assert.False(withdrawn.AiConsentGranted);
-        Assert.Equal("AI_CONSENT_REQUIRED", await ProblemCodeAsync(await StartAsync(client, "consent-3", true)));
-        Assert.Single(provider.Calls);
-        await using (var scope = host.Services.CreateAsyncScope())
-        {
-            var policy = scope.ServiceProvider.GetRequiredService<AiConsentPolicy>();
-            Assert.True(policy.IsGranted("scripted", AiConsentPolicy.NoticeVersion));
-            Assert.False(policy.IsGranted("another-provider", AiConsentPolicy.NoticeVersion));
-            Assert.False(policy.IsGranted("scripted", "2020-01-01.1"));
-            Assert.False(policy.IsGranted(null, null));
-
-            // Erasure leaves the decisions as facts without the account: not as user, not as aggregate.
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var erased = await scope.ServiceProvider.GetRequiredService<UserErasureService>()
-                .EraseAsync(session.UserId, "test", "TEST_CLEANUP", TestContext.Current.CancellationToken);
-            Assert.False(await db.DomainEvents.AnyAsync(x =>
-                x.UserId == session.UserId || x.AggregateId == session.UserId));
-            Assert.False(await db.CommandResults.AnyAsync(x =>
-                x.UserId == session.UserId || x.AggregateId == session.UserId));
-            Assert.Equal(2, await db.DomainEvents.CountAsync(x => x.UserId == erased!.TombstoneUserId &&
-                x.AggregateId == erased.TombstoneUserId && x.EventType == AccountEventTypes.AiConsentChanged));
-        }
-    }
-
-    [Fact]
-    public async Task A_queued_attempt_is_not_generated_once_consent_is_gone()
-    {
-        var session = await CreateSessionAsync();
-        var provider = new AiPlanningRuntimeTests.ScriptedProvider();
-        using var host = ModelBackedHost(provider);
+        // The consent action is gone, and no decision is recorded any more.
+        var retired = await SendAsync(client, HttpMethod.Put, "/api/v1/users/me/ai-consent",
+            new { granted = true, noticeVersion = PrivacyNotice.Version }, "consent-retired");
+        Assert.Contains(retired.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
         await using var scope = host.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var context = await scope.ServiceProvider.GetRequiredService<PlanningContextBuilder>()
-            .BuildAsync(session.UserId, null, null, TestContext.Current.CancellationToken);
-        var now = factory.Clock.GetUtcNow();
-        var attempt = new PlanningAttempt
-        {
-            Id = Guid.NewGuid(), UserId = session.UserId, ClientAttemptId = "attempt-queued", RequestHash = Hash,
-            Status = PlanningAttemptStatuses.Queued, Intention = Intention, GeneratorKey = AiPlanningGenerator.ConfigurationKey,
-            ContextBuilderVersion = context.BuilderVersion, ContextFingerprint = context.Fingerprint,
-            CreatedAt = now, UpdatedAt = now
-        };
-        db.PlanningAttempts.Add(attempt);
-        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        // The runner shares this scope's context and must read the row as stored.
-        db.ChangeTracker.Clear();
-
-        await scope.ServiceProvider.GetRequiredService<PlanningAttemptRunner>().RunAsync(
-            new PlanningWorkItem(attempt.Id, session.UserId, Intention, context, null, [], true),
-            TestContext.Current.CancellationToken);
-
-        db.ChangeTracker.Clear();
-        var ended = await db.PlanningAttempts.AsNoTracking().SingleAsync(x => x.Id == attempt.Id);
-        Assert.Equal(PlanningAttemptStatuses.Failed, ended.Status);
-        Assert.Equal(PlanningFailureCodes.ConsentRequired, ended.FailureCode);
-        Assert.Empty(provider.Calls);
+        Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().DomainEvents
+            .AnyAsync(x => x.UserId == session.UserId && x.EventType == AccountEventTypes.AiConsentChanged,
+                TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task Without_a_model_backed_generator_no_consent_is_asked_and_the_notice_states_the_configuration()
+    public async Task A_consent_decision_recorded_before_the_step_was_retired_stays_history_and_is_erased_with_the_account()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var session = await CreateSessionAsync();
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var now = factory.Clock.GetUtcNow();
+        // Recorded the way the Step 11 consent action recorded it.
+        var payload = JsonSerializer.Serialize(new { granted = true, provider = "deepseek", noticeVersion = "2026-10-09.1" });
+        var result = await scope.ServiceProvider.GetRequiredService<CommandExecutionService>().ExecuteAsync(
+            new CommandExecutionRequest(session.UserId, "consent-history", "SET_AI_CONSENT",
+                CommandExecutionRequest.HashCanonicalRequest(System.Text.Encoding.UTF8.GetBytes(payload)),
+                now.AddHours(24), Guid.NewGuid().ToString("N")),
+            (_, owner, _) => Task.FromResult(new CommandMutation("User", owner, 1, AccountEventTypes.AiConsentChanged, 1,
+                payload, now)), cancellationToken);
+        Assert.Equal("SUCCEEDED", result.Status);
+        var decision = await db.DomainEvents.AsNoTracking().SingleAsync(x =>
+            x.UserId == session.UserId && x.EventType == AccountEventTypes.AiConsentChanged, cancellationToken);
+        Assert.Equal("R1", decision.RetentionClass);
+
+        // Erasure leaves the decision as a fact without the account: not as user, not as aggregate.
+        var erased = await scope.ServiceProvider.GetRequiredService<UserErasureService>()
+            .EraseAsync(session.UserId, "test", "TEST_CLEANUP", cancellationToken);
+        Assert.False(await db.DomainEvents.AnyAsync(x =>
+            x.UserId == session.UserId || x.AggregateId == session.UserId, cancellationToken));
+        Assert.Equal(1, await db.DomainEvents.CountAsync(x => x.UserId == erased!.TombstoneUserId &&
+            x.AggregateId == erased.TombstoneUserId && x.EventType == AccountEventTypes.AiConsentChanged, cancellationToken));
+    }
+
+    [Fact]
+    public async Task Without_a_model_backed_generator_the_notice_says_no_text_reaches_a_model()
     {
         using var host = factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, configuration) =>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -164,20 +116,13 @@ public sealed class PilotReadinessTests(PostgresWebApplicationFactory factory)
             })));
         var session = await CreateSessionAsync();
         using var client = Client(session.Token, host);
-        var me = (await client.GetFromJsonAsync<CurrentUserDto>("/api/v1/users/me"))!;
-        Assert.False(me.AiConsentRequired);
-        Assert.True(me.AiConsentGranted);
-        var needless = await SendAsync(client, HttpMethod.Put, "/api/v1/users/me/ai-consent",
-            new { granted = true, noticeVersion = AiConsentPolicy.NoticeVersion }, "consent-needless");
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, needless.StatusCode);
-        Assert.Equal("AI_CONSENT_NOT_REQUIRED", await ProblemCodeAsync(needless));
-        Assert.Equal(HttpStatusCode.Accepted, (await StartAsync(client, "no-consent-needed")).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await StartAsync(client, "sample-generator")).StatusCode);
 
         // The notice is readable before signing in and repeats what the system is configured to do.
         using var anonymous = host.CreateClient(new WebApplicationFactoryClientOptions
             { AllowAutoRedirect = false, BaseAddress = new Uri("http://localhost") });
         var notice = (await anonymous.GetFromJsonAsync<PilotNoticeDto>("/api/v1/pilot/notice"))!;
-        Assert.Equal(new PilotNoticeDto(AiConsentPolicy.NoticeVersion, null, 120, 30, 90, 30, "support@example.test",
+        Assert.Equal(new PilotNoticeDto(PrivacyNotice.Version, false, 120, 30, 90, 30, "support@example.test",
             PilotInstruments.Version), notice);
     }
 
@@ -428,8 +373,7 @@ public sealed class PilotReadinessTests(PostgresWebApplicationFactory factory)
                     ["Ai:Planning:Provider"] = "scripted",
                     ["Ai:Providers:scripted:BaseUrl"] = "https://provider.test",
                     ["Ai:Providers:scripted:ApiKey"] = "test-key",
-                    ["Ai:Providers:scripted:Model"] = "test-model",
-                    ["Ai:Providers:scripted:DisplayName"] = "Scripted Provider"
+                    ["Ai:Providers:scripted:Model"] = "test-model"
                 }));
             builder.ConfigureTestServices(services =>
             {

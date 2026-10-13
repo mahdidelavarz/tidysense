@@ -28,7 +28,7 @@ const sample: Array<{ entity: EntityKind; title?: string; meta?: string; tasks?:
 
 /**
  * First sign-in: one question with two ways to answer it. The written
- * intention is handed to Planning, which owns consent, the draft and its
+ * intention is handed to Planning, which owns the draft and its
  * confirmation; the manual choices open the shell's ordinary create flow.
  */
 function FirstEntry() {
