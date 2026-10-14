@@ -2,29 +2,32 @@ import { CalendarDays, Plus, Sun } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatLongDate, formatNumber } from '../../../shared/lib/date'
 import { showToast, useUiStore } from '../../../shared/lib/ui-store'
+import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog'
 import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
-import { AccountButton } from '../../shell/components/AccountButton'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { TodayReconcileEntry } from '../../reconcile/components/TodayReconcileEntry'
-import { useCompleteOccurrence, useCorrectOccurrence } from '../../routines/hooks/routine-hooks'
+import { useCompleteOccurrence, useCorrectOccurrence, useRoutineWeek } from '../../routines/hooks/routine-hooks'
 import type { RoutineOccurrenceDto } from '../../routines/types/routine.types'
+import { AccountButton } from '../../shell/components/AccountButton'
 import { TaskCarrySheet } from '../../tasks/components/TaskCarrySheet'
-import { useCarryTask, useCompleteTask, useTaskOptions, useTaskParentTitle } from '../../tasks/hooks/task-hooks'
+import { useCarryTask, useCompleteTask, useDropTask, useTaskOptions, useTaskParentTitle } from '../../tasks/hooks/task-hooks'
 import type { TaskDto } from '../../tasks/types/task.types'
 import { useToday } from '../hooks/today-hooks'
 import { DayStrip } from './DayStrip'
-import { SkyHeader } from './SkyHeader'
+import { TodayHero } from './TodayHero'
 import { TodayRoutineGroup } from './TodayRoutineGroup'
 import { TodayTaskCard } from './TodayTaskCard'
 
 /**
- * Today page: only what there is to do. The local date's Tasks (ready, then
- * waiting) and its Routine occurrences, each completed with one press. The
- * day strip can look ahead at what is planned for a later day.
+ * Today page: only what there is to do. The local date's Tasks as a timeline
+ * (ready, then waiting, then those already done today) and its Routines, each
+ * completed with one press. The day wheel can look ahead at what is planned
+ * for a later day.
  */
 export function TodayView() {
   const today = useToday()
+  const week = useRoutineWeek()
   const complete = useCompleteTask()
   const completeOccurrence = useCompleteOccurrence()
   const correctOccurrence = useCorrectOccurrence()
@@ -33,6 +36,7 @@ export function TodayView() {
   // Null follows the server's local date; a later day is a look ahead.
   const [chosenDay, setChosenDay] = useState<string | null>(null)
   const [carrying, setCarrying] = useState<TaskDto | null>(null)
+  const [dropping, setDropping] = useState<TaskDto | null>(null)
 
   if (today.isPending) {
     return <div className="page"><PageHeader title="امروز" /><LoadingState text="در حال آماده‌سازی امروز…" /></div>
@@ -46,101 +50,93 @@ export function TodayView() {
     )
   }
 
-  const { localDate, tasks, routineOccurrences } = today.data
+  const { localDate, tasks, completedTasks, routineOccurrences } = today.data
   const selected = chosenDay ?? localDate
-  const ready = tasks.filter(task => !task.isBlocked)
-  const waiting = tasks.filter(task => task.isBlocked)
+  const ordered = [...tasks.filter(task => !task.isBlocked), ...tasks.filter(task => task.isBlocked), ...completedTasks]
   const routines = groupByRoutine(routineOccurrences)
   const busyOccurrenceId = completeOccurrence.isPending
     ? completeOccurrence.variables?.occurrenceId
     : correctOccurrence.isPending ? correctOccurrence.variables?.occurrenceId : undefined
 
-  const renderTask = (task: TaskDto) => (
-    <li key={task.id}>
-      <TodayTaskCard
-        task={task}
-        parentTitle={parentTitle(task)}
-        completing={complete.isPending && complete.variables?.taskId === task.id}
-        onCarry={() => setCarrying(task)}
-        onComplete={() => complete.mutate(
-          { taskId: task.id, expectedVersion: Number(task.version), completedForLocalDate: localDate },
-          { onSuccess: () => showToast('کار انجام شد.') },
-        )}
-      />
-    </li>
-  )
-
   return (
     <div className="page page-sky">
-      <SkyHeader
-        start={<AccountButton />}
-        routines={routineOccurrences}
-        dateLine={(
-          <time dateTime={localDate}>{formatLongDate(localDate)}</time>
+      <TodayHero
+        dateLine={<time dateTime={localDate}>{formatLongDate(localDate)}</time>}
+        end={(
+          <>
+            <button className="hero-action" type="button" onClick={() => openCreate('task')}>
+              <Plus size={20} aria-hidden="true" />
+              افزودن کار
+            </button>
+            <AccountButton />
+          </>
         )}
-        action={(
-          <button className="sky-action" type="button" onClick={() => openCreate('task')}>
-            <Plus size={20} aria-hidden="true" />
-            افزودن کار
-          </button>
-        )}
-      />
-
-      <div className="mt-2" />
+      >
+        <TodayReconcileEntry />
+      </TodayHero>
 
       <DayStrip today={localDate} selected={selected} onSelect={day => setChosenDay(day === localDate ? null : day)} />
 
-      <TodayReconcileEntry />
-
       {selected !== localDate ? (
-        <PlannedDay date={selected} parentTitle={parentTitle} onCarry={setCarrying} />
+        <PlannedDay date={selected} today={localDate} parentTitle={parentTitle} onCarry={setCarrying} onDrop={setDropping} />
       ) : (
         <>
           <div className="mb-4">
             <FormError error={complete.error ?? completeOccurrence.error ?? correctOccurrence.error} />
           </div>
 
-          {tasks.length === 0 && routines.length === 0 ? (
+          {ordered.length === 0 && routines.length === 0 ? (
             <EmptyState
               icon={Sun}
               title="برای امروز کاری نمانده است."
               description="کارهایی که برای تاریخ امروز برنامه‌ریزی شوند و روتین‌های امروز اینجا دیده می‌شوند."
             />
           ) : (
-            <div className="space-y-8">
-              {ready.length > 0 && (
-                <section aria-labelledby="today-ready">
-                  <SectionTitle id="today-ready" count={ready.length}>آماده انجام</SectionTitle>
-                  <ul className="group-card">{ready.map(renderTask)}</ul>
-                </section>
-              )}
-              {waiting.length > 0 && (
-                <section aria-labelledby="today-waiting">
-                  <SectionTitle id="today-waiting" count={waiting.length}>در انتظار کارهای پیشین</SectionTitle>
-                  <ul className="group-card">{waiting.map(renderTask)}</ul>
+            <div className="space-y-7">
+              {ordered.length > 0 && (
+                <section aria-labelledby="today-tasks">
+                  <ListHeading id="today-tasks" count={tasks.length}>کارهای امروز</ListHeading>
+                  <ol className="timeline">
+                    {ordered.map(task => (
+                      <TodayTaskCard
+                        key={task.id}
+                        task={task}
+                        today={localDate}
+                        parentTitle={parentTitle(task)}
+                        completing={complete.isPending && complete.variables?.taskId === task.id}
+                        onCarry={() => setCarrying(task)}
+                        onDrop={() => setDropping(task)}
+                        onComplete={() => complete.mutate(
+                          { taskId: task.id, expectedVersion: Number(task.version), completedForLocalDate: localDate },
+                          { onSuccess: () => showToast('کار انجام شد.') },
+                        )}
+                      />
+                    ))}
+                  </ol>
                 </section>
               )}
               {routines.length > 0 && (
                 <section aria-labelledby="today-routines">
-                  <SectionTitle id="today-routines" count={routines.length}>روتین‌های امروز</SectionTitle>
-                  <ul className="group-card">
+                  <ListHeading id="today-routines" count={routines.length}>روتین‌های امروز</ListHeading>
+                  <ol className="timeline">
                     {routines.map(group => (
-                      <li key={group[0].routineId}>
-                        <TodayRoutineGroup
-                          occurrences={group}
-                          busyId={busyOccurrenceId}
-                          onComplete={occurrence => completeOccurrence.mutate(
-                            { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version) },
-                            { onSuccess: () => showToast('نوبت روتین انجام شد.') },
-                          )}
-                          onCorrect={occurrence => correctOccurrence.mutate(
-                            { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version), targetStatus: 'DONE' },
-                            { onSuccess: () => showToast('سابقه اصلاح شد.') },
-                          )}
-                        />
-                      </li>
+                      <TodayRoutineGroup
+                        key={group[0].routineId}
+                        occurrences={group}
+                        week={week.data?.routines.find(item => item.routineId === group[0].routineId)}
+                        today={localDate}
+                        busyId={busyOccurrenceId}
+                        onComplete={occurrence => completeOccurrence.mutate(
+                          { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version) },
+                          { onSuccess: () => showToast('نوبت روتین انجام شد.') },
+                        )}
+                        onCorrect={occurrence => correctOccurrence.mutate(
+                          { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version), targetStatus: 'DONE' },
+                          { onSuccess: () => showToast('سابقه اصلاح شد.') },
+                        )}
+                      />
                     ))}
-                  </ul>
+                  </ol>
                 </section>
               )}
             </div>
@@ -149,18 +145,22 @@ export function TodayView() {
       )}
 
       {carrying && <TodayCarrySheet task={carrying} onClose={() => setCarrying(null)} />}
+      {dropping && <TodayDropDialog task={dropping} onClose={() => setDropping(null)} />}
     </div>
   )
 }
 
 /**
- * What is already planned for a later day: its active Tasks, read-only.
- * Routine occurrences exist only from their own day on, so none are listed.
+ * What is already planned for a later day: its active Tasks, which can be
+ * moved or dropped but not completed ahead of their day. Routine occurrences
+ * exist only from their own day on, so none are listed.
  */
-function PlannedDay({ date, parentTitle, onCarry }: {
+function PlannedDay({ date, today, parentTitle, onCarry, onDrop }: {
   date: string
+  today: string
   parentTitle: (task: TaskDto) => string | undefined
   onCarry: (task: TaskDto) => void
+  onDrop: (task: TaskDto) => void
 }) {
   const options = useTaskOptions()
   if (options.isPending) return <LoadingState text="در حال دریافت کارهای این روز…" />
@@ -178,25 +178,30 @@ function PlannedDay({ date, parentTitle, onCarry }: {
   }
   return (
     <section aria-labelledby="today-planned">
-      <SectionTitle id="today-planned" count={planned.length}>برنامه {formatLongDate(date)}</SectionTitle>
-      <ul className="group-card">
+      <ListHeading id="today-planned" count={planned.length}>برنامه {formatLongDate(date)}</ListHeading>
+      <ol className="timeline">
         {planned.map(task => (
-          <li key={task.id}>
-            <TodayTaskCard task={task} parentTitle={parentTitle(task)} onCarry={() => onCarry(task)} />
-          </li>
+          <TodayTaskCard
+            key={task.id}
+            task={task}
+            today={today}
+            parentTitle={parentTitle(task)}
+            onCarry={() => onCarry(task)}
+            onDrop={() => onDrop(task)}
+          />
         ))}
-      </ul>
-      <p className="mt-4 text-xs text-text-secondary">روتین‌های این روز در همان روز اضافه می‌شوند.</p>
+      </ol>
+      <p className="mt-4 px-2 text-xs text-text-secondary">روتین‌های این روز در همان روز اضافه می‌شوند.</p>
     </section>
   )
 }
 
-/** A Today list heading with its item count beside it, as in «کارها ۳». */
-function SectionTitle({ id, count, children }: { id: string; count: number; children: React.ReactNode }) {
+/** A Today list heading with its item count beside it, as in «کارهای امروز ۳». */
+function ListHeading({ id, count, children }: { id: string; count: number; children: React.ReactNode }) {
   return (
-    <h2 className="mb-2 flex items-baseline gap-1.5 px-2">
-      <span className="section-title" id={id}>{children}</span>
-      <span className="text-xs font-semibold text-text-secondary" aria-hidden="true">{formatNumber(count)}</span>
+    <h2 className="list-heading">
+      <span id={id}>{children}</span>
+      <span className="text-xs" aria-hidden="true">{formatNumber(count)}</span>
     </h2>
   )
 }
@@ -218,6 +223,39 @@ function TodayCarrySheet({ task, onClose }: { task: TaskDto; onClose: () => void
         },
       })}
     />
+  )
+}
+
+/** Drops one Task after an explicit confirmation; it can be restored from the Task. */
+function TodayDropDialog({ task, onClose }: { task: TaskDto; onClose: () => void }) {
+  const drop = useDropTask(task.id)
+  return (
+    <ConfirmationDialog
+      title="کنار گذاشتن کار"
+      description={`«${task.title}» از فهرست کارهای فعال و امروز خارج می‌شود و بعداً می‌توانید آن را بازگردانید.`}
+      onClose={onClose}
+      pending={drop.isPending}
+      actions={(
+        <>
+          <button className="secondary-button" type="button" disabled={drop.isPending} onClick={onClose}>انصراف</button>
+          <button
+            className="danger-button"
+            type="button"
+            disabled={drop.isPending}
+            onClick={() => drop.mutate(Number(task.version), {
+              onSuccess: () => {
+                onClose()
+                showToast('کار کنار گذاشته شد.')
+              },
+            })}
+          >
+            {drop.isPending ? 'در حال ثبت…' : 'تأیید کنار گذاشتن'}
+          </button>
+        </>
+      )}
+    >
+      <FormError error={drop.error} />
+    </ConfirmationDialog>
   )
 }
 

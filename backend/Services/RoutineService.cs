@@ -260,6 +260,48 @@ public sealed class RoutineService(
             rows.Select(x => ToDto(x, routine.Title)).ToArray(), new PageInfoDto(next, hasMore));
     }
 
+    /// <summary>
+    /// This local week (Saturday to Friday) for every active Routine. Past days and today read the
+    /// occurrences that exist; later days apply the schedule, which is what will be created.
+    /// </summary>
+    public async Task<RoutineWeeksDto> WeekAsync(CancellationToken cancellationToken)
+    {
+        var localNow = dates.LocalNow;
+        await EvaluateAsync(localNow, cancellationToken);
+        var today = localNow.Date;
+        // DayOfWeek counts from Sunday = 0; Saturday starts the Persian week.
+        var start = today.AddDays(-(((int)today.DayOfWeek + 1) % 7));
+        var end = start.AddDays(6);
+        var routines = await db.Routines.AsNoTracking()
+            .Where(x => x.UserId == currentUser.UserId && x.Status == RoutineStatuses.Active)
+            .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(cancellationToken);
+        var ids = routines.Select(x => x.Id).ToArray();
+        var counts = (await db.RoutineOccurrences.AsNoTracking()
+                .Where(x => ids.Contains(x.RoutineId) && x.ScheduledLocalDate >= start && x.ScheduledLocalDate <= today)
+                .GroupBy(x => new { x.RoutineId, x.ScheduledLocalDate })
+                .Select(x => new { x.Key.RoutineId, x.Key.ScheduledLocalDate, Scheduled = x.Count(),
+                    Done = x.Count(o => o.Status == OccurrenceStatuses.Done) })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(x => (x.RoutineId, x.ScheduledLocalDate));
+        return new RoutineWeeksDto(start, today, routines.Select(routine =>
+        {
+            var recurrence = RoutineSchedule.Parse(routine.RecurrenceDefinition);
+            var slots = RoutineSchedule.SlotsFor(routine.TimesOfDay).Count;
+            return new RoutineWeekDto(routine.Id, ToRecurrenceDto(recurrence), slots, Enumerable.Range(0, 7).Select(offset =>
+            {
+                var date = start.AddDays(offset);
+                if (date <= today)
+                    return counts.TryGetValue((routine.Id, date), out var day)
+                        ? new RoutineWeekDayDto(date, day.Scheduled, day.Done)
+                        : new RoutineWeekDayDto(date, 0, 0);
+                var scheduled = RoutineSchedule.OccursOn(recurrence, date) &&
+                    RoutineSchedule.IsEligible(routine.EffectiveFromLocalDate, routine.EffectiveUntilLocalDate, date)
+                    ? slots : 0;
+                return new RoutineWeekDayDto(date, scheduled, 0);
+            }).ToArray());
+        }).ToArray());
+    }
+
     /// <summary>Every occurrence scheduled for the local date, resolved or not, grouped by Routine.</summary>
     public async Task<IReadOnlyList<RoutineOccurrenceDto>> TodayOccurrencesAsync(DateOnly today,
         CancellationToken cancellationToken)
@@ -517,13 +559,14 @@ public sealed class RoutineService(
             return new RoutineDto(value.Id, value.GoalId, value.ProjectId, value.ContinuationOfRoutineId,
                 continuedBy.TryGetValue(value.Id, out var next) ? next : null, value.Title,
                 value.Description, value.Status,
-                new RecurrenceDto(recurrence.Type,
-                    recurrence.DaysOfWeek.Count > 0 ? recurrence.DaysOfWeek : null, recurrence.DayOfMonth),
-                value.TimesOfDay, value.RecurrenceTimezone, value.EffectiveFromLocalDate,
+                ToRecurrenceDto(recurrence), value.TimesOfDay, value.RecurrenceTimezone, value.EffectiveFromLocalDate,
                 value.EffectiveUntilLocalDate, value.Source, value.Version, value.CreatedAt,
                 value.UpdatedAt, value.StoppedAt);
         }).ToArray();
     }
+
+    private static RecurrenceDto ToRecurrenceDto(RoutineRecurrence recurrence) =>
+        new(recurrence.Type, recurrence.DaysOfWeek.Count > 0 ? recurrence.DaysOfWeek : null, recurrence.DayOfMonth);
 
     private static RoutineOccurrenceDto ToDto(RoutineOccurrence value, string routineTitle) =>
         new(value.Id, value.RoutineId, routineTitle, value.ScheduledLocalDate, value.ScheduledLocalTime,

@@ -8,3 +8,6 @@ export type UpdateRoutineRequest = components['schemas']['UpdateRoutineRequest']
 export type RoutineOccurrenceDto = components['schemas']['RoutineOccurrenceDto']
 export type RoutineOccurrencePage = components['schemas']['CursorPageDtoOfRoutineOccurrenceDto']
 export type OccurrenceCorrection = 'DONE' | 'MISSED'
+export type RoutineWeeksDto = components['schemas']['RoutineWeeksDto']
+export type RoutineWeekDto = components['schemas']['RoutineWeekDto']
+export type RoutineWeekDayDto = components['schemas']['RoutineWeekDayDto']

@@ -32,3 +32,15 @@ public sealed record RoutineOccurrenceDto(
     string Status,
     DateTimeOffset? ResolvedAt,
     long Version);
+
+/// <summary>
+/// The local week (Saturday to Friday) of each active Routine: per day, how many slots are
+/// scheduled and how many are done. Days up to today count the occurrences that exist; later
+/// days count the slots the schedule will create. A read model only.
+/// </summary>
+public sealed record RoutineWeeksDto(DateOnly WeekStart, DateOnly Today, IReadOnlyList<RoutineWeekDto> Routines);
+
+public sealed record RoutineWeekDto(Guid RoutineId, RecurrenceDto Recurrence, int SlotsPerDay,
+    IReadOnlyList<RoutineWeekDayDto> Days);
+
+public sealed record RoutineWeekDayDto(DateOnly LocalDate, int Scheduled, int Done);

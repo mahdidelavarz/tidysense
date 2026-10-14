@@ -94,7 +94,9 @@ test('manual task moves through Today to completion', async ({ page }) => {
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-before.png', fullPage: true })
   await page.getByRole('button', { name: `تکمیل کار: ${title}` }).click()
-  await expect(page.getByText('برای امروز کاری نمانده است.')).toBeVisible()
+  // Done today, it stays on the timeline as a finished row with nothing left to press.
+  await expect(page.getByRole('button', { name: `تکمیل کار: ${title}` })).toBeHidden()
+  await expect(page.getByRole('listitem').filter({ hasText: title }).getByRole('img', { name: 'انجام شد' })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-after.png', fullPage: true })
 
   // The list defaults to active Tasks; a completed one is under "all".

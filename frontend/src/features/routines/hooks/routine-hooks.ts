@@ -7,6 +7,7 @@ import {
   correctOccurrence,
   createRoutine,
   getRoutine,
+  getRoutineWeek,
   listRoutineOccurrences,
   listRoutines,
   stopRoutine,
@@ -18,6 +19,8 @@ import type { CreateRoutineRequest, OccurrenceCorrection, RoutineDto, UpdateRout
 export const routineKeys = {
   all: ['routines'] as const,
   list: ['routines', 'list'] as const,
+  /** This local week of every active Routine. Under `all`, so every Routine write refreshes it. */
+  week: ['routines', 'week'] as const,
   detail: (id: string) => ['routines', 'detail', id] as const,
   occurrences: (id: string) => ['routines', 'occurrences', id] as const,
 }
@@ -30,6 +33,11 @@ export function useRoutines(status?: string) {
     queryFn: ({ pageParam }) => listRoutines(status, pageParam),
     getNextPageParam: page => page.page.nextCursor ?? undefined,
   })
+}
+
+/** This local week of every active Routine, for the week strips on Today and the Routines page. */
+export function useRoutineWeek() {
+  return useQuery({ queryKey: routineKeys.week, queryFn: getRoutineWeek })
 }
 
 /** Fetches one Routine for the Routine detail page. */

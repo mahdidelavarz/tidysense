@@ -102,6 +102,7 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
         var unlocked = Assert.Single(refreshed!.Tasks);
         Assert.Equal(second.Id, unlocked.Id);
         Assert.False(unlocked.IsBlocked);
+        Assert.Equal(first.Id, Assert.Single(refreshed.CompletedTasks).Id);
 
         await using var verifyScope = factory.Services.CreateAsyncScope();
         var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();

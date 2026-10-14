@@ -352,7 +352,8 @@ select:not(:disabled),
       min-height: calc(100dvh - 2.5rem);
       padding-inline-start: 2.5rem;
       padding-bottom: 2.5rem;
-      background: color-mix(in srgb, var(--color-surface) 55%, var(--color-canvas));
+      --page-bg: color-mix(in srgb, var(--color-surface) 55%, var(--color-canvas));
+      background: var(--page-bg);
     }
 
     .rail {
@@ -466,15 +467,6 @@ select:not(:disabled),
   /* Surfaces lift by shadow (day) or by getting lighter (night), not by outlines. */
   .card {
     @apply rounded-[1.375rem] bg-surface p-5 shadow-sm sm:p-6;
-  }
-
-  /* A grouped list: one surface, rows divided by hairlines. */
-  .group-card {
-    @apply rounded-[1.375rem] bg-surface px-4 shadow-sm;
-  }
-
-  .group-card > * + * {
-    @apply border-t border-border-subtle;
   }
 
   .notice {
@@ -825,36 +817,6 @@ select:not(:disabled),
     @apply animate-pulse rounded-xl bg-surface-sunken;
   }
 
-  /*
-   * Completion: a 44px target around a 28px ring. Hovering warms it; a
-   * completed item is the sun-filled ring (.check-done).
-   */
-  .check-button {
-    @apply relative flex size-11 shrink-0 items-center justify-center rounded-full text-transparent transition duration-200 ease-standard active:scale-95 disabled:cursor-not-allowed disabled:opacity-40;
-  }
-
-  .check-button::before {
-    @apply absolute size-7 rounded-full border-2 border-text-tertiary transition duration-200 ease-standard;
-    content: "";
-  }
-
-  .check-button > * {
-    @apply relative;
-  }
-
-  .check-button:not(:disabled):hover {
-    @apply text-sun-strong;
-  }
-
-  .check-button:not(:disabled):hover::before {
-    @apply border-sun bg-sun-tint;
-  }
-
-  .check-done {
-    @apply flex size-7 shrink-0 items-center justify-center rounded-full text-on-sun;
-    background: linear-gradient(0deg, var(--color-sun), color-mix(in srgb, var(--color-sun) 55%, var(--color-surface)));
-  }
-
   /* ---------- Lists ---------- */
   /* A whole-row link in a list of Tasks or Routines. */
   .list-row {
@@ -1008,223 +970,425 @@ select:not(:disabled),
   }
 
   /* ---------- Today ---------- */
-  /* A row of day tiles: it scrolls sideways on a phone and spreads evenly once there is room. */
-  .day-strip {
-    @apply -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0;
-    scrollbar-width: none;
+  /*
+   * The hero: a photograph, 300px tall at the top of the page. Scrolling down
+   * it sticks with only its lower 150px showing and slides the title into
+   * that band; scrolling up shows all of it again. Sticking with a negative
+   * top keeps the page from jumping, because the header's height never
+   * changes. Text on it is white over a dark veil, in both themes.
+   */
+  .hero {
+    @apply sticky z-20 -mx-4 overflow-hidden text-white sm:-mx-6 lg:mx-0 lg:rounded-[1.75rem];
+    --hero-band: 9.375rem;
+    top: 0;
+    height: calc(18.75rem + env(safe-area-inset-top));
+    margin-top: -1rem;
+    background: linear-gradient(160deg, #3e5f6b 0%, #6f93a0 45%, #b9cfd4 100%);
+    transition: top 320ms var(--ease-standard);
   }
 
-  .day-tile {
-    @apply flex h-18 min-w-15 flex-1 flex-col items-center justify-center gap-1 rounded-[1.125rem] border border-transparent bg-surface text-text-secondary shadow-sm transition duration-200 ease-standard hover:text-text-primary active:scale-[0.97];
+  .hero[data-collapsed="true"] {
+    top: calc(var(--hero-band) - 18.75rem - env(safe-area-inset-top));
   }
 
-  .day-tile[data-today="true"] {
-    @apply font-bold text-sun-strong;
+  @media (min-width: 64rem) {
+    .hero {
+      margin-top: 0;
+    }
+
+    .hero[data-collapsed="false"] {
+      top: 0.75rem;
+    }
   }
 
-  .day-tile[aria-pressed="true"] {
-    @apply border-transparent bg-accent text-on-accent shadow-md;
+  .hero-photo {
+    @apply absolute inset-0 size-full object-cover;
+    object-position: 50% 30%;
+  }
+
+  /* Legibility: darker at the top behind the title, then the page's own canvas at the foot. */
+  .hero-veil {
+    @apply pointer-events-none absolute inset-0;
+    background:
+      linear-gradient(180deg, rgb(0 0 0 / 0.34) 0%, rgb(0 0 0 / 0.06) 46%, rgb(0 0 0 / 0.1) 72%, transparent calc(100% - 3.5rem), var(--page-bg, var(--color-canvas)) 100%);
+  }
+
+  [data-theme="dark"] .hero-veil {
+    background:
+      linear-gradient(0deg, rgb(15 23 32 / 0.35), rgb(15 23 32 / 0.35)),
+      linear-gradient(180deg, rgb(0 0 0 / 0.34) 0%, rgb(0 0 0 / 0.06) 46%, rgb(0 0 0 / 0.1) 72%, transparent calc(100% - 3.5rem), var(--page-bg, var(--color-canvas)) 100%);
+  }
+
+  .hero-inner {
+    @apply relative flex items-center justify-between gap-3 px-4 pt-5 sm:px-6;
+    padding-top: calc(1.25rem + env(safe-area-inset-top));
+    transition: transform 320ms var(--ease-standard);
+  }
+
+  .hero[data-collapsed="true"] .hero-inner {
+    transform: translateY(calc(18.75rem - var(--hero-band)));
+  }
+
+  .hero-title {
+    @apply origin-right font-display text-[2.25rem] font-bold leading-[1.3] transition-transform duration-300 ease-standard;
+    text-shadow: 0 2px 14px rgb(0 0 0 / 0.25);
+  }
+
+  .hero[data-collapsed="true"] .hero-title {
+    transform: scale(0.8);
+  }
+
+  .hero-date {
+    @apply text-xs font-semibold leading-5 text-white/90;
+    text-shadow: 0 1px 8px rgb(0 0 0 / 0.25);
+  }
+
+  /* Controls on the photograph are frosted glass. */
+  .hero .account-button,
+  .hero-action {
+    @apply border border-white/40 bg-white/20 text-white shadow-none backdrop-blur-sm hover:bg-white/30;
+  }
+
+  .hero-action {
+    @apply hidden min-h-11 shrink-0 items-center gap-2 rounded-[0.875rem] px-3.5 text-sm font-extrabold transition duration-200 active:scale-[0.98] lg:inline-flex;
+  }
+
+  /* What sits at the foot of the photograph (the Reconcile offer); it steps aside while collapsed. */
+  .hero-foot {
+    @apply absolute inset-x-4 bottom-3.5 transition duration-300 ease-standard sm:inset-x-6;
+  }
+
+  .hero[data-collapsed="true"] .hero-foot {
+    @apply pointer-events-none translate-y-3 opacity-0;
+  }
+
+  /* A frosted card on the photograph. */
+  .glass-card {
+    @apply relative flex items-center gap-3 rounded-[1.375rem] border border-white/38 p-3 text-white;
+    background: rgb(255 255 255 / 0.16);
+    backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.45);
+  }
+
+  .glass-chip {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-white/18 px-2 py-0.5 text-[0.6875rem] font-bold leading-5;
+  }
+
+  .glass-chip[data-tone="warm"] {
+    background: rgb(232 181 103 / 0.32);
+    color: #ffe6bd;
+  }
+
+  .glass-button {
+    @apply flex size-11 shrink-0 items-center justify-center rounded-[0.875rem] bg-white/22 text-white transition duration-200 hover:bg-white/32 active:scale-95;
+  }
+
+  /* Closing the card: a small round mark on its corner with a full-size target. */
+  .glass-close {
+    @apply absolute -top-2.5 -left-2.5 flex size-7 items-center justify-center rounded-full border border-white/40 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45;
+  }
+
+  .glass-close::before {
+    @apply absolute -inset-2;
+    content: "";
   }
 
   /*
-   * One row of a Today list. Rows share one surface (.group-card) and are
-   * divided by hairlines. On a phone the face slides left over the action
-   * tray; from tablet width the tray opens under it.
+   * The days as a wheel: the chosen day sits in the middle and the days on
+   * either side shrink and fade with their distance from it. Days before
+   * today are only context; they cannot be chosen.
    */
-  .today-card {
-    @apply relative overflow-hidden;
+  .day-wheel {
+    @apply relative -mx-4 mt-2 mb-5 h-21 overflow-hidden sm:-mx-6 lg:mx-0;
+    mask-image: linear-gradient(90deg, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
   }
 
-  .today-card-task {
-    --tone: var(--color-sun);
+  .day-tile {
+    @apply absolute top-1.5 flex h-17 w-13.5 flex-col items-center justify-center gap-px rounded-[1.25rem] bg-surface p-0 text-text-secondary shadow-sm;
+    left: calc(50% - 1.6875rem);
+    transform: translateX(var(--x)) scale(var(--s));
+    opacity: var(--o);
+    transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1), opacity 450ms ease, background-color 300ms ease, color 300ms ease, box-shadow 300ms ease;
   }
 
-  .today-card-routine {
-    --tone: var(--color-entity-routine);
+  .day-tile[data-past="true"] {
+    @apply text-text-tertiary;
   }
 
-  .today-card-face {
-    @apply relative z-1 flex items-start gap-2 bg-surface py-2.5 transition-transform duration-300 ease-standard;
+  .day-tile[aria-pressed="true"] {
+    @apply bg-accent text-on-accent;
+    box-shadow: 0 14px 28px -12px rgb(28 46 52 / 0.55), 0 0 0 4px color-mix(in srgb, var(--color-accent) 12%, transparent);
+  }
+
+  .day-tile-dot {
+    @apply mt-0.75 size-1.25 rounded-full;
+  }
+
+  .day-tile[data-today="true"] .day-tile-dot {
+    @apply bg-sun;
+  }
+
+  /* A Today heading with its count beside it, as in «کارهای امروز ۳». */
+  .list-heading {
+    @apply mb-2 flex items-baseline gap-1.5 px-2 text-sm font-extrabold text-text-secondary;
+  }
+
+  /*
+   * A timeline: each row has a node on the start side (the completion ring,
+   * a lock, a Routine's planet) joined to the next row's by a line, and a
+   * card beside it.
+   */
+  /* Clipped sideways so a card slid open never widens the page; shadows still show above and below. */
+  .timeline {
+    @apply flex flex-col;
+    overflow-x: clip;
+  }
+
+  .timeline-row {
+    @apply relative flex gap-2.5 pb-3 last:pb-0;
+  }
+
+  .timeline-node {
+    @apply relative flex w-7 shrink-0 justify-center;
+  }
+
+  .timeline-row:not(:last-child) > .timeline-node::after {
+    @apply absolute top-10 -bottom-3 w-0.5 rounded-full bg-border;
+    content: "";
+  }
+
+  .timeline-mark {
+    @apply relative mt-3 flex size-7 items-center justify-center rounded-full bg-canvas;
+  }
+
+  .timeline-card {
+    @apply relative min-w-0 flex-1 rounded-2xl bg-surface px-3.5 py-2.75 shadow-sm;
+  }
+
+  .timeline-card[data-state="done"] {
+    @apply opacity-62;
+  }
+
+  /* Faded content on an opaque card, so the actions behind it never show through. */
+  .timeline-card[data-state="waiting"] > * {
+    @apply opacity-75;
+  }
+
+  /* The card's title is its link; the link covers the whole card, under its own controls. */
+  .timeline-title {
+    @apply min-w-0 truncate text-[0.90625rem] font-bold leading-[1.375rem];
+  }
+
+  .timeline-card[data-state="done"] .timeline-title {
+    @apply text-text-secondary line-through decoration-text-tertiary;
+  }
+
+  .stretched-link::after {
+    @apply absolute inset-0 rounded-[inherit];
+    content: "";
+  }
+
+  .timeline-meta {
+    @apply inline-flex shrink-0 items-center gap-1 text-[0.6875rem] font-extrabold text-text-tertiary;
+  }
+
+  .timeline-meta[data-tone="caution"] {
+    @apply text-caution;
+  }
+
+  .timeline-meta[data-tone="attention"] {
+    @apply text-attention;
+  }
+
+  .timeline-parent {
+    @apply mt-0.75 inline-flex max-w-full items-center gap-1.25 text-[0.71875rem] font-bold leading-[1.125rem] text-text-secondary;
+  }
+
+  .timeline-parent.entity-ink {
+    color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
+  }
+
+  /* Completion: a 44px target around a 24px ring in the Task colour. */
+  .ring-button {
+    @apply relative -m-2 flex size-11 items-center justify-center rounded-full transition duration-200 ease-standard active:scale-90 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .ring-button > span {
+    @apply size-6 rounded-full border-2 border-entity-task bg-surface transition-colors duration-200;
+  }
+
+  .ring-button:not(:disabled):hover > span {
+    background: color-mix(in srgb, var(--color-entity-task) 14%, var(--color-surface));
+  }
+
+  .ring-done {
+    @apply flex size-6 items-center justify-center rounded-full bg-entity-task text-surface;
+  }
+
+  .ring-lock {
+    @apply flex size-6 items-center justify-center rounded-full bg-surface-sunken text-text-secondary;
+  }
+
+  .ring-planned {
+    @apply size-3 rounded-full border-2 border-border bg-surface;
+  }
+
+  .ring-routine {
+    @apply flex size-7 items-center justify-center rounded-full;
+    color: color-mix(in srgb, var(--color-entity-routine) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--color-entity-routine) 12%, var(--color-surface));
+    box-shadow: inset 0 0 0 1.5px var(--color-entity-routine);
+  }
+
+  /*
+   * Swipe actions. On a phone the card slides toward the end side over a
+   * tray of actions; from tablet width the tray opens under it instead, from
+   * the card's "more" button.
+   */
+  .swipe {
+    @apply relative;
+  }
+
+  .swipe-face {
+    @apply relative z-1 transition-transform duration-300 ease-standard;
     touch-action: pan-y;
   }
 
-  .today-card[data-open="true"] .today-card-face {
-    transform: translateX(calc(var(--tray) * -1));
+  .swipe[data-open="true"] .swipe-face {
+    transform: translateX(calc(var(--tray) * -1 - 0.75rem));
   }
 
-  .today-card-more {
-    @apply -me-2 self-center max-md:sr-only;
+  .swipe-more {
+    @apply relative z-2 -my-2 -me-2 max-md:sr-only;
   }
 
-  .today-card-actions {
-    @apply absolute inset-y-0 right-0 flex bg-surface-sunken;
-    width: var(--tray);
+  .swipe-tray {
+    @apply absolute inset-0 flex rounded-2xl bg-surface-sunken p-1.5;
   }
 
-  .today-card-actions-inner {
-    @apply flex w-full items-stretch;
+  .swipe-tray-inner {
+    @apply flex w-[var(--tray)] items-stretch gap-1.5;
   }
 
-  .today-action {
-    @apply flex flex-1 flex-col items-center justify-center gap-1 text-xs font-bold text-text-secondary transition-colors duration-200 hover:text-text-primary;
+  .swipe-action {
+    @apply flex flex-1 flex-col items-center justify-center gap-1 rounded-xl text-xs font-bold transition-colors duration-200;
   }
 
-  /* The quiet facts under a row's title: its parent, a deadline, a wait. */
-  .today-badge {
-    @apply inline-flex max-w-full items-center gap-1.5 text-xs font-semibold text-text-secondary;
+  .swipe-action[data-tone="task"] {
+    color: color-mix(in srgb, var(--color-entity-task) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--color-entity-task) 14%, var(--color-surface));
   }
 
-  .routine-tile {
-    @apply flex size-10 shrink-0 items-center justify-center rounded-[0.8125rem];
-    color: var(--color-entity-routine);
-    background: color-mix(in srgb, var(--color-entity-routine) 12%, var(--color-surface));
+  .swipe-action[data-tone="danger"] {
+    @apply bg-attention-tint text-attention;
   }
 
   @media (min-width: 48rem) {
-    .today-card-face,
-    .today-card[data-open="true"] .today-card-face {
+    .swipe-face,
+    .swipe[data-open="true"] .swipe-face {
       transform: none;
     }
 
-    .today-card-actions {
+    .swipe-tray {
       position: static;
       display: grid;
       width: auto;
+      padding: 0;
       grid-template-rows: 0fr;
       background: none;
       transition: grid-template-rows 300ms var(--ease-standard);
     }
 
-    .today-card[data-open="true"] .today-card-actions {
+    .swipe[data-open="true"] .swipe-tray {
       grid-template-rows: 1fr;
     }
 
-    .today-card-actions-inner {
-      @apply min-h-0 items-center gap-2 overflow-hidden ps-13;
+    .swipe-tray-inner {
+      @apply min-h-0 w-auto items-center gap-2 overflow-hidden;
     }
 
-    .today-action {
-      @apply mb-3 min-h-10 flex-none flex-row gap-2 rounded-[0.875rem] bg-surface-sunken px-3.5 text-sm text-text-primary hover:bg-accent-tint;
-    }
-  }
-
-  /* ---------- Today's sky ---------- */
-  /*
-   * 300px tall at the top of the page. Scrolling down it sticks with only its
-   * lower 150px showing and slides its content into that band; scrolling up
-   * shows all of it again. Sticking with a negative top keeps the page from
-   * jumping, because the header's height never changes.
-   */
-  .sky {
-    @apply sticky z-20 -mx-4 overflow-hidden sm:-mx-6 lg:mx-0 lg:rounded-[1.75rem];
-    --sky-band: 9.375rem;
-    top: 0;
-    height: calc(18.75rem + env(safe-area-inset-top));
-    margin-top: -1rem;
-    background: linear-gradient(180deg, var(--sky-g0) 0%, var(--sky-g1) 42%, var(--sky-g2) 80%, var(--color-canvas) 100%);
-    transition: top 320ms var(--ease-standard);
-  }
-
-  .sky[data-collapsed="true"] {
-    top: calc(var(--sky-band) - 18.75rem - env(safe-area-inset-top));
-  }
-
-  @media (min-width: 64rem) {
-    .sky {
-      margin-top: 0;
-    }
-
-    .sky[data-collapsed="false"] {
-      top: 0.75rem;
+    .swipe-action {
+      @apply mt-2 min-h-10 flex-none flex-row gap-2 rounded-[0.875rem] px-3.5 text-sm;
     }
   }
 
-  /*
-   * The illustration palette of the sky header, one set per time of day and
-   * theme. These colours belong to the drawing only; nothing else uses them.
-   */
-  .sky[data-phase="dawn"] { --sky-g0: #c3d7dd; --sky-g1: #d8e4e5; --sky-g2: #efe3cf; --sky-sun: #f4d2a0; --sky-glow: #f7d9aa; --sky-hill-1: #c9d8db; --sky-hill-2: #dce5e1; --sky-title: #1c2e34; --sky-sub: #3f5a62; --sky-arc: rgb(28 46 52 / 0.28); --sky-stars: 0; }
-  .sky[data-phase="day"] { --sky-g0: #b4d3e0; --sky-g1: #cfe3ea; --sky-g2: #e8eeea; --sky-sun: #fbe6b4; --sky-glow: #fff3d2; --sky-hill-1: #c2d7db; --sky-hill-2: #d9e6e2; --sky-title: #163039; --sky-sub: #365864; --sky-arc: rgb(22 48 57 / 0.24); --sky-stars: 0; }
-  .sky[data-phase="dusk"] { --sky-g0: #c5bfd9; --sky-g1: #dfcbd4; --sky-g2: #f1d8c2; --sky-sun: #efb282; --sky-glow: #f4c79e; --sky-hill-1: #c8bfd0; --sky-hill-2: #e0d5d7; --sky-title: #2c2540; --sky-sub: #54486a; --sky-arc: rgb(44 37 64 / 0.26); --sky-stars: 0; }
-  .sky[data-phase="night"] { --sky-g0: #26324a; --sky-g1: #3b4964; --sky-g2: #9aa2af; --sky-sun: #f3ebd3; --sky-glow: #e9e1c6; --sky-hill-1: #46546e; --sky-hill-2: #7f8a9b; --sky-title: #f4f1ea; --sky-sub: #d3d9e4; --sky-arc: rgb(244 241 234 / 0.3); --sky-stars: 1; }
-  [data-theme="dark"] .sky[data-phase="dawn"] { --sky-g0: #0d1a26; --sky-g1: #1a3140; --sky-g2: #463a48; --sky-sun: #e9ae6e; --sky-glow: #e39a5e; --sky-hill-1: #1a2e39; --sky-hill-2: #15222d; --sky-stars: 0.25; }
-  [data-theme="dark"] .sky[data-phase="day"] { --sky-g0: #0f2538; --sky-g1: #1a3a50; --sky-g2: #243d4c; --sky-sun: #f1d9a6; --sky-glow: #e8c98a; --sky-hill-1: #19323f; --sky-hill-2: #142430; --sky-stars: 0; }
-  [data-theme="dark"] .sky[data-phase="dusk"] { --sky-g0: #1a172e; --sky-g1: #382745; --sky-g2: #5e3a44; --sky-sun: #e9946a; --sky-glow: #d9785a; --sky-hill-1: #2a2238; --sky-hill-2: #1c1c2a; --sky-stars: 0.35; }
-  [data-theme="dark"] .sky[data-phase="night"] { --sky-g0: #060b13; --sky-g1: #0d1724; --sky-g2: #15212e; --sky-sun: #ede4c8; --sky-glow: #cfc8ae; --sky-hill-1: #121c27; --sky-hill-2: #0e1720; --sky-stars: 1; }
-  [data-theme="dark"] .sky { --sky-title: #f2ede2; --sky-sub: #c4cbd6; --sky-arc: rgb(237 232 221 / 0.25); }
-
-  .sky-inner {
-    @apply relative flex h-full flex-col;
-    padding-top: env(safe-area-inset-top);
-    transition: transform 320ms var(--ease-standard);
+  /* A Routine's week: one bar per scheduled day, filled by the share of its slots done. */
+  .week-bars {
+    @apply mt-2.5 flex gap-1;
   }
 
-  .sky[data-collapsed="true"] .sky-inner {
-    transform: translateY(calc(18.75rem - var(--sky-band)));
+  .week-day {
+    @apply flex max-w-8 flex-1 flex-col items-center gap-0.75 text-[0.65625rem] leading-3 font-semibold text-text-tertiary;
   }
 
-  .sky-top {
-    @apply relative z-1 flex items-center justify-between gap-3 px-4 pt-5 sm:px-6;
+  .week-bar {
+    @apply h-1.75 w-full rounded-full;
+    background: linear-gradient(270deg, var(--color-entity-routine) var(--fill), var(--bar-rest) var(--fill));
+    --bar-rest: var(--color-border-subtle);
   }
 
-  .sky-date {
-    @apply text-[0.8125rem] font-semibold leading-5;
-    color: var(--sky-sub);
+  .week-day[data-when="past"] .week-bar {
+    --bar-rest: var(--color-surface-sunken);
+    box-shadow: inset 0 0 0 1px var(--color-border);
   }
 
-  .sky-title {
-    @apply font-display text-[2.5rem] font-bold leading-[1.3];
-    color: var(--sky-title);
+  .week-day[data-when="today"] {
+    @apply font-extrabold;
+    color: color-mix(in srgb, var(--color-entity-routine) 80%, var(--color-text-primary));
   }
 
-  .sky-action {
-    @apply inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[0.875rem] border px-3.5 text-sm font-extrabold transition duration-200 hover:bg-white/55 active:scale-[0.98];
+  .week-day[data-when="today"] .week-bar {
+    --bar-rest: color-mix(in srgb, var(--color-entity-routine) 12%, var(--color-surface));
+    box-shadow: inset 0 0 0 1.5px var(--color-entity-routine);
   }
 
-  /* Controls sitting on the sky are frosted glass, so they read on every phase. */
-  .sky .account-button,
-  .sky-action {
-    @apply border-white/70 bg-white/35 shadow-none backdrop-blur-sm;
-    color: var(--sky-title);
+  .week-day[data-when="past"][data-complete="true"] .week-bar {
+    box-shadow: none;
   }
 
-  [data-theme="dark"] .sky .account-button,
-  [data-theme="dark"] .sky-action {
-    @apply border-white/15 bg-white/8;
+  /* One slot of a Routine today: its time, with a ring to complete it or the filled ring once done. */
+  .slot-pill {
+    @apply relative z-1 inline-flex min-h-6.5 items-center gap-1.5 rounded-full py-0.75 ps-1 pe-2.5 text-[0.78125rem] font-bold;
+    box-shadow: inset 0 0 0 1.5px var(--color-border);
   }
 
-  .sky-path {
-    @apply relative mx-auto -mt-3 block h-auto w-full max-w-[24.375rem] transition-opacity duration-300;
+  button.slot-pill {
+    @apply transition duration-200 active:scale-95 disabled:opacity-50;
   }
 
-  .sky-glow-stop { stop-color: var(--sky-glow); }
-  .sky-stars { fill: #f4f1ea; opacity: var(--sky-stars); }
-  .sky-arc { fill: none; stroke: var(--sky-arc); stroke-width: 1.4; stroke-dasharray: 2 6; stroke-linecap: round; }
-  .sky-body { fill: var(--sky-sun); }
-  .sky-crescent { fill: var(--sky-g1); }
-  .sky-marker > circle:first-child { fill: var(--color-surface); stroke: var(--color-entity-routine); stroke-width: 1.6; }
-  .sky-marker-dot { fill: var(--color-entity-routine); }
-  .sky-marker[data-done="true"] > circle:first-child { fill: var(--color-entity-routine); }
-  .sky-marker[data-done="true"] .sky-marker-dot { fill: var(--color-surface); }
-
-  .sky-halo {
-    animation: sky-breathe 4s ease-in-out infinite;
+  button.slot-pill::before {
+    @apply absolute -inset-y-2.25 inset-x-0;
+    content: "";
   }
 
-  @keyframes sky-breathe {
-    0%, 100% { opacity: 0.85; }
-    50% { opacity: 1; }
+  .slot-ring {
+    @apply size-5 shrink-0 rounded-full border-2 border-entity-routine;
   }
 
-  .sky-hills {
-    @apply pointer-events-none absolute inset-x-0 bottom-0 h-[6.5rem] w-full;
+  button.slot-pill:not(:disabled):hover .slot-ring {
+    background: color-mix(in srgb, var(--color-entity-routine) 14%, var(--color-surface));
   }
 
-  .sky-hill-1 { fill: var(--sky-hill-1); opacity: 0.9; }
-  .sky-hill-2 { fill: var(--sky-hill-2); }
-  .sky-hill-3 { fill: var(--color-canvas); }
+  .slot-pill[data-status="DONE"] {
+    box-shadow: none;
+    color: color-mix(in srgb, var(--color-entity-routine) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--color-entity-routine) 12%, var(--color-surface));
+  }
 
-  /* The page under the sky starts at the screen edge on a phone. */
+  .slot-done {
+    @apply flex size-5 shrink-0 items-center justify-center rounded-full bg-entity-routine text-surface;
+  }
+
+  .slot-pill[data-status="MISSED"] {
+    @apply text-text-tertiary;
+    box-shadow: inset 0 0 0 1.5px var(--color-border-subtle);
+  }
+
+  .slot-missed {
+    @apply size-5 shrink-0 rounded-full border-2 border-dashed border-border;
+  }
+
+  /* The page under the hero starts at the screen edge on a phone. */
   .page-sky {
     @apply pt-4 lg:pt-3;
   }

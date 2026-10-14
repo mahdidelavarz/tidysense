@@ -93,7 +93,7 @@ test('a quick capture and an overdue sequence are resolved in Reconcile while To
   await page.getByRole('navigation', { name: 'ناوبری اصلی' }).getByRole('link', { name: 'امروز' }).click()
   await expect(page.getByRole('heading', { name: captureTitle })).toBeVisible()
   await page.getByRole('button', { name: `تکمیل کار: ${captureTitle}` }).click()
-  await expect(page.getByRole('heading', { name: captureTitle })).toBeHidden()
+  await expect(page.getByRole('button', { name: `تکمیل کار: ${captureTitle}` })).toBeHidden()
 
   const tasks = await (await page.request.get('/api/v1/tasks?limit=100')).json() as {
     items: Array<{ title: string; plannedDate: string; carryCount: number }>

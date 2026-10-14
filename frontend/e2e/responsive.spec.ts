@@ -106,7 +106,7 @@ test('desktop layout uses the icon rail and has no tab bar', async ({ page }) =>
   await page.keyboard.press('Tab')
   await rail.getByRole('link', { name: 'روتین‌ها' }).focus()
   await expect(rail.getByRole('link', { name: 'روتین‌ها' }).locator('.rail-tip')).toHaveCSS('opacity', '1')
-  await expect(page.getByRole('heading', { name: 'در انتظار کارهای پیشین' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'منتظر کارهای پیشین' }).first()).toBeVisible()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-desktop-today.png' })
 

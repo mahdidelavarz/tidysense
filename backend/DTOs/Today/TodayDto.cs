@@ -6,4 +6,5 @@ namespace TidySense.DTOs.Today;
 public sealed record TodayDto(
     DateOnly LocalDate,
     IReadOnlyList<TaskDto> Tasks,
+    IReadOnlyList<TaskDto> CompletedTasks,
     IReadOnlyList<RoutineOccurrenceDto> RoutineOccurrences);

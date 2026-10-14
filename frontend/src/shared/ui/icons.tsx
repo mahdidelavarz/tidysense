@@ -20,6 +20,7 @@ import SolarDatabaseLinear from '~icons/solar/database-linear'
 import SolarEyeLinear from '~icons/solar/eye-linear'
 import SolarFlagLinear from '~icons/solar/flag-linear'
 import SolarForbiddenCircleLinear from '~icons/solar/forbidden-circle-linear'
+import SolarHistoryLinear from '~icons/solar/history-linear'
 import SolarHourglassLinear from '~icons/solar/hourglass-linear'
 import SolarLayersMinimalisticLinear from '~icons/solar/layers-minimalistic-linear'
 import SolarLeafLinear from '~icons/solar/leaf-linear'
@@ -118,6 +119,7 @@ export const CalendarClock = sized(SolarCalendarMarkLinear)
 export const CalendarOff = sized(SolarCloudLinear)
 export const Clock = sized(SolarClockCircleLinear)
 export const FileClock = sized(SolarClipboardClockLinear)
+export const History = sized(SolarHistoryLinear)
 export const Flag = sized(SolarFlagLinear)
 export const StickyNote = sized(SolarNotesLinear)
 export const Link2 = sized(SolarLinkLinear)

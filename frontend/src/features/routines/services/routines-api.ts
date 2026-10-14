@@ -9,6 +9,7 @@ import type {
   RoutineOccurrenceDto,
   RoutineOccurrencePage,
   RoutinePage,
+  RoutineWeeksDto,
   UpdateRoutineRequest,
 } from '../types/routine.types'
 
@@ -20,6 +21,12 @@ export async function listRoutines(status?: string, cursor?: string, limit = 20)
   const response = await http.get<RoutinePage>('/routines', {
     params: { ...(status ? { status } : {}), ...(cursor ? { cursor } : {}), limit },
   })
+  return response.data
+}
+
+/** Fetches this local week (Saturday to Friday) of every active Routine: slots scheduled and done per day. */
+export async function getRoutineWeek(): Promise<RoutineWeeksDto> {
+  const response = await http.get<RoutineWeeksDto>('/routines/week')
   return response.data
 }
 
