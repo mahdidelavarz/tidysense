@@ -22,11 +22,11 @@ The label of an `ActionTile` is its accessible name; the explanation is its desc
 
 | Component | Use |
 |---|---|
-| `PageHeader` | top of a primary page: menu button, title, description, one action |
-| `BackLink` | top of a detail page: menu button and the way back to its list |
+| `PageHeader` | top of a primary page: title, description, one action and, below desktop, the account button |
+| `BackLink` | top of a detail page: the way back to its list and, below desktop, the account button |
 | `.card` | a static surface lifted by shadow, without an outline |
 | `.group-card` | a grouped list (Today): one surface whose direct children are rows divided by hairlines |
-| `SkyHeader` (Today) | the Today page's header: the live sky, title, date, menu button and the page action as frosted `.sky-action`. See layout-and-navigation |
+| `SkyHeader` (Today) | the Today page's header: the live sky, title, date, account button and the page action as frosted `.sky-action`. See layout-and-navigation |
 | `.detail-card` | the top of a detail page: identity (chips, title, description) in the entity's corner wash, then `.detail-facts`, the `<dl>` of `DetailTerm`s, under a rule. Takes `entity-goal`, `entity-project`, `entity-task` or `entity-routine` |
 | `.proposal-card` | a proposed item in a planning draft, in its entity's corner wash, with its include switch and edit button in a bar underneath; `data-excluded` drops the wash |
 | `.state-panel` | the panel behind `EmptyState`, `ErrorState` (`data-tone="attention"`) and the "building draft" state |
@@ -100,8 +100,10 @@ Background refetches keep the content on screen and show a small "updating" hint
 
 ## Shell components
 
-In [`features/shell`](../../frontend/src/features/shell/components): `AppShell`, `Sidebar`, `TabBar`, `NavDrawer`, `AccountMenu`, `CreateSheet`, and `Navigation` (the destination list and brand). They compose features, so they live in a feature, not in `shared`.
+In [`features/shell`](../../frontend/src/features/shell/components): `AppShell`, `Rail` (desktop), `TabBar` (phones, with the floating create button), `AccountButton`, `AccountPanel`, `CreateSheet`, and `Navigation` (the five places, `PlaceLink`, the Reconcile count). They compose features, so they live in a feature, not in `shared`.
+
+`Stepper` ([`shared/ui/Stepper.tsx`](../../frontend/src/shared/ui/Stepper.tsx)) shows a fixed sequence of named steps (`aria-current="step"` on the current one, a tick on passed ones, only the current label on a phone). It is for the four-step planning flow (STEP-18).
 
 ## Cross-feature UI state
 
-[`shared/lib/ui-store.ts`](../../frontend/src/shared/lib/ui-store.ts) (Zustand) holds only: whether the drawer is open, which create flow is open, and the toast queue. Server data stays in TanStack Query.
+[`shared/lib/ui-store.ts`](../../frontend/src/shared/lib/ui-store.ts) (Zustand) holds only: whether the account panel is open, which create flow is open, and the toast queue. Server data stays in TanStack Query.

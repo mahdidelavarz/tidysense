@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { formatLongDate, formatNumber } from '../../../shared/lib/date'
 import { showToast, useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
-import { MenuButton, PageHeader } from '../../../shared/ui/PageHeader'
+import { PageHeader } from '../../../shared/ui/PageHeader'
+import { AccountButton } from '../../shell/components/AccountButton'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { TodayReconcileEntry } from '../../reconcile/components/TodayReconcileEntry'
 import { useCompleteOccurrence, useCorrectOccurrence } from '../../routines/hooks/routine-hooks'
@@ -72,7 +73,7 @@ export function TodayView() {
   return (
     <div className="page page-sky">
       <SkyHeader
-        start={<MenuButton />}
+        start={<AccountButton />}
         routines={routineOccurrences}
         dateLine={(
           <time dateTime={localDate}>{formatLongDate(localDate)}</time>

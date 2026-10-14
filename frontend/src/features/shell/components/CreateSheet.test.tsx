@@ -9,6 +9,10 @@ import { listProjects } from '../../projects/services/projects-api'
 import { createTask, listTasks } from '../../tasks/services/tasks-api'
 import { CreateSheet } from './CreateSheet'
 
+const navigate = vi.fn()
+vi.mock('@tanstack/react-router', async original => ({
+  ...await original<typeof import('@tanstack/react-router')>(), useNavigate: () => navigate,
+}))
 vi.mock('../../captures/services/captures-api', () => ({ createCapture: vi.fn() }))
 vi.mock('../../goals/services/goals-api', () => ({ createGoal: vi.fn(), listGoals: vi.fn() }))
 vi.mock('../../projects/services/projects-api', () => ({ createProject: vi.fn(), listProjects: vi.fn() }))
@@ -42,6 +46,16 @@ describe('CreateSheet', () => {
     fireEvent.click(screen.getByRole('button', { name: /^هدف/ }))
     expect(useUiStore.getState().createTarget).toBe('goal')
     expect(screen.getByRole('dialog', { name: 'هدف جدید' })).toBeInTheDocument()
+  })
+
+  it('gives each kind an example and ends with the way into Planning', () => {
+    useUiStore.getState().openCreate('menu')
+    renderSheet()
+    const menu = screen.getByRole('dialog', { name: 'چه چیزی اضافه می‌کنید؟' })
+    expect(menu).toHaveTextContent('مثلاً: پیاده‌روی، هر روز ساعت ۱۸')
+    fireEvent.click(screen.getByRole('button', { name: /نمی‌دانید از کجا شروع کنید؟/ }))
+    expect(navigate).toHaveBeenCalledWith({ to: '/planning' })
+    expect(useUiStore.getState().createTarget).toBeNull()
   })
 
   it('creates a Goal with optional dates left empty, then closes and confirms', async () => {

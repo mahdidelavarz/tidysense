@@ -16,7 +16,7 @@ Each feature folder has the same four parts:
 - `hooks/<feature>-hooks.ts` — the query-key factory and every TanStack Query hook of the feature in one file; hooks call services and own cache updates;
 - `components/` — small components; pages compose hooks and components and never call services directly.
 
-`features/shell` is the application frame (sidebar, tab bar, drawer, create flow). `shared/ui` holds reusable components; `shared/lib` holds small cross-feature helpers and the UI store.
+`features/shell` is the application frame (rail, tab bar, account panel, create flow). `shared/ui` holds reusable components; `shared/lib` holds small cross-feature helpers and the UI store.
 
 Keep feature-specific code together. Do not create global type-based dumping grounds. Shared code must not import features. Prefer an existing pattern/component/hook/service, then extend it, then write a small feature-specific implementation; extract a reusable abstraction only after real repetition. Avoid universal forms, query hooks, deep configuration components and generic service layers.
 

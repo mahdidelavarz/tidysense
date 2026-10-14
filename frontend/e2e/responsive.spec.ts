@@ -5,7 +5,7 @@ const origin = 'http://127.0.0.1:5174'
 const phone = { width: 390, height: 844 }
 const desktop = { width: 1440, height: 900 }
 
-/** Lets sheet/drawer entrance animations finish so screenshots show the settled state. */
+/** Lets sheet and panel entrance animations finish so screenshots show the settled state. */
 const settle = (page: Page) => page.waitForTimeout(400)
 
 /** Signs in through the development session endpoint and seeds one Goal, Project and two Tasks. */
@@ -40,7 +40,7 @@ async function seed(page: Page) {
   return { goal, project, task: first }
 }
 
-test('phone layout uses the tab bar, drawer and bottom sheet instead of the sidebar', async ({ page }) => {
+test('phone layout uses the five-place tab bar, the account sheet and bottom sheets instead of the rail', async ({ page }) => {
   await page.setViewportSize(phone)
   const { task } = await seed(page)
 
@@ -48,27 +48,33 @@ test('phone layout uses the tab bar, drawer and bottom sheet instead of the side
   await expect(page.getByRole('heading', { name: 'مرور واژه‌های جلسه سوم' })).toBeVisible()
   const tabBar = page.getByRole('navigation', { name: 'ناوبری اصلی' })
   await expect(tabBar).toBeVisible()
-  await expect(tabBar.getByRole('link')).toHaveCount(4)
+  // Today, Tasks, Planning in the middle, Routines and Goals.
+  await expect(tabBar.getByRole('link')).toHaveCount(5)
+  await expect(tabBar.getByRole('link').nth(2)).toHaveAccessibleName('برنامه‌ریزی')
+  await expect(tabBar.getByRole('link', { name: /امروز/ })).toHaveAttribute('aria-current', 'page')
   // The page must fit the viewport: no horizontal scrolling on a phone.
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-phone-today.png' })
 
-  await page.getByRole('button', { name: 'باز کردن منو' }).click()
-  const drawer = page.getByRole('dialog', { name: 'منو' })
-  await expect(drawer.getByRole('link', { name: 'هدف‌ها' })).toBeVisible()
-  // Routines has no tab: on a phone it is reached through the drawer.
-  await expect(drawer.getByRole('link', { name: 'روتین‌ها' })).toBeVisible()
-  await expect(drawer.getByRole('link', { name: 'برنامه‌ریزی' })).toBeVisible()
+  await page.getByRole('button', { name: 'حساب و تنظیمات' }).click()
+  const account = page.getByRole('dialog', { name: 'حساب شما' })
+  await expect(account.getByRole('link', { name: /بازبینی/ })).toBeVisible()
+  await expect(account.getByRole('link', { name: 'برنامه‌ریزی' })).toBeVisible()
+  await expect(account.getByRole('button', { name: 'خروج از این دستگاه' })).toBeVisible()
   await settle(page)
-  await page.screenshot({ path: 'test-results/ui-phone-drawer.png' })
-  await drawer.getByRole('link', { name: 'هدف‌ها' }).click()
+  await page.screenshot({ path: 'test-results/ui-phone-account.png' })
+  // Projects are reached here until the Goals page carries its switch (STEP-17); the Goals tab stays current.
+  await account.getByRole('link', { name: 'پروژه‌ها' }).click()
+  await expect(page).toHaveURL(/\/projects$/)
+  await expect(account).toBeHidden()
+  await expect(tabBar.getByRole('link', { name: 'هدف‌ها' })).toHaveAttribute('aria-current', 'page')
+  await tabBar.getByRole('link', { name: 'هدف‌ها' }).click()
   await expect(page).toHaveURL(/\/goals$/)
-  await expect(drawer).toBeHidden()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-phone-goals.png' })
 
-  await tabBar.getByRole('button', { name: 'افزودن' }).click()
+  await page.getByRole('button', { name: 'افزودن', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'چه چیزی اضافه می‌کنید؟' })).toBeVisible()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-phone-create-menu.png' })
@@ -86,21 +92,25 @@ test('phone layout uses the tab bar, drawer and bottom sheet instead of the side
   await page.screenshot({ path: 'test-results/ui-phone-task-detail.png', fullPage: true })
 })
 
-test('desktop layout uses the sidebar and has no tab bar', async ({ page }) => {
+test('desktop layout uses the icon rail and has no tab bar', async ({ page }) => {
   await page.setViewportSize(desktop)
   const { goal, project } = await seed(page)
 
   await page.goto('/today')
-  const sidebar = page.getByRole('navigation', { name: 'ناوبری اصلی' })
-  await expect(sidebar.getByRole('link', { name: 'امروز' })).toHaveAttribute('aria-current', 'page')
-  await expect(sidebar.getByRole('link', { name: 'روتین‌ها' })).toBeVisible()
-  await expect(sidebar.getByRole('link', { name: 'برنامه‌ریزی' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'باز کردن منو' })).toBeHidden()
+  const rail = page.getByRole('navigation', { name: 'ناوبری اصلی' })
+  await expect(rail.getByRole('link', { name: /^امروز/ })).toHaveAttribute('aria-current', 'page')
+  await expect(rail.getByRole('link', { name: 'روتین‌ها' })).toBeVisible()
+  await expect(rail.getByRole('link', { name: 'برنامه‌ریزی با هوش مصنوعی' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'افزودن', exact: true })).toBeHidden()
+  // An icon names itself on keyboard focus too, not only on hover.
+  await page.keyboard.press('Tab')
+  await rail.getByRole('link', { name: 'روتین‌ها' }).focus()
+  await expect(rail.getByRole('link', { name: 'روتین‌ها' }).locator('.rail-tip')).toHaveCSS('opacity', '1')
   await expect(page.getByRole('heading', { name: 'در انتظار کارهای پیشین' })).toBeVisible()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-desktop-today.png' })
 
-  await sidebar.getByRole('link', { name: 'کارها' }).click()
+  await rail.getByRole('link', { name: 'کارها' }).click()
   // The shared test user may already hold the phone test's seed, so titles can repeat.
   await expect(page.getByRole('heading', { name: 'مرور واژه‌های جلسه سوم' }).first()).toBeVisible()
   await settle(page)

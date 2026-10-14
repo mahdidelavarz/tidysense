@@ -79,3 +79,40 @@ test('the critical manual flow works with the keyboard alone', async ({ page }) 
   })
   expect(outline).toBe(true)
 })
+
+// The rail and the account panel are usable with Tab, Enter and Escape alone, and the rail names each icon on focus.
+test('the rail and the account panel work with the keyboard alone', async ({ page }) => {
+  const session = await page.request.post('/api/v1/dev/test-session', { data: {}, headers: { Origin: origin } })
+  expect(session.ok()).toBeTruthy()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/today')
+  const rail = page.getByRole('navigation', { name: 'ناوبری اصلی' })
+  await expect(rail).toBeVisible()
+
+  const routines = await tabTo(page, 'روتین‌ها', 'link')
+  await expect(routines.locator('.rail-tip')).toHaveCSS('opacity', '1')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/routines$/)
+
+  const account = await tabTo(page, 'حساب و تنظیمات')
+  await page.keyboard.press('Enter')
+  const panel = page.getByRole('dialog', { name: 'حساب شما' })
+  await expect(panel).toBeVisible()
+  await expect(account).toHaveAttribute('aria-expanded', 'true')
+  // Focus moves into the panel, stays there, and returns to the rail on Escape.
+  expect(await panel.evaluate(element => element.contains(document.activeElement))).toBe(true)
+  for (let presses = 0; presses < 12; presses++) {
+    await page.keyboard.press('Tab')
+    expect(await panel.evaluate(element => element.contains(document.activeElement))).toBe(true)
+  }
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
+  await expect(account).toBeFocused()
+
+  // A place in the panel is opened with Enter and closes the panel.
+  await page.keyboard.press('Enter')
+  await tabTo(page, 'حریم خصوصی و داده‌ها', 'link')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/privacy$/)
+  await expect(panel).toBeHidden()
+})

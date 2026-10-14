@@ -23,7 +23,7 @@ test('the privacy notice is readable before signing in and from the account menu
   expect(session.ok()).toBeTruthy()
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/today')
-  await page.getByRole('button', { name: 'حساب کاربری' }).click()
+  await page.getByRole('button', { name: 'حساب و تنظیمات' }).click()
   await page.getByRole('link', { name: 'حریم خصوصی و داده‌ها' }).click()
   await expect(page).toHaveURL(/\/privacy$/)
   await expect(page.getByRole('navigation', { name: 'ناوبری اصلی' })).toBeVisible()

@@ -1,19 +1,19 @@
 import { create } from 'zustand'
 
-// Cross-feature, client-only UI state: the navigation drawer, the single
+// Cross-feature, client-only UI state: the account panel, the single
 // create flow, and toasts. Server data never lives here (TanStack Query owns
-// it); this store exists because pages, the tab bar and the sidebar all need
+// it); this store exists because pages, the tab bar and the rail all need
 // to open the same overlays.
 
 export type CreateTarget = 'menu' | 'task' | 'routine' | 'project' | 'goal'
 export type Toast = { id: number; message: string }
 
 type UiState = {
-  navOpen: boolean
+  accountOpen: boolean
   createTarget: CreateTarget | null
   toasts: Toast[]
-  openNav: () => void
-  closeNav: () => void
+  openAccount: () => void
+  closeAccount: () => void
   openCreate: (target: CreateTarget) => void
   closeCreate: () => void
   showToast: (message: string) => void
@@ -23,12 +23,12 @@ type UiState = {
 let nextToastId = 1
 
 export const useUiStore = create<UiState>(set => ({
-  navOpen: false,
+  accountOpen: false,
   createTarget: null,
   toasts: [],
-  openNav: () => set({ navOpen: true }),
-  closeNav: () => set({ navOpen: false }),
-  openCreate: target => set({ createTarget: target, navOpen: false }),
+  openAccount: () => set({ accountOpen: true }),
+  closeAccount: () => set({ accountOpen: false }),
+  openCreate: target => set({ createTarget: target, accountOpen: false }),
   closeCreate: () => set({ createTarget: null }),
   showToast: message => set(state => ({ toasts: [...state.toasts, { id: nextToastId++, message }] })),
   dismissToast: id => set(state => ({ toasts: state.toasts.filter(toast => toast.id !== id) })),

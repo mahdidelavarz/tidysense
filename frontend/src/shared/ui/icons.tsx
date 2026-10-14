@@ -20,7 +20,6 @@ import SolarDatabaseLinear from '~icons/solar/database-linear'
 import SolarEyeLinear from '~icons/solar/eye-linear'
 import SolarFlagLinear from '~icons/solar/flag-linear'
 import SolarForbiddenCircleLinear from '~icons/solar/forbidden-circle-linear'
-import SolarHamburgerMenuLinear from '~icons/solar/hamburger-menu-linear'
 import SolarHourglassLinear from '~icons/solar/hourglass-linear'
 import SolarLayersMinimalisticLinear from '~icons/solar/layers-minimalistic-linear'
 import SolarLeafLinear from '~icons/solar/leaf-linear'
@@ -31,7 +30,6 @@ import SolarLogout2Linear from '~icons/solar/logout-2-linear'
 import SolarMagicStick3Linear from '~icons/solar/magic-stick-3-linear'
 import SolarMagniferLinear from '~icons/solar/magnifer-linear'
 import SolarMenuDotsLinear from '~icons/solar/menu-dots-linear'
-import SolarMonitorSmartphoneLinear from '~icons/solar/monitor-smartphone-linear'
 import SolarMoonLinear from '~icons/solar/moon-linear'
 import SolarNotesLinear from '~icons/solar/notes-linear'
 import SolarPauseLinear from '~icons/solar/pause-linear'
@@ -43,7 +41,6 @@ import SolarRecordCircleLinear from '~icons/solar/record-circle-linear'
 import SolarRefreshLinear from '~icons/solar/refresh-linear'
 import SolarRestartLinear from '~icons/solar/restart-linear'
 import SolarShieldCheckLinear from '~icons/solar/shield-check-linear'
-import SolarSortVerticalLinear from '~icons/solar/sort-vertical-linear'
 import SolarStopCircleLinear from '~icons/solar/stop-circle-linear'
 import SolarStopLinear from '~icons/solar/stop-linear'
 import SolarSun2Linear from '~icons/solar/sun-2-linear'
@@ -97,7 +94,6 @@ export const Play = sized(SolarPlayLinear)
 export const Pause = sized(SolarPauseLinear)
 export const Search = sized(SolarMagniferLinear)
 export const X = sized(SolarCloseLinear)
-export const Menu = sized(SolarHamburgerMenuLinear)
 export const Ellipsis = sized(SolarMenuDotsLinear)
 export const LogOut = sized(SolarLogout2Linear)
 export const Sparkles = sized(SolarMagicStick3Linear)
@@ -130,14 +126,12 @@ export const ListOrdered = sized(SolarListArrowDownMinimalisticLinear)
 export const Languages = sized(SolarTranslationLinear)
 export const Database = sized(SolarDatabaseLinear)
 export const SlidersHorizontal = sized(SolarTuning2Linear)
-export const MonitorSmartphone = sized(SolarMonitorSmartphoneLinear)
 export const UserRound = sized(SolarUserRoundedLinear)
 
 // Direction (RTL: back points right, forward points left)
 export const ChevronLeft = sized(SolarAltArrowLeftLinear)
 export const ChevronRight = sized(SolarAltArrowRightLinear)
 export const ChevronDown = sized(SolarAltArrowDownLinear)
-export const ChevronsUpDown = sized(SolarSortVerticalLinear)
 export const ArrowLeft = sized(SolarArrowLeftLinear)
 export const ArrowRight = sized(SolarArrowRightLinear)
 
