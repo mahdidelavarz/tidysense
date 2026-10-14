@@ -8,6 +8,7 @@ import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { useGoal } from '../../goals/hooks/goal-hooks'
+import { AiFeedbackCard } from '../../feedback/components/AiFeedbackCard'
 import { PilotQuestion } from '../../pilot/components/PilotQuestion'
 import { useProject } from '../../projects/hooks/project-hooks'
 import {
@@ -53,6 +54,9 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   const [detached, setDetached] = useState(false)
   const [replace, setReplace] = useState(false)
   const [intention, setIntention] = useState(initialIntention)
+  // A draft the user ended without applying it: cancelled, or replaced by a new flow. It may be
+  // asked about (an applied draft gets the pilot question instead), until the page is left.
+  const [endedDraftId, setEndedDraftId] = useState<string | null>(null)
 
   const found = detached ? undefined : active.data
   // Unanswered questions are resumed like a running attempt: by the id of the attempt that asked them.
@@ -76,8 +80,10 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   }
   const begin = (text: string) => {
     setIntention(text)
+    const replaced = replace ? active.data?.draft?.id ?? null : null
     start.mutate({ intention: text, goalId, projectId, replaceActive: replace }, {
       onSuccess: data => {
+        if (replaced) setEndedDraftId(replaced)
         setAttemptId(data.id)
         setDraftId(null)
         setDetached(true)
@@ -138,6 +144,7 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
         title={pageTitle}
         description="بگویید می‌خواهید روی چه چیزی پیش بروید؛ یک پیش‌نویس می‌بینید، آن را مرور و ویرایش می‌کنید و فقط با تأیید خودتان چیزی ساخته می‌شود."
       />
+      {endedDraftId && <AiFeedbackCard key={endedDraftId} surface="PLANNING_DRAFT" subjectId={endedDraftId} />}
       {content}
     </div>
   )
@@ -289,7 +296,7 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
           error={revise.error ?? cancelDraft.error}
           onEdit={(edit, onStored) => revise.mutate({ draft: current, edit }, { onSuccess: onStored })}
           onApprove={() => apply.request(Number(current.revision))}
-          onCancel={() => cancelDraft.mutate(current)}
+          onCancel={() => cancelDraft.mutate(current, { onSuccess: () => setEndedDraftId(current.id) })}
           onManual={manual}
         />
         <PlanningApplyDialog flow={apply} draft={current} />

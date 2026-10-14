@@ -237,6 +237,77 @@ namespace TidySense.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TidySense.Models.AiResponseFeedback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("InstrumentVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int?>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<DateTimeOffset>("ShownAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("ShownOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Surface")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShownAt");
+
+                    b.HasIndex("UserId", "Surface", "ShownOn");
+
+                    b.HasIndex("UserId", "Surface", "SubjectId")
+                        .IsUnique();
+
+                    b.ToTable("AiResponseFeedback", t =>
+                        {
+                            t.HasCheckConstraint("CK_AiResponseFeedback_InstrumentVersion", "\"InstrumentVersion\" > 0");
+
+                            t.HasCheckConstraint("CK_AiResponseFeedback_Outcome", "\"Outcome\" IN ('SHOWN', 'ANSWERED', 'CLOSED')");
+
+                            t.HasCheckConstraint("CK_AiResponseFeedback_Rating", "(\"Outcome\" = 'ANSWERED') = (\"Rating\" IS NOT NULL) AND (\"Rating\" IS NULL OR \"Rating\" BETWEEN 1 AND 5)");
+
+                            t.HasCheckConstraint("CK_AiResponseFeedback_Reason", "\"Reason\" IS NULL OR \"Rating\" <= 2");
+
+                            t.HasCheckConstraint("CK_AiResponseFeedback_Responded", "(\"Outcome\" = 'SHOWN') = (\"RespondedAt\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_AiResponseFeedback_Surface", "\"Surface\" IN ('PLANNING_DRAFT')");
+                        });
+                });
+
             modelBuilder.Entity("TidySense.Models.CaptureItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2004,6 +2075,15 @@ namespace TidySense.Migrations
                         .HasForeignKey("ReconcileExplanationId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TidySense.Models.AiResponseFeedback", b =>
+                {
                     b.HasOne("TidySense.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")

@@ -5,9 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { currentUser } from '../../auth/services/auth-api'
 import type { CurrentUser } from '../../auth/types/auth.types'
+import { answerAiFeedback, requestAiFeedbackPrompt } from '../../feedback/services/feedback-api'
 import { getPilotNotice, submitPilotFeedback } from '../../pilot/services/pilot-api'
 import {
   cancelPlanningAttempt,
+  cancelPlanningDraft,
   createPlanningPreview,
   getPlanningActive,
   getPlanningAttempt,
@@ -33,6 +35,9 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('../../auth/services/auth-api', () => ({ currentUser: vi.fn() }))
 vi.mock('../../pilot/services/pilot-api', () => ({
   getPilotNotice: vi.fn(), submitPilotFeedback: vi.fn(),
+}))
+vi.mock('../../feedback/services/feedback-api', () => ({
+  requestAiFeedbackPrompt: vi.fn(), answerAiFeedback: vi.fn(), closeAiFeedback: vi.fn(),
 }))
 vi.mock('../services/planning-api', () => ({
   getPlanningActive: vi.fn(), startPlanningAttempt: vi.fn(), getPlanningAttempt: vi.fn(),
@@ -130,6 +135,7 @@ describe('PlanningPage', () => {
     useUiStore.setState({ toasts: [], createTarget: null })
     vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: null, sampleGenerator: true })
     vi.mocked(currentUser).mockResolvedValue(account())
+    vi.mocked(requestAiFeedbackPrompt).mockResolvedValue({ promptId: null, instrumentVersion: 1 })
   })
 
   it('opens the intention form at once with a model behind it, without a consent step or a named provider', async () => {
@@ -190,6 +196,22 @@ describe('PlanningPage', () => {
     expect(screen.getByText(/دست‌کم یک مورد را در برنامه نگه دارید/)).toBeInTheDocument()
   })
 
+  it('may ask about a draft once it was cancelled, never while it is under review', async () => {
+    vi.mocked(requestAiFeedbackPrompt).mockResolvedValue({ promptId: '00000000-0000-0000-0000-0000000000f1', instrumentVersion: 1 })
+    vi.mocked(answerAiFeedback).mockResolvedValue()
+    vi.mocked(cancelPlanningDraft).mockResolvedValue(draft({ status: 'CANCELLED', canApply: false }))
+    await openDraft(draft())
+    expect(requestAiFeedbackPrompt).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'لغو پیش‌نویس' }))
+    expect(await screen.findByText('برنامه‌ریزی لغو شد.')).toBeInTheDocument()
+    await waitFor(() => expect(requestAiFeedbackPrompt).toHaveBeenCalledWith('PLANNING_DRAFT', draftId))
+    // The prompt sits inside the page and blocks nothing: the next step stays available.
+    fireEvent.click(await screen.findByRole('button', { name: 'معمولی' }))
+    await waitFor(() => expect(answerAiFeedback).toHaveBeenCalledWith('00000000-0000-0000-0000-0000000000f1', 3, null))
+    expect(screen.getByRole('button', { name: 'شروع دوباره' })).toBeEnabled()
+  })
+
   it('never replaces an unapproved draft silently', async () => {
     const existing = draft({ linkedConfirmationId: confirmationId })
     const page = await openDraft(existing)
@@ -208,6 +230,8 @@ describe('PlanningPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledTimes(1))
     expect(vi.mocked(startPlanningAttempt).mock.calls[0][1]).toMatchObject({ replaceActive: true })
+    // The replaced draft ended without being applied, so it may be asked about.
+    await waitFor(() => expect(requestAiFeedbackPrompt).toHaveBeenCalledWith('PLANNING_DRAFT', draftId))
   })
 
   it('keeps the input after a failed attempt and offers retry, edit and the manual path', async () => {

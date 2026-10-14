@@ -514,14 +514,21 @@ public sealed partial class PlanningService(
             draft.UpdatedAt = now;
             draft.Version++;
             var items = built.Preview.Items;
+            // Removed before accepting: proposals the user left out, and those left out with their parent.
+            var excluded = built.Content.Proposals.Where(x =>
+                built.Evaluation.Proposals[x.DraftId].State == PlanningReviewStates.Excluded).ToList();
             return new CommandMutation("PlanningDraft", draft.Id, draft.Version,
-                PlanningEventTypes.DraftApplied, 1, JsonSerializer.Serialize(new
+                PlanningEventTypes.DraftApplied, 2, JsonSerializer.Serialize(new
                 {
                     goalCount = items.Count(x => x.EntityType == PlanningEntityTypes.Goal),
                     projectCount = items.Count(x => x.EntityType == PlanningEntityTypes.Project),
                     taskCount = items.Count(x => x.EntityType == PlanningEntityTypes.Task),
                     routineCount = items.Count(x => x.EntityType == PlanningEntityTypes.Routine),
-                    factCount = built.Preview.Facts.Count
+                    factCount = built.Preview.Facts.Count,
+                    excludedGoalCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Goal),
+                    excludedProjectCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Project),
+                    excludedTaskCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Task),
+                    excludedRoutineCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Routine)
                 }), now, cascades, confirmationId);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);

@@ -63,6 +63,8 @@ public sealed partial class UserErasureService(AppDbContext db, ApplicationDateS
             .ExecuteDeleteAsync(cancellationToken);
         deleted["pilotFeedbackResponses"] = await db.PilotFeedbackResponses.Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
+        deleted["aiResponseFeedback"] = await db.AiResponseFeedback.Where(x => x.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken);
         deleted["planningFacts"] = await db.PlanningFacts.Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
         deleted["planningDrafts"] = await db.PlanningDrafts.Where(x => x.UserId == userId)

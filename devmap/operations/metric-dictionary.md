@@ -69,6 +69,32 @@ Two optional questions, each asked once, answered on a scale of 1 (lowest) to 5 
 
 Not answering is a valid outcome and is reported as `NO_RESPONSE`. A second answer about the same subject changes nothing. The question is not shown again on a later visit.
 
+## Satisfaction with AI responses (Discussion 027 §4)
+
+Instrument `AI_RESPONSE_SATISFACTION`, **version 1**, frozen on 2026-10-14 before the first pilot account (027 §10). The version covers the question, the scale labels, the reason prompt and the sampling rule; changing any of them raises `AiResponseFeedbackInstrument.Version` on the server and `aiFeedbackInstrumentVersion` in the client together, and answers of different versions are never merged. Records: `AiResponseFeedback` (R2: removed 180 days after shown and on erasure). Class `SELF_REPORT`.
+
+| Surface | Subject | When it can be asked |
+|---|---|---|
+| `PLANNING_DRAFT` | the planning draft | right after the user cancelled it or replaced it with a new flow, never while it is reviewable and never once applied (an applied draft gets `H1_USEFULNESS` instead) |
+
+The Reconcile explanation is **not** asked during the pilot. The owner decided on 2026-10-14 that it is asked only where `H2_UNDERSTANDING` is not, and a session ends uncompleted only by expiring, when the user is not there, so no such moment exists. See 027 §8.
+
+- **Sampling (pilot, `Pilot:AiResponseFeedback:CoverageFirst` = true):** every eligible subject, at most one prompt per account, surface and local day, decided by the server. The first eligible subject of an account is therefore always asked. After the pilot `CoverageFirst` = false and `SampleRate` (0.33) applies to every subject after the account's first.
+- **Outcomes:** `SHOWN` (no response yet, or the page was left), `ANSWERED` (rating 1–5, optional reason only for 1–2), `CLOSED` (dismissed). `SHOWN` and `CLOSED` are non-responses and are never counted as low scores. Every figure states shown, answered and closed counts apart.
+- **Scale:** 1 بد، 2 ضعیف، 3 معمولی، 4 خوب، 5 عالی. The reason is the only user-written text the operator sees, without account, phone, titles or the draft's content.
+- **Reading it:** report per account first (each account once, e.g. its first rated draft), per response beside it, with "x of y" and a small-sample label under 10 (027 §10). Drafts made by the sample generator are excluded through the draft's `PLANNING_DRAFT_CREATED` event (`generator`).
+
+## Derived fields for product insights (Discussion 027 §5)
+
+Frozen with the instrument on 2026-10-14. They are recorded or derivable now, so the insights view (STEP-20) has data from the first pilot day.
+
+| Field | Where it comes from |
+|---|---|
+| Items removed before accepting, by entity type | `PLANNING_DRAFT_APPLIED` version 2 payload: `excludedGoalCount`, `excludedProjectCount`, `excludedTaskCount`, `excludedRoutineCount` (proposals left out, including those left out with their parent). Version 1 events (before 2026-10-14) do not have them and are reported as unknown, never as zero. |
+| Origin of a Task or Routine | provenance: a `TASK_CREATED` or `ROUTINE_CREATED` event in the same `TransactionId` as a `PLANNING_DRAFT_APPLIED` came from that draft, and the draft's `PLANNING_DRAFT_CREATED` event names its `generator`. Anything else is manual (a capture resolution is its own origin). No flag is stored on the work record. All of these are R1 events. |
+| Internal account | `Operations:OperatorPhones` and `Operations:InternalPhones`, as for every metric above. Seeded, demo and QA accounts must be listed before collection. |
+| Clarification question kind and answer type | not yet recorded; defined by Discussion 028 §2.5 and added with the new question shape in STEP-18. |
+
 ## Required metrics the product does not compute
 
 Listed by the API as `external` so they are never mistaken for zero:

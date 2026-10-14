@@ -439,20 +439,55 @@ Verified 2026-10-13 on Linux:
 
 **Implementation checklist:**
 
-- [ ] Persist the satisfaction record with its retention class, erasure path and instrument version.
-- [ ] Implement the sampling rule server-side; the client only asks whether to show the prompt for a subject.
-- [ ] Record shown, answered and closed as separate facts; closing is never a rating.
-- [ ] Record removed-item entity types, Task/Routine origin and the internal-account marker.
-- [ ] Add the feedback card (ratings 1–2 open the optional reason field), inside the response, never modal or blocking.
-- [ ] Freeze the definitions in the metric dictionary and research protocol.
+- [x] Persist the satisfaction record with its retention class, erasure path and instrument version.
+- [x] Implement the sampling rule server-side; the client only asks whether to show the prompt for a subject.
+- [x] Record shown, answered and closed as separate facts; closing is never a rating.
+- [x] Record removed-item entity types, Task/Routine origin and the internal-account marker.
+- [x] Add the feedback card (ratings 1–2 open the optional reason field), inside the response, never modal or blocking.
+- [x] Freeze the definitions in the metric dictionary and research protocol.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` with a draft rated 2 with a reason, and a closed prompt; PostgreSQL tests for sampling limits, no double asking with H1/H2, erasure and retention purge.
 
 **Completion criteria:** Every AI response the rule selects can be rated once; non-response is distinguishable from a low score; every derived field 027 §5 needs, except option codes, is recorded.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:** [migration](../backend/Migrations/20261014032809_Step14AiResponseFeedback.cs), [record](../backend/Models/AiResponseFeedback.cs), [sampling rule and responses](../backend/Services/AiResponseFeedbackService.cs), [endpoints](../backend/Controllers/FeedbackController.cs), [apply payload v2](../backend/Common/Events/PlanningEventSchemas.cs), [retention](../backend/Services/Operations/RetentionCatalog.cs), [card](../frontend/src/features/feedback/components/AiFeedbackCard.tsx) and its [wording](../frontend/src/features/feedback/types/feedback.format.ts), [metric dictionary](operations/metric-dictionary.md#satisfaction-with-ai-responses-discussion-027-4), [research protocol](operations/pilot-research-protocol.md), [owner resolution in 027 §8](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md), [backend tests](../backend.Tests/AiResponseFeedbackTests.cs), [card tests](../frontend/src/features/feedback/components/AiFeedbackCard.test.tsx), [browser scenario](../frontend/e2e/planning.spec.ts).
+
+**What the tests show:**
+
+- A draft under review is not asked about. A cancelled one is asked, and a reload returns the same prompt.
+- A second ended draft the same day is not asked; the next day one is.
+- A closed prompt cannot be answered, and an answer is accepted once.
+- A reason is refused with a rating above 2, and a wrong instrument version is refused.
+- Another account gets `404`.
+- An applied draft is never asked, but takes its H1 answer.
+- After the pilot the first ended draft is still asked, and later ones follow the rate.
+- Applying writes `PLANNING_DRAFT_APPLIED` version 2 with the excluded counts. Created Tasks and Routines share the apply's transaction, and a manual Task does not.
+- The purge removes records past R2, erasure removes them with the account, and the migration round-trips with its constraints.
+
+**Verified 2026-10-14 on Linux:**
+
+- 239 backend tests passed, with the two real-provider smokes skipped, against PostgreSQL 16.
+- 72 frontend tests passed; typecheck, lint and build were clean.
+- All 16 browser scenarios passed in Chromium against an isolated database, including "a cancelled draft may be rated once, with a reason for a low rating, and only once a day".
+
+**Decisions and deviations:**
+
+- **When the prompt appears.** The owner decided on 2026-10-14, recorded in 027 §8.3–8.4:
+  - planning drafts are asked only once they ended unapplied, so H1 stays unchanged;
+  - the Reconcile explanation is not asked during the pilot.
+
+  The board shows the card on the draft under review; it appears above the planning page after cancelling or replacing instead. The surface constraint allows only `PLANNING_DRAFT` until a Reconcile moment exists.
+- **Origin and the internal-account marker add no stored field.** Origin is derived from R1 event provenance, and the internal marker is the existing phone configuration. Both are frozen in the metric dictionary.
+- **Drafts from the sample generator are not refused at capture.** They are excluded when read, through the generator named in `PLANNING_DRAFT_CREATED`; production runs only the model.
+- **The privacy notice is now version `2026-10-14.1`.** It gained the feedback retention row.
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- Owner approval of the question wording.
+- The insights figures themselves (STEP-20).
 
 ---
 

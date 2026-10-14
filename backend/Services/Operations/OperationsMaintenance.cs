@@ -126,6 +126,8 @@ public sealed class OperationsMaintenance(
             .OrderBy(x => x.FirstSeenAt).Take(batch).ExecuteDeleteAsync(cancellationToken);
         counts["pilotFeedbackResponses"] = await db.PilotFeedbackResponses.Where(x => x.CreatedAt < before)
             .OrderBy(x => x.CreatedAt).Take(batch).ExecuteDeleteAsync(cancellationToken);
+        counts["aiResponseFeedback"] = await db.AiResponseFeedback.Where(x => x.ShownAt < before)
+            .OrderBy(x => x.ShownAt).Take(batch).ExecuteDeleteAsync(cancellationToken);
     }
 }
 

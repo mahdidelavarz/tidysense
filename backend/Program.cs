@@ -167,6 +167,7 @@ builder.Services.AddScoped<PilotMetricsService>();
 builder.Services.AddScoped<OperationsMaintenance>();
 builder.Services.AddScoped<UserErasureService>();
 builder.Services.AddOptions<PilotOptions>().Bind(builder.Configuration.GetSection(PilotOptions.SectionName));
+builder.Services.AddScoped<AiResponseFeedbackService>();
 builder.Services.AddScoped<PilotFeedbackService>();
 builder.Services.AddSingleton<IAlertDigestSender, SmtpAlertDigestSender>();
 builder.Services.AddScoped<OperationsAlertDigest>();

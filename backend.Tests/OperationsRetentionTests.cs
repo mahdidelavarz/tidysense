@@ -129,6 +129,8 @@ public sealed class OperationsRetentionTests(PostgresWebApplicationFactory facto
             new ReconcilePrompt { Id = Guid.NewGuid(), UserId = user.Id, LocalDate = Date(now.AddDays(-5)), UpdatedAt = now },
             // A pilot answer is R2 on its own date; an alert digest is R4 like a maintenance run.
             Answer(user.Id, now.AddDays(-181)), Answer(user.Id, now.AddDays(-179)),
+            // A satisfaction answer is R2 from when it was shown.
+            Satisfaction(user.Id, now.AddDays(-181)), Satisfaction(user.Id, now.AddDays(-179)),
             new OperationsRecord { Id = Guid.NewGuid(), Kind = OperationsRecordKinds.AlertDigest, CreatedAt = now.AddDays(-91) },
             new OperationsRecord { Id = Guid.NewGuid(), Kind = OperationsRecordKinds.AlertDigest, CreatedAt = now.AddDays(-89) },
             new OperationsRecord
@@ -174,6 +176,8 @@ public sealed class OperationsRetentionTests(PostgresWebApplicationFactory facto
         Assert.Equal(1, await db.ReconcileExposures.CountAsync(x => x.UserId == user.Id));
         Assert.Equal(1, counts["pilotFeedbackResponses"]);
         Assert.Equal(1, await db.PilotFeedbackResponses.CountAsync(x => x.UserId == user.Id));
+        Assert.Equal(1, counts["aiResponseFeedback"]);
+        Assert.Equal(1, await db.AiResponseFeedback.CountAsync(x => x.UserId == user.Id));
         // The old digest went with the diagnostics; an erasure record stays however old it is.
         Assert.Equal(1, await db.OperationsRecords.CountAsync(x =>
             x.Kind == OperationsRecordKinds.AlertDigest && x.CreatedAt < now.AddDays(-80)));
@@ -288,9 +292,13 @@ public sealed class OperationsRetentionTests(PostgresWebApplicationFactory facto
         await Assert.ThrowsAsync<ArgumentException>(() => erasure.EraseAsync(owner.UserId, "operator",
             "the user asked by phone", TestContext.Current.CancellationToken));
 
+        // A satisfaction reason is the user's own text: it goes with the account.
+        db.AiResponseFeedback.Add(Satisfaction(owner.UserId, factory.Clock.GetUtcNow()));
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var erased = await erasure.EraseAsync(owner.UserId, "drill-operator", "USER_REQUEST",
             TestContext.Current.CancellationToken);
         Assert.NotNull(erased);
+        Assert.Equal(1, erased.Deleted["aiResponseFeedback"]);
         Assert.Equal(1, erased.Deleted["users"]);
         Assert.Equal(1, erased.Deleted["tasks"]);
         Assert.Equal(1, erased.Deleted["reconcileExposures"]);
@@ -351,6 +359,14 @@ public sealed class OperationsRetentionTests(PostgresWebApplicationFactory facto
     {
         Id = Guid.NewGuid(), UserId = userId, Instrument = PilotInstruments.ReconcileUnderstanding,
         InstrumentVersion = PilotInstruments.Version, SubjectId = Guid.NewGuid(), Answer = 3, CreatedAt = at
+    };
+
+    private static AiResponseFeedback Satisfaction(Guid userId, DateTimeOffset at) => new()
+    {
+        Id = Guid.NewGuid(), UserId = userId, Surface = AiResponseFeedbackSurfaces.PlanningDraft,
+        SubjectId = Guid.NewGuid(), InstrumentVersion = AiResponseFeedbackInstrument.Version,
+        Outcome = AiResponseFeedbackOutcomes.Answered, Rating = 1, Reason = "دلیل", ShownOn = Date(at),
+        ShownAt = at, RespondedAt = at
     };
 
     private static AiInvocation Invocation(Guid userId, DateTimeOffset at) => new()

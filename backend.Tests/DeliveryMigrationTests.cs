@@ -668,6 +668,67 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
     }
 
     [Fact]
+    public async Task Step14_satisfaction_records_round_trip_with_their_constraints()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var user = new User
+        {
+            Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000),
+            IsActive = true, SetupComplete = true, CreatedAt = now
+        };
+        db.Add(user);
+        await db.SaveChangesAsync(cancellationToken);
+        AiResponseFeedback Row(Action<AiResponseFeedback>? set = null)
+        {
+            var row = new AiResponseFeedback
+            {
+                Id = Guid.NewGuid(), UserId = user.Id, Surface = AiResponseFeedbackSurfaces.PlanningDraft,
+                SubjectId = Guid.NewGuid(), InstrumentVersion = 1, ShownOn = DateOnly.FromDateTime(now.UtcDateTime),
+                ShownAt = now
+            };
+            set?.Invoke(row);
+            return row;
+        }
+        var subject = Guid.NewGuid();
+        db.Add(Row(x => x.SubjectId = subject));
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Asked once per response; only an answer has a rating; a reason only for a low one.
+        db.Add(Row(x => x.SubjectId = subject));
+        Assert.Equal("IX_AiResponseFeedback_UserId_Surface_SubjectId", await ConstraintAsync());
+        db.Add(Row(x => x.Rating = 3));
+        Assert.Equal("CK_AiResponseFeedback_Rating", await ConstraintAsync());
+        db.Add(Row(x => { x.Outcome = AiResponseFeedbackOutcomes.Answered; x.Rating = 4; x.Reason = "خوب"; x.RespondedAt = now; }));
+        Assert.Equal("CK_AiResponseFeedback_Reason", await ConstraintAsync());
+        db.Add(Row(x => x.Outcome = AiResponseFeedbackOutcomes.Closed));
+        Assert.Equal("CK_AiResponseFeedback_Responded", await ConstraintAsync());
+        db.Add(Row(x => x.Surface = "RECONCILE_EXPLANATION"));
+        Assert.Equal("CK_AiResponseFeedback_Surface", await ConstraintAsync());
+
+        await migrator.MigrateAsync("20261013192816_Step13RetireAiConsent", cancellationToken);
+        Assert.Equal(0, await db.Database.SqlQuery<int>($@"
+            SELECT COUNT(*)::int AS ""Value"" FROM information_schema.tables WHERE table_name = 'AiResponseFeedback'")
+            .SingleAsync(cancellationToken));
+        Assert.True(await db.Users.AnyAsync(x => x.Id == user.Id, cancellationToken));
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        Assert.Equal(0, await db.AiResponseFeedback.CountAsync(x => x.UserId == user.Id, cancellationToken));
+        await db.Users.Where(x => x.Id == user.Id).ExecuteDeleteAsync(cancellationToken);
+
+        async Task<string?> ConstraintAsync()
+        {
+            var failure = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(cancellationToken));
+            db.ChangeTracker.Clear();
+            return ((Npgsql.PostgresException)failure.InnerException!).ConstraintName;
+        }
+    }
+
+    [Fact]
     public async Task Step10_ai_reconcile_schema_round_trips_and_keeps_confirmations_and_invocations()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

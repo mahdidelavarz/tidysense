@@ -43,6 +43,7 @@ describe('PrivacyPage', () => {
     expect(kept.getByText(/۳۰ روز پس از پایان پیش‌نویس/)).toBeInTheDocument()
     expect(kept.getByText(/۱۸۰ روز پس از بسته‌شدن/)).toBeInTheDocument()
     expect(kept.getByText(/۹۰ روز نگه داشته می‌شود/)).toBeInTheDocument()
+    expect(kept.getByText(/بدون نام و شماره شما به تیم نشان داده می‌شود و ۱۸۰ روز پس از ثبت/)).toBeInTheDocument()
     const ai = within(screen.getByRole('heading', { name: 'هوش مصنوعی' }).closest('section') as HTMLElement)
     expect(ai.getByText(/فقط برای ساختن پیش‌نویس به یک مدل هوش مصنوعی فرستاده می‌شود/)).toBeInTheDocument()
     expect(ai.getByText(/سرورهای آن بیرون از ایران است/)).toBeInTheDocument()

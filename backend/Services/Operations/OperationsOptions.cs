@@ -85,6 +85,21 @@ public sealed class PilotOptions
     /// longer than this, so nothing about an erased account outlives it.
     /// </summary>
     public int ErasureCompletionDays { get; set; } = 30;
+
+    public AiResponseFeedbackOptions AiResponseFeedback { get; set; } = new();
+}
+
+/// <summary>
+/// How often the satisfaction prompt follows an AI response (Discussion 027 §8). During the pilot
+/// it is coverage-first: every eligible response, at most once per account and local day. After
+/// the pilot <see cref="SampleRate"/> applies. Changing either starts a new instrument version.
+/// </summary>
+public sealed class AiResponseFeedbackOptions
+{
+    public bool CoverageFirst { get; set; } = true;
+
+    /// <summary>The share of eligible responses asked after the pilot, from 0 to 1.</summary>
+    public double SampleRate { get; set; } = 0.33;
 }
 
 /// <summary>The only place that decides whether an account is an operator or an internal account.</summary>

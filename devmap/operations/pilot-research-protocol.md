@@ -23,6 +23,16 @@ What they measure and what they do not:
 
 Changing a question, its scale or where it is shown: change the wording in `frontend/src/features/pilot/types/pilot.format.ts`, raise `pilotInstrumentVersion` there and `PilotInstruments.Version` on the server together, and record it in the metric dictionary. Answers under the old version stay in their own version column.
 
+### Satisfaction with an AI response (`AI_RESPONSE_SATISFACTION`, version 1)
+
+Added on 2026-10-14 (Discussion 027 §4, §8). It asks about a planning draft the user ended without applying it, so it never meets `H1_USEFULNESS`, which follows an applied one. The full rule is in the metric dictionary.
+
+| Shown | Question (Persian, as shown) | Scale |
+|---|---|---|
+| above the planning page, right after a draft was cancelled («لغو پیش‌نویس») or replaced («شروع تازه و کنار گذاشتن قبلی») | از پیش‌نویسی که کنار گذاشتید چقدر راضی بودید؟ | بد، ضعیف، معمولی، خوب، عالی |
+
+Above it: «یک پرسش اختیاری». A rating of بد or ضعیف opens «چه چیزی خوب نبود؟ (اختیاری)» with «ارسال»; sending without text is allowed. Other ratings are sent at once. A close button («بستن پرسش») dismisses it and is recorded as no response. After answering: «ممنون؛ پاسخ شما ثبت شد.» The wording lives in `frontend/src/features/feedback/types/feedback.format.ts`.
+
 ## Part 2 — Moderated sessions
 
 Three to five participants from the pilot cohort, one session each, about 40 minutes, after the participant has used the product for at least a week and has applied at least one plan and completed at least one Reconcile session. One moderator; notes on a fixed sheet; no recording unless the participant agrees in writing. The participant uses their own account on their own device and shares the screen or sits beside the moderator.

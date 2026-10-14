@@ -6,5 +6,5 @@ namespace TidySense.Services;
 /// </summary>
 public static class PrivacyNotice
 {
-    public const string Version = "2026-10-13.1";
+    public const string Version = "2026-10-14.1";
 }

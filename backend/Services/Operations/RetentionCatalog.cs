@@ -41,6 +41,7 @@ public static class RetentionCatalog
         new(typeof(ReconcilePrompt), R2, "Removed R2 days after its local date."),
         new(typeof(ReconcileExposure), R2, "Removed R2 days after it was first seen."),
         new(typeof(PilotFeedbackResponse), R2, "Removed R2 days after it was given."),
+        new(typeof(AiResponseFeedback), R2, "Removed R2 days after it was shown, and on account erasure."),
         // 019C §20 as amended on 2026-10-09: the stored preview holds titles, so it goes with its subject.
         // The durable decision evidence is the R1 event and command result.
         new(typeof(ActionConfirmation), R2, "Removed with its Reconcile session or its planning draft."),

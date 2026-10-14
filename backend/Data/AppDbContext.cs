@@ -25,6 +25,7 @@ public sealed class AppDbContext(
     public DbSet<ReconcilePrompt> ReconcilePrompts => Set<ReconcilePrompt>();
     public DbSet<ReconcileExposure> ReconcileExposures => Set<ReconcileExposure>();
     public DbSet<PilotFeedbackResponse> PilotFeedbackResponses => Set<PilotFeedbackResponse>();
+    public DbSet<AiResponseFeedback> AiResponseFeedback => Set<AiResponseFeedback>();
     public DbSet<ActionConfirmation> ActionConfirmations => Set<ActionConfirmation>();
     public DbSet<PlanningAttempt> PlanningAttempts => Set<PlanningAttempt>();
     public DbSet<PlanningDraft> PlanningDrafts => Set<PlanningDraft>();
@@ -389,6 +390,31 @@ public sealed class AppDbContext(
             entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             entity.ToTable(t => t.HasCheckConstraint("CK_ReconcileExposures_Severity",
                 "\"Severity\" IN ('NONE', 'LIGHT', 'MEDIUM', 'RECOVERY')"));
+        });
+
+        modelBuilder.Entity<AiResponseFeedback>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Surface).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Outcome).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Reason).HasMaxLength(AiResponseFeedbackInstrument.ReasonMaxLength);
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            // Asked once per response.
+            entity.HasIndex(x => new { x.UserId, x.Surface, x.SubjectId }).IsUnique();
+            entity.HasIndex(x => new { x.UserId, x.Surface, x.ShownOn });
+            entity.HasIndex(x => x.ShownAt);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_AiResponseFeedback_Surface", "\"Surface\" IN ('PLANNING_DRAFT')");
+                t.HasCheckConstraint("CK_AiResponseFeedback_Outcome", "\"Outcome\" IN ('SHOWN', 'ANSWERED', 'CLOSED')");
+                // Only an answer has a rating; shown and closed are non-responses, never low scores.
+                t.HasCheckConstraint("CK_AiResponseFeedback_Rating",
+                    "(\"Outcome\" = 'ANSWERED') = (\"Rating\" IS NOT NULL) AND (\"Rating\" IS NULL OR \"Rating\" BETWEEN 1 AND 5)");
+                t.HasCheckConstraint("CK_AiResponseFeedback_Reason", "\"Reason\" IS NULL OR \"Rating\" <= 2");
+                t.HasCheckConstraint("CK_AiResponseFeedback_Responded", "(\"Outcome\" = 'SHOWN') = (\"RespondedAt\" IS NULL)");
+                t.HasCheckConstraint("CK_AiResponseFeedback_InstrumentVersion", "\"InstrumentVersion\" > 0");
+            });
         });
 
         modelBuilder.Entity<PilotFeedbackResponse>(entity =>

@@ -9,7 +9,7 @@ STATUS = CLOSED
 DECIDED_BY = OWNER
 MIND_MAP = APPLIED_2026-10-13
 DEVMAP_RECONCILIATION = PENDING (consent gate, pilot questions, operator page and metric dictionary are implemented under STEP-11)
-OPEN_QUESTIONS = 0 (§8 resolved 2026-10-13)
+OPEN_QUESTIONS = 0 (§8 resolved 2026-10-13; points 3–4 added 2026-10-14)
 IMPLEMENTATION = NOT_AUTHORIZED_FROM_THIS_FILE_ALONE
 ```
 
@@ -72,8 +72,8 @@ After an AI response is shown, the product may ask how satisfied the user is wit
 
 ### When
 
-- Planning: when a reviewable draft is shown.
-- Reconcile: when the AI explanation of a session is shown.
+- Planning: when a reviewable draft is shown. *(Narrowed by §8.3: right after a draft ended unapplied.)*
+- Reconcile: when the AI explanation of a session is shown. *(Narrowed by §8.4: only where H2 is not asked.)*
 - Asked for a random sample of responses. The rate is configuration; the design assumes about one in three.
 - Asked at most once per response, inside the response surface, never as a modal, and never blocking review, confirmation or the next step.
 
@@ -159,6 +159,9 @@ The pilot is planned for one to two months with about 30–50 accounts. The owne
 2. **Pilot sampling is coverage-first.** During the pilot the §4 prompt is shown for every AI response, limited to once per account, per surface, per local day. The first draft and first explanation of every account are always asked. After the pilot the rate returns to configuration (about one in three).
 
 ---
+
+3. **Planning: the prompt follows a draft that ended unapplied** (owner, 2026-10-14). When a draft is shown it cannot be known whether it will be applied, and H1 follows every applied draft. So the §4 prompt is shown right after the user cancels a draft or replaces it with a new flow, never on a draft under review and never on an applied one. H1 is unchanged and no plan is asked about twice. The most useful answer is why a draft was turned down. Accepted cost: a draft the user simply abandons gets no answer.
+4. **Reconcile: the prompt is asked only where H2 is not** (owner, 2026-10-14). A completed session gets H2 only. A session ends uncompleted only by expiring, when the user is absent, so in practice the explanation is not rated during the pilot, and H2 carries the Reconcile self-report. Revisit if an explicit "leave without completing" action is added.
 
 ## 10. Measurement rules for a small pilot
 
