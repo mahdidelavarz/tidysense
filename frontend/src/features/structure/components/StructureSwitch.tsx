@@ -12,7 +12,7 @@ export function StructureSwitch({ current, goals, projects }: {
   projects?: number
 }) {
   return (
-    <nav className="structure-switch" aria-label="هدف‌ها و پروژه‌ها">
+    <nav className="structure-switch" aria-label="نمای هدف‌ها و پروژه‌ها">
       <Link className="structure-tab entity-goal" to="/goals" aria-current={current === 'goals' ? 'page' : undefined}>
         <Target size={17} aria-hidden="true" />
         هدف‌ها

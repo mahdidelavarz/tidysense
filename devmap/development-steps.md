@@ -547,7 +547,7 @@ Verified 2026-10-13 on Linux:
 
 **Decisions and deviations:**
 
-- **Projects are reached from the account panel** until STEP-17 builds the Goals/Projects switch the boards show. The Goals place is current on `/projects`.
+- **Projects are reached from the account panel** until STEP-17 builds the Goals/Projects switch the boards show. The Goals place is current on `/projects`. *(Done in STEP-17: the row is gone.)*
 - **Desktop has no global create button,** as on the boards: pages keep their own "new" actions.
 - **The create menu and account panel copy use the app's formal address** («نمی‌دانید از کجا شروع کنید؟», «حساب شما»), where the boards mixed in «تو».
 - **The Today sky keeps its layout,** with the account button in the old menu slot. Its redesign belongs to STEP-16.
@@ -586,7 +586,7 @@ Verified 2026-10-13 on Linux:
 
 **Evidence:**
 
-- **Today:** [view](../frontend/src/features/today/components/TodayView.tsx), [hero](../frontend/src/features/today/components/TodayHero.tsx) with its [photograph](../frontend/src/features/today/assets/today-hero.webp), [Reconcile offer](../frontend/src/features/reconcile/components/TodayReconcileEntry.tsx), [day wheel](../frontend/src/features/today/components/DayStrip.tsx), [Task row](../frontend/src/features/today/components/TodayTaskCard.tsx), [swipe actions](../frontend/src/features/today/components/SwipeActions.tsx), [Routine card](../frontend/src/features/today/components/TodayRoutineGroup.tsx).
+- **Today:** [view](../frontend/src/features/today/components/TodayView.tsx), [hero](../frontend/src/shared/ui/PhotoHero.tsx) with its [photograph](../frontend/src/shared/assets/sunset.webp) (both moved to `shared` in STEP-17), [Reconcile offer](../frontend/src/features/reconcile/components/TodayReconcileEntry.tsx), [day wheel](../frontend/src/features/today/components/DayStrip.tsx), [Task row](../frontend/src/features/today/components/TodayTaskCard.tsx), [swipe actions](../frontend/src/features/today/components/SwipeActions.tsx), [Routine card](../frontend/src/features/today/components/TodayRoutineGroup.tsx).
 - **Tasks:** [list](../frontend/src/features/tasks/components/TasksPage.tsx), [row](../frontend/src/features/tasks/components/TaskCard.tsx), [detail](../frontend/src/features/tasks/components/TaskDetailView.tsx), [facts](../frontend/src/features/tasks/components/TaskFacts.tsx).
 - **Routines:** [list](../frontend/src/features/routines/components/RoutinesPage.tsx), [card](../frontend/src/features/routines/components/RoutineCard.tsx), [week bars](../frontend/src/features/routines/components/RoutineWeekBars.tsx), [detail](../frontend/src/features/routines/components/RoutineDetailView.tsx), [four weeks](../frontend/src/features/routines/components/RoutineMonth.tsx), [history](../frontend/src/features/routines/components/RoutineOccurrenceHistory.tsx).
 - **Sheets:** [Task form](../frontend/src/features/tasks/components/TaskForm.tsx), [owner chips](../frontend/src/features/tasks/components/ParentChoice.tsx), [day chips](../frontend/src/shared/ui/DayChoice.tsx), [Routine form](../frontend/src/features/routines/components/RoutineForm.tsx), [Carry](../frontend/src/features/tasks/components/TaskCarrySheet.tsx), [calendar](../frontend/src/shared/ui/Calendar.tsx).
@@ -675,9 +675,55 @@ Verified 2026-10-13 on Linux:
 
 **Completion criteria:** The screens match the boards; the guides appear once and never block login.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:**
+
+- **Welcome and guides:** [flow](../frontend/src/features/welcome/components/WelcomeFlow.tsx), [device-only mark](../frontend/src/features/welcome/types/welcome.storage.ts) (`localStorage` key `tidysense:guides-seen`; nothing is sent to the server), [route](../frontend/src/routes/welcome.tsx), [gate](../frontend/src/features/auth/components/AuthGate.tsx): a signed-out visitor below 1024px who has not seen them goes to `/welcome`; anyone else goes to `/login`, so the guides never stand between a returning user and sign-in.
+- **Entry:** [sign-in](../frontend/src/features/auth/components/LoginView.tsx) with its [phone](../frontend/src/features/auth/components/PhoneStep.tsx) and [code](../frontend/src/features/auth/components/OtpStep.tsx) steps, [First Entry](../frontend/src/routes/first-entry.tsx), [privacy](../frontend/src/features/pilot/components/PrivacyPage.tsx).
+- **Structure:** [switch](../frontend/src/features/structure/components/StructureSwitch.tsx), [Goals](../frontend/src/features/goals/components/GoalsPage.tsx), [Goal card](../frontend/src/features/goals/components/GoalCard.tsx), [Goal detail](../frontend/src/features/goals/components/GoalDetailView.tsx), [Projects](../frontend/src/features/projects/components/ProjectsPage.tsx), [Project card](../frontend/src/features/projects/components/ProjectCard.tsx), [Project detail](../frontend/src/features/projects/components/ProjectReadView.tsx), [progress facts](../frontend/src/features/structure/components/ProgressFacts.tsx), [next steps](../frontend/src/features/structure/components/NextSteps.tsx), [terminal confirmation](../frontend/src/shared/ui/TerminalDialog.tsx), [shared photograph hero](../frontend/src/shared/ui/PhotoHero.tsx). The account panel's temporary Projects row is [removed](../frontend/src/features/shell/components/AccountPanel.tsx).
+- **Backend read model:** [`GET /progress`](../backend/Controllers/ProgressController.cs) ([service](../backend/Services/ProgressService.cs)) derives per request, for each Goal and Project, its Task counts (open, done, today, waiting), active Routines and next three Tasks; nothing is stored. The terminal preview's blockers and cascades now carry their [titles](../backend/DTOs/Common/ParentRequests.cs), so the dialog can name what stands in the way.
+- **Removed:** `ActionTile`, `.entity-card`, `.detail-card`, `.detail-facts`; `DetailTerm` became [`FactRow`](../frontend/src/shared/ui/FactRow.tsx).
+- **Docs:** [components](frontend/components.md), [layout and navigation](frontend/layout-and-navigation.md), [design system](frontend/design-system.md).
+
+**What the tests show:**
+
+- [Welcome](../frontend/src/features/welcome/components/WelcomeFlow.test.tsx): from the welcome through three guides (back appears after the first) to sign-in, marked seen on this device; skipping also marks them seen.
+- [Sign-in](../frontend/src/features/auth/components/LoginView.test.tsx): the resend countdown follows the server's timing, and the code form stays after a rejected code.
+- [Goals](../frontend/src/features/goals/components/GoalsPage.test.tsx), [Goal detail](../frontend/src/features/goals/components/GoalDetailView.test.tsx), [Project detail](../frontend/src/features/projects/components/ProjectReadView.test.tsx): Goals in progress with what is under them, the nearest review offered and finished Goals folded; a Goal's progress, what is under it and its next steps; the terminal dialog names each blocker with a way to open it and offers only later; a Project's completion names the Routines it will stop before confirming.
+- [Privacy](../frontend/src/features/pilot/components/PrivacyPage.test.tsx): retention, where planning text goes, the erasure limit and the contact channel; no consent asked or withdrawn and no model named; readable without a session.
+- Backend: [the progress read model and blocker titles](../backend.Tests/TaskTodayModuleTests.cs).
+- Browser: [welcome](../frontend/e2e/welcome.spec.ts) — a first phone visit sees the welcome and three guides, a second visit goes straight to sign-in; skipping also counts as seen; a desktop visit never shows them. [Parents](../frontend/e2e/parents.spec.ts) reaches Projects through the switch and resolves a blocked Goal from the dialog's «باز کن»; [responsive](../frontend/e2e/responsive.spec.ts), [privacy](../frontend/e2e/privacy.spec.ts) and [auth](../frontend/e2e/auth.spec.ts) updated.
+
+**Verified 2026-10-14 on Linux:**
+
+- 92 frontend tests passed; typecheck, lint and build were clean.
+- All 19 browser scenarios passed in Chromium against a fresh isolated database.
+- 241 backend tests passed (2 skipped, unchanged).
+- Screenshots at 390 px in both themes were compared with every board: `CodeWelcome`, `CodeGuide1`–`CodeGuide3`, `CodeLogin` (both steps), `CodeFirstEntry`, `CodeGoals`, `CodeGoalDetail`, `CodeGoalTerminal`, `CodeProjects`, `CodeProjectDetail`, `CodePrivacy` (signed out); plus sign-in, First Entry and Projects at 1440 px.
+
+**Guide promises (028 §4.3):**
+
+- Guide 2, a one-line Task in under 5 seconds: **holds** (median 3.7 s, measured in STEP-16).
+- Guide 3, Reconcile «با یک لمس»: **not true yet** (one-tap is STEP-19), so its copy now promises «همه یک‌جا» — everything waiting in one place. Restore the one-tap promise only when STEP-19 is verified.
+- Guide 1, a plan in under 2 minutes: **unmeasured**. Only the mock provider runs here; STEP-18 owes the real measurement, and the copy must change if it fails.
+
+**Decisions and deviations:**
+
+- **Guides show below 1024px,** tablets included, because the layout is the phone layout up to there; 028 says "phones".
+- **The welcome uses the sunset photograph** already chosen for Today. The checklist's "replace with the owner's image" is not done: no other image was supplied.
+- **Lists read the options endpoints** (up to 100 Goals or Projects), which is ample for the pilot and keeps one request per page.
+- **No filter button and no «…» menu** on the lists or details: closed items are folded at the foot, and editing is the pencil in the header. The boards' extra buttons had no action.
+- **Wording:** «به این هدف رسیدم» for achieving a Goal; «توقف پروژه» rather than the board's «کنار گذاشتن پروژه», which is the Task verb; formal address throughout, as in STEP-15 and STEP-16.
+- **«کار جدید در این پروژه»** opens the create sheet with the Project preset, a small addition the board implies.
+- **A first OTP sign-in creates the account,** so the screen says «ورود یا ثبت‌نام».
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- Guide 1's time measured with the real provider (STEP-18), before the pilot.
+- The owner's welcome image and the photograph's licence for the pilot.
+- A screen-reader pass of the guides, the switch and the terminal dialog.
 
 ---
 

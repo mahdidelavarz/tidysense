@@ -64,10 +64,12 @@ test('phone layout uses the five-place tab bar, the account sheet and bottom she
   await expect(account.getByRole('button', { name: 'خروج از این دستگاه' })).toBeVisible()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-phone-account.png' })
-  // Projects are reached here until the Goals page carries its switch (STEP-17); the Goals tab stays current.
-  await account.getByRole('link', { name: 'پروژه‌ها' }).click()
-  await expect(page).toHaveURL(/\/projects$/)
+  await page.keyboard.press('Escape')
   await expect(account).toBeHidden()
+  // Projects are the other view of the Goals place, reached from its switch; the Goals tab stays current.
+  await tabBar.getByRole('link', { name: 'هدف‌ها' }).click()
+  await page.getByRole('navigation', { name: 'نمای هدف‌ها و پروژه‌ها' }).getByRole('link', { name: /پروژه‌ها/ }).click()
+  await expect(page).toHaveURL(/\/projects$/)
   await expect(tabBar.getByRole('link', { name: 'هدف‌ها' })).toHaveAttribute('aria-current', 'page')
   await tabBar.getByRole('link', { name: 'هدف‌ها' }).click()
   await expect(page).toHaveURL(/\/goals$/)
@@ -122,7 +124,7 @@ test('desktop layout uses the icon rail and has no tab bar', async ({ page }) =>
   await page.screenshot({ path: 'test-results/ui-desktop-projects.png' })
 
   await page.goto(`/goals/${goal.id}`)
-  await expect(page.getByRole('button', { name: 'تحقق هدف' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'به این هدف رسیدم' })).toBeVisible()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-desktop-goal-detail.png' })
 

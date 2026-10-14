@@ -19,9 +19,9 @@ test('create Goal and child Project, resolve blocker, then explicitly achieve Go
   await page.getByRole('button', { name: 'ساخت هدف' }).click()
   await expect(page.getByRole('link', { name: new RegExp(goalTitle) })).toBeVisible()
 
-  // Until the Goals page carries its Projects switch (STEP-17), Projects are reached from the account panel.
-  await page.getByRole('button', { name: 'حساب و تنظیمات' }).click()
-  await page.getByRole('dialog').getByRole('link', { name: 'پروژه‌ها', exact: true }).click()
+  // Goals and Projects are one place; the switch on the photograph moves between them.
+  await page.getByRole('navigation', { name: 'نمای هدف‌ها و پروژه‌ها' }).getByRole('link', { name: /پروژه‌ها/ }).click()
+  await expect(page).toHaveURL(/\/projects$/)
   await page.getByRole('button', { name: 'پروژه جدید' }).click()
   await page.getByLabel('عنوان پروژه').fill(projectTitle)
   await page.getByLabel('معنای تکمیل (اختیاری)').fill('تحویل خروجی محدود')
@@ -32,16 +32,19 @@ test('create Goal and child Project, resolve blocker, then explicitly achieve Go
 
   await page.getByRole('navigation', { name: 'ناوبری اصلی' }).getByRole('link', { name: 'هدف‌ها و پروژه‌ها' }).click()
   await page.getByRole('link', { name: new RegExp(goalTitle) }).click()
-  await page.getByRole('button', { name: 'تحقق هدف' }).click()
-  await expect(page.getByText(/ابتدا پروژه‌های فعال/)).toBeVisible()
-  await page.getByRole('link', { name: 'مشاهده پروژه فعال' }).click()
+  await page.getByRole('button', { name: 'به این هدف رسیدم' }).click()
+  const blocked = page.getByRole('dialog', { name: 'رسیدن به هدف' })
+  await expect(blocked.getByText('این‌ها هنوز زیر این هدف فعال‌اند.')).toBeVisible()
+  await expect(blocked.getByRole('button', { name: 'تأیید تحقق هدف' })).toHaveCount(0)
+  await page.screenshot({ path: 'test-results/step-17-goal-terminal-blocked.png' })
+  await blocked.getByRole('link', { name: `باز کن: ${projectTitle}` }).click()
 
-  await page.getByRole('button', { name: 'تکمیل پروژه' }).click()
+  await page.getByRole('button', { name: 'این پروژه تمام شد' }).click()
   await page.getByRole('button', { name: 'تأیید تکمیل پروژه' }).click()
   await expect(page.getByText('تکمیل‌شده')).toBeVisible()
-  await page.getByRole('link', { name: 'مشاهده هدف' }).click()
+  await page.getByRole('link', { name: `هدف: ${goalTitle}` }).click()
 
-  await page.getByRole('button', { name: 'تحقق هدف' }).click()
+  await page.getByRole('button', { name: 'به این هدف رسیدم' }).click()
   await page.getByRole('button', { name: 'تأیید تحقق هدف' }).click()
   await expect(page.getByText('محقق‌شده')).toBeVisible()
 })

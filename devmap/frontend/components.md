@@ -14,9 +14,8 @@ Reuse order: existing component → extend it → small feature component → ne
 | ghost button | `.ghost-button` | low-emphasis actions such as back, resend |
 | icon button | `.icon-button` | icon-only control; always give it an `aria-label` |
 | text link | `.text-link` | navigation inside text or a fact value |
-| action tile | `ActionTile` | the actions of a detail page: icon, label, one-line explanation; tones `neutral`, `positive`, `attention` |
 
-The label of an `ActionTile` is its accessible name; the explanation is its description. Never put two primary buttons on one screen.
+Never put two primary buttons on one screen. A terminal or destructive action never sits beside its opposite as an equal: the positive one leads, the other is a quiet ghost below it.
 
 ## Structure
 
@@ -25,12 +24,17 @@ The label of an `ActionTile` is its accessible name; the explanation is its desc
 | `PageHeader` | top of a primary page: title, description, one action and, below desktop, the account button |
 | `BackLink` | top of a detail page: the way back to its list, the page's own small `actions` (such as the edit pencil) and, below desktop, the account button |
 | `.card` | a static surface lifted by shadow, without an outline |
-| `TodayHero` (Today) | the Today page's header: the photograph under a dark veil, the white Naskh title and date, the account button (below desktop) and the page action (desktop) as frosted glass, and its foot (the Reconcile offer). See layout-and-navigation |
+| `PhotoHero` | the header of a page drawn on the photograph (Today, Goals, Projects): the photograph under a dark veil, the white Naskh title and a line under it, the account button (below desktop) and the page action (desktop) as frosted glass, an optional row under the title (`below`) and its foot (`children`). Sticky; collapses to a band on scroll down. See layout-and-navigation |
+| `StructureSwitch` | the Goals/Projects switch on the photograph: two tabs with their active counts; the current one is solid |
+| `.goal-card` (`GoalCard`, `ProjectCard`) | a Goal or Project in its list, washed in its colour: its tile (solid for a Goal, a tint for a Project), title as a stretched link, meaning, `.count-chip`s (Goal) or open counts (Project), `ProgressBar` and target. A Project card ends with its next open Task, completed from its ring. `data-closed` fades finished items |
+| `ProgressBar`, `TargetNote`, `ReviewNote` | «X از Y کار انجام شد» over a bar in the item's colour (`large` on a detail page); a target date as a date, or days left in the caution colour within two weeks; the next review, or that it is due |
+| `.progress-card`, `.meaning-line` | on a Goal or Project page: how far it has come, washed in its colour; what it means, set off by a rule in its colour |
+| `NextSteps`, `UnderRow` | a Goal's or Project's next open Tasks as a short timeline (ring, or a lock while waiting); one row of what is under it: a count, a few names and the list it lives in |
+| `.positive-button` | the quiet positive answer at the foot of a Goal or Project («به این هدف رسیدم», «این پروژه تمام شد») |
+| `.add-row` | a dashed row that adds one more item in place («کار جدید در این پروژه») |
 | `.glass-card`, `.glass-chip`, `.glass-button`, `.glass-close` | a frosted card on the photograph: an icon tile, a title, chips (`data-tone="warm"` for age), a 44px arrow link and a small corner close with a full-size target |
-| `.detail-card` | the top of a detail page: identity (chips, title, description) in the entity's corner wash, then `.detail-facts`, the `<dl>` of `DetailTerm`s, under a rule. Takes `entity-goal`, `entity-project`, `entity-task` or `entity-routine` |
 | `.proposal-card` | a proposed item in a planning draft, in its entity's corner wash, with its include switch and edit button in a bar underneath; `data-excluded` drops the wash |
 | `.state-panel` | the panel behind `EmptyState`, `ErrorState` (`data-tone="attention"`) and the "building draft" state |
-| `.entity-card` | a whole-card link in a grid (Goal, Project), with `entity-goal` or `entity-project` for its corner wash; `data-closed` drops the wash for finished work |
 | `.timeline`, `.timeline-row`, `.timeline-node`, `.timeline-mark`, `.timeline-card` | a list as a timeline (Today, Tasks, a Task's sequence): each row has a 28px node on the start side joined to the next by a line, and a card. The card's title is a `.stretched-link` that covers the card under its own controls; `data-state="done"` fades it with the title struck through, `"waiting"` fades its content on an opaque card. `.timeline-page` runs one line behind several groups, each opened by a `.timeline-head` dot, label and `.count-pill` |
 | `.ring-button` / `.ring-done` / `.ring-lock` / `.ring-planned` / `.ring-routine` | timeline nodes: completing a Task (a 24px ring in the Task colour in a 44px target), done, waiting for an earlier step, planned for a later day, a Routine's planet |
 | `SwipeActions` | a Today row's hidden actions: below 768px the card is dragged toward the end side over a tray of `.swipe-action` tiles (`data-tone="task"` or `"danger"`); from 768px its "more" button opens them under the card. A drag never ends in a tap, and a tap on an open card closes it |
@@ -45,7 +49,6 @@ The label of an `ActionTile` is its accessible name; the explanation is its desc
 | `.decision-card` | one item waiting for an answer (Reconcile): what it is on top (`.decision-head`, `.decision-title`), then a `.decision-bar` of `.decision-button`s, one per possible answer; tones `primary`, `positive`, `danger`. Below 640px the bar is one compact row with the icon over an 11px label; from 640px the answers are ordinary buttons |
 | `.lane` | a part of a page with its own kind of decision: a rule above, a `.lane-title` with a `.lane-count`, a `.lane-hint`, and `.lane-owner` pills naming the Goal or Project its cards belong to |
 | `DateLeaf` | a planned date as a small calendar leaf (day over month), coloured by `when`; used by Task rows and Reconcile |
-| `DetailTerm` | one icon + label + value fact inside a `<dl>` (Goal and Project detail) |
 | `Calendar` | a Jalali month grid, Saturday first, ISO values in and out; days before `min` are disabled, and a day can carry a deadline mark and a count of what is planned on it. `DateField` and the Carry sheet use it |
 | `DayChoice` | when something is for, as one-press chips: today, tomorrow, a picked day (opens the calendar) and, where allowed, none |
 | `ParentChoice` | the owner of a new item as chips: the first two active Projects and Goals, the chosen one, standalone, and a search button that opens the full `TaskParentSelect` |
@@ -93,7 +96,7 @@ The quick create forms (New Task, New Routine) ask a question as the title label
 |---|---|
 | `Sheet` | create/edit flows: bottom sheet on phones, side panel from 768px. `entity` puts that kind's icon before the title and its colour on the title line and the chosen chips |
 | `ConfirmationDialog` | one explicit decision. Title and close button on top, body, then `.dialog-actions`: a tinted bar that stacks the buttons on a phone and lines them up from 640px |
-| `TerminalDialog` | the Goal/Project terminal confirmation with its blocker list |
+| `TerminalDialog` | the Goal/Project terminal confirmation (`CodeGoalTerminal`): the item, then either the active children standing in the way, each named with «باز کن» to its page and only «باشه، بعداً», or what confirming means a line each, the Routines it will stop by name, and the confirm button |
 | `Toaster` + `showToast` | confirmed success messages |
 
 All three modal surfaces share [`useModal`](../../frontend/src/shared/lib/use-modal.ts): focus moves in, Tab is trapped, Escape closes unless an action is pending, the page behind stops scrolling, and focus returns to the trigger.
