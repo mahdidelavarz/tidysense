@@ -260,6 +260,51 @@ public sealed class RoutineService(
             rows.Select(x => ToDto(x, routine.Title)).ToArray(), new PageInfoDto(next, hasMore));
     }
 
+    /// <summary>
+    /// The local weeks (Saturday to Friday) ending with this one, for every active Routine or for
+    /// one owned Routine whatever its status. Past days and today read the occurrences that exist;
+    /// later days apply the schedule, which is what will be created (nothing once stopped).
+    /// </summary>
+    public async Task<RoutineWeeksDto> WeekAsync(int weeks, Guid? routineId, CancellationToken cancellationToken)
+    {
+        var localNow = dates.LocalNow;
+        await EvaluateAsync(localNow, cancellationToken);
+        var today = localNow.Date;
+        // DayOfWeek counts from Sunday = 0; Saturday starts the Persian week.
+        var start = today.AddDays(-(((int)today.DayOfWeek + 1) % 7) - 7 * (weeks - 1));
+        var days = 7 * weeks;
+        var query = db.Routines.AsNoTracking().Where(x => x.UserId == currentUser.UserId);
+        query = routineId is { } id ? query.Where(x => x.Id == id) : query.Where(x => x.Status == RoutineStatuses.Active);
+        var routines = await query.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(cancellationToken);
+        if (routineId is { } missing && routines.Count == 0)
+            throw new ResourceNotFoundException("Routine", missing);
+        var ids = routines.Select(x => x.Id).ToArray();
+        var counts = (await db.RoutineOccurrences.AsNoTracking()
+                .Where(x => ids.Contains(x.RoutineId) && x.ScheduledLocalDate >= start && x.ScheduledLocalDate <= today)
+                .GroupBy(x => new { x.RoutineId, x.ScheduledLocalDate })
+                .Select(x => new { x.Key.RoutineId, x.Key.ScheduledLocalDate, Scheduled = x.Count(),
+                    Done = x.Count(o => o.Status == OccurrenceStatuses.Done) })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(x => (x.RoutineId, x.ScheduledLocalDate));
+        return new RoutineWeeksDto(start, today, routines.Select(routine =>
+        {
+            var recurrence = RoutineSchedule.Parse(routine.RecurrenceDefinition);
+            var slots = RoutineSchedule.SlotsFor(routine.TimesOfDay).Count;
+            return new RoutineWeekDto(routine.Id, ToRecurrenceDto(recurrence), slots, Enumerable.Range(0, days).Select(offset =>
+            {
+                var date = start.AddDays(offset);
+                if (date <= today)
+                    return counts.TryGetValue((routine.Id, date), out var day)
+                        ? new RoutineWeekDayDto(date, day.Scheduled, day.Done)
+                        : new RoutineWeekDayDto(date, 0, 0);
+                var scheduled = routine.Status == RoutineStatuses.Active && RoutineSchedule.OccursOn(recurrence, date) &&
+                    RoutineSchedule.IsEligible(routine.EffectiveFromLocalDate, routine.EffectiveUntilLocalDate, date)
+                    ? slots : 0;
+                return new RoutineWeekDayDto(date, scheduled, 0);
+            }).ToArray());
+        }).ToArray());
+    }
+
     /// <summary>Every occurrence scheduled for the local date, resolved or not, grouped by Routine.</summary>
     public async Task<IReadOnlyList<RoutineOccurrenceDto>> TodayOccurrencesAsync(DateOnly today,
         CancellationToken cancellationToken)
@@ -517,13 +562,14 @@ public sealed class RoutineService(
             return new RoutineDto(value.Id, value.GoalId, value.ProjectId, value.ContinuationOfRoutineId,
                 continuedBy.TryGetValue(value.Id, out var next) ? next : null, value.Title,
                 value.Description, value.Status,
-                new RecurrenceDto(recurrence.Type,
-                    recurrence.DaysOfWeek.Count > 0 ? recurrence.DaysOfWeek : null, recurrence.DayOfMonth),
-                value.TimesOfDay, value.RecurrenceTimezone, value.EffectiveFromLocalDate,
+                ToRecurrenceDto(recurrence), value.TimesOfDay, value.RecurrenceTimezone, value.EffectiveFromLocalDate,
                 value.EffectiveUntilLocalDate, value.Source, value.Version, value.CreatedAt,
                 value.UpdatedAt, value.StoppedAt);
         }).ToArray();
     }
+
+    private static RecurrenceDto ToRecurrenceDto(RoutineRecurrence recurrence) =>
+        new(recurrence.Type, recurrence.DaysOfWeek.Count > 0 ? recurrence.DaysOfWeek : null, recurrence.DayOfMonth);
 
     private static RoutineOccurrenceDto ToDto(RoutineOccurrence value, string routineTitle) =>
         new(value.Id, value.RoutineId, routineTitle, value.ScheduledLocalDate, value.ScheduledLocalTime,

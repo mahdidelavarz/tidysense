@@ -1,12 +1,11 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { CalendarDays, CalendarOff, Clock, Link2, Pencil, Play, Repeat, Square } from '../../../shared/ui/icons'
+import { CalendarDays, CalendarOff, Check, Link2, LoaderCircle, Pause, Pencil, Play, RefreshCw } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
-import { formatLocalDate } from '../../../shared/lib/date'
+import { formatLocalDate, formatNumber, formatTime } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
-import { ActionTile } from '../../../shared/ui/ActionTile'
 import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog'
-import { DetailTerm } from '../../../shared/ui/DetailTerm'
+import { FactRow } from '../../../shared/ui/DetailTerm'
 import { EntityLabel, StatusBadge } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
 import { BackLink } from '../../../shared/ui/PageHeader'
@@ -14,13 +13,22 @@ import { Sheet } from '../../../shared/ui/Sheet'
 import { ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { useGoalOptions } from '../../goals/hooks/goal-hooks'
 import { useProjectOptions } from '../../projects/hooks/project-hooks'
-import { useContinueRoutine, useRoutine, useStopRoutine, useUpdateRoutine } from '../hooks/routine-hooks'
+import { useTaskParentTitle } from '../../tasks/hooks/task-hooks'
+import { useToday } from '../../today/hooks/today-hooks'
+import {
+  useCompleteOccurrence, useContinueRoutine, useCorrectOccurrence, useRoutine, useRoutineMonth, useStopRoutine, useUpdateRoutine,
+} from '../hooks/routine-hooks'
 import { recurrenceLabel, slotsLabel } from '../types/routine.format'
-import type { CreateRoutineRequest, RoutineDto, UpdateRoutineRequest } from '../types/routine.types'
+import type { CreateRoutineRequest, RoutineDto, RoutineOccurrenceDto, UpdateRoutineRequest } from '../types/routine.types'
 import { RoutineForm } from './RoutineForm'
+import { RoutineMonth } from './RoutineMonth'
 import { RoutineOccurrenceHistory } from './RoutineOccurrenceHistory'
 
-/** Routine detail page: read, edit, stop, resume as a continuation, and the occurrence history. */
+/**
+ * Routine detail page: its schedule, today's slots (completed here too), the
+ * last four weeks, its facts and its history. Editing is the pencil at the
+ * top; stopping (or resuming as a continuation) is at the foot.
+ */
 export function RoutineDetailView({ routineId }: { routineId: string }) {
   const routine = useRoutine(routineId)
   const goals = useGoalOptions()
@@ -28,6 +36,9 @@ export function RoutineDetailView({ routineId }: { routineId: string }) {
   const update = useUpdateRoutine(routineId)
   const stop = useStopRoutine(routineId)
   const resume = useContinueRoutine(routineId)
+  const month = useRoutineMonth(routineId)
+  const todayView = useToday()
+  const parentTitle = useTaskParentTitle()
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [resuming, setResuming] = useState(false)
@@ -53,79 +64,95 @@ export function RoutineDetailView({ routineId }: { routineId: string }) {
   const data = routine.data
   const version = Number(data.version)
   const active = data.status === 'ACTIVE'
+  const slots = (todayView.data?.routineOccurrences ?? []).filter(occurrence => occurrence.routineId === data.id)
+  const weeks = month.data?.routines[0]
   return (
     <div className="page">
-      <BackLink to="/routines" />
+      <BackLink
+        to="/routines"
+        actions={active && (
+          <button className="account-button" type="button" aria-label="ویرایش روتین" onClick={() => setEditing(true)}>
+            <Pencil size={20} aria-hidden="true" />
+          </button>
+        )}
+      />
 
-      <article className="detail-card entity-routine">
+      <header className="entity-routine">
         <div className="flex flex-wrap items-center gap-2">
           <EntityLabel entity="routine" />
           <StatusBadge status={data.status} />
         </div>
         <h1 className="page-title mt-3 wrap-break-word">{data.title}</h1>
-        {data.description
-          ? <p className="mt-3 whitespace-pre-wrap leading-8 text-text-secondary">{data.description}</p>
-          : <p className="mt-3 text-sm text-text-tertiary">توضیحی برای این روتین ثبت نشده است.</p>}
-        <dl className="detail-facts">
-          <DetailTerm icon={Link2} label="وابستگی" value={<ParentLink routine={data} />} />
-          <DetailTerm icon={Repeat} label="تکرار" value={recurrenceLabel(data.recurrence)} />
-          <DetailTerm icon={Clock} label="ساعت‌ها" value={slotsLabel(data.timesOfDay)} />
-          <DetailTerm icon={CalendarDays} label="تاریخ شروع" value={formatLocalDate(data.effectiveFromLocalDate)} dateTime={data.effectiveFromLocalDate} />
-          {data.effectiveUntilLocalDate && (
-            <DetailTerm icon={CalendarOff} label="آخرین روز" value={formatLocalDate(data.effectiveUntilLocalDate)} dateTime={data.effectiveUntilLocalDate} />
-          )}
-        </dl>
-        {(data.continuationOfRoutineId || data.continuedByRoutineId) && (
-          <div className="notice mt-4 space-y-1">
-            {data.continuationOfRoutineId && (
-              <p>
-                این روتین ادامه یک روتین متوقف‌شده است.{' '}
-                <Link className="text-link" to="/routines/$routineId" params={{ routineId: data.continuationOfRoutineId }}>مشاهده روتین قبلی</Link>
-              </p>
-            )}
-            {data.continuedByRoutineId && (
-              <p>
-                این روتین با یک روتین تازه ادامه پیدا کرده است.{' '}
-                <Link className="text-link" to="/routines/$routineId" params={{ routineId: data.continuedByRoutineId }}>مشاهده روتین ادامه</Link>
-              </p>
-            )}
-          </div>
-        )}
-      </article>
+        <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-text-secondary">
+          <RefreshCw size={16} aria-hidden="true" />
+          {recurrenceLabel(data.recurrence)}، {data.timesOfDay.length > 0 ? `ساعت ${slotsLabel(data.timesOfDay)}` : 'بدون ساعت مشخص'}
+        </p>
+        {data.description && <p className="mt-3 whitespace-pre-wrap leading-8 text-text-secondary">{data.description}</p>}
+      </header>
 
-      {(active || !data.continuedByRoutineId) && (
-        <section className="mt-8" aria-labelledby="routine-actions">
-          <h2 className="lane-title" id="routine-actions">چه کاری می‌خواهید انجام دهید؟</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {active ? (
-              <>
-                <ActionTile icon={Pencil} label="ویرایش روتین" description="عنوان، وابستگی، تکرار یا ساعت‌ها را تغییر دهید." onClick={() => setEditing(true)} />
-                <ActionTile
-                  icon={Square}
-                  tone="attention"
-                  label="توقف روتین"
-                  description="از فردا دیگر در «امروز» نمی‌آید؛ سابقه آن حفظ می‌شود."
-                  disabled={stop.isPending}
-                  onClick={() => setConfirmStop(true)}
-                />
-              </>
-            ) : (
-              <ActionTile
-                icon={Play}
-                label="ازسرگیری روتین"
-                description="یک روتین تازه با همین مشخصات ساخته می‌شود؛ این روتین و سابقه‌اش دست‌نخورده می‌ماند."
-                onClick={() => setResuming(true)}
-              />
-            )}
+      {slots.length > 0 && (
+        <section className="card entity-routine mt-6 p-4 sm:p-5" aria-labelledby="routine-today">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-extrabold" id="routine-today">نوبت‌های امروز</h2>
+            <span className="entity-ink text-xs font-bold">
+              {formatNumber(slots.filter(slot => slot.status === 'DONE').length)} از {formatNumber(slots.length)}
+            </span>
           </div>
+          <ul className="mt-3 grid grid-cols-2 gap-2.5">
+            {slots.map(slot => <TodaySlot key={slot.id} slot={slot} title={data.title} next={slot === slots.find(item => item.status === 'PENDING')} />)}
+          </ul>
         </section>
       )}
+
+      {weeks && (
+        <section className="card mt-5 p-4 sm:p-5" aria-labelledby="routine-month">
+          <h2 className="mb-3 font-extrabold" id="routine-month">۴ هفته‌ی اخیر</h2>
+          <RoutineMonth weeks={weeks} today={month.data?.today ?? ''} />
+        </section>
+      )}
+
+      <dl className="fact-list mt-5">
+        <FactRow icon={Link2} label="برای" value={<OwnerValue routine={data} title={parentTitle(data)} />} />
+        <FactRow icon={CalendarDays} label="شروع از" value={formatLocalDate(data.effectiveFromLocalDate)} dateTime={data.effectiveFromLocalDate} />
+        {data.effectiveUntilLocalDate && (
+          <FactRow icon={CalendarOff} label="آخرین روز" value={formatLocalDate(data.effectiveUntilLocalDate)} dateTime={data.effectiveUntilLocalDate} />
+        )}
+      </dl>
+      {(data.continuationOfRoutineId || data.continuedByRoutineId) && (
+        <div className="notice mt-4 space-y-1">
+          {data.continuationOfRoutineId && (
+            <p>
+              این روتین ادامه یک روتین متوقف‌شده است.{' '}
+              <Link className="text-link" to="/routines/$routineId" params={{ routineId: data.continuationOfRoutineId }}>مشاهده روتین قبلی</Link>
+            </p>
+          )}
+          {data.continuedByRoutineId && (
+            <p>
+              این روتین با یک روتین تازه ادامه پیدا کرده است.{' '}
+              <Link className="text-link" to="/routines/$routineId" params={{ routineId: data.continuedByRoutineId }}>مشاهده روتین ادامه</Link>
+            </p>
+          )}
+        </div>
+      )}
+
+      <RoutineOccurrenceHistory routineId={routineId} today={month.data?.today} />
 
       <div className="mt-4">
         <FormError error={stop.error} />
       </div>
-
-      <RoutineOccurrenceHistory routineId={routineId} />
+      {active ? (
+        <div className="mt-6 flex justify-center">
+          <button className="ghost-button text-attention" type="button" disabled={stop.isPending} onClick={() => setConfirmStop(true)}>
+            <Pause size={18} aria-hidden="true" />
+            توقف روتین
+          </button>
+        </div>
+      ) : !data.continuedByRoutineId && (
+        <button className="secondary-button mt-6 min-h-14 w-full rounded-[1.25rem]" type="button" onClick={() => setResuming(true)}>
+          <Play size={20} aria-hidden="true" />
+          ازسرگیری روتین
+        </button>
+      )}
 
       {editing && (
         <Sheet title="ویرایش روتین" onClose={() => setEditing(false)} locked={update.isPending}>
@@ -200,13 +227,75 @@ export function RoutineDetailView({ routineId }: { routineId: string }) {
   )
 }
 
-/** Names the Routine's parent and links to it, so the user can move up the hierarchy. */
-function ParentLink({ routine }: { routine: RoutineDto }) {
+/** The Routine's owner, linked, or that it stands alone. */
+function OwnerValue({ routine, title }: { routine: RoutineDto; title?: string }) {
   if (routine.projectId) {
-    return <Link className="text-link" to="/projects/$projectId" params={{ projectId: routine.projectId }}>مشاهده پروژه</Link>
+    return <Link className="text-link" to="/projects/$projectId" params={{ projectId: routine.projectId }}>{title ?? 'مشاهده پروژه'}</Link>
   }
   if (routine.goalId) {
-    return <Link className="text-link" to="/goals/$goalId" params={{ goalId: routine.goalId }}>مشاهده هدف</Link>
+    return <Link className="text-link" to="/goals/$goalId" params={{ goalId: routine.goalId }}>{title ?? 'مشاهده هدف'}</Link>
   }
-  return 'روتین مستقل'
+  return 'مستقل'
+}
+
+/** One of today's slots: done, missed (correctable), or open and completed with one press. */
+function TodaySlot({ slot, title, next }: { slot: RoutineOccurrenceDto; title: string; next: boolean }) {
+  const complete = useCompleteOccurrence()
+  const correct = useCorrectOccurrence()
+  const time = slot.scheduledLocalTime ? formatTime(slot.scheduledLocalTime) : 'امروز'
+  const face = (mark: React.ReactNode, words: string) => (
+    <>
+      {mark}
+      <span className="min-w-0">
+        <bdi className="block font-extrabold" dir={slot.scheduledLocalTime ? 'ltr' : undefined}>{time}</bdi>
+        <span className="block text-xs font-semibold text-text-secondary">{words}</span>
+      </span>
+    </>
+  )
+  if (slot.status === 'PENDING') {
+    return (
+      <li>
+        <button
+          className="slot-tile w-full"
+          type="button"
+          aria-label={`انجام شد: ${title}، ${time}`}
+          disabled={complete.isPending}
+          onClick={() => complete.mutate(
+            { occurrenceId: slot.id, expectedVersion: Number(slot.version) },
+            { onSuccess: () => showToast('نوبت روتین انجام شد.') },
+          )}
+        >
+          {face(
+            complete.isPending
+              ? <LoaderCircle size={28} className="animate-spin text-entity-routine" aria-hidden="true" />
+              : <span className="size-7 shrink-0 rounded-full border-2 border-entity-routine" aria-hidden="true" />,
+            next ? 'بعدی' : 'در پیش',
+          )}
+        </button>
+      </li>
+    )
+  }
+  return (
+    <li className="slot-tile" data-status={slot.status}>
+      {face(
+        slot.status === 'DONE'
+          ? <span className="slot-done size-7" aria-hidden="true"><Check size={16} /></span>
+          : <span className="slot-missed size-7" aria-hidden="true" />,
+        slot.status === 'DONE' ? 'انجام شد' : 'انجام نشد',
+      )}
+      {slot.status === 'MISSED' && (
+        <button
+          className="text-link relative ms-auto text-xs"
+          type="button"
+          disabled={correct.isPending}
+          onClick={() => correct.mutate(
+            { occurrenceId: slot.id, expectedVersion: Number(slot.version), targetStatus: 'DONE' },
+            { onSuccess: () => showToast('سابقه اصلاح شد.') },
+          )}
+        >
+          انجامش دادم
+        </button>
+      )}
+    </li>
+  )
 }

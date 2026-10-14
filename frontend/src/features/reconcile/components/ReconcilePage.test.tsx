@@ -35,7 +35,9 @@ vi.mock('../services/reconcile-api', () => ({
   createReconcilePreview: vi.fn(), submitReconcileConfirmation: vi.fn(),
   requestReconcileExplanation: vi.fn(), cancelReconcileExplanation: vi.fn(), dismissReconcileRecommendation: vi.fn(),
 }))
-vi.mock('../../tasks/services/tasks-api', () => ({ completeTask: vi.fn() }))
+vi.mock('../../tasks/services/tasks-api', () => ({
+  completeTask: vi.fn(), listTasks: vi.fn().mockResolvedValue({ items: [], page: { nextCursor: null, hasMore: false } }),
+}))
 vi.mock('../../pilot/services/pilot-api', () => ({ submitPilotFeedback: vi.fn() }))
 vi.mock('../../goals/services/goals-api', () => ({ reviewGoal: vi.fn(), listGoals: vi.fn() }))
 vi.mock('../../projects/services/projects-api', () => ({ reviewProject: vi.fn(), listProjects: vi.fn() }))
@@ -205,8 +207,7 @@ describe('ReconcilePage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'انتقال کل دنباله' }))
     const sheet = within(screen.getByRole('dialog', { name: 'انتقال کل دنباله' }))
     expect(createReconcilePreview).not.toHaveBeenCalled()
-    fireEvent.click(sheet.getByLabelText('تاریخ جدید'))
-    fireEvent.click(sheet.getByRole('button', { name: 'فردا' }))
+    fireEvent.click(sheet.getByRole('button', { name: /^فردا/ }))
     fireEvent.click(sheet.getByRole('button', { name: 'دیدن پیش‌نمایش' }))
     await waitFor(() => expect(createReconcilePreview).toHaveBeenCalledWith(sessionId, {
       actionType: 'SEQUENCE_CARRY_ALL', sequenceId, plannedDate: toIsoDate(addDays(new Date(), 1)),

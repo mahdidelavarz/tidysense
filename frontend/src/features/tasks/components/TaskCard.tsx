@@ -1,60 +1,94 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronLeft, CircleCheckBig, CircleDashed, CircleSlash, FolderKanban, Lock, ShieldCheck, Target } from '../../../shared/ui/icons'
-import { StatusBadge } from '../../../shared/ui/EntityUi'
+import { CalendarDays, Check, ChevronLeft, CircleSlash, LoaderCircle, Lock, ShieldCheck } from '../../../shared/ui/icons'
+import { parseIsoDate } from '../../../shared/lib/date'
 import type { TaskDto } from '../types/task.types'
-import { DateLeaf, leafDateText } from './DateLeaf'
+import { TaskNote, TaskParent } from './TaskFacts'
 
-/** Where a planned date falls relative to today; both are ISO local dates, so they compare as text. */
-export function taskWhen(task: Pick<TaskDto, 'status' | 'plannedDate'>, today: string) {
+const dayMonth = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long' })
+
+/** The time bucket a Task falls in on the Tasks list; both dates are ISO local dates, so they compare as text. */
+export type TaskGroup = 'today' | 'earlier' | 'tomorrow' | 'later' | 'none' | 'closed'
+
+export function taskGroup(task: Pick<TaskDto, 'status' | 'plannedDate'>, today: string, tomorrow: string): TaskGroup {
   if (task.status !== 'ACTIVE') return 'closed'
   if (!task.plannedDate) return 'none'
-  return task.plannedDate < today ? 'earlier' : task.plannedDate === today ? 'today' : 'later'
+  if (task.plannedDate === today) return 'today'
+  if (task.plannedDate === tomorrow) return 'tomorrow'
+  return task.plannedDate < today ? 'earlier' : 'later'
 }
 
 /**
- * One Task row in the Tasks list. The whole row opens the Task. The leaf at
- * its start is the planned date, or how the Task ended once it is closed.
+ * One Task on the Tasks timeline. The node completes it with one press (a
+ * lock while it waits for earlier steps; how it ended once closed); the card
+ * opens it. Beside the title: since when it has been waiting for an earlier
+ * day, its date on a later one, or else how close its deadline is.
  */
-export function TaskCard({ task, today, parentTitle }: {
+export function TaskCard({ task, group, today, parentTitle, completing = false, onComplete }: {
   task: TaskDto
-  /** Today's ISO local date, to mark the leaf. */
+  group: TaskGroup
+  /** Today's ISO local date, for how close the deadline is. */
   today: string
   /** Title of the Goal or Project the Task belongs to, when it is known. */
   parentTitle?: string
+  completing?: boolean
+  onComplete: () => void
 }) {
-  const when = taskWhen(task, today)
-  const ParentIcon = task.projectId ? FolderKanban : task.goalId ? Target : CircleDashed
-  const parentKind = task.projectId ? 'پروژه' : task.goalId ? 'هدف' : 'مستقل'
+  const closed = task.status !== 'ACTIVE'
+  const planned = task.plannedDate ? dayMonth.format(parseIsoDate(task.plannedDate)) : null
+  const note = group === 'earlier' && planned ? <DateNote text={`از ${planned}`} />
+    : group === 'later' && planned && !task.deadline ? <DateNote text={planned} />
+      : closed ? null : <TaskNote task={task} today={today} />
   return (
-    <Link className="list-row" to="/tasks/$taskId" params={{ taskId: task.id }}>
-      <DateLeaf date={task.plannedDate} when={when}>
-        {when === 'closed' && (task.status === 'COMPLETED' ? <CircleCheckBig size={22} /> : <CircleSlash size={22} />)}
-      </DateLeaf>
-      <div className="min-w-0 flex-1">
-        <h3 className={`truncate font-bold leading-7 ${when === 'closed' ? 'text-text-secondary' : ''}`}>{task.title}</h3>
-        <p className="mt-0.5 flex flex-wrap items-center gap-1.5">
-          <span className="meta-chip">
-            <ParentIcon size={13} className="shrink-0" aria-hidden="true" />
-            <span className="truncate">{parentTitle ? `${parentKind}: ${parentTitle}` : parentKind}</span>
-          </span>
-          {/* The leaf is decorative, so the date is also said in words for assistive technology. */}
-          <span className="sr-only">{leafDateText(task.plannedDate)}</span>
-          {task.isBlocked && (
-            <span className="meta-chip bg-caution-tint text-caution">
-              <Lock size={13} className="shrink-0" aria-hidden="true" />
-              منتظر کار پیشین
-            </span>
+    <li className="timeline-row">
+      <div className="timeline-node">
+        <span className="timeline-mark">
+          {task.status === 'COMPLETED' ? (
+            <span className="ring-done" role="img" aria-label="تکمیل‌شده"><Check size={14} /></span>
+          ) : task.status === 'DROPPED' ? (
+            <span className="ring-lock" role="img" aria-label="کنار گذاشته‌شده"><CircleSlash size={14} /></span>
+          ) : task.isBlocked ? (
+            <span className="ring-lock" role="img" aria-label="منتظر کار پیشین"><Lock size={13} /></span>
+          ) : (
+            <button className="ring-button" type="button" aria-label={`تکمیل کار: ${task.title}`} disabled={completing} onClick={onComplete}>
+              {completing
+                ? <LoaderCircle size={20} className="animate-spin text-entity-task" aria-hidden="true" />
+                : <span aria-hidden="true" />}
+            </button>
           )}
-          {task.isProtected && (
-            <span className="meta-chip">
-              <ShieldCheck size={13} className="shrink-0" aria-hidden="true" />
-              محافظت‌شده
-            </span>
-          )}
-        </p>
+        </span>
       </div>
-      {task.status !== 'ACTIVE' && <StatusBadge status={task.status} />}
-      <ChevronLeft size={20} className="shrink-0 text-text-tertiary" aria-hidden="true" />
-    </Link>
+      <div className="timeline-card flex items-center gap-2" data-state={closed ? 'done' : undefined}>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="timeline-title">
+              <Link className="stretched-link" to="/tasks/$taskId" params={{ taskId: task.id }}>{task.title}</Link>
+            </h3>
+            {note}
+          </div>
+          <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <TaskParent task={task} parentTitle={parentTitle} />
+            {task.isProtected && (
+              <span className="mt-0.75 text-text-tertiary" role="img" aria-label="محافظت‌شده"><ShieldCheck size={13} /></span>
+            )}
+            {task.isBlocked && !closed && (
+              <span className="meta-chip mt-0.75 bg-caution-tint text-caution">
+                <Lock size={12} className="shrink-0" aria-hidden="true" />
+                منتظر کار پیشین
+              </span>
+            )}
+          </p>
+        </div>
+        <ChevronLeft size={18} className="shrink-0 text-text-tertiary" aria-hidden="true" />
+      </div>
+    </li>
+  )
+}
+
+function DateNote({ text }: { text: string }) {
+  return (
+    <span className="timeline-meta">
+      <CalendarDays size={12} aria-hidden="true" />
+      {text}
+    </span>
   )
 }

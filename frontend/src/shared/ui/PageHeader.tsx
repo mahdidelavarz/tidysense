@@ -34,15 +34,22 @@ const backTargets = {
   '/goals': 'هدف‌ها',
 } as const
 
-/** Top row of a detail page: a clear way back to the list it belongs to. The arrow points right because the layout is RTL. */
-export function BackLink({ to }: { to: keyof typeof backTargets }) {
+/**
+ * Top row of a detail page: a clear way back to the list it belongs to, and
+ * the page's own small actions (such as edit). The arrow points right
+ * because the layout is RTL.
+ */
+export function BackLink({ to, actions }: { to: keyof typeof backTargets; actions?: ReactNode }) {
   return (
     <div className="mb-4 flex min-h-11 items-center justify-between gap-2 lg:mb-6">
       <Link className="ghost-button -ms-2 px-2" to={to}>
         <ArrowRight size={20} aria-hidden="true" />
         بازگشت به {backTargets[to]}
       </Link>
-      <AccountButton />
+      <div className="flex items-center gap-2">
+        {actions}
+        <AccountButton />
+      </div>
     </div>
   )
 }

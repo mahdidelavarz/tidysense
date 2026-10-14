@@ -124,6 +124,66 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task The_week_counts_existing_occurrences_up_to_today_and_the_schedule_after_it()
+    {
+        PinLocal(Day, 10, 0);
+        var session = await CreateSessionAsync();
+        using var client = Client(session.Token);
+        var twice = await CreateRoutineAsync(client, "week-twice", times: [new TimeOnly(9, 0), new TimeOnly(18, 0)]);
+        // A weekly Routine on the day after tomorrow only (ISO weekday: Monday = 1 … Sunday = 7).
+        var weekday = ((int)Day.AddDays(2).DayOfWeek + 6) % 7 + 1;
+        var weekly = await CreateRoutineAsync(client, "week-once",
+            recurrence: new { type = "SPECIFIC_WEEKDAYS", daysOfWeek = new[] { weekday } });
+        var stopped = await CreateRoutineAsync(client, "week-stopped");
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/routines/{stopped.Id}/stop",
+            new { expectedVersion = stopped.Version }, "week-stop")).EnsureSuccessStatusCode();
+        var nine = (await TodayAsync(client)).RoutineOccurrences.Single(x => x.RoutineId == twice.Id &&
+            x.ScheduledLocalTime == new TimeOnly(9, 0));
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/routine-occurrences/{nine.Id}/done",
+            new { expectedVersion = nine.Version }, "week-done")).EnsureSuccessStatusCode();
+
+        var week = (await client.GetFromJsonAsync<RoutineWeeksDto>("/api/v1/routines/week"))!;
+        Assert.Equal(DayOfWeek.Saturday, week.WeekStart.DayOfWeek);
+        Assert.Equal(Day, week.Today);
+        Assert.InRange(Day.DayNumber - week.WeekStart.DayNumber, 0, 6);
+        // Stopped Routines have no week.
+        Assert.Equal(new[] { twice.Id, weekly.Id }.Order(), week.Routines.Select(x => x.RoutineId).Order());
+        foreach (var routine in week.Routines)
+            Assert.Equal(Enumerable.Range(0, 7).Select(week.WeekStart.AddDays), routine.Days.Select(x => x.LocalDate));
+
+        var dailyWeek = week.Routines.Single(x => x.RoutineId == twice.Id);
+        Assert.Equal(("DAILY", 2), (dailyWeek.Recurrence.Type, dailyWeek.SlotsPerDay));
+        var weeklyWeek = week.Routines.Single(x => x.RoutineId == weekly.Id);
+        Assert.Equal([weekday], weeklyWeek.Recurrence.DaysOfWeek!);
+        Assert.Equal(1, weeklyWeek.SlotsPerDay);
+        var daily = dailyWeek.Days;
+        // Before the Routine began there is nothing; today counts what exists; later days count the schedule.
+        Assert.All(daily.Where(x => x.LocalDate < Day), x => Assert.Equal((0, 0), (x.Scheduled, x.Done)));
+        Assert.Equal((2, 1), (daily.Single(x => x.LocalDate == Day).Scheduled, daily.Single(x => x.LocalDate == Day).Done));
+        Assert.All(daily.Where(x => x.LocalDate > Day), x => Assert.Equal((2, 0), (x.Scheduled, x.Done)));
+        var once = week.Routines.Single(x => x.RoutineId == weekly.Id).Days.Where(x => x.Scheduled > 0).ToArray();
+        if (Day.AddDays(2) <= week.WeekStart.AddDays(6))
+            Assert.Equal(Day.AddDays(2), Assert.Single(once).LocalDate);
+        else
+            Assert.Empty(once);
+
+        // Four weeks of one Routine, stopped or not, end with this week.
+        var month = (await client.GetFromJsonAsync<RoutineWeeksDto>(
+            $"/api/v1/routines/week?weeks=4&routineId={stopped.Id}"))!;
+        Assert.Equal(week.WeekStart.AddDays(-21), month.WeekStart);
+        var stoppedWeeks = Assert.Single(month.Routines);
+        Assert.Equal(stopped.Id, stoppedWeeks.RoutineId);
+        Assert.Equal(28, stoppedWeeks.Days.Count);
+        // Its slot today still stands; nothing is scheduled after it stopped.
+        Assert.Equal(1, stoppedWeeks.Days.Single(x => x.LocalDate == Day).Scheduled);
+        Assert.All(stoppedWeeks.Days.Where(x => x.LocalDate > Day), x => Assert.Equal(0, x.Scheduled));
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await client.GetAsync("/api/v1/routines/week?weeks=5")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await client.GetAsync($"/api/v1/routines/week?routineId={Guid.NewGuid()}")).StatusCode);
+    }
+
+    [Fact]
     public async Task Occurrences_resolve_once_at_slot_and_day_boundaries_and_corrections_keep_identity()
     {
         PinLocal(Day, 10, 0);

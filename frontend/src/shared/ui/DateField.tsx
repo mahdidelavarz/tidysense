@@ -1,19 +1,9 @@
-import { addDays, addMonths, getDate, getDay, getDaysInMonth, startOfMonth } from 'date-fns-jalali'
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from './icons'
+import { addDays } from 'date-fns-jalali'
+import { CalendarDays, ChevronDown } from './icons'
 import { useEffect, useId, useRef, useState } from 'react'
-import { formatLocalDate, formatNumber, parseIsoDate, toIsoDate } from '../lib/date'
+import { formatLocalDate, toIsoDate } from '../lib/date'
+import { Calendar } from './Calendar'
 import { LabelText } from './FormUi'
-
-const weekdays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
-const monthFormatter = new Intl.DateTimeFormat('fa-IR', { month: 'long', year: 'numeric' })
-const dayFormatter = new Intl.DateTimeFormat('fa-IR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-
-/** «مهر ۱۴۰۵» — assembled from parts because the default fa-IR order puts the year first. */
-function monthLabel(date: Date) {
-  const parts = monthFormatter.formatToParts(date)
-  const part = (type: string) => parts.find(item => item.type === type)?.value ?? ''
-  return `${part('month')} ${part('year')}`
-}
 
 /**
  * Jalali date picker. The value in and out is the ISO Gregorian `yyyy-MM-dd`
@@ -21,18 +11,19 @@ function monthLabel(date: Date) {
  * Jalali. The calendar expands inline under the field instead of floating,
  * so it is never clipped inside a scrolling sheet.
  */
-export function DateField({ label, value, onChange, error, hint }: {
+export function DateField({ label, value, onChange, error, hint, defaultOpen = false }: {
   label: string
   value: string
   onChange: (value: string) => void
   error?: string
   hint?: string
+  /** Opens with the calendar showing, when the field was asked for to pick a day. */
+  defaultOpen?: boolean
 }) {
   const id = useId()
   const panelId = `${id}-panel`
   const errorId = error ? `${id}-error` : undefined
-  const [open, setOpen] = useState(false)
-  const [viewMonth, setViewMonth] = useState(() => startOfMonth(value ? parseIsoDate(value) : new Date()))
+  const [open, setOpen] = useState(defaultOpen)
   const todayIso = toIsoDate(new Date())
   const calendar = useRef<HTMLDivElement>(null)
 
@@ -42,7 +33,6 @@ export function DateField({ label, value, onChange, error, hint }: {
   }, [open])
 
   function toggle() {
-    if (!open) setViewMonth(startOfMonth(value ? parseIsoDate(value) : new Date()))
     setOpen(current => !current)
   }
 
@@ -50,10 +40,6 @@ export function DateField({ label, value, onChange, error, hint }: {
     onChange(iso)
     setOpen(false)
   }
-
-  // The Jalali week starts on Saturday; JS getDay() counts from Sunday.
-  const leadingBlanks = (getDay(viewMonth) + 1) % 7
-  const days = Array.from({ length: getDaysInMonth(viewMonth) }, (_, index) => addDays(viewMonth, index))
 
   return (
     <div>
@@ -77,39 +63,7 @@ export function DateField({ label, value, onChange, error, hint }: {
 
       {open && (
         <div className="mt-2 scroll-mb-24 animate-pop-in rounded-2xl border border-border-subtle bg-surface p-3 shadow-md" id={panelId} ref={calendar}>
-          <div className="flex items-center justify-between">
-            <button className="icon-button" type="button" aria-label="ماه قبل" onClick={() => setViewMonth(month => addMonths(month, -1))}>
-              <ChevronRight size={20} aria-hidden="true" />
-            </button>
-            <p className="text-sm font-bold" aria-live="polite">{monthLabel(viewMonth)}</p>
-            <button className="icon-button" type="button" aria-label="ماه بعد" onClick={() => setViewMonth(month => addMonths(month, 1))}>
-              <ChevronLeft size={20} aria-hidden="true" />
-            </button>
-          </div>
-          <div className="mt-1 grid grid-cols-7 gap-1 text-center text-xs text-text-secondary" aria-hidden="true">
-            {weekdays.map(day => <span key={day} className="py-1">{day}</span>)}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((day, index) => {
-              const iso = toIsoDate(day)
-              return (
-                <button
-                  key={iso}
-                  className="calendar-day"
-                  type="button"
-                  // The first day is pushed to its weekday column; the rest flow after it.
-                  style={index === 0 ? { gridColumnStart: leadingBlanks + 1 } : undefined}
-                  data-date={iso}
-                  data-today={iso === todayIso}
-                  aria-pressed={iso === value}
-                  aria-label={dayFormatter.format(day)}
-                  onClick={() => choose(iso)}
-                >
-                  {formatNumber(getDate(day))}
-                </button>
-              )
-            })}
-          </div>
+          <Calendar value={value} today={todayIso} onChange={choose} />
           <div className="mt-3 flex flex-wrap gap-2 border-t border-border-subtle pt-3">
             <button className="choice-chip min-h-9 px-3" type="button" onClick={() => choose(todayIso)}>امروز</button>
             <button className="choice-chip min-h-9 px-3" type="button" onClick={() => choose(toIsoDate(addDays(new Date(), 1)))}>فردا</button>

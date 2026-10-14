@@ -17,6 +17,7 @@ public sealed class TodayService(
         await routines.EvaluateAsync(localNow, cancellationToken);
         return new TodayDto(localNow.Date,
             await tasks.TodayTasksAsync(localNow.Date, cancellationToken),
+            await tasks.TodayCompletedTasksAsync(localNow.Date, cancellationToken),
             await routines.TodayOccurrencesAsync(localNow.Date, cancellationToken));
     }
 }

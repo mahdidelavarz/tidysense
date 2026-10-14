@@ -4711,6 +4711,60 @@
         }
       }
     },
+    "/api/v1/routines/week": {
+      "get": {
+        "tags": [
+          "Routines"
+        ],
+        "parameters": [
+          {
+            "name": "weeks",
+            "in": "query",
+            "schema": {
+              "maximum": 4,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "routineId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineWeeksDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineWeeksDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineWeeksDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/routines/{id}": {
       "get": {
         "tags": [
@@ -10067,6 +10121,92 @@
           }
         }
       },
+      "RoutineWeekDayDto": {
+        "required": [
+          "localDate",
+          "scheduled",
+          "done"
+        ],
+        "type": "object",
+        "properties": {
+          "localDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "scheduled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "done": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RoutineWeekDto": {
+        "required": [
+          "routineId",
+          "recurrence",
+          "slotsPerDay",
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "routineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurrence": {
+            "$ref": "#/components/schemas/RecurrenceDto"
+          },
+          "slotsPerDay": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoutineWeekDayDto"
+            }
+          }
+        }
+      },
+      "RoutineWeeksDto": {
+        "required": [
+          "weekStart",
+          "today",
+          "routines"
+        ],
+        "type": "object",
+        "properties": {
+          "weekStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "today": {
+            "type": "string",
+            "format": "date"
+          },
+          "routines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoutineWeekDto"
+            }
+          }
+        }
+      },
       "StartPlanningAttemptRequest": {
         "required": [
           "clientAttemptId",
@@ -10536,6 +10676,7 @@
         "required": [
           "localDate",
           "tasks",
+          "completedTasks",
           "routineOccurrences"
         ],
         "type": "object",
@@ -10545,6 +10686,12 @@
             "format": "date"
           },
           "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskDto"
+            }
+          },
+          "completedTasks": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TaskDto"

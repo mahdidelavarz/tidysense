@@ -59,6 +59,21 @@ public sealed class TaskService(
             .ThenBy(x => x.CreatedAt).ThenBy(x => x.Id).ToArray();
     }
 
+    /// <summary>
+    /// Today's own Tasks already completed today. They are shown, not executed (015 §5.3):
+    /// membership is still the authoritative planned date.
+    /// </summary>
+    public async Task<IReadOnlyList<TaskDto>> TodayCompletedTasksAsync(DateOnly today,
+        CancellationToken cancellationToken)
+    {
+        var rows = await db.Tasks.AsNoTracking()
+            .Where(x => x.UserId == currentUser.UserId && x.Status == TaskStatuses.Completed &&
+                x.PlannedDate == today && x.CompletedForLocalDate == today)
+            .OrderBy(x => x.TerminalAt).ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+        return await ToDtosAsync(rows, cancellationToken);
+    }
+
     public async Task<TaskDto> CreateAsync(CreateTaskRequest request, string idempotencyKey,
         CancellationToken cancellationToken)
     {

@@ -27,11 +27,11 @@ test('a multi-slot Routine and a Task are executed together from Today', async (
   await expect(page).toHaveURL(/\/routines$/)
   await page.getByRole('button', { name: 'روتین جدید' }).click()
   const sheet = page.getByRole('dialog', { name: 'روتین جدید' })
-  await sheet.getByLabel('عنوان روتین').fill(routineTitle)
+  await sheet.getByLabel('چه کاری تکرار می‌شود؟').fill(routineTitle)
   // 00:00 and 23:59 keep both slots pending whatever time the test runs:
   // the first is missed only once the second is reached.
   for (const time of ['00:00', '23:59']) {
-    await sheet.getByLabel('ساعت‌های روز (اختیاری)').fill(time)
+    await sheet.getByLabel('چه ساعتی؟ (اختیاری)').fill(time)
     await sheet.getByRole('button', { name: 'افزودن ساعت' }).click()
   }
   await page.screenshot({ path: 'test-results/step-06-routine-sheet.png', fullPage: true })
@@ -41,23 +41,24 @@ test('a multi-slot Routine and a Task are executed together from Today', async (
   await page.getByRole('navigation', { name: 'ناوبری اصلی' }).getByRole('link', { name: 'امروز' }).click()
   await expect(page.getByRole('heading', { name: taskTitle })).toBeVisible()
   const routines = page.getByRole('region', { name: 'روتین‌های امروز' })
-  const group = routines.getByRole('article').filter({ hasText: routineTitle })
+  const group = routines.getByRole('listitem').filter({ hasText: routineTitle })
   await expect(group.getByRole('button', { name: /^انجام شد:/ })).toHaveCount(2)
   await page.screenshot({ path: 'test-results/step-06-today-before.png', fullPage: true })
 
   await group.getByRole('button', { name: `انجام شد: ${routineTitle}، ۰۰:۰۰` }).click()
-  await expect(group.getByText('انجام‌شده')).toBeVisible()
+  await expect(group.getByText('، انجام شد')).toBeAttached()
   await expect(group.getByRole('button', { name: /^انجام شد:/ })).toHaveCount(1)
   await page.getByRole('button', { name: `تکمیل کار: ${taskTitle}` }).click()
-  await expect(page.getByRole('heading', { name: taskTitle })).toBeHidden()
+  // A Task done today stays on the timeline, read-only.
+  await expect(page.getByRole('button', { name: `تکمیل کار: ${taskTitle}` })).toBeHidden()
+  await expect(page.getByRole('heading', { name: taskTitle })).toBeVisible()
   // The Routine's remaining slot keeps Today from being empty.
   await expect(group.getByRole('button', { name: `انجام شد: ${routineTitle}، ۲۳:۵۹` })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-06-today-after.png', fullPage: true })
 
   // Stop the Routine from its detail page; today's slots and history remain.
-  // Today shows only the complete control; the way to the Routine is among the card's further actions.
-  await group.getByRole('button', { name: `اقدام‌های بیشتر: ${routineTitle}` }).click()
-  await group.getByRole('link', { name: `جزئیات: ${routineTitle}` }).click()
+  // The Routine's card opens it.
+  await group.getByRole('link', { name: routineTitle }).click()
   await expect(page.getByRole('heading', { name: 'سابقه اجرا' })).toBeVisible()
   await page.getByRole('button', { name: 'توقف روتین' }).click()
   await page.getByRole('button', { name: 'تأیید توقف' }).click()

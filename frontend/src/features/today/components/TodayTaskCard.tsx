@@ -1,71 +1,98 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, Check, CircleDashed, Eye, FolderKanban, LoaderCircle, Lock, Target } from '../../../shared/ui/icons'
+import { CalendarClock, Check, LoaderCircle, Lock, Trash2 } from '../../../shared/ui/icons'
+import { TaskNote, TaskParent } from '../../tasks/components/TaskFacts'
 import type { TaskDto } from '../../tasks/types/task.types'
-import { TodayCard } from './TodayCard'
+import { SwipeActions } from './SwipeActions'
 
 /**
- * One Task in Today: a complete control, the title and where it belongs.
- * Details and moving it to another day are in the card's hidden actions.
- * `onComplete` is absent when the card only previews another day.
+ * One Task in Today's timeline. The node is its completion ring (a lock while
+ * it waits for earlier steps, a filled ring once done today); the card opens
+ * the Task. Moving it to another day and dropping it are the card's hidden
+ * actions. `onComplete` is absent when the row only previews another day.
  */
-export function TodayTaskCard({ task, parentTitle, completing = false, onComplete, onCarry }: {
+export function TodayTaskCard({ task, today, parentTitle, completing = false, onComplete, onCarry, onDrop }: {
   task: TaskDto
+  /** Today's ISO local date, for how close the deadline is. */
+  today: string
   /** Title of the Goal or Project the Task belongs to, when it is known. */
   parentTitle?: string
   completing?: boolean
   onComplete?: () => void
   onCarry: () => void
+  onDrop: () => void
 }) {
-  const ParentIcon = task.projectId ? FolderKanban : task.goalId ? Target : CircleDashed
-  const parentKind = task.projectId ? 'پروژه' : task.goalId ? 'هدف' : 'مستقل'
-  return (
-    <TodayCard
-      tone="task"
-      label={task.title}
-      dimmed={task.isBlocked}
-      actionCount={2}
-      actions={(
-        <>
-          <Link className="today-action" to="/tasks/$taskId" params={{ taskId: task.id }} aria-label={`جزئیات: ${task.title}`}>
-            <Eye size={20} aria-hidden="true" />
-            جزئیات
-          </Link>
-          <button className="today-action" type="button" onClick={onCarry}>
-            <CalendarClock size={20} aria-hidden="true" />
-            روز دیگر
-          </button>
-        </>
-      )}
-    >
-      {onComplete && (
-        <button
-          className="check-button"
-          type="button"
-          aria-label={`تکمیل کار: ${task.title}`}
-          disabled={task.isBlocked || completing}
-          onClick={onComplete}
-        >
-          {completing
-            ? <LoaderCircle size={20} className="animate-spin text-text-secondary" aria-hidden="true" />
-            : <Check size={16} aria-hidden="true" />}
-        </button>
-      )}
-      <div className="min-w-0 flex-1 self-center">
-        <h2 className="wrap-break-word text-[0.96875rem] font-semibold leading-7">{task.title}</h2>
-        <p className="today-badge mt-1.5">
-          <ParentIcon size={14} className="shrink-0" aria-hidden="true" />
-          <span className="truncate">{parentTitle ? `${parentKind}: ${parentTitle}` : parentKind}</span>
-        </p>
-        {task.isBlocked && (
-          <p className="mt-2 flex items-start gap-1.5 text-xs leading-6 text-text-secondary">
-            <Lock size={14} className="mt-1 shrink-0" aria-hidden="true" />
-            <span>
-              <span className="font-bold text-text-primary">منتظر تکمیل کارهای پیشین</span>
-              {task.blockedBy.length > 0 && `: ${task.blockedBy.map(blocker => blocker.title).join('، ')}`}
-            </span>
-          </p>
-        )}
+  const done = task.status === 'COMPLETED'
+  const state = done ? 'done' : task.isBlocked ? 'waiting' : undefined
+
+  const card = (more?: React.ReactNode) => (
+    <div className="timeline-card" data-state={state}>
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="timeline-title">
+          <Link className="stretched-link" to="/tasks/$taskId" params={{ taskId: task.id }}>{task.title}</Link>
+        </h3>
+        <span className="flex shrink-0 items-center gap-1">
+          {!done && <TaskNote task={task} today={today} />}
+          {more}
+        </span>
       </div>
-    </TodayCard>
+      <TaskParent task={task} parentTitle={parentTitle} />
+      {task.isBlocked && (
+        <p className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-text-secondary">
+          <Lock size={13} className="mt-0.75 shrink-0" aria-hidden="true" />
+          <span>
+            <span className="font-bold text-text-primary">منتظر کارهای پیشین</span>
+            {task.blockedBy.length > 0 && `: ${task.blockedBy.map(blocker => blocker.title).join('، ')}`}
+          </span>
+        </p>
+      )}
+    </div>
+  )
+
+  return (
+    <li className="timeline-row">
+      <div className="timeline-node">
+        <span className="timeline-mark">
+          {done ? (
+            <span className="ring-done" role="img" aria-label="انجام شد"><Check size={14} /></span>
+          ) : task.isBlocked ? (
+            <span className="ring-lock" role="img" aria-label="منتظر کارهای پیشین"><Lock size={13} /></span>
+          ) : onComplete ? (
+            <button
+              className="ring-button"
+              type="button"
+              aria-label={`تکمیل کار: ${task.title}`}
+              disabled={completing}
+              onClick={onComplete}
+            >
+              {completing
+                ? <LoaderCircle size={20} className="animate-spin text-entity-task" aria-hidden="true" />
+                : <span aria-hidden="true" />}
+            </button>
+          ) : (
+            <span className="ring-planned" aria-hidden="true" />
+          )}
+        </span>
+      </div>
+      {done ? card() : (
+        <SwipeActions
+          label={task.title}
+          actionCount={2}
+          actions={(
+            <>
+              <button className="swipe-action" data-tone="task" type="button" onClick={onCarry}>
+                <CalendarClock size={20} aria-hidden="true" />
+                روز دیگر
+              </button>
+              <button className="swipe-action" data-tone="danger" type="button" onClick={onDrop}>
+                <Trash2 size={20} aria-hidden="true" />
+                کنار بگذار
+              </button>
+            </>
+          )}
+        >
+          {card}
+        </SwipeActions>
+      )}
+    </li>
   )
 }

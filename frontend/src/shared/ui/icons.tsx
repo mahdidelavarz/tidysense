@@ -18,8 +18,10 @@ import SolarCompassLinear from '~icons/solar/compass-linear'
 import SolarDangerCircleLinear from '~icons/solar/danger-circle-linear'
 import SolarDatabaseLinear from '~icons/solar/database-linear'
 import SolarEyeLinear from '~icons/solar/eye-linear'
+import SolarFilterLinear from '~icons/solar/filter-linear'
 import SolarFlagLinear from '~icons/solar/flag-linear'
 import SolarForbiddenCircleLinear from '~icons/solar/forbidden-circle-linear'
+import SolarHistoryLinear from '~icons/solar/history-linear'
 import SolarHourglassLinear from '~icons/solar/hourglass-linear'
 import SolarLayersMinimalisticLinear from '~icons/solar/layers-minimalistic-linear'
 import SolarLeafLinear from '~icons/solar/leaf-linear'
@@ -44,7 +46,6 @@ import SolarShieldCheckLinear from '~icons/solar/shield-check-linear'
 import SolarStopCircleLinear from '~icons/solar/stop-circle-linear'
 import SolarStopLinear from '~icons/solar/stop-linear'
 import SolarSun2Linear from '~icons/solar/sun-2-linear'
-import SolarSunriseLinear from '~icons/solar/sunrise-linear'
 import SolarTargetLinear from '~icons/solar/target-linear'
 import SolarTranslationLinear from '~icons/solar/translation-linear'
 import SolarTrashBinMinimalisticLinear from '~icons/solar/trash-bin-minimalistic-linear'
@@ -71,7 +72,6 @@ function sized(Svg: ComponentType<SVGProps<SVGSVGElement>>): AppIcon {
 }
 
 // Entities and destinations
-export const Today = sized(SolarSunriseLinear)
 export const Sun = sized(SolarSun2Linear)
 export const Moon = sized(SolarMoonLinear)
 export const ListChecks = sized(SolarChecklistMinimalisticLinear)
@@ -93,6 +93,7 @@ export const RefreshCw = sized(SolarRefreshLinear)
 export const Play = sized(SolarPlayLinear)
 export const Pause = sized(SolarPauseLinear)
 export const Search = sized(SolarMagniferLinear)
+export const Filter = sized(SolarFilterLinear)
 export const X = sized(SolarCloseLinear)
 export const Ellipsis = sized(SolarMenuDotsLinear)
 export const LogOut = sized(SolarLogout2Linear)
@@ -118,6 +119,7 @@ export const CalendarClock = sized(SolarCalendarMarkLinear)
 export const CalendarOff = sized(SolarCloudLinear)
 export const Clock = sized(SolarClockCircleLinear)
 export const FileClock = sized(SolarClipboardClockLinear)
+export const History = sized(SolarHistoryLinear)
 export const Flag = sized(SolarFlagLinear)
 export const StickyNote = sized(SolarNotesLinear)
 export const Link2 = sized(SolarLinkLinear)

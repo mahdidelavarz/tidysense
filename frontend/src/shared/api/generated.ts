@@ -3234,6 +3234,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/routines/week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    weeks?: number | string;
+                    routineId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RoutineWeeksDto"];
+                        "application/json": components["schemas"]["RoutineWeeksDto"];
+                        "text/json": components["schemas"]["RoutineWeeksDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/routines/{id}": {
         parameters: {
             query?: never;
@@ -5174,6 +5214,29 @@ export interface components {
             /** Format: int64 */
             version: number | string;
         };
+        RoutineWeekDayDto: {
+            /** Format: date */
+            localDate: string;
+            /** Format: int32 */
+            scheduled: number | string;
+            /** Format: int32 */
+            done: number | string;
+        };
+        RoutineWeekDto: {
+            /** Format: uuid */
+            routineId: string;
+            recurrence: components["schemas"]["RecurrenceDto"];
+            /** Format: int32 */
+            slotsPerDay: number | string;
+            days: components["schemas"]["RoutineWeekDayDto"][];
+        };
+        RoutineWeeksDto: {
+            /** Format: date */
+            weekStart: string;
+            /** Format: date */
+            today: string;
+            routines: components["schemas"]["RoutineWeekDto"][];
+        };
         StartPlanningAttemptRequest: {
             clientAttemptId: string;
             intention: string;
@@ -5294,6 +5357,7 @@ export interface components {
             /** Format: date */
             localDate: string;
             tasks: components["schemas"]["TaskDto"][];
+            completedTasks: components["schemas"]["TaskDto"][];
             routineOccurrences: components["schemas"]["RoutineOccurrenceDto"][];
         };
         UpdateGoalRequest: {

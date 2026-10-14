@@ -38,11 +38,12 @@ test('a quick capture and an overdue sequence are resolved in Reconcile while To
     plannedDate: shiftDate(localDate, -2), deadline: null, sequenceId, sequenceOrder: 20,
   })
 
-  // Quick capture: a title alone through the ordinary Add Task form.
+  // Quick capture: a title with no day and no owner, through the ordinary Add Task form.
   await page.goto('/today')
   await page.getByRole('button', { name: 'افزودن کار' }).click()
   const createSheet = page.getByRole('dialog', { name: 'کار جدید' })
-  await createSheet.getByLabel('عنوان کار').fill(captureTitle)
+  await createSheet.getByLabel('چه کاری باید انجام شود؟').fill(captureTitle)
+  await createSheet.getByRole('button', { name: 'بدون تاریخ' }).click()
   await expect(createSheet.getByRole('status')).toContainText('یادداشت سریع')
   await createSheet.getByRole('button', { name: 'ذخیره یادداشت' }).click()
   await expect(createSheet).toBeHidden()
@@ -78,8 +79,7 @@ test('a quick capture and an overdue sequence are resolved in Reconcile while To
   // The whole sequence is re-anchored through a server preview and one confirmation.
   await sequence.getByRole('button', { name: 'انتقال کل دنباله' }).click()
   const dateSheet = page.getByRole('dialog', { name: 'انتقال کل دنباله' })
-  await dateSheet.getByLabel('تاریخ جدید').click()
-  await dateSheet.getByRole('button', { name: 'فردا', exact: true }).click()
+  await dateSheet.getByRole('button', { name: /^فردا/ }).click()
   await dateSheet.getByRole('button', { name: 'دیدن پیش‌نمایش' }).click()
   const review = page.getByRole('dialog', { name: 'انتقال کل دنباله' })
   await expect(review.getByRole('listitem')).toHaveCount(2)
@@ -93,7 +93,7 @@ test('a quick capture and an overdue sequence are resolved in Reconcile while To
   await page.getByRole('navigation', { name: 'ناوبری اصلی' }).getByRole('link', { name: 'امروز' }).click()
   await expect(page.getByRole('heading', { name: captureTitle })).toBeVisible()
   await page.getByRole('button', { name: `تکمیل کار: ${captureTitle}` }).click()
-  await expect(page.getByRole('heading', { name: captureTitle })).toBeHidden()
+  await expect(page.getByRole('button', { name: `تکمیل کار: ${captureTitle}` })).toBeHidden()
 
   const tasks = await (await page.request.get('/api/v1/tasks?limit=100')).json() as {
     items: Array<{ title: string; plannedDate: string; carryCount: number }>
@@ -147,8 +147,7 @@ test('an optional explanation points at an allowed action and the change still g
 
   await recommendation.getByRole('button', { name: 'دیدن پیش‌نمایش' }).click()
   const dateSheet = page.getByRole('dialog', { name: 'انتقال به تاریخ جدید' })
-  await dateSheet.getByLabel('تاریخ جدید').click()
-  await dateSheet.getByRole('button', { name: 'فردا', exact: true }).click()
+  await dateSheet.getByRole('button', { name: /^فردا/ }).click()
   await dateSheet.getByRole('button', { name: 'دیدن پیش‌نمایش' }).click()
   const review = page.getByRole('dialog', { name: 'انتقال به تاریخ جدید' })
   await expect(review.getByRole('listitem')).toHaveCount(1)

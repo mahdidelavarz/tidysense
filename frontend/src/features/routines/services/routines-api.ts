@@ -9,6 +9,7 @@ import type {
   RoutineOccurrenceDto,
   RoutineOccurrencePage,
   RoutinePage,
+  RoutineWeeksDto,
   UpdateRoutineRequest,
 } from '../types/routine.types'
 
@@ -19,6 +20,17 @@ const commandHeaders = () => ({ 'Idempotency-Key': crypto.randomUUID() })
 export async function listRoutines(status?: string, cursor?: string, limit = 20): Promise<RoutinePage> {
   const response = await http.get<RoutinePage>('/routines', {
     params: { ...(status ? { status } : {}), ...(cursor ? { cursor } : {}), limit },
+  })
+  return response.data
+}
+
+/**
+ * Fetches local weeks (Saturday to Friday) ending with this one: slots
+ * scheduled and done per day, for every active Routine or for one Routine.
+ */
+export async function getRoutineWeek(weeks = 1, routineId?: string): Promise<RoutineWeeksDto> {
+  const response = await http.get<RoutineWeeksDto>('/routines/week', {
+    params: { ...(weeks > 1 ? { weeks } : {}), ...(routineId ? { routineId } : {}) },
   })
   return response.data
 }

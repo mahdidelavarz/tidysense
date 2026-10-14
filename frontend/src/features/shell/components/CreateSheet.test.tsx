@@ -7,6 +7,7 @@ import { createCapture } from '../../captures/services/captures-api'
 import { createGoal, listGoals } from '../../goals/services/goals-api'
 import { listProjects } from '../../projects/services/projects-api'
 import { createTask, listTasks } from '../../tasks/services/tasks-api'
+import { getToday } from '../../today/services/today-api'
 import { CreateSheet } from './CreateSheet'
 
 const navigate = vi.fn()
@@ -17,6 +18,7 @@ vi.mock('../../captures/services/captures-api', () => ({ createCapture: vi.fn() 
 vi.mock('../../goals/services/goals-api', () => ({ createGoal: vi.fn(), listGoals: vi.fn() }))
 vi.mock('../../projects/services/projects-api', () => ({ createProject: vi.fn(), listProjects: vi.fn() }))
 vi.mock('../../tasks/services/tasks-api', () => ({ createTask: vi.fn(), listTasks: vi.fn() }))
+vi.mock('../../today/services/today-api', () => ({ getToday: vi.fn() }))
 
 const empty = { items: [], page: { nextCursor: null, hasMore: false } }
 
@@ -32,6 +34,7 @@ describe('CreateSheet', () => {
     vi.mocked(listGoals).mockResolvedValue(empty)
     vi.mocked(listProjects).mockResolvedValue(empty)
     vi.mocked(listTasks).mockResolvedValue(empty)
+    vi.mocked(getToday).mockResolvedValue({ localDate: toIsoDate(new Date()), tasks: [], completedTasks: [], routineOccurrences: [] })
   })
 
   it('renders nothing until a create flow is requested, then offers the four kinds', () => {
@@ -78,7 +81,7 @@ describe('CreateSheet', () => {
     expect(useUiStore.getState().toasts.map(toast => toast.message)).toEqual(['هدف ساخته شد.'])
   })
 
-  it('saves a title with no date and no parent as a quick capture, not as a Task', async () => {
+  it('saves a title as a quick capture, not as a Task, once no date and no owner are chosen', async () => {
     vi.mocked(createCapture).mockResolvedValue({
       id: '00000000-0000-0000-0000-000000000401', title: 'تماس با دندان‌پزشک', status: 'UNRESOLVED',
       source: 'MANUAL', version: 1, createdAt: '2026-10-02T00:00:00Z', updatedAt: '2026-10-02T00:00:00Z',
@@ -86,7 +89,10 @@ describe('CreateSheet', () => {
     })
     useUiStore.getState().openCreate('task')
     renderSheet()
-    fireEvent.change(screen.getByLabelText('عنوان کار'), { target: { value: 'تماس با دندان‌پزشک' } })
+    fireEvent.change(screen.getByLabelText('چه کاری باید انجام شود؟'), { target: { value: 'تماس با دندان‌پزشک' } })
+    // The day starts at today; with no day and no owner it is not yet a Task.
+    expect(screen.getByRole('button', { name: 'امروز' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'بدون تاریخ' }))
     // The form says what will happen before the user submits.
     expect(screen.getByRole('status')).toHaveTextContent('یادداشت سریع')
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره یادداشت' }))
@@ -96,7 +102,7 @@ describe('CreateSheet', () => {
     expect(useUiStore.getState().toasts.map(toast => toast.message)).toEqual(['یادداشت ذخیره شد.'])
   })
 
-  it('creates a standalone Task once a date is picked in the calendar', async () => {
+  it('makes a title alone a standalone Task for today in one press', async () => {
     const today = toIsoDate(new Date())
     vi.mocked(createTask).mockResolvedValue({
       id: '00000000-0000-0000-0000-000000000101', goalId: null, projectId: null,
@@ -107,10 +113,8 @@ describe('CreateSheet', () => {
     })
     useUiStore.getState().openCreate('task')
     renderSheet()
-    fireEvent.change(screen.getByLabelText('عنوان کار'), { target: { value: 'مرور یادداشت‌ها' } })
-    fireEvent.click(screen.getByLabelText('تاریخ برنامه‌ریزی'))
-    fireEvent.click(screen.getByRole('button', { name: 'امروز' }))
-    fireEvent.click(screen.getByRole('button', { name: 'ساخت کار' }))
+    fireEvent.change(screen.getByLabelText('چه کاری باید انجام شود؟'), { target: { value: 'مرور یادداشت‌ها' } })
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن به امروز' }))
     await waitFor(() => expect(createTask).toHaveBeenCalled())
     expect(vi.mocked(createTask).mock.calls[0][0]).toEqual({
       title: 'مرور یادداشت‌ها', description: null, goalId: null, projectId: null,

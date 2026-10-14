@@ -83,22 +83,28 @@ test('manual task moves through Today to completion', async ({ page }) => {
 
   await page.goto('/tasks')
   await page.getByRole('button', { name: 'کار جدید' }).click()
-  await page.getByLabel('عنوان کار').fill(title)
-  // The Jalali calendar exposes each day's ISO date for exactly this kind of lookup.
-  await page.getByLabel('تاریخ برنامه‌ریزی').click()
-  await page.locator(`[data-date="${localDate}"]`).click()
-  await page.getByRole('button', { name: 'ساخت کار' }).click()
+  await page.getByLabel('چه کاری باید انجام شود؟').fill(title)
+  // A new Task is for today unless another day is chosen.
+  await expect(page.getByRole('button', { name: 'امروز', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'افزودن به امروز' }).click()
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
+  const created = await (await page.request.get('/api/v1/tasks?limit=100')).json() as {
+    items: Array<{ title: string; plannedDate: string | null }>
+  }
+  expect(created.items.find(item => item.title === title)?.plannedDate).toBe(localDate)
 
   await page.getByRole('link', { name: 'امروز' }).click()
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-before.png', fullPage: true })
   await page.getByRole('button', { name: `تکمیل کار: ${title}` }).click()
-  await expect(page.getByText('برای امروز کاری نمانده است.')).toBeVisible()
+  // Done today, it stays on the timeline as a finished row with nothing left to press.
+  await expect(page.getByRole('button', { name: `تکمیل کار: ${title}` })).toBeHidden()
+  await expect(page.getByRole('listitem').filter({ hasText: title }).getByRole('img', { name: 'انجام شد' })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-after.png', fullPage: true })
 
   // The list defaults to active Tasks; a completed one is under "all".
   await page.getByRole('link', { name: 'کارها', exact: true }).click()
+  await page.getByRole('button', { name: 'فیلتر' }).click()
   await page.getByRole('button', { name: 'همه', exact: true }).click()
   await page.getByRole('heading', { name: title }).click()
   await expect(page.getByText('تکمیل‌شده')).toBeVisible()

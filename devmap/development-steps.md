@@ -582,9 +582,74 @@ Verified 2026-10-13 on Linux:
 
 **Completion criteria:** The execution screens match the boards, with no lost state or action.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:**
+
+- **Today:** [view](../frontend/src/features/today/components/TodayView.tsx), [hero](../frontend/src/features/today/components/TodayHero.tsx) with its [photograph](../frontend/src/features/today/assets/today-hero.webp), [Reconcile offer](../frontend/src/features/reconcile/components/TodayReconcileEntry.tsx), [day wheel](../frontend/src/features/today/components/DayStrip.tsx), [Task row](../frontend/src/features/today/components/TodayTaskCard.tsx), [swipe actions](../frontend/src/features/today/components/SwipeActions.tsx), [Routine card](../frontend/src/features/today/components/TodayRoutineGroup.tsx).
+- **Tasks:** [list](../frontend/src/features/tasks/components/TasksPage.tsx), [row](../frontend/src/features/tasks/components/TaskCard.tsx), [detail](../frontend/src/features/tasks/components/TaskDetailView.tsx), [facts](../frontend/src/features/tasks/components/TaskFacts.tsx).
+- **Routines:** [list](../frontend/src/features/routines/components/RoutinesPage.tsx), [card](../frontend/src/features/routines/components/RoutineCard.tsx), [week bars](../frontend/src/features/routines/components/RoutineWeekBars.tsx), [detail](../frontend/src/features/routines/components/RoutineDetailView.tsx), [four weeks](../frontend/src/features/routines/components/RoutineMonth.tsx), [history](../frontend/src/features/routines/components/RoutineOccurrenceHistory.tsx).
+- **Sheets:** [Task form](../frontend/src/features/tasks/components/TaskForm.tsx), [owner chips](../frontend/src/features/tasks/components/ParentChoice.tsx), [day chips](../frontend/src/shared/ui/DayChoice.tsx), [Routine form](../frontend/src/features/routines/components/RoutineForm.tsx), [Carry](../frontend/src/features/tasks/components/TaskCarrySheet.tsx), [calendar](../frontend/src/shared/ui/Calendar.tsx).
+- **Backend read models:**
+  - [Today](../backend/Services/TodayService.cs) adds `completedTasks`: today's own Tasks completed today, read-only.
+  - [`GET /routines/week`](../backend/Controllers/RoutinesController.cs) (`weeks` 1–4, optional `routineId`) gives slots scheduled and done per day, the recurrence and slots per day.
+  - [Routine service](../backend/Services/RoutineService.cs).
+- **Docs:** [components](frontend/components.md), [layout and navigation](frontend/layout-and-navigation.md), [design system](frontend/design-system.md).
+
+**What the tests show:**
+
+- [Today tests](../frontend/src/features/today/components/TodayView.test.tsx):
+  - the frosted offer's chips, arrow and "not now";
+  - waiting work has a lock, not a ring;
+  - work done today stays read-only after the open work, and the count is of open work;
+  - drop only after confirmation;
+  - a Routine's schedule and week come from the read model.
+- [Week bars](../frontend/src/features/routines/components/RoutineWeekBars.test.tsx): complete-day count, scheduled-only or every-day bars, the fill share.
+- [Task facts](../frontend/src/features/tasks/components/TaskFacts.test.tsx): deadline wording and tone, the times-moved fallback, the owner in its colour.
+- [Create flows](../frontend/src/features/shell/components/CreateSheet.test.tsx):
+  - a title alone is a Task for today in one press;
+  - no day and no owner is still a quick capture.
+- [Routine form](../frontend/src/features/routines/components/RoutineForm.test.tsx), [Reconcile carry](../frontend/src/features/reconcile/components/ReconcilePage.test.tsx).
+- Backend:
+  - [Today returns today's completed Tasks](../backend.Tests/TaskTodayModuleTests.cs);
+  - [the week read model](../backend.Tests/RoutineModuleTests.cs): existing occurrences up to today and the schedule after it; recurrence and slots per day; four weeks of one stopped Routine with nothing scheduled after it; `weeks=5` rejected; an unknown Routine not found.
+- Browser scenarios updated for the timeline, the swipe actions, the filter button and the new sheets: [auth](../frontend/e2e/auth.spec.ts) (a title alone is saved for today's date), [keyboard](../frontend/e2e/keyboard.spec.ts) (a day picked from the calendar by keyboard), [Reconcile](../frontend/e2e/reconcile.spec.ts) (capture by choosing no date), [Routines](../frontend/e2e/routines.spec.ts), [responsive](../frontend/e2e/responsive.spec.ts).
+
+**Verified 2026-10-14 on Linux:**
+
+- 90 frontend tests passed; typecheck, lint and build were clean.
+- All 17 browser scenarios passed in Chromium against a fresh isolated database.
+- 240 backend tests passed (2 skipped, unchanged).
+- Screenshots at 390 px in both themes were compared with every board:
+  - `CodeToday` and `CodeTodayActions`, plus 1440 px;
+  - `CodeTasks` and `CodeTaskDetail`;
+  - `CodeRoutines` and `CodeRoutineDetail`;
+  - `CodeNewTask`, `CodeNewRoutine` and `CodeCarrySheet`.
+- Quick capture was measured five times on a 390 px touch viewport: tap the create button, pause 400 ms, tap «کار», type a 19-character title at 150 ms per character, tap «افزودن به امروز».
+  - Median time to the saved toast was **3.7 s**.
+  - The app's own share was about 0.46 s.
+  - This was a local run against the dev server; network latency on a real phone is not included.
+- New text and fill pairs are at least 4.5:1 in both themes, among them:
+  - the complete button: 4.6:1 light, 8.6:1 dark;
+  - Routine and Task ink on their tints: 5.5:1 or more.
+
+**Decisions and deviations:**
+
+- **A new Task's day starts at «امروز».** This follows the board and the D028 §4.3 promise of a one-line Task in under 5 seconds. A title with no date and no owner is still saved as a quick capture (026 §10), now by choosing «بدون تاریخ» with «مستقل». *This changes what a bare title does, from a capture to a Task for today, and is for the owner to confirm.*
+- **The day wheel shows the three days before today as context only.** They cannot be chosen; earlier work is Reconcile's. Days that fade out of the wheel are out of keyboard reach until a nearer day is chosen.
+- **Origin dates.** "Since 17 Mehr" is shown on the Tasks list from the planned date, where it is the fact. Today and Task detail show how many times a Task was moved, because no origin date is stored.
+- **Done and waiting rows are faded to 85%,** not the board's 62%, which would drop their text to 2.8:1. Quiet meta text uses `text-secondary`, not the boards' tertiary grey (3.4:1).
+- **Counts are complete days.** The Routines list and Today count complete days of the week («۱ از ۷»). The boards mixed day and slot counts.
+- **No buttons without an action.** The Routines list has no filter button: stopped Routines are folded at the foot instead. Task detail has no "more" button. The board's swipe legend (`CodeTodayActions`) is an annotation, not a screen.
+- **An open slot is completed from «نوبت‌های امروز»,** not from the Routine's history, which only corrects resolved slots.
+- **Sheet copy** uses the app's formal address, as STEP-15 did.
+- **The hero photograph is the owner's chosen placeholder,** compressed to 1600 px and 120 KB. Its licence for the pilot is the owner's to confirm.
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- The quick-capture timing on a real phone over the pilot network.
+- A screen-reader pass of the swipe actions, the day wheel and the calendars. Only the role-based automated checks ran.
 
 ---
 

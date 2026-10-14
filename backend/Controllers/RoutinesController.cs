@@ -20,6 +20,13 @@ public sealed class RoutinesController(RoutineService routines) : ControllerBase
         [FromQuery, Range(1, 100)] int limit = 20, CancellationToken cancellationToken = default) =>
         Ok(await routines.ListAsync(status, cursor, limit, cancellationToken));
 
+    /// <summary>This local week of every active Routine, for the week strips on Today and the Routines page.</summary>
+    [HttpGet("week")]
+    [ProducesResponseType<RoutineWeeksDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<RoutineWeeksDto>> Week([FromQuery, Range(1, 4)] int weeks = 1,
+        [FromQuery] Guid? routineId = null, CancellationToken cancellationToken = default) =>
+        Ok(await routines.WeekAsync(weeks, routineId, cancellationToken));
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType<RoutineDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]

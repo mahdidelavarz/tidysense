@@ -1,32 +1,36 @@
 import { useState } from 'react'
-import { formatLocalDate, formatTime } from '../../../shared/lib/date'
+import { formatLongDate, formatTime, parseIsoDate, toIsoDate } from '../../../shared/lib/date'
+import { Check } from '../../../shared/ui/icons'
 import { showToast } from '../../../shared/lib/ui-store'
 import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog'
-import { StatusBadge } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
 import { ErrorState, LoadMoreButton, LoadingState } from '../../../shared/ui/StateUi'
-import { useCompleteOccurrence, useCorrectOccurrence, useRoutineOccurrences } from '../hooks/routine-hooks'
+import { useCorrectOccurrence, useRoutineOccurrences } from '../hooks/routine-hooks'
 import type { OccurrenceCorrection, RoutineOccurrenceDto } from '../types/routine.types'
 
 type Correction = { occurrence: RoutineOccurrenceDto; target: OccurrenceCorrection }
 
 /**
- * A Routine's occurrences, newest first. A pending one can be marked done; a
- * resolved one can be corrected between done and missed after confirmation.
+ * A Routine's occurrences, newest first. A resolved one can be corrected
+ * between done and missed after confirmation; an open one is today's and is
+ * completed from today's slots.
  * The scheduled date and time are facts and are never editable.
  */
-export function RoutineOccurrenceHistory({ routineId }: { routineId: string }) {
+export function RoutineOccurrenceHistory({ routineId, today }: {
+  routineId: string
+  /** The server's local date, to say «امروز» and «دیروز». */
+  today?: string
+}) {
   const occurrences = useRoutineOccurrences(routineId)
-  const complete = useCompleteOccurrence()
   const correct = useCorrectOccurrence()
   const [correction, setCorrection] = useState<Correction | null>(null)
   const items = occurrences.data?.pages.flatMap(page => page.items) ?? []
 
   return (
-    <section className="mt-8" aria-labelledby="routine-history">
-      <h2 className="lane-title" id="routine-history">سابقه اجرا</h2>
-      <div className="mt-3">
-        <FormError error={complete.error ?? correct.error} />
+    <section className="card mt-5 p-4 sm:p-5" aria-labelledby="routine-history">
+      <h2 className="font-extrabold" id="routine-history">سابقه اجرا</h2>
+      <div className="mt-2">
+        <FormError error={correct.error} />
       </div>
       {occurrences.isPending && <LoadingState text="در حال دریافت سابقه…" />}
       {occurrences.isError && <ErrorState description="ارتباط را بررسی کنید و دوباره تلاش کنید." onRetry={() => occurrences.refetch()} />}
@@ -34,35 +38,32 @@ export function RoutineOccurrenceHistory({ routineId }: { routineId: string }) {
         <p className="notice">هنوز نوبتی برای این روتین ثبت نشده است.</p>
       )}
       {items.length > 0 && (
-        <ul className="divide-y divide-border-subtle overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <ul className="divide-y divide-border-subtle">
           {items.map(occurrence => (
-            <li key={occurrence.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <time className="block font-bold" dateTime={occurrence.scheduledLocalDate}>{formatLocalDate(occurrence.scheduledLocalDate)}</time>
-                {occurrence.scheduledLocalTime && (
-                  <bdi className="text-xs text-text-secondary" dir="ltr">{formatTime(occurrence.scheduledLocalTime)}</bdi>
-                )}
-              </div>
-              <StatusBadge status={occurrence.status} />
+            <li key={occurrence.id} className="flex min-h-14 items-center gap-3 py-2">
+              {occurrence.status === 'DONE'
+                ? <span className="slot-done size-6" aria-hidden="true"><Check size={14} /></span>
+                : occurrence.status === 'MISSED'
+                  ? <span className="slot-missed size-6" aria-hidden="true" />
+                  : <span className="size-6 shrink-0 rounded-full border-2 border-entity-routine" aria-hidden="true" />}
+              <time className="min-w-0 flex-1 truncate font-bold" dateTime={occurrence.scheduledLocalDate}>
+                {dayWords(occurrence.scheduledLocalDate, today)}
+              </time>
+              {occurrence.scheduledLocalTime && (
+                <bdi className="text-xs font-semibold text-text-secondary" dir="ltr">{formatTime(occurrence.scheduledLocalTime)}</bdi>
+              )}
               {occurrence.status === 'PENDING' ? (
-                <button
-                  className="secondary-button min-h-10 px-3"
-                  type="button"
-                  disabled={complete.isPending}
-                  onClick={() => complete.mutate(
-                    { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version) },
-                    { onSuccess: () => showToast('نوبت انجام شد.') },
-                  )}
-                >
-                  انجام شد
-                </button>
+                // An open slot is always today's; it is completed from today's slots above.
+                <span className="px-1 text-xs font-bold text-text-secondary">در پیش</span>
               ) : (
+                // The status is also the way to correct it, after a confirmation.
                 <button
-                  className="ghost-button min-h-10 px-3"
+                  className={`min-h-9 px-1 text-xs font-bold underline decoration-dotted underline-offset-4 ${occurrence.status === 'DONE' ? 'text-entity-routine' : 'text-text-primary'}`}
                   type="button"
+                  aria-label={occurrence.status === 'DONE' ? 'انجام شد؛ اصلاح به انجام‌نشده' : 'انجام نشد؛ اصلاح به انجام‌شده'}
                   onClick={() => setCorrection({ occurrence, target: occurrence.status === 'DONE' ? 'MISSED' : 'DONE' })}
                 >
-                  اصلاح
+                  {occurrence.status === 'DONE' ? 'انجام شد' : 'انجامش دادم'}
                 </button>
               )}
             </li>
@@ -72,7 +73,7 @@ export function RoutineOccurrenceHistory({ routineId }: { routineId: string }) {
       <LoadMoreButton
         visible={occurrences.hasNextPage}
         loading={occurrences.isFetchingNextPage}
-        label="نمایش نوبت‌های قدیمی‌تر"
+        label="نوبت‌های قدیمی‌تر"
         onClick={() => occurrences.fetchNextPage()}
       />
 
@@ -108,4 +109,14 @@ export function RoutineOccurrenceHistory({ routineId }: { routineId: string }) {
       )}
     </section>
   )
+}
+
+/** A date as «امروز، …» or «دیروز، …» when it is that close, else with its weekday. */
+function dayWords(date: string, today?: string) {
+  if (!today) return formatLongDate(date)
+  const yesterday = new Date(parseIsoDate(today))
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (date === today) return `امروز، ${formatLongDate(date)}`
+  if (date === toIsoDate(yesterday)) return `دیروز، ${formatLongDate(date)}`
+  return formatLongDate(date)
 }
