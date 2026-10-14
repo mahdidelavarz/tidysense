@@ -941,9 +941,60 @@ Verified 2026-10-13 on Linux:
 
 **Completion criteria:** Every figure is reproducible from its definition, shows its denominator, and excludes internal accounts.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:**
+
+- Backend:
+  - [`ProductInsightCatalog`](../backend/Services/Operations/ProductInsightCatalog.cs), version `2026-10-14.1`: 29 figures, each one SQL definition returning `(segment, numerator, denominator)` with its unit, window, segmentation and missing-data rule. Every per-attempt or per-response rate has an account-level partner (027 §10).
+  - The query runner of `PilotMetricsService` became the shared `MetricQuery` (window, population, excluded accounts), so both catalogs are computed the same way.
+  - [`ProductInsightsService`](../backend/Services/Operations/ProductInsightsService.cs) and `GET /api/v1/operations/insights?days=N`: primary population only, `internalAccountCount`, and the 50 latest reasons (surface, rating, day, text; no identity).
+- Tests:
+  - [Product insights](../backend.Tests/ProductInsightsTests.cs): one seeded fixture with three primary accounts, an internal account with activity in every area, an account registered after the window, and denominators of 0, 1 and 2. Every figure's numerator and denominator is asserted exactly. The internal account appears in no figure and is counted once. The figures are reproduced on a second run, and an empty window gives `0 / 0` or no row. No account id or phone appears in the response.
+  - Every definition states its unit, numerator, denominator, window and missing-data rule, and reads no title or phone.
+  - [Operations API](../backend.Tests/OperationsApiTests.cs): `/insights` is `401` without a session, `404` for a signed-in non-operator and identifies nobody for an operator.
+  - [Operations page](../frontend/src/features/operations/components/OperationsPage.test.tsx): 12 tests covering both tabs (also by arrow keys) and «x از y» everywhere, with no percentage. They check «نمونه‌ی کم» under 10, the funnel's accounts, attempts and drop, and accepted unchanged and edited apart. They also check usefulness beside behaviour, shown, answered and closed apart, reasons without identity, a failed read keeping the page, and no request for a non-operator.
+  - Browser ([operations](../frontend/e2e/operations.spec.ts)): both views on desktop and phone, the internal-account count, the 90-day window, and no sideways scroll at 390 px.
+- Docs: metric dictionary *Product insights*, STEP-11 contract statements 2, 3 and 19a, the route table, the icon table and `active-conventions.md`.
+
+**Verified 2026-10-14 on Linux:**
+
+- The steps of `./dev.ps1 check`, run directly:
+  - backend build with OpenAPI generation;
+  - frontend lint, typecheck and build;
+  - 267 backend tests passed; 2 skipped (the real-provider smoke runs);
+  - 101 frontend tests passed.
+- All 20 browser scenarios passed in Chromium against a fresh isolated database; the opt-in time-to-draft scenario was skipped.
+- Screenshots of both views at 1440 px and 390 px, in both themes, were compared with the four boards. The insights view was shown with fixture data in place of the empty test database.
+
+**Decisions and deviations:**
+
+- **Questions are listed by kind, not by question text.** `CodeInsights` names each question. 028 §2.5 records only the `kind` and answer codes, never the text, so the row is the kind («زمان‌بندی» `TIMING`).
+- **No good or bad colour.** Several board colours are not used, under 027 §5 ("no thresholds or good/bad colouring"):
+  - amber for a funnel drop of four or more accounts;
+  - red for the «بد» and «ضعیف» bars;
+  - green for «انجام شد».
+  
+  Bars use one colour per meaning, and the decision mix uses categorical colours. Alert severity in «سلامت سیستم» keeps its colour, because it is system state, not a product figure.
+- **No percentages.** The board's decision-mix percentages are shown as «x از y».
+- **More account-level figures than the board.** 027 §10 requires every rate also counted per account. Six figures were added that the board does not show: questions, acceptance with or without answers, Routine slots, repeated Carries, decision mix and reverted decisions.
+- **Usefulness sits beside behaviour.** The funnel carries «سودمندی ۴ یا ۵» from `H1.USEFULNESS_RESPONSE` beside «زنده تا ۷ روز» (027 §10). It is not on the board.
+- **No interpretation.** The board's callout («روتین‌ها بیشتر از بقیه برداشته می‌شوند…») is not generated; the product states figures, not conclusions.
+- **Window words.**
+  - «فعال این هفته» became «فعال در ۷ روز آخر» of the chosen window.
+  - «ثبت‌نام این هفته» became «ثبت‌نام در این بازه».
+  - Weekly sign-ups are the cohort sizes in «ماندگاری».
+  - Cohort weeks are UTC weeks starting on Saturday, not the account's local week.
+- **One satisfaction surface.** The board's «خلاصه‌ی بازبینی» row does not exist: the Reconcile explanation is not asked during the pilot (027 §8, decided 2026-10-14). The view lists whatever surfaces have prompts.
+- **Activity** is any event the user caused, except a consent change or a resolved prompt, plus a draft made or a question asked. Opening the application is not activity (027 §5).
+- **Reasons** are the 50 most recent in the window. Older ones stay until retention removes them, 180 days after they were shown.
+- **Correction:** the metric dictionary said a Task's origin is not stored on the record. `Tasks.Source` and `Routines.Source` are written as `AI_ASSISTED` only by the apply command, which is the provenance 027 §5 asks for, and the figures read them.
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- A screen-reader pass of the tabs and of the cohort table.
+- A look at the view with real pilot data. Every figure is tested on fixtures, but none on real accounts yet.
 
 ---
 

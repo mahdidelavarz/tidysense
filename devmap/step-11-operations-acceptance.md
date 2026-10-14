@@ -7,8 +7,8 @@
 ### Operator access
 
 1. An operator is an account whose phone number is listed in `Operations:OperatorPhones`. The list is configuration supplied outside tracked files. `CurrentUserDto.isOperator` tells the client.
-2. `GET /api/v1/operations/metrics`, `/ai` and `/health` answer an operator. Anyone else signed in gets `404`, the answer for a resource that is not theirs; without a session the answer is `401`.
-3. Every response is an aggregate. None contains a user id, a phone number, a title or other user text, or a context manifest. The endpoints are read-only.
+2. `GET /api/v1/operations/metrics`, `/insights`, `/ai` and `/health` answer an operator. Anyone else signed in gets `404`, the answer for a resource that is not theirs; without a session the answer is `401`.
+3. Every response is an aggregate. None contains a user id, a phone number, a title or other user text, or a context manifest. The endpoints are read-only. *Amended by 027 §5 (STEP-20):* the one exception is `/insights`' reason texts, written by users for a rating of 1 or 2, shown without account, phone or subject.
 
 ### Metrics
 
@@ -61,6 +61,7 @@
 
 18. `/operations` exists only for an operator; anyone else sees the not-found state and no request is made. The navigation entry is shown to operators only and has no tab.
 19. The page shows alerts and maintenance state, the AI runtime per family, and each metric as numerator and denominator columns. Internal accounts are in a separate, collapsed block.
+19a. *STEP-20:* the page has two views behind tabs, «سلامت سیستم» and «سنجش محصول», over the same 7/28/90-day window. «سلامت سیستم» keeps the content of statement 19 as summary tiles, alert cards, family cards and metric cards with bars («x از y»; a median or a per-account count has no bar). «سنجش محصول» reads `/insights` and four H1 metrics and follows 027 §10: account level first, «x از y», «نمونه‌ی کم» under 10, no good/bad colour, no percentage, internal accounts counted apart. See `operations/metric-dictionary.md`, *Product insights*.
 
 ## Configuration
 

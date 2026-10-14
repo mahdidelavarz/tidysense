@@ -165,6 +165,7 @@ builder.Services.AddOptions<OperationsOptions>().Bind(builder.Configuration.GetS
 builder.Services.AddSingleton<OperatorAccess>();
 builder.Services.AddScoped<OperationsHealthService>();
 builder.Services.AddScoped<PilotMetricsService>();
+builder.Services.AddScoped<ProductInsightsService>();
 builder.Services.AddScoped<OperationsMaintenance>();
 builder.Services.AddScoped<UserErasureService>();
 builder.Services.AddOptions<PilotOptions>().Bind(builder.Configuration.GetSection(PilotOptions.SectionName));

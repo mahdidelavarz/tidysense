@@ -2168,4 +2168,215 @@ select:not(:disabled),
   .calendar-day[data-today="true"]:not([aria-pressed="true"]) {
     @apply font-bold text-sun-strong ring-1 ring-sun/60;
   }
+
+  /* ---------- Operations (operator page) ---------- */
+  /* Figures are counts with their denominators; bars have one colour so only their length speaks. */
+  .ops-tabs {
+    @apply inline-flex gap-1 rounded-2xl bg-surface-sunken p-1;
+  }
+
+  .ops-tab {
+    @apply flex min-h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-text-secondary transition duration-200 hover:text-text-primary;
+  }
+
+  .ops-tab[aria-selected="true"] {
+    @apply bg-surface font-extrabold text-text-primary shadow-sm;
+  }
+
+  .ops-tile {
+    @apply flex flex-col p-4 sm:p-5;
+  }
+
+  .ops-tile-value {
+    @apply mt-3 text-2xl font-extrabold leading-9;
+  }
+
+  .ops-of {
+    @apply inline-flex flex-wrap items-center gap-x-1.5 whitespace-nowrap text-sm text-text-secondary;
+  }
+
+  .ops-of-n {
+    @apply text-base font-extrabold text-text-primary;
+  }
+
+  .ops-faint {
+    @apply text-xs font-semibold text-text-tertiary;
+  }
+
+  .ops-faint .ops-of-n {
+    @apply text-xs font-semibold text-text-tertiary;
+  }
+
+  .ops-tile-value .ops-of-n {
+    @apply text-2xl;
+  }
+
+  .ops-small {
+    @apply inline-flex items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[0.6875rem] font-bold text-text-secondary;
+  }
+
+  .ops-meter {
+    @apply mt-2 block h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken;
+  }
+
+  .ops-meter-fill {
+    @apply block h-full rounded-full bg-accent-strong;
+  }
+
+  .ops-meter-fill.tone-strong { @apply bg-accent; }
+  .ops-meter-fill.tone-ai { background: var(--color-moon); }
+  .ops-meter-fill.tone-entity { background: var(--entity-color); }
+  .ops-meter-fill.tone-caution { @apply bg-caution; }
+  .ops-meter-fill.tone-attention { @apply bg-attention; }
+
+  .ops-bar-row {
+    @apply grid grid-cols-[6.5rem_1fr_auto] items-center gap-3;
+  }
+
+  .ops-bar-row .ops-meter {
+    @apply mt-0;
+  }
+
+  .ops-bar-label {
+    @apply truncate text-sm font-bold;
+  }
+
+  .ops-funnel-row {
+    @apply grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 text-sm sm:grid-cols-[8.5rem_1fr_7.5rem_5.5rem];
+  }
+
+  .ops-funnel-row .ops-meter {
+    @apply col-span-2 mt-0 h-2.5 sm:col-span-1;
+  }
+
+  .ops-chip {
+    @apply inline-flex flex-wrap items-center gap-1.5 rounded-xl bg-surface-sunken px-3 py-1.5 text-xs text-text-secondary;
+  }
+
+  .ops-stats {
+    @apply grid grid-cols-2 gap-2 sm:grid-cols-4;
+  }
+
+  .ops-card .ops-stats:has(> :nth-child(3):last-child) {
+    @apply grid-cols-3;
+  }
+
+  .ops-stat {
+    @apply rounded-xl bg-surface-sunken px-3 py-2;
+  }
+
+  .ops-stat dt {
+    @apply text-[0.6875rem] font-bold text-text-secondary;
+  }
+
+  .ops-stat dd {
+    @apply mt-0.5;
+  }
+
+  .ops-alert {
+    @apply rounded-2xl bg-surface-sunken p-4;
+  }
+
+  .ops-alert[data-severity="critical"] {
+    box-shadow: inset -3px 0 0 var(--color-attention);
+  }
+
+  .ops-alert[data-severity="warning"] {
+    box-shadow: inset -3px 0 0 var(--color-caution);
+  }
+
+  .ops-provider {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-surface-sunken px-3 py-1 text-xs text-text-secondary;
+  }
+
+  .ops-switch {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-surface-sunken px-3 py-1 text-xs text-text-secondary;
+  }
+
+  .ops-switch-on {
+    @apply bg-attention-tint text-attention;
+  }
+
+  .ops-code {
+    @apply font-mono text-[0.8125em];
+  }
+
+  /* A wide table scrolls inside its card; its width never widens the page. */
+  .ops-scroll {
+    @apply relative overflow-x-auto;
+    contain: inline-size;
+  }
+
+  .ops-table {
+    @apply w-full text-sm;
+  }
+
+  .ops-table caption {
+    @apply px-4 pb-3 pt-4 text-start font-extrabold;
+  }
+
+  .ops-table th,
+  .ops-table td {
+    @apply px-4 py-2.5 text-start;
+  }
+
+  .ops-table thead th {
+    @apply border-y border-border-subtle text-xs font-bold text-text-secondary;
+  }
+
+  .ops-table tbody tr {
+    @apply border-b border-border-subtle last:border-0;
+  }
+
+  .ops-table tbody th {
+    @apply font-bold;
+  }
+
+  .ops-table.ops-cohort th,
+  .ops-table.ops-cohort td {
+    @apply px-1.5 py-1 text-center;
+  }
+
+  .ops-table.ops-cohort tbody th {
+    @apply whitespace-nowrap text-start text-sm;
+  }
+
+  .ops-cohort .ops-small {
+    @apply ms-1.5;
+  }
+
+  /* A cohort cell's shade follows its share; it is never a pass or fail colour. */
+  .ops-cell {
+    @apply flex h-9 min-w-14 items-center justify-center rounded-lg text-sm font-bold;
+    color: var(--color-text-primary);
+    background: color-mix(in srgb, var(--color-moon) calc(var(--share, 0) * 45% + 8%), var(--color-surface));
+  }
+
+  .ops-mix {
+    @apply flex h-3 gap-0.5 overflow-hidden rounded-full bg-surface-sunken;
+  }
+
+  .ops-dot {
+    @apply inline-block size-2.5 rounded-full;
+  }
+
+  /* Decision kinds are told apart, not ranked. */
+  .mix-done { background: var(--color-accent-strong); }
+  .mix-today { background: var(--color-sun); }
+  .mix-moved { background: var(--color-moon); }
+  .mix-keep { background: var(--color-entity-project); }
+  .mix-drop { background: var(--color-text-tertiary); }
+
+  .ops-highlight {
+    @apply rounded-2xl bg-surface-sunken p-4;
+  }
+
+  .ops-reason {
+    @apply rounded-2xl border border-border-subtle p-3.5;
+  }
+
+  .ops-rating {
+    @apply rounded-full bg-surface-sunken px-2 py-0.5 font-bold text-text-primary;
+  }
+
 }

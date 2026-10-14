@@ -36,3 +36,13 @@ public sealed record OperationsAlertDto(string Rule, string Severity, string Sco
 public sealed record OperationsHealthDto(IReadOnlyList<OperationsAlertDto> Alerts,
     DateTimeOffset? LastMaintenanceAt, string? LastMaintenanceOutcome, int StuckExplanations,
     int StuckPlanningAttempts, int PendingOutboxMessages);
+
+/// <summary>A reason written with a rating of 1 or 2: the surface, the rating and the day only, never who wrote it.</summary>
+public sealed record LowRatingReasonDto(string Surface, int Rating, DateOnly ShownOn, string Text);
+
+/// <summary>
+/// «سنجش محصول» for a window (027 §5): figures over the primary population only, with every
+/// numerator and denominator; internal accounts are counted, never mixed in.
+/// </summary>
+public sealed record OperationsInsightsDto(string CatalogVersion, DateTimeOffset From, DateTimeOffset To,
+    int InternalAccountCount, IReadOnlyList<MetricResultDto> Figures, IReadOnlyList<LowRatingReasonDto> Reasons);

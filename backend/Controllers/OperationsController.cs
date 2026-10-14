@@ -23,6 +23,7 @@ public sealed class OperationsController(
     OperatorAccess access,
     ApplicationDateService dates,
     PilotMetricsService metrics,
+    ProductInsightsService insights,
     OperationsHealthService health) : ControllerBase
 {
     private const int DefaultDays = 28;
@@ -37,6 +38,18 @@ public sealed class OperationsController(
         if (!await IsOperatorAsync(cancellationToken)) return NotFound();
         var (from, to) = Window(days);
         return Ok(await metrics.ComputeAsync(from, to, cancellationToken));
+    }
+
+    /// <summary>«سنجش محصول» (027 §5): product figures over the primary population, and reasons without identity.</summary>
+    [HttpGet("insights")]
+    [ProducesResponseType<OperationsInsightsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OperationsInsightsDto>> Insights([FromQuery] int days = DefaultDays,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await IsOperatorAsync(cancellationToken)) return NotFound();
+        var (from, to) = Window(days);
+        return Ok(await insights.ComputeAsync(from, to, cancellationToken));
     }
 
     [HttpGet("ai")]

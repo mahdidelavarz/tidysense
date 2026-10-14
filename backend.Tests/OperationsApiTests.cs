@@ -22,7 +22,8 @@ public sealed class OperationsApiTests(PostgresWebApplicationFactory factory)
 {
     private const string OperatorPhone = "+989120008801";
     private static readonly string[] Paths =
-        ["/api/v1/operations/metrics", "/api/v1/operations/ai?days=7", "/api/v1/operations/health"];
+        ["/api/v1/operations/metrics", "/api/v1/operations/insights?days=7", "/api/v1/operations/ai?days=7",
+            "/api/v1/operations/health"];
 
     [Fact]
     public async Task Only_an_operator_reads_operational_evidence_and_it_identifies_nobody()

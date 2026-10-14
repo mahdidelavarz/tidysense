@@ -1,10 +1,21 @@
 // Operations HTTP operations only. No React Query, no component concerns.
 import { http } from '../../../shared/api/http'
-import type { OperationsAiDto, OperationsHealthDto, OperationsMetricsDto } from '../types/operations.types'
+import type {
+  OperationsAiDto,
+  OperationsHealthDto,
+  OperationsInsightsDto,
+  OperationsMetricsDto,
+} from '../types/operations.types'
 
 /** H1/H2 numerators and denominators for the last `days` days. Operator accounts only; anyone else gets 404. */
 export async function getOperationsMetrics(days: number): Promise<OperationsMetricsDto> {
   const response = await http.get<OperationsMetricsDto>('/operations/metrics', { params: { days } })
+  return response.data
+}
+
+/** «سنجش محصول» for the last `days` days: product figures without internal accounts, and reasons without identity. */
+export async function getOperationsInsights(days: number): Promise<OperationsInsightsDto> {
+  const response = await http.get<OperationsInsightsDto>('/operations/insights', { params: { days } })
   return response.data
 }
 
