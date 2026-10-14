@@ -42,12 +42,13 @@ export function AiExplanationCard({ session, onAction, onDatedAction }: { sessio
   const requestCode = request.error ? toApiError(request.error).code : null
 
   return (
-    <section className="rounded-2xl border border-accent/20 bg-linear-to-bl from-accent-tint via-surface to-surface p-4 shadow-sm sm:p-6" aria-labelledby="reconcile-ai">
-      <h2 className="flex items-center gap-2 font-bold" id="reconcile-ai">
-        <Sparkles size={18} aria-hidden="true" />
-        توضیح هوش مصنوعی
-        <span className="status-badge status-neutral">{sample ? 'نمونه' : 'اختیاری'}</span>
+    <section className="ai-question" aria-labelledby="reconcile-ai">
+      <h2 className="flex items-center gap-2.5 font-extrabold" id="reconcile-ai">
+        <span className="ai-tile size-8 rounded-[0.625rem]" aria-hidden="true"><Sparkles size={16} /></span>
+        <span className="min-w-0 flex-1">چرا این‌ها اینجا هستند؟</span>
+        <span className="rounded-md bg-surface-sunken px-2 py-0.5 text-[0.6875rem] font-bold text-text-secondary">{sample ? 'نمونه' : 'اختیاری'}</span>
       </h2>
+      <p className="sr-only">توضیح هوش مصنوعی</p>
 
       {!explanation && !canAsk && (
         <p className="mt-2 text-sm text-text-secondary">
@@ -121,7 +122,7 @@ export function AiExplanationCard({ session, onAction, onDatedAction }: { sessio
             </ul>
           )}
           <p className="mt-3 text-xs text-text-secondary">
-            این متن توضیح است، نه تصمیم. تا پیش‌نمایش را تأیید نکنید چیزی تغییر نمی‌کند.
+            این متن توضیح است، نه تصمیم. پیشنهادها فقط دکمه‌ی مربوطشان را روی کارت با <Sparkles size={12} className="inline" aria-label="نشان دستیار" /> نشان می‌دهند، و تا پیش‌نمایش را تأیید نکنید چیزی تغییر نمی‌کند.
           </p>
         </>
       )}

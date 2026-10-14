@@ -1,11 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import { formatLocalDate, formatNumber } from '../../../shared/lib/date'
+import { formatDayMonth, formatLocalDate, formatNumber } from '../../../shared/lib/date'
+import { CalendarClock, CircleSlash, Play, Target } from '../../../shared/ui/icons'
 import { showToast } from '../../../shared/lib/ui-store'
 import { EntityIcon } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
 import { useReviewGoal } from '../../goals/hooks/goal-hooks'
 import { useReviewProject } from '../../projects/hooks/project-hooks'
 import type { ReconcileActionDraft, ReconcileReviewItemDto, ReconcileTaskRefDto } from '../types/reconcile.types'
+import { LaneHeading } from './ExecutionLane'
 
 /**
  * Commitment-review lane: Goals and Projects whose review date has arrived.
@@ -25,15 +27,16 @@ export function ReviewLane({ reviews, total, onAction, onDatedAction }: {
     : reviewProject.isPending ? reviewProject.variables?.projectId : undefined
 
   return (
-    <section className="lane" aria-labelledby="reconcile-reviews">
-      <h2 className="lane-title" id="reconcile-reviews">
-        مرور تعهدها
-        <span className="lane-count" aria-hidden="true">{formatNumber(total)}</span>
-      </h2>
-      <p className="lane-hint">
-        زمان مرور این موارد رسیده است. این یک نقطه بازبینی است، نه کار عقب‌افتاده.
-        {total > reviews.length && ` ${formatNumber(reviews.length)} مورد از ${formatNumber(total)} مورد نمایش داده شده است.`}
-      </p>
+    <section aria-labelledby="reconcile-reviews">
+      <LaneHeading
+        id="reconcile-reviews"
+        icon={Target}
+        entity="goal"
+        count={total}
+        hint={`وقت مرورشان رسیده؛ ادامه، بعداً یا پایان. این نقطه‌ی بازبینی است، نه کار عقب‌افتاده.${total > reviews.length ? ` ${formatNumber(reviews.length)} مورد از ${formatNumber(total)} مورد نمایش داده شده است.` : ''}`}
+      >
+        مرور هدف و پروژه
+      </LaneHeading>
       <div className="mt-3"><FormError error={reviewGoal.error ?? reviewProject.error} /></div>
       <ul className="mt-4 space-y-4">
         {reviews.map(review => {
@@ -42,24 +45,24 @@ export function ReviewLane({ reviews, total, onAction, onDatedAction }: {
           const version = Number(review.version)
           return (
             <li key={review.id}>
-              <article className="decision-card">
-                <div className="p-3 sm:p-4">
+              <article className={`decision-card review-card entity-${isGoal ? 'goal' : 'project'}`} aria-label={review.title}>
+                <div className="p-4">
                 <div className="flex items-start gap-3">
                   <EntityIcon entity={isGoal ? 'goal' : 'project'} />
                   <div className="min-w-0 flex-1">
+                    <p className="entity-ink text-[0.6875rem] font-extrabold">{isGoal ? 'هدف' : 'پروژه'}</p>
                     <h3 className="decision-title">{review.title}</h3>
-                    <p className="mt-1 flex flex-wrap gap-1.5">
-                      <span className="meta-chip">{isGoal ? 'هدف' : 'پروژه'}</span>
-                      <span className="meta-chip">تاریخ مرور: {formatLocalDate(review.reviewDate)}</span>
-                      {review.targetDate && <span className="meta-chip">تاریخ هدف: {formatLocalDate(review.targetDate)}</span>}
+                    <p className="mt-0.5 text-xs leading-6 text-text-secondary">
+                      موعد مرورش {formatDayMonth(review.reviewDate)} بود
+                      {review.targetDate && `؛ تاریخ هدف ${formatLocalDate(review.targetDate)}`}
                     </p>
                   </div>
                 </div>
                 {isGoal && <p className="mt-3 text-sm font-bold sm:mt-4 sm:text-base">آیا می‌خواهید این هدف را ادامه دهید؟</p>}
 
                 {review.undatedTasks.length > 0 && (
-                  <div className="notice mt-3">
-                    <p className="font-bold text-text-primary">کارهای فعال بدون تاریخ</p>
+                  <div className="mt-3 rounded-2xl bg-surface-sunken p-3 text-sm">
+                    <p className="font-bold">{formatNumber(review.undatedTasks.length)} کار بدون تاریخ</p>
                     <ul className="mt-2 space-y-2">
                       {review.undatedTasks.map(task => (
                         <li key={task.id}><UndatedTask task={task} onAction={onAction} onDatedAction={onDatedAction} /></li>
@@ -73,43 +76,51 @@ export function ReviewLane({ reviews, total, onAction, onDatedAction }: {
                   {isGoal ? (
                     <>
                       <button
-                        className="decision-button" data-tone="primary"
+                        className="decision-button review-continue"
                         type="button"
                         disabled={busy}
                         onClick={() => reviewGoal.mutate({ goalId: review.id, decision: 'CONTINUE', expectedVersion: version }, {
                           onSuccess: () => showToast('هدف ادامه می‌یابد.'),
                         })}
                       >
+                        <Play size={19} aria-hidden="true" />
                         ادامه می‌دهم
                       </button>
                       <button
                         className="decision-button"
                         type="button"
+                        aria-label="بعداً مرور می‌کنم"
                         disabled={busy}
                         onClick={() => reviewGoal.mutate({ goalId: review.id, decision: 'REVIEW_LATER', expectedVersion: version }, {
                           onSuccess: () => showToast('مرور هدف به بعد موکول شد.'),
                         })}
                       >
-                        بعداً مرور می‌کنم
+                        <CalendarClock size={19} aria-hidden="true" />
+                        بعداً
                       </button>
-                      <Link className="decision-button" to="/goals/$goalId" params={{ goalId: review.id }}>
-                        تصمیم دیگری دارم
+                      {/* Abandoning is a terminal decision: it goes through the Goal's own confirmation. */}
+                      <Link className="decision-button" data-tone="danger" to="/goals/$goalId" params={{ goalId: review.id }} aria-label="رها کردن یا تصمیم دیگر، در صفحه‌ی هدف">
+                        <CircleSlash size={19} aria-hidden="true" />
+                        رهایش کن
                       </Link>
                     </>
                   ) : (
                     <>
                       <button
-                        className="decision-button" data-tone="primary"
+                        className="decision-button review-continue"
                         type="button"
+                        aria-label="ادامه با تاریخ مرور تازه"
                         disabled={busy}
                         onClick={() => reviewProject.mutate({ projectId: review.id, expectedVersion: version }, {
                           onSuccess: () => showToast('پروژه با تاریخ مرور تازه ادامه می‌یابد.'),
                         })}
                       >
-                        ادامه با تاریخ مرور تازه
+                        <Play size={19} aria-hidden="true" />
+                        ادامه می‌دهم
                       </button>
-                      <Link className="decision-button" to="/projects/$projectId" params={{ projectId: review.id }}>
-                        تکمیل یا توقف پروژه
+                      <Link className="decision-button" to="/projects/$projectId" params={{ projectId: review.id }} aria-label="تکمیل یا توقف پروژه، در صفحه‌ی پروژه">
+                        <CircleSlash size={19} aria-hidden="true" />
+                        تمام یا توقف
                       </Link>
                     </>
                   )}

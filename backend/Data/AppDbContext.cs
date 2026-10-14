@@ -19,6 +19,7 @@ public sealed class AppDbContext(
     public DbSet<CaptureItem> Captures => Set<CaptureItem>();
     public DbSet<ReconcileSession> ReconcileSessions => Set<ReconcileSession>();
     public DbSet<ReconcileFact> ReconcileFacts => Set<ReconcileFact>();
+    public DbSet<ReconcileQuickAction> ReconcileQuickActions => Set<ReconcileQuickAction>();
     public DbSet<RuleMatch> RuleMatches => Set<RuleMatch>();
     public DbSet<ReconcileExplanation> ReconcileExplanations => Set<ReconcileExplanation>();
     public DbSet<ReconcileRecommendation> ReconcileRecommendations => Set<ReconcileRecommendation>();
@@ -281,6 +282,24 @@ public sealed class AppDbContext(
                 t.HasCheckConstraint("CK_ReconcileSessions_Counts", "\"ActionableBacklogCount\" >= 0 AND \"ReviewDueCount\" >= 0 AND \"UnresolvedCaptureCount\" >= 0");
                 t.HasCheckConstraint("CK_ReconcileSessions_Version", "\"Version\" > 0");
                 t.HasCheckConstraint("CK_ReconcileSessions_Completion", "(\"Status\" = 'OPEN' AND \"CompletedAt\" IS NULL) OR (\"Status\" <> 'OPEN' AND \"CompletedAt\" IS NOT NULL)");
+            });
+        });
+
+        modelBuilder.Entity<ReconcileQuickAction>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ActionType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            entity.HasIndex(x => new { x.SessionId, x.CreatedAt });
+            entity.HasIndex(x => new { x.UserId, x.TaskId });
+            entity.HasOne(x => x.Session).WithMany(x => x.QuickActions).HasForeignKey(x => x.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ReconcileQuickActions_ActionType", "\"ActionType\" IN ('COMPLETE_TASK', 'CARRY_TO_TODAY')");
+                t.HasCheckConstraint("CK_ReconcileQuickActions_Status", "\"Status\" IN ('APPLIED', 'UNDONE')");
+                t.HasCheckConstraint("CK_ReconcileQuickActions_Undone", "(\"Status\" = 'UNDONE') = (\"UndoneAt\" IS NOT NULL AND \"UndoEventId\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_ReconcileQuickActions_Carry", "(\"ActionType\" = 'CARRY_TO_TODAY') = (\"PreviousPlannedDate\" IS NOT NULL)");
             });
         });
 

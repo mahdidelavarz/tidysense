@@ -11,6 +11,9 @@ public static class TaskEventTypes
     public const string TaskRestored = "TASK_RESTORED";
     public const string TaskCarried = "TASK_CARRIED";
     public const string TaskReviewKept = "TASK_REVIEW_KEPT";
+    // A one-tap Reconcile decision taken back (027 §6); the causation id is the event it reverses.
+    public const string TaskCompletionUndone = "TASK_COMPLETION_UNDONE";
+    public const string TaskCarryUndone = "TASK_CARRY_UNDONE";
 }
 
 public static class TaskCarryScopes
@@ -53,6 +56,8 @@ public static class TaskEventSchemas
             new EventPayloadFieldPolicy("reasonCodes", true, value => UniqueAllowed(value, ReasonCodes)));
         yield return new EventPayloadSchema(TaskEventTypes.TaskCompleted, 1);
         yield return new EventPayloadSchema(TaskEventTypes.TaskDropped, 1);
+        yield return new EventPayloadSchema(TaskEventTypes.TaskCompletionUndone, 1);
+        yield return new EventPayloadSchema(TaskEventTypes.TaskCarryUndone, 1);
         yield return new EventPayloadSchema(TaskEventTypes.TaskRestored, 1,
             new EventPayloadFieldPolicy("parentScope", true, value => Allowed(value, Scopes)),
             new EventPayloadFieldPolicy("hasPlannedDate", true, IsBoolean));

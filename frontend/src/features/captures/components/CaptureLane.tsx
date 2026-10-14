@@ -1,6 +1,7 @@
 import { ListChecks, Repeat, StickyNote, Trash2 } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'
+import { LaneHeading } from '../../reconcile/components/ExecutionLane'
 import { showToast } from '../../../shared/lib/ui-store'
 import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog'
 import { FormError } from '../../../shared/ui/FormUi'
@@ -30,37 +31,32 @@ export function CaptureLane({ captures, total }: {
   const close = () => setOpen(null)
 
   return (
-    <section className="lane" aria-labelledby="reconcile-captures">
-      <h2 className="lane-title" id="reconcile-captures">
+    <section aria-labelledby="reconcile-captures">
+      <LaneHeading
+        id="reconcile-captures"
+        icon={StickyNote}
+        count={total}
+        hint={`ثبت شده‌اند ولی هنوز کار یا روتین نیستند.${total > captures.length ? ` ${formatNumber(captures.length)} مورد از ${formatNumber(total)} مورد نمایش داده شده است.` : ''}`}
+      >
         یادداشت‌های سریع
-        <span className="lane-count" aria-hidden="true">{formatNumber(total)}</span>
-      </h2>
-      <p className="lane-hint">
-        این‌ها هنوز تعهد نیستند. هر کدام را به کار یا روتین تبدیل کنید یا دور بیندازید.
-        {total > captures.length && ` ${formatNumber(captures.length)} مورد از ${formatNumber(total)} مورد نمایش داده شده است.`}
-      </p>
+      </LaneHeading>
       <ul className="mt-4 space-y-4">
         {captures.map(capture => (
           <li key={capture.id}>
-            <article className="decision-card">
-              <div className="decision-head items-center">
-                <span className="decision-tile bg-surface-sunken text-text-secondary" aria-hidden="true">
-                  <StickyNote size={22} />
-                </span>
-                <h3 className="decision-title min-w-0 flex-1">{capture.title}</h3>
-              </div>
-              <div className="decision-bar">
-                <button className="decision-button" type="button" aria-label={`تبدیل به کار: ${capture.title}`} onClick={() => setOpen({ kind: 'task', capture })}>
-                  <ListChecks size={18} aria-hidden="true" />
-                  تبدیل به کار
+            <article className="decision-card capture-card" aria-label={capture.title}>
+              <h3 className="decision-title px-4 pt-3.5">{capture.title}</h3>
+              <div className="decision-bar mt-3">
+                <button className="decision-button entity-task capture-choice" type="button" aria-label={`تبدیل به کار: ${capture.title}`} onClick={() => setOpen({ kind: 'task', capture })}>
+                  <ListChecks size={19} aria-hidden="true" />
+                  کار کن
                 </button>
-                <button className="decision-button" type="button" aria-label={`تبدیل به روتین: ${capture.title}`} onClick={() => setOpen({ kind: 'routine', capture })}>
-                  <Repeat size={18} aria-hidden="true" />
-                  تبدیل به روتین
+                <button className="decision-button entity-routine capture-choice" type="button" aria-label={`تبدیل به روتین: ${capture.title}`} onClick={() => setOpen({ kind: 'routine', capture })}>
+                  <Repeat size={19} aria-hidden="true" />
+                  روتین کن
                 </button>
                 <button className="decision-button" data-tone="danger" type="button" aria-label={`دور انداختن: ${capture.title}`} onClick={() => setOpen({ kind: 'discard', capture })}>
-                  <Trash2 size={18} aria-hidden="true" />
-                  دور انداختن
+                  <Trash2 size={19} aria-hidden="true" />
+                  دور بینداز
                 </button>
               </div>
             </article>

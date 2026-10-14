@@ -846,9 +846,76 @@ Verified 2026-10-13 on Linux:
 
 **Completion criteria:** The two single-item actions apply on tap and undo exactly; everything else still needs preview and confirmation.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:**
+
+- **One-tap decisions and undo** ([STEP-07 contract](step-07-capture-reconcile-acceptance.md) statements 26–31):
+  - [apply and undo commands and the session's list](../backend/Services/ReconcileService.cs), [endpoints](../backend/Controllers/ReconcileController.cs);
+  - [`ReconcileQuickAction`](../backend/Models/ReconcileSession.cs) with its [migration](../backend/Migrations/20261014162734_Step19ReconcileQuickActions.cs) and R2 [retention](../backend/Services/Operations/RetentionCatalog.cs);
+  - [`TASK_COMPLETION_UNDONE` / `TASK_CARRY_UNDONE`](../backend/Common/Events/TaskEventSchemas.cs);
+  - the executor's optional preset [event and causation ids](../backend/Common/Commands/CommandExecutionRequest.cs);
+  - undone Carries left out of [carry count](../backend/Services/TaskHistory.cs) and the [planning context](../backend/Services/PlanningContextBuilder.cs).
+- **Screens:**
+  - [page](../frontend/src/features/reconcile/components/ReconcilePage.tsx), [lanes and tiles](../frontend/src/features/reconcile/components/ExecutionLane.tsx), [reviews](../frontend/src/features/reconcile/components/ReviewLane.tsx), [captures](../frontend/src/features/captures/components/CaptureLane.tsx), [AI card](../frontend/src/features/reconcile/components/AiExplanationCard.tsx);
+  - [Review & Apply](../frontend/src/features/reconcile/components/ReviewApplyDialog.tsx);
+  - [hooks](../frontend/src/features/reconcile/hooks/reconcile-hooks.ts).
+- **Docs:**
+  - [STEP-07](step-07-capture-reconcile-acceptance.md) and [STEP-10](step-10-ai-reconcile-acceptance.md) contracts;
+  - [active conventions](context/active-conventions.md), [metric dictionary](operations/metric-dictionary.md), [components](frontend/components.md), [layout and navigation](frontend/layout-and-navigation.md).
+
+**What the tests show:**
+
+- [PostgreSQL/API](../backend.Tests/CaptureReconcileModuleTests.cs), tap and undo:
+  - «انجام شد» and «امروز» apply with no preview and no confirmation;
+  - the Task leaves the evaluation, and the decision stays listed with its owner and `canUndo`;
+  - «امروز» counts as a Carry, and a replay changes nothing more;
+  - a Task the session does not offer is refused, as is any other action type, and another user's undo is `404`.
+- Undo restores exactly:
+  - the prior planned date, `ACTIVE` with no completion date;
+  - the carry count back to 0 and the Task back in the lane;
+  - a second undo is refused;
+  - each undo is a user event in the session, caused by the event it reverses.
+- Undo is refused:
+  - after an edit of the Task (`409 QUICK_ACTION_STALE`, nothing moves);
+  - when an undo races an edit of the same Task: exactly one of them commits;
+  - after a later sequence step was completed;
+  - once the session closed.
+- A stale tap is `409`.
+- [Reconcile page](../frontend/src/features/reconcile/components/ReconcilePage.test.tsx):
+  - «۴ تصمیم مانده، از ۴»;
+  - a tap with no preview, after which the row takes the focus;
+  - undo, and «امروز»; a changed Task offers no undo;
+  - a refused undo is explained;
+  - «امروز» is hidden once the deadline has passed;
+  - the sequence's «تک‌تک»;
+  - an AI recommendation rings only its tile, never a one-tap tile, and tapping it cites the recommendation and opens the preview;
+  - Keep, Drop, warnings, stale preview and sequence carry still go through Review & Apply.
+- Browser ([Reconcile](../frontend/e2e/reconcile.spec.ts)):
+  - tap «انجام شد», see the row, undo, and the Task is `ACTIVE` on its old date;
+  - tap «امروز» (carry count 1), the Task is edited elsewhere, undo is refused with the message, and the Task stays on today;
+  - the earlier sequence and explanation scenarios now name the highlighted tile.
+
+**Verified 2026-10-14 on Linux:**
+
+- 96 frontend tests passed; typecheck, lint and build were clean.
+- All 20 browser scenarios passed in Chromium against a fresh isolated database; the opt-in time-to-draft scenario was skipped.
+- 265 backend tests passed; 2 skipped (the real-provider smoke runs).
+- Screenshots at 390 px in both themes were compared with `CodeReconcile` and `CodeReviewApply`.
+
+**Decisions and deviations:**
+
+- **«امروز» is a fifth tile.** `CodeReconcile` shows four («انجام شد»، «جابه‌جا»، «بماند»، «کنار بگذار»); 027 §6 requires a control that names «امروز». It appears only for a Task planned for an earlier day whose deadline allows today. The two one-tap tiles come first, in the Task colour and the sun.
+- **«بماند» still has a preview.** 027 §6 makes only completion and Carry to today one-tap.
+- **Undo outlives the page.** It is stored with the session, so it survives a reload, until «پایان بازبینی» or the session expires.
+- **A completion is not undone after a later step of its sequence was completed,** which would leave that step done before its predecessor.
+- **The progress card counts all three lanes** («N تصمیم مانده، از M», where M is what waited when the session opened). The board's per-review progress («۸ از ۱۳ کار انجام شده») and the preview's owner footnote are not shown, because the session and the preview do not carry those figures.
+- **Formal address,** as in STEPs 15–18.
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- A screen-reader pass of the tile rows, the undo rows and the sheet.
 
 ---
 

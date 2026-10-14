@@ -608,6 +608,169 @@ public sealed class CaptureReconcileModuleTests(PostgresWebApplicationFactory fa
         Assert.All(facts, x => Assert.DoesNotContain(secret, x.ObservedMetrics));
     }
 
+    [Fact]
+    public async Task One_tap_complete_and_carry_to_today_apply_at_once_and_undo_exactly()
+    {
+        PinLocal(Day.AddDays(-3));
+        var owner = await CreateSessionAsync();
+        var other = await CreateSessionAsync();
+        using var client = Client(owner.Token);
+        using var otherClient = Client(other.Token);
+        var done = await CreateTaskAsync(client, "tap-done", plannedDate: Day.AddDays(-3));
+        var moved = await CreateTaskAsync(client, "tap-moved", plannedDate: Day.AddDays(-2), deadline: Day.AddDays(5));
+        var later = await CreateTaskAsync(client, "tap-later", plannedDate: Day.AddDays(4));
+        PinLocal(Day);
+        var session = await OpenSessionAsync(client, "tap-open");
+
+        // «انجام شد»: applied on the tap, no preview, and kept in the session with its undo.
+        var afterComplete = await QuickAsync(client, session.Id, done.Id, "COMPLETE_TASK", done.Version, "tap-complete");
+        Assert.DoesNotContain(afterComplete.ExecutionGroups.SelectMany(Items), x => x.TaskId == done.Id);
+        var completed = await TaskAsync(client, done.Id);
+        Assert.Equal("COMPLETED", completed.Status);
+        Assert.Equal(Day, completed.CompletedForLocalDate);
+        var completeAction = Assert.Single(afterComplete.QuickActions);
+        Assert.Equal(("COMPLETE_TASK", "APPLIED", true, "STANDALONE"),
+            (completeAction.ActionType, completeAction.Status, completeAction.CanUndo, completeAction.OwnerType));
+
+        // «امروز»: carried to today and counted as a Carry, like the ordinary command.
+        var afterCarry = await QuickAsync(client, session.Id, moved.Id, "CARRY_TO_TODAY", moved.Version, "tap-carry");
+        var carried = await TaskAsync(client, moved.Id);
+        Assert.Equal(Day, carried.PlannedDate);
+        Assert.Equal(1, carried.CarryCount);
+        Assert.Equal(2, afterCarry.QuickActions.Count);
+        // A replay answers the same and changes nothing more.
+        await QuickAsync(client, session.Id, moved.Id, "CARRY_TO_TODAY", moved.Version, "tap-carry");
+        Assert.Equal(1, (await TaskAsync(client, moved.Id)).CarryCount);
+
+        // Only these two, only for this session's decisions; the rest is the preview's.
+        Assert.Equal("QUICK_ACTION_NOT_ALLOWED", await ProblemCodeAsync(await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/sessions/{session.Id}/quick-actions",
+            new { taskId = later.Id, actionType = "COMPLETE_TASK", expectedVersion = later.Version }, "tap-not-offered")));
+        Assert.Equal(HttpStatusCode.BadRequest, (await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/sessions/{session.Id}/quick-actions",
+            new { taskId = moved.Id, actionType = "DROP_TASKS", expectedVersion = carried.Version }, "tap-drop")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(otherClient, HttpMethod.Post,
+            $"/api/v1/reconcile/quick-actions/{completeAction.Id}/undo", new { }, "tap-other-undo")).StatusCode);
+
+        // Undo puts back exactly what the action found, and the undone Carry is no longer evidence.
+        var carryAction = afterCarry.QuickActions.Single(x => x.TaskId == moved.Id);
+        var afterUndoCarry = await UndoAsync(client, carryAction.Id, "tap-undo-carry");
+        var restored = await TaskAsync(client, moved.Id);
+        Assert.Equal(Day.AddDays(-2), restored.PlannedDate);
+        Assert.Equal(0, restored.CarryCount);
+        Assert.Equal("ACTIVE", restored.Status);
+        Assert.Contains(afterUndoCarry.ExecutionGroups.SelectMany(Items), x => x.TaskId == moved.Id);
+        Assert.Equal(("UNDONE", false), (afterUndoCarry.QuickActions.Single(x => x.Id == carryAction.Id).Status,
+            afterUndoCarry.QuickActions.Single(x => x.Id == carryAction.Id).CanUndo));
+
+        await UndoAsync(client, completeAction.Id, "tap-undo-complete");
+        var reopened = await TaskAsync(client, done.Id);
+        Assert.Equal("ACTIVE", reopened.Status);
+        Assert.Null(reopened.CompletedForLocalDate);
+        Assert.Equal(Day.AddDays(-3), reopened.PlannedDate);
+        Assert.Equal("QUICK_ACTION_ALREADY_UNDONE", await ProblemCodeAsync(await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/quick-actions/{completeAction.Id}/undo", new { }, "tap-undo-twice")));
+
+        // Each undo is its own user event pointing at the event it reverses, in the session.
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var events = await db.DomainEvents.AsNoTracking()
+            .Where(x => x.UserId == owner.UserId && x.ReconcileSessionId == session.Id && x.AggregateType == "Task")
+            .ToListAsync();
+        var carryEvent = events.Single(x => x.EventType == "TASK_CARRIED");
+        var completeEvent = events.Single(x => x.EventType == "TASK_COMPLETED");
+        Assert.Equal(carryEvent.EventId, events.Single(x => x.EventType == "TASK_CARRY_UNDONE").CausationId);
+        Assert.Equal(completeEvent.EventId, events.Single(x => x.EventType == "TASK_COMPLETION_UNDONE").CausationId);
+        Assert.All(events, x => Assert.Equal("USER", x.Actor));
+        Assert.All(events, x => Assert.Null(x.ConfirmationId));
+        Assert.Equal(0, await db.ActionConfirmations.CountAsync(x => x.ReconcileSessionId == session.Id));
+    }
+
+    [Fact]
+    public async Task Undo_is_refused_once_the_task_changed_the_session_closed_or_a_later_step_was_done()
+    {
+        PinLocal(Day.AddDays(-3));
+        var owner = await CreateSessionAsync();
+        using var client = Client(owner.Token);
+        var edited = await CreateTaskAsync(client, "undo-edited", plannedDate: Day.AddDays(-3));
+        var raced = await CreateTaskAsync(client, "undo-raced", plannedDate: Day.AddDays(-3));
+        var closed = await CreateTaskAsync(client, "undo-closed", plannedDate: Day.AddDays(-3));
+        var sequence = Guid.NewGuid();
+        var first = await CreateTaskAsync(client, "undo-first", plannedDate: Day.AddDays(-3), sequenceId: sequence, sequenceOrder: 1);
+        var second = await CreateTaskAsync(client, "undo-second", plannedDate: Day.AddDays(-3), sequenceId: sequence, sequenceOrder: 2);
+        PinLocal(Day);
+        var session = await OpenSessionAsync(client, "undo-open");
+
+        // A stale tap is refused like any stale command.
+        Assert.Equal(HttpStatusCode.Conflict, (await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/sessions/{session.Id}/quick-actions",
+            new { taskId = edited.Id, actionType = "CARRY_TO_TODAY", expectedVersion = edited.Version + 1 }, "undo-stale-tap")).StatusCode);
+
+        // Changed after the action: undo would overwrite that change, so it is refused and nothing moves.
+        var view = await QuickAsync(client, session.Id, edited.Id, "CARRY_TO_TODAY", edited.Version, "undo-carry-edited");
+        var current = await TaskAsync(client, edited.Id);
+        Assert.Equal(HttpStatusCode.OK, (await UpdateTitleAsync(client, current, "عنوان تازه", "undo-edit")).StatusCode);
+        Assert.False((await GetSessionAsync(client, session.Id)).QuickActions.Single(x => x.TaskId == edited.Id).CanUndo);
+        var refused = await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/quick-actions/{view.QuickActions.Single().Id}/undo", new { }, "undo-after-edit");
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal("QUICK_ACTION_STALE", await ProblemCodeAsync(refused));
+        Assert.Equal(Day, (await TaskAsync(client, edited.Id)).PlannedDate);
+
+        // Undo racing an edit of the same Task: one of them wins, never both.
+        var racedView = await QuickAsync(client, session.Id, raced.Id, "CARRY_TO_TODAY", raced.Version, "undo-carry-raced");
+        var racedTask = await TaskAsync(client, raced.Id);
+        var racedAction = racedView.QuickActions.Single(x => x.TaskId == raced.Id);
+        var outcomes = await Task.WhenAll(
+            SendAsync(client, HttpMethod.Post, $"/api/v1/reconcile/quick-actions/{racedAction.Id}/undo", new { }, "undo-race"),
+            UpdateTitleAsync(client, racedTask, "عنوان هم‌زمان", "undo-race-edit"));
+        Assert.Equal(1, outcomes.Count(x => x.StatusCode == HttpStatusCode.OK));
+        Assert.Equal(1, outcomes.Count(x => x.StatusCode == HttpStatusCode.Conflict));
+        var racedAfter = await TaskAsync(client, raced.Id);
+        Assert.Equal(outcomes[0].IsSuccessStatusCode ? Day.AddDays(-3) : Day, racedAfter.PlannedDate);
+
+        // A later step completed after its predecessor: taking the first back would leave the second done before it.
+        await QuickAsync(client, session.Id, first.Id, "COMPLETE_TASK", first.Version, "undo-tap-first");
+        var sequenceView = await QuickAsync(client, session.Id, second.Id, "COMPLETE_TASK", second.Version, "undo-tap-second");
+        var blocked = await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/quick-actions/{sequenceView.QuickActions.Single(x => x.TaskId == first.Id).Id}/undo", new { }, "undo-first-back");
+        Assert.Equal("QUICK_ACTION_STALE", await ProblemCodeAsync(blocked));
+        Assert.Equal("COMPLETED", (await TaskAsync(client, first.Id)).Status);
+
+        // Undo lasts until the session closes.
+        var closing = await QuickAsync(client, session.Id, closed.Id, "COMPLETE_TASK", closed.Version, "undo-closed-tap");
+        var completedSession = await ReadAsync<ReconcileSessionDto>(await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/sessions/{session.Id}/complete", new { expectedVersion = closing.Version }, "undo-complete-session"));
+        Assert.All(completedSession.QuickActions, x => Assert.False(x.CanUndo));
+        var late = await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/quick-actions/{closing.QuickActions.Single(x => x.TaskId == closed.Id).Id}/undo", new { }, "undo-too-late");
+        Assert.Equal("RECONCILE_SESSION_NOT_OPEN", await ProblemCodeAsync(late));
+        Assert.Equal("COMPLETED", (await TaskAsync(client, closed.Id)).Status);
+    }
+
+    private static IEnumerable<ReconcileTaskItemDto> Items(ReconcileOwnerGroupDto group) =>
+        group.Tasks.Concat(group.Sequences.SelectMany(x => x.Items));
+
+    private static async Task<ReconcileSessionDto> QuickAsync(HttpClient client, Guid sessionId, Guid taskId,
+        string actionType, long expectedVersion, string key) => await ReadAsync<ReconcileSessionDto>(await SendAsync(client,
+        HttpMethod.Post, $"/api/v1/reconcile/sessions/{sessionId}/quick-actions",
+        new { taskId, actionType, expectedVersion }, key));
+
+    private static async Task<ReconcileSessionDto> UndoAsync(HttpClient client, Guid actionId, string key) =>
+        await ReadAsync<ReconcileSessionDto>(await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/reconcile/quick-actions/{actionId}/undo", new { }, key));
+
+    private static async Task<ReconcileSessionDto> GetSessionAsync(HttpClient client, Guid id) =>
+        (await client.GetFromJsonAsync<ReconcileSessionDto>($"/api/v1/reconcile/sessions/{id}"))!;
+
+    private static Task<HttpResponseMessage> UpdateTitleAsync(HttpClient client, TaskDto task, string title, string key) =>
+        SendAsync(client, HttpMethod.Put, $"/api/v1/tasks/{task.Id}", new
+        {
+            title, description = task.Description, goalId = task.GoalId, projectId = task.ProjectId,
+            plannedDate = task.PlannedDate, deadline = task.Deadline, sequenceId = task.SequenceId,
+            sequenceOrder = task.SequenceOrder, expectedVersion = task.Version, isProtected = task.IsProtected
+        }, key);
+
     private void PinLocal(DateOnly date, int hour = 10) =>
         factory.Clock.Pin(new DateTimeOffset(date.Year, date.Month, date.Day, hour, 0, 0,
             TimeSpan.FromMinutes(210)));

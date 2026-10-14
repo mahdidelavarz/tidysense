@@ -85,6 +85,32 @@ public sealed class ReconcileController(ReconcileService reconcile) : Controller
         CreateReconcilePreviewRequest request, CancellationToken cancellationToken) =>
         Ok(await reconcile.CreatePreviewAsync(id, request, cancellationToken));
 
+    /// <summary>
+    /// Applies «انجام شد» or «امروز» to one Task of the session on tap (027 §6). Every other decision
+    /// goes through a preview.
+    /// </summary>
+    [HttpPost("sessions/{id:guid}/quick-actions")]
+    [ProducesResponseType<ReconcileSessionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<ReconcileSessionDto>> ApplyQuickAction(Guid id,
+        ApplyReconcileQuickActionRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        Ok(await reconcile.ApplyQuickActionAsync(id, request, idempotencyKey, cancellationToken));
+
+    /// <summary>Takes a one-tap decision back while its session is open and the Task is unchanged since.</summary>
+    [HttpPost("quick-actions/{id:guid}/undo")]
+    [ProducesResponseType<ReconcileSessionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<ReconcileSessionDto>> UndoQuickAction(Guid id,
+        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        Ok(await reconcile.UndoQuickActionAsync(id, idempotencyKey, cancellationToken));
+
     [HttpPost("confirmations/{id:guid}/submit")]
     [ProducesResponseType<ConfirmationResultDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]

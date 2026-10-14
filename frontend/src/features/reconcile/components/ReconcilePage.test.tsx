@@ -7,8 +7,8 @@ import { toIsoDate } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { reviewGoal } from '../../goals/services/goals-api'
 import { submitPilotFeedback } from '../../pilot/services/pilot-api'
-import { completeTask } from '../../tasks/services/tasks-api'
 import {
+  applyReconcileQuickAction,
   cancelReconcileExplanation,
   completeReconcileSession,
   createReconcilePreview,
@@ -17,6 +17,7 @@ import {
   openReconcileSession,
   requestReconcileExplanation,
   submitReconcileConfirmation,
+  undoReconcileQuickAction,
 } from '../services/reconcile-api'
 import type {
   ActionConfirmationDto,
@@ -34,6 +35,7 @@ vi.mock('../services/reconcile-api', () => ({
   openReconcileSession: vi.fn(), getReconcileSession: vi.fn(), completeReconcileSession: vi.fn(),
   createReconcilePreview: vi.fn(), submitReconcileConfirmation: vi.fn(),
   requestReconcileExplanation: vi.fn(), cancelReconcileExplanation: vi.fn(), dismissReconcileRecommendation: vi.fn(),
+  applyReconcileQuickAction: vi.fn(), undoReconcileQuickAction: vi.fn(),
 }))
 vi.mock('../../tasks/services/tasks-api', () => ({
   completeTask: vi.fn(), listTasks: vi.fn().mockResolvedValue({ items: [], page: { nextCursor: null, hasMore: false } }),
@@ -88,6 +90,8 @@ const session: ReconcileSessionDto = {
   }],
   ruleMatches: [],
   ai: { availability: 'NOT_ELIGIBLE', sample: false, explanation: null },
+  quickActions: [],
+  openedDecisionCount: 4,
 }
 
 const preview = (overrides: Partial<ActionConfirmationDto>): ActionConfirmationDto => ({
@@ -120,28 +124,87 @@ describe('ReconcilePage', () => {
 
   it('shows execution, commitment-review and capture lanes separately with a non-colour severity label', async () => {
     renderPage()
-    const execution = within(await screen.findByRole('region', { name: 'تصمیم‌های اجرایی' }))
-    expect(screen.getByText('شدت: سبک')).toBeInTheDocument()
-    expect(execution.getByText('پروژه: بازطراحی سایت')).toBeInTheDocument()
-    expect(execution.getByText('کارهای مستقل')).toBeInTheDocument()
+    const execution = within(await screen.findByRole('region', { name: /^کارهای عقب‌افتاده/ }))
+    expect(screen.getByText('حجم: سبک')).toBeInTheDocument()
+    // Four decisions were waiting when the session opened, and four still are.
+    expect(screen.getByRole('heading', { name: '۴ تصمیم مانده، از ۴' })).toBeInTheDocument()
+    expect(execution.getByText('بازطراحی سایت')).toBeInTheDocument()
+    expect(execution.getByText('مستقل')).toBeInTheDocument()
 
     // The blocked member is context under its sequence: it cannot be completed or kept on its own.
     const sequence = within(execution.getByRole('article', { name: 'دنباله کارها' }))
+    expect(sequence.getByText('منتظر قبلی')).toBeInTheDocument()
+    fireEvent.click(sequence.getByRole('button', { name: 'تصمیم برای هر کار جداگانه' }))
     expect(sequence.getByText('منتظر کار پیشین')).toBeInTheDocument()
     expect(sequence.getByRole('button', { name: 'انجام شد: طراحی اولیه' })).toBeInTheDocument()
     expect(sequence.queryByRole('button', { name: 'انجام شد: بازبینی طرح' })).not.toBeInTheDocument()
     expect(sequence.queryByRole('button', { name: 'فعلاً بماند: بازبینی طرح' })).not.toBeInTheDocument()
 
-    const reviews = within(screen.getByRole('region', { name: 'مرور تعهدها' }))
+    const reviews = within(screen.getByRole('region', { name: /^مرور هدف و پروژه/ }))
     expect(reviews.getByText('آیا می‌خواهید این هدف را ادامه دهید؟')).toBeInTheDocument()
     expect(reviews.getByText('انتخاب کتاب')).toBeInTheDocument()
     expect(reviews.queryByText(/گذشته/)).not.toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'یادداشت‌های سریع' })).getByText('ایده هدیه')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: /^یادداشت‌های سریع/ })).getByText('ایده هدیه')).toBeInTheDocument()
 
-    vi.mocked(completeTask).mockResolvedValue({} as never)
+  })
+
+  it('applies «انجام شد» and «امروز» on the tap, keeps the item in place with its undo, and takes it back', async () => {
+    const decided = (actionType: string, canUndo = true) => ({
+      ...session,
+      executionGroups: [session.executionGroups[0]],
+      counts: { ...session.counts, actionableBacklogCount: 1 },
+      quickActions: [{
+        id: '00000000-0000-0000-0000-000000000b01', taskId: loose.taskId, title: loose.title, actionType, status: 'APPLIED',
+        ownerType: 'STANDALONE', ownerId: null, ownerTitle: null,
+        previousPlannedDate: actionType === 'CARRY_TO_TODAY' ? loose.plannedDate : null, canUndo, createdAt: '2026-10-02T06:05:00Z',
+      }],
+    })
+    vi.mocked(applyReconcileQuickAction).mockResolvedValueOnce(decided('COMPLETE_TASK'))
+    vi.mocked(undoReconcileQuickAction).mockResolvedValueOnce(session)
+    renderPage()
+    const execution = within(await screen.findByRole('region', { name: /^کارهای عقب‌افتاده/ }))
     fireEvent.click(execution.getByRole('button', { name: 'انجام شد: پرداخت قبض' }))
-    // Completion is recorded for the session's local date, not the browser's.
-    await waitFor(() => expect(completeTask).toHaveBeenCalledWith(loose.taskId, 1, '2026-10-02'))
+    await waitFor(() => expect(applyReconcileQuickAction).toHaveBeenCalledWith(sessionId,
+      { taskId: loose.taskId, actionType: 'COMPLETE_TASK', expectedVersion: 1 }))
+    // No preview: the tap is the confirmation of exactly this action.
+    expect(createReconcilePreview).not.toHaveBeenCalled()
+    const row = within(await execution.findByRole('article', { name: 'انجام شد: پرداخت قبض' }))
+    // The tapped tile is gone, so its undo takes the focus.
+    await waitFor(() => expect(row.getByRole('button', { name: 'بازگردان: پرداخت قبض' })).toHaveFocus())
+    expect(screen.getByRole('heading', { name: '۳ تصمیم مانده، از ۴' })).toBeInTheDocument()
+    fireEvent.click(row.getByRole('button', { name: 'بازگردان: پرداخت قبض' }))
+    await waitFor(() => expect(undoReconcileQuickAction).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000b01'))
+    expect(await execution.findByRole('button', { name: 'امروز: پرداخت قبض' })).toBeInTheDocument()
+
+    // «امروز» moves the earlier-day Task to today, also on the tap.
+    vi.mocked(applyReconcileQuickAction).mockResolvedValueOnce(decided('CARRY_TO_TODAY', false))
+    fireEvent.click(execution.getByRole('button', { name: 'امروز: پرداخت قبض' }))
+    await waitFor(() => expect(applyReconcileQuickAction).toHaveBeenLastCalledWith(sessionId,
+      { taskId: loose.taskId, actionType: 'CARRY_TO_TODAY', expectedVersion: 1 }))
+    // Changed since: undo would overwrite that change, so it is not offered.
+    const moved = within(await execution.findByRole('article', { name: 'به امروز آمد: پرداخت قبض' }))
+    expect(moved.getByText('بعداً تغییر کرد')).toBeInTheDocument()
+    expect(moved.queryByRole('button', { name: /بازگردان/ })).not.toBeInTheDocument()
+  })
+
+  it('explains a refused undo and never offers «امروز» where the deadline has passed', async () => {
+    const late = item('00000000-0000-0000-0000-000000000112', 'تمدید بیمه', { deadline: '2026-10-01' })
+    vi.mocked(openReconcileSession).mockResolvedValue({
+      ...session,
+      executionGroups: [{ ownerType: 'STANDALONE', ownerId: null, ownerTitle: null, sequences: [], tasks: [late] }],
+      quickActions: [{
+        id: '00000000-0000-0000-0000-000000000b02', taskId: loose.taskId, title: loose.title, actionType: 'COMPLETE_TASK',
+        status: 'APPLIED', ownerType: 'STANDALONE', ownerId: null, ownerTitle: null, previousPlannedDate: null, canUndo: true,
+        createdAt: '2026-10-02T06:05:00Z',
+      }],
+    })
+    vi.mocked(undoReconcileQuickAction).mockRejectedValueOnce(apiError(409, 'QUICK_ACTION_STALE'))
+    renderPage()
+    const execution = within(await screen.findByRole('region', { name: /^کارهای عقب‌افتاده/ }))
+    expect(execution.getByRole('button', { name: 'انجام شد: تمدید بیمه' })).toBeInTheDocument()
+    expect(execution.queryByRole('button', { name: 'امروز: تمدید بیمه' })).not.toBeInTheDocument()
+    fireEvent.click(execution.getByRole('button', { name: 'بازگردان: پرداخت قبض' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('این کار بعد از آن تصمیم تغییر کرده است')
   })
 
   it('applies an action only after the server preview is shown and confirmed', async () => {
@@ -157,7 +220,7 @@ describe('ReconcilePage', () => {
 
     const dialog = within(await screen.findByRole('dialog', { name: 'بدون تغییر بماند' }))
     expect(await dialog.findByText('بدون تغییر می‌ماند')).toBeInTheDocument()
-    fireEvent.click(dialog.getByRole('button', { name: 'تأیید و اعمال' }))
+    fireEvent.click(dialog.getByRole('button', { name: /^تأیید و/ }))
     await waitFor(() => expect(submitReconcileConfirmation).toHaveBeenCalledWith(
       '00000000-0000-0000-0000-000000000800', []))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -182,7 +245,7 @@ describe('ReconcilePage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'کنار گذاشتن: پرداخت قبض' }))
 
     const dialog = within(await screen.findByRole('dialog', { name: 'کنار گذاشتن' }))
-    const apply = await dialog.findByRole('button', { name: 'تأیید و اعمال' })
+    const apply = await dialog.findByRole('button', { name: /^تأیید و/ })
     expect(apply).toBeDisabled()
     fireEvent.click(dialog.getByRole('checkbox'))
     expect(apply).toBeEnabled()
@@ -191,11 +254,11 @@ describe('ReconcilePage', () => {
       '00000000-0000-0000-0000-000000000800', [warning]))
 
     expect(await dialog.findByText(/چیزی اعمال نشد/)).toBeInTheDocument()
-    expect(dialog.queryByRole('button', { name: 'تأیید و اعمال' })).not.toBeInTheDocument()
+    expect(dialog.queryByRole('button', { name: /^تأیید و/ })).not.toBeInTheDocument()
     fireEvent.click(dialog.getByRole('button', { name: 'پیش‌نمایش تازه' }))
     await waitFor(() => expect(createReconcilePreview).toHaveBeenCalledTimes(2))
     // The fresh preview starts unacknowledged again.
-    await waitFor(() => expect(screen.getByRole('button', { name: 'تأیید و اعمال' })).toBeDisabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: /^تأیید و/ })).toBeDisabled())
   })
 
   it('asks for a date before previewing a whole-sequence carry and refuses a blocked preview', async () => {
@@ -204,7 +267,7 @@ describe('ReconcilePage', () => {
       items: [previewItem(head, 'WILL_SHIFT_NORMALLY'), previewItem(blocked, 'HAS_TEMPORAL_CONFLICT')],
     }))
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'انتقال کل دنباله' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'جابه‌جایی کل دنباله' }))
     const sheet = within(screen.getByRole('dialog', { name: 'انتقال کل دنباله' }))
     expect(createReconcilePreview).not.toHaveBeenCalled()
     fireEvent.click(sheet.getByRole('button', { name: /^فردا/ }))
@@ -215,13 +278,13 @@ describe('ReconcilePage', () => {
 
     expect(await screen.findByText('از مهلتش می‌گذرد')).toBeInTheDocument()
     expect(screen.getByText(/به این شکل قابل اعمال نیست/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'تأیید و اعمال' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^تأیید و/ })).not.toBeInTheDocument()
   })
 
   it('answers the Goal continuation check from the review lane', async () => {
     vi.mocked(reviewGoal).mockResolvedValue({ id: goalId } as never)
     renderPage()
-    const reviews = within(await screen.findByRole('region', { name: 'مرور تعهدها' }))
+    const reviews = within(await screen.findByRole('region', { name: /^مرور هدف و پروژه/ }))
     fireEvent.click(reviews.getByRole('button', { name: 'ادامه می‌دهم' }))
     await waitFor(() => expect(reviewGoal).toHaveBeenCalledWith(goalId, 'CONTINUE', 3))
     await waitFor(() => expect(useUiStore.getState().toasts.map(toast => toast.message)).toEqual(['هدف ادامه می‌یابد.']))
@@ -288,7 +351,7 @@ describe('ReconcilePage', () => {
       vi.mocked(requestReconcileExplanation).mockResolvedValue(withAi({ explanation: explanation() }))
       vi.mocked(createReconcilePreview).mockResolvedValue(preview({ items: [previewItem(loose, 'WILL_KEEP')] }))
       renderPage()
-      const card = within(await screen.findByRole('region', { name: /توضیح هوش مصنوعی/ }))
+      const card = within(await screen.findByRole('region', { name: /چرا این‌ها اینجا هستند/ }))
       // The user is told what leaves the device before asking.
       expect(card.getByText(/عنوان و متن کارهای شما فرستاده نمی‌شود/)).toBeInTheDocument()
       expect(requestReconcileExplanation).not.toHaveBeenCalled()
@@ -304,8 +367,12 @@ describe('ReconcilePage', () => {
       expect(recommendation.getByText('۹ روز گذشته · ۲ بار منتقل شده')).toBeInTheDocument()
       expect(card.getByText(/تا پیش‌نمایش را تأیید نکنید چیزی تغییر نمی‌کند/)).toBeInTheDocument()
       expect(createReconcilePreview).not.toHaveBeenCalled()
-      // The deterministic lanes stay beside it.
-      expect(screen.getByRole('button', { name: 'فعلاً بماند: پرداخت قبض' })).toBeInTheDocument()
+      // The deterministic lanes stay beside it, and the recommendation only rings the control it points at.
+      const suggested = screen.getByRole('button', { name: 'فعلاً بماند: پرداخت قبض، پیشنهاد دستیار' })
+      expect(suggested).toHaveAttribute('data-suggested')
+      // A one-tap control is never the one an AI recommendation points at.
+      expect(screen.getByRole('button', { name: 'انجام شد: پرداخت قبض' })).not.toHaveAttribute('data-suggested')
+      expect(applyReconcileQuickAction).not.toHaveBeenCalled()
 
       fireEvent.click(recommendation.getByRole('checkbox', { name: 'طراحی اولیه' }))
       fireEvent.click(recommendation.getByRole('button', { name: 'دیدن پیش‌نمایش' }))
@@ -313,6 +380,18 @@ describe('ReconcilePage', () => {
         sessionId, { actionType: 'KEEP_TASKS', taskIds: [loose.taskId], recommendationId }))
       expect(submitReconcileConfirmation).not.toHaveBeenCalled()
       expect(await screen.findByRole('dialog', { name: 'بدون تغییر بماند' })).toBeInTheDocument()
+    })
+
+    it('a highlighted control cites its recommendation and still goes through the preview', async () => {
+      vi.mocked(openReconcileSession).mockResolvedValue(withAi({ explanation: explanation() }))
+      vi.mocked(createReconcilePreview).mockResolvedValue(preview({ items: [previewItem(loose, 'WILL_KEEP')] }))
+      renderPage()
+      fireEvent.click(await screen.findByRole('button', { name: 'فعلاً بماند: پرداخت قبض، پیشنهاد دستیار' }))
+      await waitFor(() => expect(createReconcilePreview).toHaveBeenCalledWith(
+        sessionId, { actionType: 'KEEP_TASKS', taskIds: [loose.taskId], recommendationId }))
+      expect(await screen.findByRole('dialog', { name: 'بدون تغییر بماند' })).toBeInTheDocument()
+      expect(submitReconcileConfirmation).not.toHaveBeenCalled()
+      expect(applyReconcileQuickAction).not.toHaveBeenCalled()
     })
 
     it('asks for a date before previewing a recommended move and lets a recommendation be declined', async () => {
@@ -329,7 +408,7 @@ describe('ReconcilePage', () => {
       }))
       vi.mocked(dismissReconcileRecommendation).mockResolvedValue({ id: recommendationId, disposition: 'REJECTED' })
       renderPage()
-      const card = within(await screen.findByRole('region', { name: /توضیح هوش مصنوعی/ }))
+      const card = within(await screen.findByRole('region', { name: /چرا این‌ها اینجا هستند/ }))
       expect(card.getByText('نمونه')).toBeInTheDocument()
       const recommendation = within(card.getByRole('article', { name: 'پیشنهاد: انتقال کل دنباله' }))
       // A sequence is taken whole: its members cannot be picked apart here.
@@ -348,7 +427,7 @@ describe('ReconcilePage', () => {
       vi.mocked(cancelReconcileExplanation).mockResolvedValue(withAi({}))
       const running = renderPage()
       expect(await screen.findByText(/در حال آماده‌سازی توضیح/)).toBeInTheDocument()
-      expect(screen.getByRole('region', { name: 'تصمیم‌های اجرایی' })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: /^کارهای عقب‌افتاده/ })).toBeInTheDocument()
       fireEvent.click(screen.getByRole('button', { name: 'انصراف' }))
       expect(await screen.findByRole('button', { name: 'توضیح بده' })).toBeInTheDocument()
       running.unmount()
@@ -388,7 +467,7 @@ describe('ReconcilePage', () => {
       renderPage()
       expect(await screen.findByText(/توضیح هوشمند اکنون خاموش است/)).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'توضیح بده' })).not.toBeInTheDocument()
-      expect(screen.getByRole('region', { name: 'تصمیم‌های اجرایی' })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: /^کارهای عقب‌افتاده/ })).toBeInTheDocument()
     })
   })
 })

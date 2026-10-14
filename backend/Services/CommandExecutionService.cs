@@ -59,9 +59,10 @@ public sealed class CommandExecutionService(
             var transactionId = Guid.NewGuid();
             var domainEvent = new DomainEvent
             {
-                EventId = Guid.NewGuid(), EventType = mutation.EventType,
+                EventId = mutation.EventId ?? Guid.NewGuid(), EventType = mutation.EventType,
                 EventVersion = mutation.EventVersion, OccurredAt = mutation.OccurredAt,
                 RecordedAt = DateTimeOffset.UtcNow, UserId = request.UserId, Actor = "USER",
+                CausationId = mutation.CausationId,
                 AggregateType = mutation.AggregateType, AggregateId = mutation.AggregateId,
                 AggregateVersion = mutation.AggregateVersion, TransactionId = transactionId,
                 CorrelationId = request.CorrelationId, CommandResultId = result.Id,

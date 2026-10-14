@@ -1,14 +1,37 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, Check, ChevronLeft, CircleDashed, FolderKanban, Hourglass, ListOrdered, Lock, Pause, ShieldCheck, Target, Trash2 } from '../../../shared/ui/icons'
+import { useEffect, useRef, useState } from 'react'
 import { formatLocalDate, formatNumber } from '../../../shared/lib/date'
-import { DateLeaf, leafDateText } from '../../tasks/components/DateLeaf'
+import {
+  CalendarClock,
+  Check,
+  ChevronLeft,
+  CircleDashed,
+  FolderKanban,
+  Hourglass,
+  ListChecks,
+  ListOrdered,
+  Lock,
+  Pause,
+  RefreshCw,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  Target,
+  Trash2,
+} from '../../../shared/ui/icons'
 import { formatAge, reasonLabels } from '../types/reconcile.format'
 import type {
   ReconcileActionDraft,
   ReconcileOwnerGroupDto,
+  ReconcileQuickActionDto,
+  ReconcileQuickActionType,
   ReconcileSequenceGroupDto,
   ReconcileTaskItemDto,
 } from '../types/reconcile.types'
+
+/** What an open AI recommendation points at: the control it highlights and the recommendation to cite. */
+export type Suggestion = { actionType: string; recommendationId: string }
 
 type LaneActions = {
   /** The session's local date, to tell an earlier planned date from a later one. */
@@ -17,48 +40,61 @@ type LaneActions = {
   onAction: (draft: ReconcileActionDraft) => void
   /** Starts an action that first needs a date from the user. */
   onDatedAction: (draft: ReconcileActionDraft) => void
-  onComplete: (task: ReconcileTaskItemDto) => void
-  busyTaskId?: string
+  /** «انجام شد» and «امروز»: applied on the tap, with an undo (027 §6). */
+  onQuick: (task: ReconcileTaskItemDto, actionType: ReconcileQuickActionType) => void
+  onUndo: (action: ReconcileQuickActionDto) => void
+  /** The Task or quick action being sent, so its controls wait. */
+  busyId?: string
+  /** Controls an AI recommendation highlights, by Task or sequence id. It never applies anything. */
+  suggestions: ReadonlyMap<string, Suggestion>
+  /** The decision just applied: its row takes the focus, so the undo is one key away. */
+  focusId?: string
 }
 
-const ownerLabels: Record<string, string> = { PROJECT: 'پروژه', GOAL: 'هدف' }
+const ownerKey = (type: string, id: string | null | undefined) => `${type}:${id ?? ''}`
 
 /**
- * Execution lane: work that needs a decision, grouped by owner, then by
- * sequence, then by Task. A blocked Task is shown as context under its
- * sequence and never as its own decision.
+ * «کارهای عقب‌افتاده»: work that needs a decision, grouped by owner, then by
+ * sequence, then by Task. A Task decided on tap in this session stays where it
+ * was, as a short row with its undo, until the session closes.
  */
-export function ExecutionLane({ groups, total, ...actions }: {
+export function ExecutionLane({ groups, quickActions, total, ...actions }: {
   groups: ReconcileOwnerGroupDto[]
+  /** This session's one-tap decisions, newest first. */
+  quickActions: ReconcileQuickActionDto[]
   /** Every Task waiting for a decision, for the count beside the heading. */
   total: number
 } & LaneActions) {
+  // A decided Task no longer belongs to the evaluation; its owner may have no other decision left.
+  const applied = quickActions.filter(action => action.status === 'APPLIED')
+  type Owner = { type: string; id: string | null; title: string | null; group?: ReconcileOwnerGroupDto }
+  const owners: Owner[] = groups.map(group => ({ type: group.ownerType, id: group.ownerId ?? null, title: group.ownerTitle ?? null, group }))
+  for (const action of applied) {
+    if (!owners.some(owner => ownerKey(owner.type, owner.id) === ownerKey(action.ownerType, action.ownerId))) {
+      owners.push({ type: action.ownerType, id: action.ownerId ?? null, title: action.ownerTitle ?? null })
+    }
+  }
+
   return (
-    <section className="lane" aria-labelledby="reconcile-execution">
-      <h2 className="lane-title" id="reconcile-execution">
-        تصمیم‌های اجرایی
-        <span className="lane-count" aria-hidden="true">{formatNumber(total)}</span>
-      </h2>
-      <p className="lane-hint">برای هر کار یکی را انتخاب کنید.</p>
-      <div className="mt-5 space-y-8">
-        {groups.map(group => {
-          const OwnerIcon = group.ownerType === 'PROJECT' ? FolderKanban : group.ownerType === 'GOAL' ? Target : CircleDashed
+    <section aria-labelledby="reconcile-execution">
+      <LaneHeading id="reconcile-execution" icon={ListChecks} count={total} hint="برای هر کدام یکی را انتخاب کنید.">
+        کارهای عقب‌افتاده
+      </LaneHeading>
+      <div className="mt-4 space-y-5">
+        {owners.map(owner => {
+          const decided = applied.filter(action => ownerKey(action.ownerType, action.ownerId) === ownerKey(owner.type, owner.id))
           return (
-            <div key={`${group.ownerType}:${group.ownerId ?? ''}`}>
-              <h3 className="lane-owner">
-                <OwnerIcon size={15} className="shrink-0 text-text-secondary" aria-hidden="true" />
-                <span className="truncate">
-                  {group.ownerId
-                    ? `${ownerLabels[group.ownerType]}: ${group.ownerTitle ?? ''}`
-                    : 'کارهای مستقل'}
-                </span>
-              </h3>
-              <ul className="mt-3 space-y-4">
-                {group.sequences.map(sequence => (
+            <div key={ownerKey(owner.type, owner.id)}>
+              <OwnerLabel type={owner.type} title={owner.title} />
+              <ul className="mt-2 space-y-3">
+                {decided.map(action => (
+                  <li key={action.id}><DecidedRow action={action} focus={actions.focusId === action.id} busy={actions.busyId === action.id} onUndo={() => actions.onUndo(action)} /></li>
+                ))}
+                {owner.group?.sequences.map(sequence => (
                   <li key={sequence.sequenceId}><SequenceCard sequence={sequence} {...actions} /></li>
                 ))}
-                {group.tasks.map(task => (
-                  <li key={task.taskId}><TaskRow task={task} {...actions} /></li>
+                {owner.group?.tasks.map(task => (
+                  <li key={task.taskId}><TaskCard task={task} {...actions} /></li>
                 ))}
               </ul>
             </div>
@@ -69,168 +105,297 @@ export function ExecutionLane({ groups, total, ...actions }: {
   )
 }
 
-/** One coherent decision for the remaining members of a sequence, with each member still reviewable on its own. */
-function SequenceCard({ sequence, ...actions }: { sequence: ReconcileSequenceGroupDto } & LaneActions) {
-  const allowed = new Set(sequence.allowedActions)
-  const dropped = sequence.droppedPredecessor
+/** A lane's heading as on the board: an icon tile, the name with its count, and one line of what to do. */
+export function LaneHeading({ id, icon: Icon, count, hint, entity, children }: {
+  id: string
+  icon: typeof ListChecks
+  count: number
+  hint: string
+  entity?: string
+  children: React.ReactNode
+}) {
   return (
-    <article className="decision-card" aria-label="دنباله کارها">
-      <div className="decision-head">
-        <span className="decision-tile bg-accent-tint text-accent-strong" aria-hidden="true">
-          <ListOrdered size={22} />
+    <div className="flex items-start gap-3">
+      <span className={`lane-tile ${entity ? `entity-${entity}` : ''}`} aria-hidden="true"><Icon size={19} /></span>
+      <div className="min-w-0">
+        <h2 className="lane-title" id={id}>
+          {children}
+          <span className="text-sm font-bold text-text-secondary">{formatNumber(count)}</span>
+        </h2>
+        <p className="lane-hint">{hint}</p>
+      </div>
+    </div>
+  )
+}
+
+function OwnerLabel({ type, title }: { type: string; title: string | null }) {
+  if (type === 'STANDALONE') {
+    return (
+      <p className="lane-owner text-text-secondary">
+        <CircleDashed size={14} aria-hidden="true" />
+        مستقل
+      </p>
+    )
+  }
+  const goal = type === 'GOAL'
+  return (
+    <p className={`lane-owner entity-ink ${goal ? 'entity-goal' : 'entity-project'}`}>
+      {goal ? <Target size={14} aria-hidden="true" /> : <FolderKanban size={14} aria-hidden="true" />}
+      <span className="sr-only">{goal ? 'هدف: ' : 'پروژه: '}</span>
+      <span className="truncate">{title}</span>
+    </p>
+  )
+}
+
+/** A decision already applied on tap: what happened, and the way back while it still exists. */
+function DecidedRow({ action, focus, busy, onUndo }: { action: ReconcileQuickActionDto; focus: boolean; busy: boolean; onUndo: () => void }) {
+  const complete = action.actionType === 'COMPLETE_TASK'
+  // The tapped tile is gone; its row's undo takes the focus instead of letting it fall to the page.
+  const undo = useRef<HTMLButtonElement>(null)
+  useEffect(() => { if (focus) undo.current?.focus() }, [focus])
+  return (
+    <article className="decided-row" aria-label={`${complete ? 'انجام شد' : 'به امروز آمد'}: ${action.title}`}>
+      <span className={complete ? 'decided-tile entity-task' : 'decided-tile decided-sun'} aria-hidden="true">
+        {complete ? <Check size={17} /> : <Sun size={17} />}
+      </span>
+      <span className="min-w-0 flex-1 leading-6">
+        <span className={`block wrap-break-word text-sm font-extrabold ${complete ? 'text-text-secondary line-through decoration-1' : ''}`}>{action.title}</span>
+        <span className="block text-xs text-text-secondary">
+          {complete ? 'انجام شد' : `به امروز آمد${action.previousPlannedDate ? `؛ قبلاً ${formatLocalDate(action.previousPlannedDate)}` : ''}`}
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="decision-title">
-            دنباله‌ای از {formatNumber(sequence.items.length)} کار
-          </p>
-          <p className="text-xs leading-6 text-text-secondary sm:text-sm">
-            {dropped
-              ? 'کار پیش‌نیاز این دنباله کنار گذاشته شده است، پس کارهای بعدی قابل انجام نیستند تا درباره‌اش تصمیم بگیرید.'
-              : 'به هم وابسته‌اند؛ یک‌جا تصمیم بگیرید یا تک‌تک.'}
-          </p>
-          {dropped && (
-            <p className="notice mt-3">
-              پیش‌نیاز کنار گذاشته‌شده:{' '}
-              <Link className="text-link" to="/tasks/$taskId" params={{ taskId: dropped.id }}>{dropped.title}</Link>
-              <span className="block">برای بازگرداندنش، صفحه همان کار را باز کنید.</span>
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="decision-bar">
-        {allowed.has('SEQUENCE_CARRY_ALL') && (
-          <button
-            className="decision-button"
-            data-tone="primary"
-            type="button"
-            onClick={() => actions.onDatedAction({ actionType: 'SEQUENCE_CARRY_ALL', sequenceId: sequence.sequenceId })}
-          >
-            <CalendarClock size={18} aria-hidden="true" />
-            انتقال کل دنباله
+      </span>
+      {action.canUndo
+        ? (
+          <button ref={undo} className="undo-button" type="button" disabled={busy} aria-label={`بازگردان: ${action.title}`} onClick={onUndo}>
+            <RotateCcw size={16} aria-hidden="true" />
+            {busy ? '…' : 'بازگردان'}
           </button>
-        )}
-        {allowed.has('DETACH_DROPPED_PREDECESSOR') && (
-          <button
-            className="decision-button"
-            data-tone="primary"
-            type="button"
-            onClick={() => actions.onAction({ actionType: 'DETACH_DROPPED_PREDECESSOR', sequenceId: sequence.sequenceId })}
-          >
-            ادامه بدون پیش‌نیاز
-          </button>
-        )}
-        {allowed.has('SEQUENCE_DROP_ALL') && (
-          <button
-            className="decision-button"
-            data-tone="danger"
-            type="button"
-            onClick={() => actions.onAction({ actionType: 'SEQUENCE_DROP_ALL', sequenceId: sequence.sequenceId })}
-          >
-            <Trash2 size={18} aria-hidden="true" />
-            کنار گذاشتن همه
-          </button>
-        )}
-      </div>
-      <ul className="space-y-2.5 border-t border-border bg-canvas p-2.5 sm:p-3">
-        {sequence.items.map(task => (
-          <li key={task.taskId}><TaskRow task={task} nested {...actions} /></li>
-        ))}
-      </ul>
+        )
+        // The Task changed after the tap: undoing would overwrite that change, so it is no longer offered.
+        : <span className="shrink-0 text-[0.6875rem] text-text-secondary">بعداً تغییر کرد</span>}
     </article>
   )
 }
 
-function TaskRow({ task, nested = false, today, onAction, onDatedAction, onComplete, busyTaskId }: {
+/** One coherent decision for the remaining members of a sequence; «تک‌تک» opens each member's own. */
+function SequenceCard({ sequence, ...actions }: { sequence: ReconcileSequenceGroupDto } & LaneActions) {
+  const [individually, setIndividually] = useState(false)
+  const allowed = new Set(sequence.allowedActions)
+  const dropped = sequence.droppedPredecessor
+  const suggested = actions.suggestions.get(sequence.sequenceId)
+  const count = sequence.items.length
+  const both = count === 2
+  return (
+    <article className="decision-card" aria-label="دنباله کارها">
+      <p className="flex items-center gap-2 px-4 pt-3.5 text-[0.8125rem] font-extrabold text-text-secondary">
+        <ListOrdered size={16} aria-hidden="true" />
+        {both ? 'دو کار به‌هم‌وابسته' : `${formatNumber(count)} کار به‌هم‌وابسته`}
+      </p>
+      {dropped && (
+        <p className="notice mx-4 mt-3">
+          کار پیش‌نیاز کنار گذاشته شده است، پس کارهای بعدی قابل انجام نیستند تا درباره‌اش تصمیم بگیرید:{' '}
+          <Link className="text-link" to="/tasks/$taskId" params={{ taskId: dropped.id }}>{dropped.title}</Link>
+        </p>
+      )}
+      <ol className="mt-2 px-4">
+        {sequence.items.map((task, index) => (
+          <li key={task.taskId} className="flex items-center gap-3 py-1.5">
+            <span className={task.isBlocked ? 'sequence-node sequence-lock' : 'sequence-node'} aria-hidden="true">
+              {task.isBlocked ? <Lock size={12} /> : null}
+            </span>
+            <span className="min-w-0 flex-1 wrap-break-word text-[0.9375rem] font-extrabold">
+              <span className="sr-only">{`قدم ${formatNumber(index + 1)}: `}</span>
+              {task.title}
+            </span>
+            {task.isBlocked
+              ? <span className="shrink-0 text-xs text-text-secondary">منتظر قبلی</span>
+              : <AgeChip task={task} />}
+          </li>
+        ))}
+      </ol>
+      <div className="decision-bar mt-2">
+        {allowed.has('SEQUENCE_CARRY_ALL') && (
+          <Tile
+            icon={CalendarClock}
+            label={both ? 'هر دو جابه‌جا' : 'همه جابه‌جا'}
+            name="جابه‌جایی کل دنباله"
+            suggested={suggested?.actionType === 'SEQUENCE_CARRY_ALL'}
+            onClick={() => actions.onDatedAction({ actionType: 'SEQUENCE_CARRY_ALL', sequenceId: sequence.sequenceId, recommendationId: pick(suggested, 'SEQUENCE_CARRY_ALL') })}
+          />
+        )}
+        {allowed.has('DETACH_DROPPED_PREDECESSOR') && (
+          <Tile
+            icon={RefreshCw}
+            label="ادامه بدون پیش‌نیاز"
+            suggested={suggested?.actionType === 'DETACH_DROPPED_PREDECESSOR'}
+            onClick={() => actions.onAction({ actionType: 'DETACH_DROPPED_PREDECESSOR', sequenceId: sequence.sequenceId, recommendationId: pick(suggested, 'DETACH_DROPPED_PREDECESSOR') })}
+          />
+        )}
+        <Tile icon={ListOrdered} label="تک‌تک" name="تصمیم برای هر کار جداگانه" pressed={individually} onClick={() => setIndividually(value => !value)} />
+        {allowed.has('SEQUENCE_DROP_ALL') && (
+          <Tile
+            icon={Trash2}
+            tone="danger"
+            label={both ? 'هر دو کنار' : 'همه کنار'}
+            name="کنار گذاشتن کل دنباله"
+            suggested={suggested?.actionType === 'SEQUENCE_DROP_ALL'}
+            onClick={() => actions.onAction({ actionType: 'SEQUENCE_DROP_ALL', sequenceId: sequence.sequenceId, recommendationId: pick(suggested, 'SEQUENCE_DROP_ALL') })}
+          />
+        )}
+      </div>
+      {individually && (
+        <ul className="space-y-2.5 border-t border-border-subtle bg-canvas p-2.5">
+          {sequence.items.map(task => (
+            <li key={task.taskId}><TaskCard task={task} nested {...actions} /></li>
+          ))}
+        </ul>
+      )}
+    </article>
+  )
+}
+
+/**
+ * One Task's decision. «انجام شد» and «امروز» say exactly what the tap does and
+ * apply it; «جابه‌جا»، «بماند» and «کنار بگذار» show the server's preview first.
+ */
+function TaskCard({ task, nested = false, today, onAction, onDatedAction, onQuick, busyId, suggestions }: {
   task: ReconcileTaskItemDto
   nested?: boolean
 } & LaneActions) {
   const allowed = new Set(task.allowedActions)
-  const busy = busyTaskId === task.taskId
-  const age = formatAge(task.ageDays)
-  const when = !task.plannedDate ? 'none' : task.plannedDate < today ? 'earlier' : task.plannedDate === today ? 'today' : 'later'
+  const busy = busyId === task.taskId
+  const suggested = suggestions.get(task.taskId)
+  // «امروز» moves a Task planned for an earlier day, only where its deadline still allows today.
+  const toToday = allowed.has('REPLAN_TASKS') && task.plannedDate != null && task.plannedDate < today &&
+    (task.deadline == null || task.deadline >= today)
   const hasActions = ['COMPLETE_TASK', 'REPLAN_TASKS', 'KEEP_TASKS', 'DROP_TASKS'].some(action => allowed.has(action))
   return (
-    <article className={nested ? 'decision-card shadow-none' : 'decision-card'}>
-      <div className="decision-head">
-        <DateLeaf date={task.plannedDate} when={when} />
+    <article className={nested ? 'decision-card shadow-none' : 'decision-card'} aria-label={task.title}>
+      <div className="flex items-start gap-2 px-4 pt-3.5">
         <div className="min-w-0 flex-1">
-          <h4 className="decision-title">{task.title}</h4>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="sr-only">{leafDateText(task.plannedDate)}</span>
-            {age && (
-              <span className="meta-chip bg-caution-tint text-caution">
-                <Hourglass size={13} className="shrink-0" aria-hidden="true" />
-                {age}
+          <h3 className="decision-title">{task.title}</h3>
+          <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <AgeChip task={task} />
+            {task.deadline && <span className="meta-chip">مهلت: {formatLocalDate(task.deadline)}</span>}
+            {Number(task.carryCount) > 0 && (
+              <span className="meta-chip">
+                <RotateCcw size={12} className="shrink-0" aria-hidden="true" />
+                {formatNumber(Number(task.carryCount))} بار منتقل شده
               </span>
             )}
-            {task.deadline && <span className="meta-chip">مهلت: {formatLocalDate(task.deadline)}</span>}
-            {Number(task.carryCount) > 0 && <span className="meta-chip">{formatNumber(Number(task.carryCount))} بار منتقل شده</span>}
             {task.isProtected && (
               <span className="meta-chip">
-                <ShieldCheck size={13} className="shrink-0" aria-hidden="true" />
+                <ShieldCheck size={12} className="shrink-0" aria-hidden="true" />
                 محافظت‌شده
               </span>
             )}
             {task.isBlocked && (
               <span className="meta-chip bg-caution-tint text-caution">
-                <Lock size={13} className="shrink-0" aria-hidden="true" />
+                <Lock size={12} className="shrink-0" aria-hidden="true" />
                 منتظر کار پیشین
               </span>
             )}
             {/* The age chip already says a date has passed, so that reason is not repeated in words. */}
-            {task.actionable && task.reasonCodes.filter(code => !(age && code === 'EXECUTION_OVERDUE')).map(code => (
+            {task.actionable && task.reasonCodes.filter(code => !(task.ageDays != null && code === 'EXECUTION_OVERDUE')).map(code => (
               <span key={code} className="meta-chip">{reasonLabels[code] ?? code}</span>
             ))}
           </p>
         </div>
-        <Link className="icon-button -me-2 -mt-1" to="/tasks/$taskId" params={{ taskId: task.taskId }} aria-label={`جزئیات: ${task.title}`}>
+        <Link className="icon-button -me-2 -mt-1.5" to="/tasks/$taskId" params={{ taskId: task.taskId }} aria-label={`جزئیات: ${task.title}`}>
           <ChevronLeft size={20} aria-hidden="true" />
         </Link>
       </div>
       {hasActions && (
-        <div className="decision-bar">
-          {allowed.has('COMPLETE_TASK') && (
-            <button className="decision-button" data-tone="positive" type="button" disabled={busy} aria-label={`انجام شد: ${task.title}`} onClick={() => onComplete(task)}>
-              <Check size={18} aria-hidden="true" />
-              {busy ? 'در حال ثبت…' : 'انجام شد'}
-            </button>
+        <div className="decision-bar mt-3">
+          {allowed.has('COMPLETE_TASK') && task.actionable && (
+            <Tile icon={Check} tone="done" label={busy ? '…' : 'انجام شد'} name={`انجام شد: ${task.title}`} disabled={busy} onClick={() => onQuick(task, 'COMPLETE_TASK')} />
+          )}
+          {toToday && task.actionable && (
+            <Tile icon={Sun} tone="today" label="امروز" name={`امروز: ${task.title}`} disabled={busy} onClick={() => onQuick(task, 'CARRY_TO_TODAY')} />
           )}
           {allowed.has('REPLAN_TASKS') && (
-            <button
-              className="decision-button"
-              type="button"
-              aria-label={`انتقال: ${task.title}`}
-              onClick={() => onDatedAction({ actionType: 'REPLAN_TASKS', taskIds: [task.taskId] })}
-            >
-              <CalendarClock size={18} aria-hidden="true" />
-              انتقال
-            </button>
+            <Tile
+              icon={CalendarClock}
+              label="جابه‌جا"
+              name={`جابه‌جا به روز دیگر: ${task.title}`}
+              disabled={busy}
+              suggested={suggested?.actionType === 'REPLAN_TASKS'}
+              onClick={() => onDatedAction({ actionType: 'REPLAN_TASKS', taskIds: [task.taskId], recommendationId: pick(suggested, 'REPLAN_TASKS') })}
+            />
           )}
           {allowed.has('KEEP_TASKS') && (
-            <button
-              className="decision-button"
-              type="button"
-              aria-label={`فعلاً بماند: ${task.title}`}
-              onClick={() => onAction({ actionType: 'KEEP_TASKS', taskIds: [task.taskId] })}
-            >
-              <Pause size={18} aria-hidden="true" />
-              فعلاً بماند
-            </button>
+            <Tile
+              icon={Pause}
+              label="بماند"
+              name={`فعلاً بماند: ${task.title}`}
+              disabled={busy}
+              suggested={suggested?.actionType === 'KEEP_TASKS'}
+              onClick={() => onAction({ actionType: 'KEEP_TASKS', taskIds: [task.taskId], recommendationId: pick(suggested, 'KEEP_TASKS') })}
+            />
           )}
           {allowed.has('DROP_TASKS') && (
-            <button
-              className="decision-button"
-              data-tone="danger"
-              type="button"
-              aria-label={`کنار گذاشتن: ${task.title}`}
-              onClick={() => onAction({ actionType: 'DROP_TASKS', taskIds: [task.taskId] })}
-            >
-              <Trash2 size={18} aria-hidden="true" />
-              کنار گذاشتن
-            </button>
+            <Tile
+              icon={Trash2}
+              tone="danger"
+              label="کنار بگذار"
+              name={`کنار گذاشتن: ${task.title}`}
+              disabled={busy}
+              suggested={suggested?.actionType === 'DROP_TASKS'}
+              onClick={() => onAction({ actionType: 'DROP_TASKS', taskIds: [task.taskId], recommendationId: pick(suggested, 'DROP_TASKS') })}
+            />
           )}
         </div>
       )}
     </article>
+  )
+}
+
+/** The recommendation is cited only when the user takes the very action it pointed at. */
+function pick(suggested: Suggestion | undefined, actionType: string) {
+  return suggested?.actionType === actionType ? suggested.recommendationId : undefined
+}
+
+function AgeChip({ task }: { task: ReconcileTaskItemDto }) {
+  const age = formatAge(task.ageDays)
+  if (!age) return null
+  return (
+    <span className="meta-chip bg-caution-tint text-caution">
+      <Hourglass size={12} className="shrink-0" aria-hidden="true" />
+      {age}
+    </span>
+  )
+}
+
+/**
+ * One decision tile: icon over a short label. A tile an AI recommendation
+ * points at is ringed in the moonstone and says so to a screen reader; it does
+ * nothing more than any other tile.
+ */
+function Tile({ icon: Icon, label, name, tone, suggested = false, pressed, disabled, onClick }: {
+  icon: typeof Check
+  label: string
+  /** The accessible name when the label alone is not enough. */
+  name?: string
+  tone?: 'done' | 'today' | 'danger'
+  suggested?: boolean
+  pressed?: boolean
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      className="decision-button"
+      data-tone={tone}
+      data-suggested={suggested || undefined}
+      type="button"
+      aria-label={name ? `${name}${suggested ? '، پیشنهاد دستیار' : ''}` : undefined}
+      aria-pressed={pressed}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {suggested && <Sparkles size={12} className="decision-spark" aria-hidden="true" />}
+      <Icon size={19} aria-hidden="true" />
+      {label}
+    </button>
   )
 }

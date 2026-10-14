@@ -68,10 +68,13 @@ public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateServi
                 .Select(x => x.TerminalAt!.Value).ToListAsync(cancellationToken))
             .Count(x => InWindow(dates.LocalDateOf(x)));
         var scopeTaskIds = tasks.Select(x => x.Id);
+        // A Carry taken back in Reconcile (027 §6) is not counted.
+        var undoneCarries = db.DomainEvents.Where(x => x.UserId == owner &&
+            x.EventType == TaskEventTypes.TaskCarryUndone && x.CausationId != null).Select(x => x.CausationId!.Value);
         var carried = (await db.DomainEvents.AsNoTracking()
                 .Where(x => x.UserId == owner && x.AggregateType == "Task" &&
                     x.EventType == TaskEventTypes.TaskCarried && x.OccurredAt >= since &&
-                    scopeTaskIds.Contains(x.AggregateId))
+                    scopeTaskIds.Contains(x.AggregateId) && !undoneCarries.Contains(x.EventId))
                 .Select(x => new { x.AggregateId, x.OccurredAt }).ToListAsync(cancellationToken))
             .Where(x => InWindow(dates.LocalDateOf(x.OccurredAt))).Select(x => x.AggregateId).Distinct().Count();
         var routineIds = routines.Select(x => x.Id).ToArray();

@@ -194,6 +194,139 @@ public sealed class ReconcileService(
     }
 
     /// <summary>
+    /// A single-item decision applied on tap (027 §6): complete the Task, or carry it to today. The
+    /// Task must be an actionable decision of the current evaluation with that action allowed, and is
+    /// revalidated under its lock exactly as the ordinary command would be. The action is recorded with
+    /// what undo needs.
+    /// </summary>
+    public async Task<ReconcileSessionDto> ApplyQuickActionAsync(Guid sessionId,
+        ApplyReconcileQuickActionRequest request, string idempotencyKey, CancellationToken cancellationToken)
+    {
+        await OwnedSessionAsync(sessionId, cancellationToken);
+        var (evaluation, today) = await EvaluateAsync(cancellationToken);
+        var item = evaluation.ExecutionGroups
+            .SelectMany(group => group.Tasks.Concat(group.Sequences.SelectMany(x => x.Items)))
+            .FirstOrDefault(x => x.TaskId == request.TaskId);
+        var now = dates.UtcNow;
+        var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "RECONCILE_QUICK_ACTION",
+            new { sessionId, request.TaskId, request.ActionType, request.ExpectedVersion }, now);
+        var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
+        {
+            var session = await LockSessionAsync(context, sessionId, owner, ct);
+            if (session.Status != ReconcileSessionStatuses.Open || session.LocalDate != today)
+                throw new CommandRejectedException("RECONCILE_SESSION_NOT_OPEN");
+            var complete = request.ActionType == ReconcileQuickActionTypes.CompleteTask;
+            // Only a decision this session offers, with the matching ordinary action allowed.
+            if (item is not { Actionable: true } ||
+                !item.AllowedActions.Contains(complete ? ReconcileRules.CompleteTask : ReconcileActionTypes.ReplanTasks))
+                throw new CommandRejectedException("QUICK_ACTION_NOT_ALLOWED");
+            var snapshot = await context.Tasks.AsNoTracking().SingleOrDefaultAsync(
+                x => x.Id == request.TaskId && x.UserId == owner, ct)
+                ?? throw new ResourceNotFoundException("Task", request.TaskId);
+            if (snapshot.SequenceId is { } sequenceId) await TaskService.LockSequencesAsync(context, [sequenceId], ct);
+            var task = await TaskService.LockOwnedAsync(context, request.TaskId, owner, ct);
+            VersionGuard.RequireMatch(task.Id, request.ExpectedVersion, task.Version);
+            if (task.Status != TaskStatuses.Active) throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
+
+            var previous = task.PlannedDate;
+            string eventType, payload;
+            if (complete)
+            {
+                if (await TaskService.HasUnresolvedPredecessorAsync(context, task, ct))
+                    throw new CommandRejectedException("TASK_BLOCKED");
+                task.Status = TaskStatuses.Completed;
+                task.CompletedForLocalDate = today;
+                task.TerminalAt = now;
+                task.UpdatedAt = now;
+                task.Version++;
+                (eventType, payload) = (TaskEventTypes.TaskCompleted, "{}");
+            }
+            else
+            {
+                // «امروز» moves a Task planned for an earlier day; anything else needs a date and a preview.
+                if (task.PlannedDate is not { } planned) throw new CommandRejectedException("TASK_NOT_SCHEDULED");
+                if (planned >= today) throw new CommandRejectedException("NO_CHANGES");
+                if (task.Deadline is { } deadline && today > deadline)
+                    throw new CommandRejectedException("DEADLINE_EXCEEDED");
+                (eventType, payload) = (TaskEventTypes.TaskCarried,
+                    TaskService.Carry(task, today, today, now, TaskCarryScopes.Task));
+            }
+            var eventId = Guid.NewGuid();
+            context.ReconcileQuickActions.Add(new ReconcileQuickAction
+            {
+                Id = Guid.NewGuid(), UserId = owner, SessionId = sessionId, TaskId = task.Id,
+                ActionType = request.ActionType, PreviousPlannedDate = complete ? null : previous,
+                ResultingVersion = task.Version, AppliedEventId = eventId, CreatedAt = now
+            });
+            return new CommandMutation("Task", task.Id, task.Version, eventType, 1, payload, now,
+                ReconcileSessionId: sessionId, EventId: eventId);
+        }, cancellationToken);
+        ParentCommandSupport.RequireSuccess(result);
+        return await GetSessionAsync(sessionId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Takes a one-tap decision back through a deterministic command: the Task returns to exactly
+    /// the state the action found it in. Refused once the session closed, once it was undone, or when
+    /// the Task changed after the action (including a later step of its sequence completed since).
+    /// </summary>
+    public async Task<ReconcileSessionDto> UndoQuickActionAsync(Guid quickActionId, string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var action = await db.ReconcileQuickActions.AsNoTracking().SingleOrDefaultAsync(
+            x => x.Id == quickActionId && x.UserId == currentUser.UserId, cancellationToken)
+            ?? throw new ResourceNotFoundException("ReconcileQuickAction", quickActionId);
+        var now = dates.UtcNow;
+        var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey,
+            "UNDO_RECONCILE_QUICK_ACTION", new { quickActionId }, now);
+        var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
+        {
+            var session = await LockSessionAsync(context, action.SessionId, owner, ct);
+            if (session.Status != ReconcileSessionStatuses.Open)
+                throw new CommandRejectedException("RECONCILE_SESSION_NOT_OPEN");
+            var tracked = await context.ReconcileQuickActions.SingleAsync(x => x.Id == quickActionId, ct);
+            if (tracked.Status != ReconcileQuickActionStatuses.Applied)
+                throw new CommandRejectedException("QUICK_ACTION_ALREADY_UNDONE");
+            var snapshot = await context.Tasks.AsNoTracking().SingleAsync(x => x.Id == tracked.TaskId && x.UserId == owner, ct);
+            if (snapshot.SequenceId is { } sequenceId) await TaskService.LockSequencesAsync(context, [sequenceId], ct);
+            var task = await TaskService.LockOwnedAsync(context, tracked.TaskId, owner, ct);
+            // Undo restores the state the action found only if nothing has happened to the Task since.
+            if (task.Version != tracked.ResultingVersion)
+                throw new CommandConflictException("QUICK_ACTION_STALE", "The Task changed after the action.");
+
+            string eventType;
+            if (tracked.ActionType == ReconcileQuickActionTypes.CompleteTask)
+            {
+                // The Task was open when the action ran, so a later step completed now was completed after it,
+                // and taking this one back would leave that step done before its predecessor.
+                if (task.SequenceId is { } sequence && task.SequenceOrder is { } order &&
+                    await context.Tasks.AsNoTracking().AnyAsync(x => x.UserId == owner && x.SequenceId == sequence &&
+                        x.SequenceOrder > order && x.Status == TaskStatuses.Completed, ct))
+                    throw new CommandConflictException("QUICK_ACTION_STALE", "A later step was completed after the action.");
+                task.Status = TaskStatuses.Active;
+                task.CompletedForLocalDate = null;
+                task.TerminalAt = null;
+                eventType = TaskEventTypes.TaskCompletionUndone;
+            }
+            else
+            {
+                task.PlannedDate = tracked.PreviousPlannedDate;
+                eventType = TaskEventTypes.TaskCarryUndone;
+            }
+            task.UpdatedAt = now;
+            task.Version++;
+            var eventId = Guid.NewGuid();
+            tracked.Status = ReconcileQuickActionStatuses.Undone;
+            tracked.UndoneAt = now;
+            tracked.UndoEventId = eventId;
+            return new CommandMutation("Task", task.Id, task.Version, eventType, 1, "{}", now,
+                ReconcileSessionId: session.Id, EventId: eventId, CausationId: tracked.AppliedEventId);
+        }, cancellationToken);
+        ParentCommandSupport.RequireSuccess(result);
+        return await GetSessionAsync(action.SessionId, cancellationToken);
+    }
+
+    /// <summary>
     /// Asks for an AI explanation of the session's rule-matched evidence. The deterministic
     /// evaluation runs first and is the only thing the explanation is given; if it fails, nothing
     /// is requested.
@@ -520,7 +653,40 @@ public sealed class ReconcileService(
             // A burst of checkpoints is presented in a limited chunk; the count stays complete.
             evaluation.Reviews.Take(ReviewChunkSize).ToArray(),
             captures.Select(CaptureService.ToDto).ToArray(), evaluation.RuleMatches,
-            await explanations.ViewAsync(session, evaluation, today, cancellationToken));
+            await explanations.ViewAsync(session, evaluation, today, cancellationToken),
+            await QuickActionsAsync(session, cancellationToken),
+            session.ActionableBacklogCount + session.ReviewDueCount + session.UnresolvedCaptureCount);
+    }
+
+    /// <summary>The session's one-tap decisions, newest first, each with its owner and whether it can still be undone.</summary>
+    private async Task<IReadOnlyList<ReconcileQuickActionDto>> QuickActionsAsync(ReconcileSession session,
+        CancellationToken cancellationToken)
+    {
+        var rows = await (from action in db.ReconcileQuickActions.AsNoTracking()
+                          join task in db.Tasks.AsNoTracking() on action.TaskId equals task.Id
+                          where action.SessionId == session.Id
+                          orderby action.CreatedAt descending
+                          select new { action, task.Title, task.Version, task.GoalId, task.ProjectId })
+            .ToListAsync(cancellationToken);
+        if (rows.Count == 0) return [];
+        var projectIds = rows.Where(x => x.ProjectId != null).Select(x => x.ProjectId!.Value).Distinct().ToArray();
+        var goalIds = rows.Where(x => x.ProjectId == null && x.GoalId != null).Select(x => x.GoalId!.Value).Distinct().ToArray();
+        var projects = await db.Projects.AsNoTracking().Where(x => projectIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Title, cancellationToken);
+        var goals = await db.Goals.AsNoTracking().Where(x => goalIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Title, cancellationToken);
+        var open = session.Status == ReconcileSessionStatuses.Open;
+        return rows.Select(x =>
+        {
+            var (ownerType, ownerId, ownerTitle) = x.ProjectId is { } project
+                ? (ReconcileOwnerTypes.Project, (Guid?)project, projects.GetValueOrDefault(project))
+                : x.GoalId is { } goal ? (ReconcileOwnerTypes.Goal, (Guid?)goal, goals.GetValueOrDefault(goal))
+                : (ReconcileOwnerTypes.Standalone, null, null);
+            return new ReconcileQuickActionDto(x.action.Id, x.action.TaskId, x.Title, x.action.ActionType,
+                x.action.Status, ownerType, ownerId, ownerTitle, x.action.PreviousPlannedDate,
+                open && x.action.Status == ReconcileQuickActionStatuses.Applied && x.Version == x.action.ResultingVersion,
+                x.action.CreatedAt);
+        }).ToArray();
     }
 
     private static ActionConfirmationDto ToDto(ActionConfirmation value, DateTimeOffset now)

@@ -9,12 +9,31 @@ import type {
   ReconcileOverviewDto,
   ReconcilePromptDto,
   ReconcilePromptState,
+  ReconcileQuickActionType,
   ReconcileRecommendationDispositionDto,
   ReconcileSessionDto,
 } from '../types/reconcile.types'
 
 /** Generates a fresh per-request idempotency key for a consequential write. */
 const commandHeaders = () => ({ 'Idempotency-Key': crypto.randomUUID() })
+
+/** «انجام شد» or «امروز» on one Task of the session, applied on the tap. Returns the session as it now stands. */
+export async function applyReconcileQuickAction(sessionId: string, value: {
+  taskId: string
+  actionType: ReconcileQuickActionType
+  expectedVersion: number
+}): Promise<ReconcileSessionDto> {
+  const response = await http.post<ReconcileSessionDto>(
+    `/reconcile/sessions/${encodeURIComponent(sessionId)}/quick-actions`, value, { headers: commandHeaders() })
+  return response.data
+}
+
+/** Takes a one-tap decision back while its session is open and the Task is unchanged since. */
+export async function undoReconcileQuickAction(id: string): Promise<ReconcileSessionDto> {
+  const response = await http.post<ReconcileSessionDto>(
+    `/reconcile/quick-actions/${encodeURIComponent(id)}/undo`, {}, { headers: commandHeaders() })
+  return response.data
+}
 
 /** Eligibility, severity and counts for the Today entry and the navigation badge. */
 export async function getReconcileOverview(): Promise<ReconcileOverviewDto> {

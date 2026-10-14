@@ -35,6 +35,7 @@ public static class RetentionCatalog
         new(typeof(CommandResult), R1, "Never purged. On erasure the user id is replaced by a tombstone."),
         new(typeof(ReconcileSession), R2, "A closed session is removed R2 days after it closed."),
         new(typeof(ReconcileFact), R2, WithSession),
+        new(typeof(ReconcileQuickAction), R2, WithSession),
         new(typeof(RuleMatch), R2, WithSession),
         new(typeof(ReconcileExplanation), R2, WithSession),
         new(typeof(ReconcileRecommendation), R2, WithSession),
