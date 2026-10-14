@@ -20,7 +20,7 @@ function renderForm(props: Partial<Parameters<typeof RoutineForm>[0]> = {}) {
 }
 
 function addTime(value: string) {
-  fireEvent.change(screen.getByLabelText('ساعت‌های روز (اختیاری)'), { target: { value } })
+  fireEvent.change(screen.getByLabelText('چه ساعتی؟ (اختیاری)'), { target: { value } })
   fireEvent.click(screen.getByRole('button', { name: 'افزودن ساعت' }))
 }
 
@@ -32,7 +32,7 @@ describe('RoutineForm', () => {
     expect(alerts.some(alert => alert.textContent?.includes('عنوان روتین الزامی است.'))).toBe(true)
     expect(onSubmit).not.toHaveBeenCalled()
 
-    fireEvent.change(screen.getByLabelText('عنوان روتین'), { target: { value: 'مطالعه' } })
+    fireEvent.change(screen.getByLabelText(/^(عنوان روتین|چه کاری تکرار می‌شود؟)$/), { target: { value: 'مطالعه' } })
     fireEvent.click(screen.getByRole('button', { name: 'ساخت روتین' }))
     await waitFor(() => expect(onSubmit).toHaveBeenCalled())
     expect(onSubmit.mock.calls[0][0]).toEqual({
@@ -44,7 +44,7 @@ describe('RoutineForm', () => {
 
   it('collects unique time slots in order and rejects a duplicate', async () => {
     const onSubmit = renderForm()
-    fireEvent.change(screen.getByLabelText('عنوان روتین'), { target: { value: 'دارو' } })
+    fireEvent.change(screen.getByLabelText(/^(عنوان روتین|چه کاری تکرار می‌شود؟)$/), { target: { value: 'دارو' } })
     addTime('16:00')
     addTime('08:00')
     addTime('16:00')
@@ -59,12 +59,12 @@ describe('RoutineForm', () => {
 
   it('requires a weekday or a valid month day for those recurrence types', async () => {
     const onSubmit = renderForm()
-    fireEvent.change(screen.getByLabelText('عنوان روتین'), { target: { value: 'گزارش' } })
-    fireEvent.click(screen.getByRole('radio', { name: 'روزهای مشخص هفته' }))
+    fireEvent.change(screen.getByLabelText(/^(عنوان روتین|چه کاری تکرار می‌شود؟)$/), { target: { value: 'گزارش' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'روزهای هفته' }))
     fireEvent.click(screen.getByRole('button', { name: 'ساخت روتین' }))
     expect((await screen.findAllByText('دست‌کم یک روز هفته را انتخاب کنید.')).length).toBeGreaterThan(0)
 
-    fireEvent.click(screen.getByRole('radio', { name: 'یک روز مشخص در هر ماه' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'ماهانه' }))
     fireEvent.change(screen.getByLabelText('روز ماه'), { target: { value: '32' } })
     fireEvent.click(screen.getByRole('button', { name: 'ساخت روتین' }))
     expect((await screen.findAllByText('روز ماه باید عددی بین ۱ و ۳۱ باشد.')).length).toBeGreaterThan(0)

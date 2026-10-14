@@ -211,6 +211,7 @@ function TodayCarrySheet({ task, onClose }: { task: TaskDto; onClose: () => void
   const carry = useCarryTask(task.id)
   return (
     <TaskCarrySheet
+      taskTitle={task.title}
       currentDate={task.plannedDate}
       deadline={task.deadline}
       pending={carry.isPending}

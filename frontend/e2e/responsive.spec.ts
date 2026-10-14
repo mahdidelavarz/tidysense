@@ -80,7 +80,7 @@ test('phone layout uses the five-place tab bar, the account sheet and bottom she
   await page.screenshot({ path: 'test-results/ui-phone-create-menu.png' })
   await page.getByRole('button', { name: /^کار/ }).click()
   const sheet = page.getByRole('dialog', { name: 'کار جدید' })
-  await sheet.getByLabel('تاریخ برنامه‌ریزی').click()
+  await sheet.getByRole('button', { name: 'انتخاب روز…' }).click()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-phone-task-sheet.png' })
   await page.keyboard.press('Escape')

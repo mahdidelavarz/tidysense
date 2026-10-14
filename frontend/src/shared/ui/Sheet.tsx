@@ -1,14 +1,17 @@
 import { X } from './icons'
 import { type ReactNode, useId, useRef } from 'react'
 import { useModal } from '../lib/use-modal'
+import { EntityIcon, type EntityKind } from './EntityUi'
 
 /**
  * Page sheet for create/edit flows: a bottom sheet on phones and a side
  * panel from tablet width up. Use ConfirmationDialog instead for a short
  * yes/no decision.
  */
-export function Sheet({ title, description, children, onClose, locked = false }: {
+export function Sheet({ title, description, entity, children, onClose, locked = false }: {
   title: string
+  /** What the sheet makes or acts on: its icon sits before the title and its colour marks the fields. */
+  entity?: EntityKind
   description?: string
   children: ReactNode
   onClose: () => void
@@ -31,7 +34,7 @@ export function Sheet({ title, description, children, onClose, locked = false }:
         onClick={onClose}
       />
       <div
-        className="sheet-panel"
+        className={`sheet-panel ${entity ? `entity-${entity}` : ''}`}
         ref={panel}
         role="dialog"
         aria-modal="true"
@@ -40,7 +43,8 @@ export function Sheet({ title, description, children, onClose, locked = false }:
       >
         <div className="sheet-handle" aria-hidden="true" />
         <div className="sheet-header">
-          <div className="min-w-0">
+          {entity && <EntityIcon entity={entity} />}
+          <div className="min-w-0 flex-1 self-center">
             <h2 className="display-title text-[1.4375rem]" id={titleId}>{title}</h2>
             {description && <p className="mt-1 text-sm leading-6 text-text-secondary" id={descriptionId}>{description}</p>}
           </div>

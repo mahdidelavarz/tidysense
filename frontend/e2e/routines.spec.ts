@@ -27,11 +27,11 @@ test('a multi-slot Routine and a Task are executed together from Today', async (
   await expect(page).toHaveURL(/\/routines$/)
   await page.getByRole('button', { name: 'روتین جدید' }).click()
   const sheet = page.getByRole('dialog', { name: 'روتین جدید' })
-  await sheet.getByLabel('عنوان روتین').fill(routineTitle)
+  await sheet.getByLabel('چه کاری تکرار می‌شود؟').fill(routineTitle)
   // 00:00 and 23:59 keep both slots pending whatever time the test runs:
   // the first is missed only once the second is reached.
   for (const time of ['00:00', '23:59']) {
-    await sheet.getByLabel('ساعت‌های روز (اختیاری)').fill(time)
+    await sheet.getByLabel('چه ساعتی؟ (اختیاری)').fill(time)
     await sheet.getByRole('button', { name: 'افزودن ساعت' }).click()
   }
   await page.screenshot({ path: 'test-results/step-06-routine-sheet.png', fullPage: true })

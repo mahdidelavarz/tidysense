@@ -12,10 +12,7 @@ export function RoutineCreateSheet({ onClose }: { onClose: () => void }) {
   const projects = useProjectOptions()
   const create = useCreateRoutine()
   return (
-    <Sheet
-      title="روتین جدید"
-      description="کاری که تکرار می‌شود. در روزهای خودش در «امروز» دیده می‌شود."
-      onClose={onClose}
+    <Sheet title="روتین جدید" entity="routine" onClose={onClose}
       locked={create.isPending}
     >
       <RoutineForm

@@ -1,24 +1,31 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
-import { formatNumber } from '../../../shared/lib/date'
+import { addDays } from 'date-fns-jalali'
+import { formatNumber, parseIsoDate, toIsoDate } from '../../../shared/lib/date'
 import { DateField } from '../../../shared/ui/DateField'
+import { DayChoice } from '../../../shared/ui/DayChoice'
 import { FormError, FormField, MoreFields, SwitchField, ValidationSummary } from '../../../shared/ui/FormUi'
 import type { GoalDto } from '../../goals/types/goal.types'
 import type { ProjectDto } from '../../projects/types/project.types'
 import { type TaskFields, taskCreateFieldsSchema, taskFieldsSchema } from '../types/task.schema'
 import type { CreateTaskRequest, TaskDto, UpdateTaskRequest } from '../types/task.types'
+import { ParentChoice } from './ParentChoice'
 import { TaskParentSelect } from './TaskParentSelect'
 import { TaskSequenceSelect } from './TaskSequenceSelect'
 
 /**
  * Create/edit form for a Task, rendered as the body of a Sheet. Sequence
  * placement is offered only on create; an existing Task's position is
- * immutable here. On create, a title with no date and no parent is not yet a
- * Task: it is handed to `onCapture` and saved as a quick capture.
+ * immutable here. On create, the day and the owner are one-press choices and
+ * the day starts at today, so a title alone is a Task for today; a title with
+ * no date and no owner is not yet a Task: it is handed to `onCapture` and
+ * saved as a quick capture.
  */
-export function TaskForm({ task, goals, projects, tasks = [], pending, error, onSubmit, onCapture, onCancel }: {
+export function TaskForm({ task, today, goals, projects, tasks = [], pending, error, onSubmit, onCapture, onCancel }: {
   task?: TaskDto
+  /** Today's ISO local date: a new Task is for today unless another day (or none) is chosen. */
+  today?: string
   goals: GoalDto[]
   projects: ProjectDto[]
   tasks?: TaskDto[]
@@ -34,7 +41,7 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
       title: task?.title ?? '',
       description: task?.description ?? '',
       parentScope: task?.goalId ? `goal:${task.goalId}` : task?.projectId ? `project:${task.projectId}` : 'none',
-      plannedDate: task?.plannedDate ?? '',
+      plannedDate: task ? task.plannedDate ?? '' : today ?? '',
       deadline: task?.deadline ?? '',
       sequenceChoice: 'none',
       isProtected: task?.isProtected ?? false,
@@ -67,28 +74,34 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
   return (
     <form className="form-stack" onSubmit={submit} noValidate aria-busy={pending}>
       <ValidationSummary messages={Object.values(errors).map(value => value?.message)} />
-      <FormField label="عنوان کار" name="title" required autoFocus prominent maxLength={200} placeholder="چه کاری باید انجام شود؟" registration={form.register('title')} error={errors.title?.message} />
+      {task || !today ? (
+        <FormField label="عنوان کار" name="title" required autoFocus prominent maxLength={200} placeholder="چه کاری باید انجام شود؟" registration={form.register('title')} error={errors.title?.message} />
+      ) : (
+        <FormField label="چه کاری باید انجام شود؟" name="title" required autoFocus prominent maxLength={200} placeholder="مثلاً: ارسال فاکتور مهر" registration={form.register('title')} error={errors.title?.message} />
+      )}
       <Controller
         control={form.control}
         name="plannedDate"
-        render={({ field }) => <DateField label="تاریخ برنامه‌ریزی" value={field.value} onChange={field.onChange} error={errors.plannedDate?.message} />}
+        render={({ field }) => task || !today
+          ? <DateField label="تاریخ برنامه‌ریزی" value={field.value} onChange={field.onChange} error={errors.plannedDate?.message} />
+          : <DayChoice label="کی؟" value={field.value} today={today} onChange={field.onChange} error={errors.plannedDate?.message} />}
       />
       <Controller
         control={form.control}
         name="parentScope"
-        render={({ field }) => (
+        render={({ field }) => task ? (
           <TaskParentSelect
             goals={goals}
             projects={projects}
-            currentGoalId={task?.goalId}
-            currentProjectId={task?.projectId}
+            currentGoalId={task.goalId}
+            currentProjectId={task.projectId}
             value={field.value}
             onChange={field.onChange}
           />
-        )}
+        ) : <ParentChoice goals={goals} projects={projects} value={field.value} onChange={field.onChange} />}
       />
       <MoreFields
-        summary={task ? 'توضیحات، مهلت و محافظت' : 'توضیحات، مهلت، ترتیب انجام و محافظت'}
+        summary={task ? 'توضیحات، مهلت و محافظت' : 'همه اختیاری‌اند؛ بیشتر کارها به این‌ها نیاز ندارند'}
         defaultOpen={Boolean(task && (task.description || task.deadline || task.isProtected))}
         forceOpen={Boolean(errors.description || errors.deadline)}
       >
@@ -123,11 +136,18 @@ export function TaskForm({ task, goals, projects, tasks = [], pending, error, on
       <div className="sheet-actions">
         <button className="secondary-button" type="button" disabled={pending} onClick={onCancel}>انصراف</button>
         <button className="primary-button" type="submit" disabled={pending}>
-          {pending ? 'در حال ذخیره…' : task ? 'ذخیره تغییرات' : capturing ? 'ذخیره یادداشت' : 'ساخت کار'}
+          {pending ? 'در حال ذخیره…' : task ? 'ذخیره تغییرات' : capturing ? 'ذخیره یادداشت' : submitLabel(form.watch('plannedDate'), today)}
         </button>
       </div>
     </form>
   )
+}
+
+/** The create button says where the Task lands when that is today or tomorrow. */
+function submitLabel(plannedDate: string, today?: string) {
+  if (today && plannedDate === today) return 'افزودن به امروز'
+  if (today && plannedDate && plannedDate === toIsoDate(addDays(parseIsoDate(today), 1))) return 'افزودن به فردا'
+  return 'ساخت کار'
 }
 
 function parseSequence(value: string): Pick<CreateTaskRequest, 'sequenceId' | 'sequenceOrder'> {

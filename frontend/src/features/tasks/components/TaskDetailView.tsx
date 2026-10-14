@@ -201,6 +201,7 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
       )}
       {carrying && data.plannedDate && (
         <TaskCarrySheet
+          taskTitle={data.title}
           currentDate={data.plannedDate}
           deadline={data.deadline}
           pending={carry.isPending}

@@ -83,12 +83,15 @@ test('manual task moves through Today to completion', async ({ page }) => {
 
   await page.goto('/tasks')
   await page.getByRole('button', { name: 'کار جدید' }).click()
-  await page.getByLabel('عنوان کار').fill(title)
-  // The Jalali calendar exposes each day's ISO date for exactly this kind of lookup.
-  await page.getByLabel('تاریخ برنامه‌ریزی').click()
-  await page.locator(`[data-date="${localDate}"]`).click()
-  await page.getByRole('button', { name: 'ساخت کار' }).click()
+  await page.getByLabel('چه کاری باید انجام شود؟').fill(title)
+  // A new Task is for today unless another day is chosen.
+  await expect(page.getByRole('button', { name: 'امروز', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'افزودن به امروز' }).click()
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
+  const created = await (await page.request.get('/api/v1/tasks?limit=100')).json() as {
+    items: Array<{ title: string; plannedDate: string | null }>
+  }
+  expect(created.items.find(item => item.title === title)?.plannedDate).toBe(localDate)
 
   await page.getByRole('link', { name: 'امروز' }).click()
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
