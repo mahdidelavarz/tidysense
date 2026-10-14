@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react'
-import heroPhoto from '../assets/today-hero.webp'
+import heroPhoto from '../assets/sunset.webp'
 
 /**
  * Collapsed while the reader scrolls down past the photograph; open again as
@@ -30,15 +30,20 @@ function useCollapsed(threshold = 120) {
 }
 
 /**
- * The top of Today: a photograph with the page title and the date, the
- * account button (below desktop) and the page's action (desktop). Whatever is
- * passed as children sits at its foot. It collapses to a band on scroll down
- * and opens again on scroll up; the foot steps aside while collapsed.
+ * The top of a primary page drawn on the photograph (Today, Goals, Projects):
+ * the page title and a line under it, the account button (below desktop) and
+ * the page's action (desktop), an optional row under the title (such as the
+ * Goals/Projects switch), and whatever is passed as children at its foot. It
+ * collapses to a band on scroll down and opens again on scroll up; the foot
+ * steps aside while collapsed.
  */
-export function TodayHero({ dateLine, end, children }: {
-  dateLine: ReactNode
+export function PhotoHero({ title, subtitle, end, below, children }: {
+  title: string
+  subtitle?: ReactNode
   /** Controls at the end of the title row: the account button and the page action. */
   end?: ReactNode
+  /** A row under the title, inside the photograph. */
+  below?: ReactNode
   children?: ReactNode
 }) {
   const collapsed = useCollapsed()
@@ -48,11 +53,12 @@ export function TodayHero({ dateLine, end, children }: {
       <div className="hero-veil" aria-hidden="true" />
       <div className="hero-inner">
         <div className="min-w-0">
-          <h1 className="hero-title">امروز</h1>
-          <p className="hero-date">{dateLine}</p>
+          <h1 className="hero-title">{title}</h1>
+          {subtitle && <p className="hero-date">{subtitle}</p>}
         </div>
         <div className="flex shrink-0 items-center gap-2">{end}</div>
       </div>
+      {below && <div className="hero-below" inert={collapsed}>{below}</div>}
       {children && <div className="hero-foot" inert={collapsed}>{children}</div>}
     </header>
   )

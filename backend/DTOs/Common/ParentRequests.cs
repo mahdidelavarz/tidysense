@@ -33,7 +33,8 @@ public sealed record TerminalPreviewDto(
     IReadOnlyList<TerminalCascadeDto> Cascades,
     string PreviewHash);
 
-public sealed record TerminalBlockerDto(string ResourceType, Guid ResourceId, string Status, long Version);
+/// <summary>An active child that must be resolved first. Title is for display only; the preview hash ignores it.</summary>
+public sealed record TerminalBlockerDto(string ResourceType, Guid ResourceId, string Title, string Status, long Version);
 
 /// <summary>A child the confirmed terminal transition will change by itself, shown before confirmation.</summary>
-public sealed record TerminalCascadeDto(string ResourceType, Guid ResourceId, string ResultingStatus, long Version);
+public sealed record TerminalCascadeDto(string ResourceType, Guid ResourceId, string Title, string ResultingStatus, long Version);

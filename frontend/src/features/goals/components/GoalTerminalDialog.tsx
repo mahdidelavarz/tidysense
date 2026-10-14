@@ -1,34 +1,32 @@
-import { Link } from '@tanstack/react-router'
 import { TerminalDialog } from '../../../shared/ui/TerminalDialog'
 import type { GoalTerminalPreview } from '../types/goal.types'
 
-/** Goal-specific copy and blocker links around the shared terminal confirmation dialog. */
-export function GoalTerminalDialog({ preview, pending, onCancel, onConfirm }: {
+/** Goal-specific copy around the shared terminal confirmation. */
+export function GoalTerminalDialog({ goalTitle, preview, pending, onCancel, onConfirm }: {
+  goalTitle: string
   preview: GoalTerminalPreview
   pending: boolean
   onCancel: () => void
   onConfirm: () => void
 }) {
   const achieved = preview.targetStatus === 'ACHIEVED'
-  const action = achieved ? 'تحقق هدف' : 'رها کردن هدف'
   return (
     <TerminalDialog
-      title={`تأیید ${action}`}
-      description="این تغییر وضعیت صریح است و فقط پس از تأیید شما ثبت می‌شود."
+      entity="goal"
+      entityTitle={goalTitle}
+      title={achieved ? 'رسیدن به هدف' : 'رها کردن هدف'}
       tone={achieved ? 'positive' : 'attention'}
-      confirmLabel={`تأیید ${action}`}
-      pendingLabel="در حال ثبت…"
+      confirmLabel={achieved ? 'تأیید تحقق هدف' : 'رها کردن هدف'}
       pending={pending}
       canApply={preview.canApply}
-      blockersIntro="ابتدا پروژه‌های فعال و کارها و روتین‌های مستقیم زیر را تعیین تکلیف کنید:"
       blockers={preview.blockers.map(blocker => ({
         id: blocker.resourceId,
-        label: blocker.resourceType === 'Task'
-          ? <Link className="text-link" to="/tasks/$taskId" params={{ taskId: blocker.resourceId }}>مشاهده کار فعال</Link>
-          : blocker.resourceType === 'Routine'
-            ? <Link className="text-link" to="/routines/$routineId" params={{ routineId: blocker.resourceId }}>مشاهده روتین فعال</Link>
-            : <Link className="text-link" to="/projects/$projectId" params={{ projectId: blocker.resourceId }}>مشاهده پروژه فعال</Link>,
+        kind: blocker.resourceType as 'Project' | 'Task' | 'Routine',
+        title: blocker.title,
       }))}
+      notes={achieved
+        ? ['«محقق‌شده» ثبت می‌شود و به «پایان‌یافته‌ها» می‌رود.', 'سابقه‌اش، کارهای انجام‌شده و یادداشت‌ها می‌مانند.']
+        : ['«رهاشده» ثبت می‌شود و به «پایان‌یافته‌ها» می‌رود.', 'سابقه‌اش، کارهای انجام‌شده و یادداشت‌ها می‌مانند.', 'رها کردن شکست نیست؛ یعنی جایش را به چیز مهم‌تری دادید.']}
       onCancel={onCancel}
       onConfirm={onConfirm}
     />

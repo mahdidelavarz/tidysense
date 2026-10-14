@@ -1,5 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { FolderKanban, Sun, Target } from '../../../shared/ui/icons'
+import photo from '../../../shared/assets/sunset.webp'
+import { FolderKanban, ShieldCheck, Sun, Target } from '../../../shared/ui/icons'
 import { useEffect, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { getDevelopmentOtp } from '../services/auth-api'
@@ -12,12 +13,16 @@ import { PhoneStep } from './PhoneStep'
 const showDevelopmentCode = import.meta.env.DEV || import.meta.env.VITE_SHOW_LOGIN_CODE === 'true'
 
 const loginHighlights = [
-  { icon: Sun, text: 'هر روز فقط کارهای همان روز را ببینید.' },
-  { icon: FolderKanban, text: 'تلاش‌های بزرگ را به پروژه‌های قابل‌مدیریت بشکنید.' },
-  { icon: Target, text: 'هدف‌هایتان را روشن و جلوی چشم نگه دارید.' },
+  { icon: Sun, text: 'هر روز فقط کارهای همان روز' },
+  { icon: FolderKanban, text: 'تلاش‌های بزرگ، در قدم‌های کوچک' },
+  { icon: Target, text: 'هدف‌ها همیشه جلوی چشم' },
 ]
 
-/** Two-step OTP login: phone entry, then code verification. */
+/**
+ * Two-step OTP sign-in (a first sign-in creates the account): phone, then
+ * code. On a phone the form is a sheet over the photograph; on desktop the
+ * photograph is the start half of the screen.
+ */
 export function LoginView() {
   const [phone, setPhone] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -88,52 +93,55 @@ export function LoginView() {
   const resendRemaining = Math.max(0, Math.ceil((resendUntil - now) / 1000))
 
   return (
-    <div className="grid min-h-dvh grid-rows-[auto_1fr] lg:grid-cols-2 lg:grid-rows-1">
-      {/* Brand panel: a full half on desktop, a compact band on phones. */}
-      <aside className="login-brand">
-        {/* Two soft discs give the panel depth without competing with the words. */}
-        <span className="pointer-events-none absolute -end-24 -top-24 size-72 rounded-full bg-white/10" aria-hidden="true" />
-        <span className="pointer-events-none absolute -bottom-32 -start-16 size-96 rounded-full bg-white/5" aria-hidden="true" />
-        <div className="relative flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center login-mark rounded-xl bg-white text-xl font-extrabold shadow-md" aria-hidden="true">ت</span>
-          <span className="text-xl font-extrabold tracking-tight">تایدی‌سنس</span>
-        </div>
-        <div className="relative hidden lg:block">
-          <p className="max-w-md text-4xl font-extrabold leading-normal">برنامه‌ای که با زندگی واقعی شما کنار می‌آید.</p>
-          <ul className="mt-8 space-y-4 text-white/90">
+    <div className="login">
+      {/* The photograph: behind the whole screen on a phone, the start half on desktop. */}
+      <header className="login-photo">
+        <img className="absolute inset-0 size-full object-cover" style={{ objectPosition: '50% 35%' }} src={photo} alt="" />
+        <div className="login-veil" aria-hidden="true" />
+        <div className="login-intro">
+          <span className="flex items-center gap-2.5">
+            <span className="login-mark" aria-hidden="true">ت</span>
+            <span className="text-xl font-extrabold">تایدی‌سنس</span>
+          </span>
+          <p className="mt-1.5 font-display text-[1.6875rem] font-bold leading-[1.55] lg:text-[2.25rem]">برنامه‌ای که با زندگی واقعی شما کنار می‌آید.</p>
+          <ul className="space-y-2">
             {loginHighlights.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-3 text-lg">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15" aria-hidden="true"><Icon size={20} /></span>
+              <li key={text} className="flex items-center gap-2 text-[0.78125rem] font-bold lg:text-base">
+                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-[0.5625rem] bg-white/20" aria-hidden="true"><Icon size={15} /></span>
                 {text}
               </li>
             ))}
           </ul>
         </div>
-        <p className="relative hidden text-sm text-white/70 lg:block">هدف، پروژه و کار روزانه در یک جای آرام.</p>
-      </aside>
+      </header>
 
-      <section className="flex items-start justify-center px-4 pb-10 sm:px-10 lg:items-center lg:py-10">
-        {/* On a phone the card rises over the brand band, so the form is the first thing in reach. */}
-        <div className="relative -mt-10 w-full max-w-md rounded-3xl border border-border-subtle bg-surface p-6 shadow-md sm:p-9 lg:mt-0">
-          <h1 className="text-2xl font-extrabold sm:text-[1.75rem]">ورود به حساب</h1>
-          <p className="mt-2 text-sm leading-7 text-text-secondary">
-            {phone ? 'کد تأیید پیامک‌شده را وارد کنید.' : 'شماره موبایل خود را وارد کنید تا کد ورود برایتان پیامک شود.'}
+      <section className="login-sheet" aria-labelledby="login-title">
+        <h1 className="display-title text-[1.4375rem]" id="login-title">{phone ? 'کد را وارد کنید' : 'ورود یا ثبت‌نام'}</h1>
+        {phone ? (
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[0.8125rem] leading-7 text-text-secondary">
+            به <bdi className="font-bold text-text-primary" dir="ltr">{phone}</bdi> پیامک شد.
+            <button className="font-extrabold text-entity-task" type="button" onClick={() => { setPhone(null); setError(''); setDevelopmentCode(null) }}>ویرایش شماره</button>
           </p>
-          {!phone
-            ? <PhoneStep pending={busy} onSubmit={send} />
-            : (
-              <OtpStep
-                phone={phone}
-                pending={busy}
-                resendRemainingSeconds={resendRemaining}
-                onVerify={verify}
-                onResend={() => send(phone)}
-                onEditPhone={() => { setPhone(null); setError(''); setDevelopmentCode(null) }}
-              />
-            )}
-          {error && <p role="alert" className="notice-attention mt-5 font-medium">{error}</p>}
-          <p className="mt-6 border-t border-border-subtle pt-5 text-center text-sm"><Link className="text-link" to="/privacy">حریم خصوصی و داده‌ها</Link></p>
-        </div>
+        ) : (
+          <p className="mt-0.5 text-[0.8125rem] leading-7 text-text-secondary">شماره موبایل خود را وارد کنید؛ یک کد چهار رقمی برایتان پیامک می‌شود.</p>
+        )}
+        {!phone
+          ? <PhoneStep pending={busy} onSubmit={send} />
+          : (
+            <OtpStep
+              pending={busy}
+              resendRemainingSeconds={resendRemaining}
+              onVerify={verify}
+              onResend={() => send(phone)}
+            />
+          )}
+        {error && <p role="alert" className="notice-attention mt-4 font-medium">{error}</p>}
+        <p className="mt-5 text-center">
+          <Link className="inline-flex min-h-11 items-center gap-1.5 text-[0.78125rem] font-bold text-text-secondary hover:text-text-primary" to="/privacy">
+            <ShieldCheck size={15} aria-hidden="true" />
+            حریم خصوصی و داده‌ها
+          </Link>
+        </p>
       </section>
       {showDevelopmentCode && developmentCode && (
         <DevelopmentOtpToast code={developmentCode} onDismiss={() => setDevelopmentCode(null)} />

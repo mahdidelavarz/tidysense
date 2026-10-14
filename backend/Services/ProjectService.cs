@@ -230,14 +230,14 @@ public sealed class ProjectService(
         Guid id, Guid userId, CancellationToken cancellationToken) => context.Tasks.AsNoTracking()
         .Where(x => x.ProjectId == id && x.UserId == userId && x.Status == TaskStatuses.Active)
         .OrderBy(x => x.Id)
-        .Select(x => new TerminalBlockerDto("Task", x.Id, x.Status, x.Version))
+        .Select(x => new TerminalBlockerDto("Task", x.Id, x.Title, x.Status, x.Version))
         .ToListAsync(cancellationToken);
 
     private static TerminalPreviewDto Preview(Project project, string target,
         IReadOnlyList<TerminalBlockerDto> blockers, IReadOnlyList<Routine> activeRoutines)
     {
         var cascades = activeRoutines.OrderBy(x => x.Id)
-            .Select(x => new TerminalCascadeDto("Routine", x.Id, RoutineStatuses.Stopped, x.Version))
+            .Select(x => new TerminalCascadeDto("Routine", x.Id, x.Title, RoutineStatuses.Stopped, x.Version))
             .ToArray();
         return new TerminalPreviewDto(project.Id, "Project", project.Status, target, project.Version,
             blockers.Count == 0, blockers, cascades, ParentCommandSupport.PreviewHash(project.Id,

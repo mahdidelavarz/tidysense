@@ -194,17 +194,17 @@ public sealed class GoalService(
         var projects = await context.Projects.AsNoTracking()
             .Where(x => x.GoalId == id && x.UserId == userId && x.Status == ParentStatuses.Active)
             .OrderBy(x => x.Id)
-            .Select(x => new TerminalBlockerDto("Project", x.Id, x.Status, x.Version))
+            .Select(x => new TerminalBlockerDto("Project", x.Id, x.Title, x.Status, x.Version))
             .ToListAsync(ct);
         var tasks = await context.Tasks.AsNoTracking()
             .Where(x => x.GoalId == id && x.UserId == userId && x.Status == TaskStatuses.Active)
             .OrderBy(x => x.Id)
-            .Select(x => new TerminalBlockerDto("Task", x.Id, x.Status, x.Version))
+            .Select(x => new TerminalBlockerDto("Task", x.Id, x.Title, x.Status, x.Version))
             .ToListAsync(ct);
         var routines = await context.Routines.AsNoTracking()
             .Where(x => x.GoalId == id && x.UserId == userId && x.Status == RoutineStatuses.Active)
             .OrderBy(x => x.Id)
-            .Select(x => new TerminalBlockerDto("Routine", x.Id, x.Status, x.Version))
+            .Select(x => new TerminalBlockerDto("Routine", x.Id, x.Title, x.Status, x.Version))
             .ToListAsync(ct);
         return projects.Concat(tasks).Concat(routines).ToList();
     }

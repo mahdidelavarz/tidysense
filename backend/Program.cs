@@ -120,6 +120,7 @@ builder.Services.AddScoped<GoalService>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<RoutineService>();
 builder.Services.AddScoped<TodayService>();
+builder.Services.AddScoped<ProgressService>();
 builder.Services.AddScoped<CaptureService>();
 builder.Services.AddScoped<ReconcileService>();
 builder.Services.AddScoped<ReconcileExplanationService>();

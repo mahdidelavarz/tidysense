@@ -5,6 +5,7 @@ import { showToast, useUiStore } from '../../../shared/lib/ui-store'
 import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog'
 import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
+import { PhotoHero } from '../../../shared/ui/PhotoHero'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { TodayReconcileEntry } from '../../reconcile/components/TodayReconcileEntry'
 import { useCompleteOccurrence, useCorrectOccurrence, useRoutineWeek } from '../../routines/hooks/routine-hooks'
@@ -15,7 +16,6 @@ import { useCarryTask, useCompleteTask, useDropTask, useTaskOptions, useTaskPare
 import type { TaskDto } from '../../tasks/types/task.types'
 import { useToday } from '../hooks/today-hooks'
 import { DayStrip } from './DayStrip'
-import { TodayHero } from './TodayHero'
 import { TodayRoutineGroup } from './TodayRoutineGroup'
 import { TodayTaskCard } from './TodayTaskCard'
 
@@ -60,8 +60,9 @@ export function TodayView() {
 
   return (
     <div className="page page-sky">
-      <TodayHero
-        dateLine={<time dateTime={localDate}>{formatLongDate(localDate)}</time>}
+      <PhotoHero
+        title="امروز"
+        subtitle={<time dateTime={localDate}>{formatLongDate(localDate)}</time>}
         end={(
           <>
             <button className="hero-action" type="button" onClick={() => openCreate('task')}>
@@ -73,7 +74,7 @@ export function TodayView() {
         )}
       >
         <TodayReconcileEntry />
-      </TodayHero>
+      </PhotoHero>
 
       <DayStrip today={localDate} selected={selected} onSelect={day => setChosenDay(day === localDate ? null : day)} />
 

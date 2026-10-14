@@ -10,6 +10,7 @@ import { PrivacyPage } from './PrivacyPage'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
+  useNavigate: () => vi.fn(),
 }))
 vi.mock('../../auth/services/auth-api', () => ({ currentUser: vi.fn() }))
 vi.mock('../services/pilot-api', () => ({ getPilotNotice: vi.fn() }))
@@ -39,18 +40,19 @@ describe('PrivacyPage', () => {
     vi.mocked(currentUser).mockResolvedValue(account)
     renderPage()
 
-    const kept = within((await screen.findByRole('heading', { name: 'چه چیزی و تا کی نگه داشته می‌شود' })).closest('section') as HTMLElement)
-    expect(kept.getByText(/۳۰ روز پس از پایان پیش‌نویس/)).toBeInTheDocument()
-    expect(kept.getByText(/۱۸۰ روز پس از بسته‌شدن/)).toBeInTheDocument()
-    expect(kept.getByText(/۹۰ روز نگه داشته می‌شود/)).toBeInTheDocument()
-    expect(kept.getByText(/بدون نام و شماره شما به تیم نشان داده می‌شود و ۱۸۰ روز پس از ثبت/)).toBeInTheDocument()
-    const ai = within(screen.getByRole('heading', { name: 'هوش مصنوعی' }).closest('section') as HTMLElement)
+    const kept = within((await screen.findByRole('heading', { name: 'چه چیزی، تا کی' })).closest('section') as HTMLElement)
+    const row = (title: string) => kept.getByText(title).closest('li') as HTMLElement
+    expect(row('پیش‌نویس برنامه‌ریزی و نوشته‌اش')).toHaveTextContent(/پس از پایان پیش‌نویس پاک می‌شود.*نگه‌داری: ۳۰روز/)
+    expect(row('تاریخچه‌ی بازبینی و پاسخ‌های اختیاری')).toHaveTextContent(/نگه‌داری: ۱۸۰روز/)
+    expect(row('اطلاعات فنی عملکرد')).toHaveTextContent(/بدون هیچ متنی از شما.*نگه‌داری: ۹۰روز/)
+    expect(row('نظر درباره‌ی پاسخ‌های هوش مصنوعی')).toHaveTextContent(/بدون نام و شماره.*نگه‌داری: ۱۸۰روز/)
+    const ai = within(screen.getByRole('heading', { name: 'برنامه‌ریزی با هوش مصنوعی' }).closest('section') as HTMLElement)
     expect(ai.getByText(/فقط برای ساختن پیش‌نویس به یک مدل هوش مصنوعی فرستاده می‌شود/)).toBeInTheDocument()
     expect(ai.getByText(/سرورهای آن بیرون از ایران است/)).toBeInTheDocument()
-    expect(ai.getByText(/نسخه‌ای از متن فرستاده‌شده یا پاسخ خام مدل را نگه نمی‌دارد/)).toBeInTheDocument()
-    expect(ai.getByText(/شماره تلفن شما هرگز فرستاده نمی‌شود/)).toBeInTheDocument()
+    expect(ai.getByText('نسخه‌ای از متن فرستاده‌شده یا پاسخ خام مدل')).toBeInTheDocument()
+    expect(ai.getByText('شماره تلفن')).toBeInTheDocument()
     expect(ai.getByText(/کار و روتین را دستی بسازید/)).toBeInTheDocument()
-    const erasure = within(screen.getByRole('heading', { name: 'حذف حساب و داده‌ها' }).closest('section') as HTMLElement)
+    const erasure = within(screen.getByRole('heading', { name: 'حذف حساب و همه‌ی داده‌ها' }).closest('section') as HTMLElement)
     expect(erasure.getByText('support@example.test')).toBeInTheDocument()
     expect(erasure.getByText(/حداکثر تا ۳۰ روز بعد از بین می‌روند/)).toBeInTheDocument()
   })
@@ -59,7 +61,7 @@ describe('PrivacyPage', () => {
     vi.mocked(currentUser).mockResolvedValue(account)
     renderPage()
 
-    const ai = within((await screen.findByRole('heading', { name: 'هوش مصنوعی' })).closest('section') as HTMLElement)
+    const ai = within((await screen.findByRole('heading', { name: 'برنامه‌ریزی با هوش مصنوعی' })).closest('section') as HTMLElement)
     expect(ai.queryByRole('button')).not.toBeInTheDocument()
     expect(screen.queryByText(/اجازه|DeepSeek|سرویس/)).not.toBeInTheDocument()
   })

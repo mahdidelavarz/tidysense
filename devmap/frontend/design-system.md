@@ -48,9 +48,9 @@ Two themes defined by the same tokens. Light values live in `@theme`; `:root[dat
 
 Entity colours changed on 2026-10-14 (STEP-15) to the canvas set: Goal magenta, Project teal, Task blue, Routine violet, so Task no longer shares `positive`'s green. Every chip and icon pair stays at least 4.5:1 (lowest: Project icon 4.79:1 by day).
 
-The design's own grey for meta text (`#7d7a84`) is 4.2:1 on white, so `text-secondary` is a step darker; every text pair above is at least 4.5:1 in both themes (`on-accent` on `accent` 12.5:1 light, 14.8:1 dark). The design palette had no Goal or Project colour; they were mapped into its family (ochre summit, cloud blue). Feature code uses these tokens through Tailwind utilities (`bg-accent`, `text-on-accent`) and never raw hex values, `white` or `black`: a colour mixed toward the surface is mixed with `var(--color-surface)`, toward ink with `var(--color-text-primary)`, so it works in both themes. The exceptions keep their own palette: the Today hero, whose text is white over a dark veil on a photograph in both themes, and the sign-in panel, which is the night sky in both themes.
+The design's own grey for meta text (`#7d7a84`) is 4.2:1 on white, so `text-secondary` is a step darker; every text pair above is at least 4.5:1 in both themes (`on-accent` on `accent` 12.5:1 light, 14.8:1 dark). The design palette had no Goal or Project colour; they were mapped into its family (ochre summit, cloud blue). Feature code uses these tokens through Tailwind utilities (`bg-accent`, `text-on-accent`) and never raw hex values, `white` or `black`: a colour mixed toward the surface is mixed with `var(--color-surface)`, toward ink with `var(--color-text-primary)`, so it works in both themes. The exceptions keep their own palette: the photograph heroes (`PhotoHero` on Today, Goals and Projects; the welcome, its guides and First Entry), whose text and frosted glass are white over a dark veil in both themes, and the sign-in panel, which is the night sky in both themes.
 
-Entity colours mostly appear as tints: `.entity-chip`, `.entity-icon`, `.entity-ink` and the chosen chips of a sheet derive a 12% tint and a darker (light theme) or lighter (dark theme) foreground from `--entity-color`, and `.entity-card`, `.detail-card` and `.proposal-card` take its corner wash. Solid entity fills are kept to completion: a done ring or slot, the Routine calendar's complete days, its week bars, and a Task's one complete button (text in `canvas`, 4.6:1 light, 8.6:1 dark).
+Entity colours mostly appear as tints: `.entity-chip`, `.entity-icon`, `.entity-ink` and the chosen chips of a sheet derive a 12% tint and a darker (light theme) or lighter (dark theme) foreground from `--entity-color`, and `.goal-card`, `.progress-card` and `.proposal-card` take its corner wash. Solid entity fills are kept to completion: a done ring or slot, the Routine calendar's complete days, its week bars, and a Task's one complete button (text in `canvas`, 4.6:1 light, 8.6:1 dark).
 
 ### Theme
 
@@ -129,6 +129,9 @@ Direction: the layout is RTL, so "back" is `ArrowRight`/`ChevronRight` and "forw
 | no date | `CalendarOff` | `cloud` (the design's «بعداً») |
 | move to another day | `CalendarClock` | `calendar-mark` |
 | restore | `RotateCcw` | `undo-left` |
+| phone number (sign-in) | `Smartphone` | `smartphone` |
+| copy the dev code | `Copy` | `copy` |
+| send the code | `Send` | `plain` |
 
 ## Dependencies added for this system
 

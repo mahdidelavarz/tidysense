@@ -505,14 +505,72 @@ select:not(:disabled),
   }
 
   /* The sign-in brand panel: the blue night sky in both themes, a compact band on a phone, half the screen on desktop. */
-  .login-brand {
-    @apply relative flex flex-col justify-between gap-8 overflow-hidden px-6 pb-16 pt-8 text-white sm:px-10 lg:py-14;
-    background: linear-gradient(170deg, #0f2538 0%, #1a3a50 50%, #3a3f52 100%);
+  /*
+   * Sign-in. On a phone the photograph fills the screen with the promise at
+   * its top and the form is a sheet at the foot; on desktop the photograph is
+   * the start half and the form a card in the other. Text on the photograph
+   * is white over a dark veil in both themes.
+   */
+  .login {
+    @apply relative flex min-h-dvh flex-col bg-canvas text-text-primary lg:grid lg:grid-cols-2;
   }
 
-  /* The product mark on the sign-in sky: ink on white whatever the theme. */
+  .login-photo {
+    @apply absolute inset-0 overflow-hidden text-white lg:relative lg:inset-auto lg:min-h-dvh;
+  }
+
+  .login-veil {
+    @apply absolute inset-0;
+    background: linear-gradient(180deg, rgb(10 18 28 / 0.55) 0%, rgb(10 18 28 / 0.12) 40%, rgb(10 18 28 / 0.05) 75%, rgb(10 18 28 / 0.25) 100%);
+  }
+
+  .login-intro {
+    @apply relative flex flex-col gap-3.5 px-5.5 pt-7 lg:max-w-xl lg:px-14 lg:pt-14;
+    text-shadow: 0 2px 14px rgb(0 0 0 / 0.35);
+  }
+
+  /* The product mark on the photograph: ink on white whatever the theme. */
   .login-mark {
-    color: #1c2e34;
+    @apply flex size-11 items-center justify-center rounded-[0.875rem] bg-white/95 font-display text-2xl font-bold text-[#1c2e34];
+    text-shadow: none;
+  }
+
+  .login-sheet {
+    @apply relative mt-auto rounded-t-[1.875rem] bg-surface-raised px-5 pt-5.5 shadow-lg lg:m-auto lg:w-full lg:max-w-md lg:rounded-[1.75rem] lg:p-9;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  }
+
+  /* The phone number, large, on the page's canvas inside the sheet. */
+  .phone-field {
+    @apply flex h-15 items-center gap-2.5 rounded-[1.125rem] bg-canvas px-4 transition duration-200;
+    box-shadow: inset 0 0 0 1px var(--color-border);
+  }
+
+  .phone-field:focus-within {
+    box-shadow: inset 0 0 0 1.5px var(--color-accent);
+  }
+
+  /* The code as four boxes: one real input over them takes the typing. */
+  .otp {
+    @apply relative flex gap-2.5;
+  }
+
+  .otp-input {
+    @apply absolute inset-0 z-1 w-full bg-transparent text-transparent caret-transparent opacity-0 outline-none;
+    font-size: 16px;
+  }
+
+  .otp-box {
+    @apply flex h-15 flex-1 items-center justify-center rounded-2xl bg-canvas text-[1.625rem] font-extrabold;
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  }
+
+  .otp-box[data-filled="true"] {
+    box-shadow: inset 0 0 0 1.5px var(--color-border);
+  }
+
+  .otp:focus-within .otp-box[data-active="true"] {
+    box-shadow: inset 0 0 0 2px var(--color-accent);
   }
 
   /* ---------- Buttons ---------- */
@@ -889,22 +947,6 @@ select:not(:disabled),
     @apply inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface-sunken px-2.5 py-0.5 text-xs font-medium text-text-secondary;
   }
 
-  /*
-   * A Goal or Project in its grid. The entity colour washes in from one
-   * corner and fades to white, so a grid of cards stays calm.
-   */
-  .entity-card {
-    @apply block h-full rounded-[1.75rem] border p-5 shadow-sm transition duration-200 ease-standard hover:shadow-md active:scale-[0.99];
-    border-color: color-mix(in srgb, var(--entity-color) 16%, var(--color-border-subtle));
-    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 13%, var(--color-surface)) 0%, color-mix(in srgb, var(--entity-color) 4%, var(--color-surface)) 40%, var(--color-surface) 72%);
-  }
-
-  /* Closed work keeps its place in the grid without asking for attention. */
-  .entity-card[data-closed="true"] {
-    @apply border-border-subtle bg-none text-text-secondary;
-    background: var(--color-surface);
-  }
-
   /* ---------- Decisions (Reconcile) ---------- */
   /* One item that waits for an answer: what it is on top, its possible answers in a bar underneath. */
   .decision-card {
@@ -976,14 +1018,6 @@ select:not(:disabled),
     @apply mt-1 text-xs leading-6 text-text-secondary sm:text-sm;
   }
 
-  /* ---------- Detail pages ---------- */
-  /* What one Goal, Project, Task or Routine is: identity on top in its own corner wash, its facts underneath. */
-  .detail-card {
-    @apply rounded-[1.75rem] border p-5 shadow-sm sm:p-7;
-    border-color: color-mix(in srgb, var(--entity-color) 16%, var(--color-border-subtle));
-    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 12%, var(--color-surface)) 0%, color-mix(in srgb, var(--entity-color) 3%, var(--color-surface)) 30%, var(--color-surface) 55%);
-  }
-
   /* Facts as rows of one card, divided by hairlines. */
   .fact-list {
     @apply rounded-[1.375rem] bg-surface px-4 shadow-sm;
@@ -1018,10 +1052,6 @@ select:not(:disabled),
     @apply inline-flex max-w-full items-center gap-2 rounded-2xl py-1.5 ps-1.5 pe-3 text-sm font-bold transition hover:brightness-[0.98];
     color: color-mix(in srgb, var(--entity-color, var(--color-text-secondary)) 80%, var(--color-text-primary));
     background: color-mix(in srgb, var(--entity-color, var(--color-text-tertiary)) 12%, var(--color-surface));
-  }
-
-  .detail-facts {
-    @apply mt-6 grid gap-5 border-t border-border-subtle pt-6 sm:grid-cols-2;
   }
 
   /* A proposed item in a planning draft: its entity colour in one corner, its switches in a bar underneath. */
@@ -1118,6 +1148,105 @@ select:not(:disabled),
 
   .hero-action {
     @apply hidden min-h-11 shrink-0 items-center gap-2 rounded-[0.875rem] px-3.5 text-sm font-extrabold transition duration-200 active:scale-[0.98] lg:inline-flex;
+  }
+
+  /* A count beside a heading or tab, as in «کارهای امروز ۳». */
+  .count-pill {
+    @apply rounded-full bg-surface-sunken px-2 text-xs font-bold leading-5 text-text-secondary;
+  }
+
+  /* A row under the title on the photograph, such as the Goals/Projects switch. */
+  .hero-below {
+    @apply relative mt-3 px-4 transition duration-300 ease-standard sm:px-6;
+  }
+
+  .hero[data-collapsed="true"] .hero-below {
+    @apply pointer-events-none opacity-0;
+  }
+
+  /* The Goals/Projects switch: two tabs on frosted glass; the current one is solid. */
+  .structure-switch {
+    @apply grid grid-cols-2 gap-1 rounded-[1.125rem] border border-white/35 bg-white/18 p-1 backdrop-blur-md;
+  }
+
+  .structure-tab {
+    @apply flex min-h-11 items-center justify-center gap-2 rounded-[0.875rem] text-sm font-extrabold text-white transition;
+  }
+
+  .structure-tab .count-pill {
+    @apply bg-white/25 text-white;
+  }
+
+  .structure-tab[aria-current="page"] {
+    @apply bg-surface text-text-primary shadow-sm;
+  }
+
+  .structure-tab[aria-current="page"] svg {
+    color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
+  }
+
+  .structure-tab[aria-current="page"] .count-pill {
+    @apply bg-surface-sunken text-text-secondary;
+  }
+
+  /* A Goal or Project card: a wash of its colour from the start corner. */
+  .goal-card {
+    @apply relative rounded-[1.5rem] border p-4 shadow-sm transition hover:shadow-md;
+    border-color: color-mix(in srgb, var(--entity-color) 14%, var(--color-border-subtle));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 9%, var(--color-surface)) 0%, var(--color-surface) 45%);
+  }
+
+  .goal-card[data-closed="true"] {
+    @apply opacity-85;
+    background: var(--color-surface);
+  }
+
+  /* A Goal's own tile is solid in its colour; a Project's is its tint. */
+  .goal-tile {
+    @apply flex size-11 shrink-0 items-center justify-center rounded-[0.875rem] text-surface;
+    background: var(--entity-color);
+  }
+
+  .project-tile {
+    @apply flex size-11 shrink-0 items-center justify-center rounded-[0.875rem];
+    color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--entity-color) 12%, var(--color-surface));
+  }
+
+  /* A count of one kind of item, in that kind's tint. */
+  .count-chip {
+    @apply flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-2;
+    color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--entity-color) 12%, var(--color-surface));
+  }
+
+  /* What a Goal means or a Project finishing means, set off by a rule in its colour. */
+  .meaning-line {
+    @apply whitespace-pre-wrap ps-3 text-[0.9375rem] leading-8 text-text-secondary;
+    border-inline-start: 3px solid var(--entity-color);
+  }
+
+  /* How far a Goal or Project has come, washed in its colour. */
+  .progress-card {
+    @apply rounded-[1.5rem] border p-4;
+    border-color: color-mix(in srgb, var(--entity-color) 18%, var(--color-border-subtle));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 12%, var(--color-surface)) 0%, var(--color-surface) 70%);
+  }
+
+  /* The quiet positive answer at the foot of a Goal or Project: it was reached. */
+  .positive-button {
+    @apply inline-flex min-h-13 items-center justify-center gap-2 rounded-[1.125rem] bg-positive-tint px-6 text-[0.9375rem] font-extrabold text-positive transition hover:brightness-[0.98] active:scale-[0.98] disabled:opacity-50;
+  }
+
+  /* Adding one more item in place: a dashed row. */
+  .add-row {
+    @apply flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border text-sm font-extrabold text-entity-task transition hover:bg-surface-sunken;
+  }
+
+  /* A bar filled to the share of the work done, in the item's colour. */
+  .progress-bar {
+    @apply h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken;
+    background-image: linear-gradient(270deg, var(--entity-color) var(--share), transparent var(--share));
   }
 
   /* What sits at the foot of the photograph (the Reconcile offer); it steps aside while collapsed. */
@@ -1275,10 +1404,6 @@ select:not(:disabled),
 
   .timeline-head[data-today="true"] .timeline-head-label {
     color: color-mix(in srgb, var(--color-entity-task) 80%, var(--color-text-primary));
-  }
-
-  .count-pill {
-    @apply rounded-full bg-surface-sunken px-2 text-xs font-bold leading-5 text-text-secondary;
   }
 
   .timeline-card {
@@ -1578,6 +1703,178 @@ select:not(:disabled),
   /* The page under the hero starts at the screen edge on a phone. */
   .page-sky {
     @apply pt-4 lg:pt-3;
+  }
+
+  /* ---------- First Entry ---------- */
+  /* A short photograph with «بعداً» on glass and the greeting; the AI card rises over its foot. */
+  .first-hero {
+    @apply relative -mx-4 -mt-4 h-68 overflow-hidden text-white sm:-mx-6 lg:mx-0 lg:mt-0 lg:rounded-[1.75rem];
+  }
+
+  .first-hero-title {
+    @apply absolute inset-x-5 bottom-16 font-display text-[1.75rem] font-bold leading-[1.4];
+    text-shadow: 0 2px 14px rgb(0 0 0 / 0.35);
+  }
+
+  .glass-later {
+    @apply absolute top-5 left-4 flex min-h-11 items-center gap-1 rounded-[0.875rem] border border-white/40 bg-white/20 px-3.5 text-sm font-extrabold text-white backdrop-blur-sm transition hover:bg-white/30;
+  }
+
+  .first-card {
+    @apply relative -mt-11 rounded-[1.75rem] bg-surface p-4 shadow-md sm:p-5;
+  }
+
+  .ai-tile {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-[0.8125rem];
+    color: var(--color-ai-icon);
+    background: var(--ai-fill);
+    box-shadow: var(--ai-shadow);
+  }
+
+  .first-input {
+    @apply mt-3.5 block min-h-28 w-full resize-none rounded-2xl bg-canvas p-3.5 text-base leading-8 text-text-primary placeholder:text-text-tertiary focus:outline-none;
+    box-shadow: inset 0 0 0 1px var(--color-border);
+  }
+
+  .first-input:focus {
+    box-shadow: inset 0 0 0 1.5px var(--color-accent), 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+
+  .example-chip {
+    @apply min-h-10 rounded-xl bg-surface-sunken px-3.5 text-[0.8125rem] font-bold text-text-primary transition hover:bg-accent-tint active:scale-[0.98];
+  }
+
+  /* The sample of what a sentence becomes: the Goal holds the Project, the Project its Tasks. */
+  .sample-goal {
+    @apply rounded-[1.25rem] border p-3.5;
+    border-color: color-mix(in srgb, var(--entity-color) 16%, var(--color-border-subtle));
+    border-inline-start: 4px solid var(--entity-color);
+    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 13%, var(--color-surface)) 0%, color-mix(in srgb, var(--entity-color) 4%, var(--color-surface)) 40%, var(--color-surface) 72%);
+  }
+
+  .sample-project {
+    @apply rounded-2xl border bg-surface p-3;
+    border-color: color-mix(in srgb, var(--entity-color) 16%, var(--color-border-subtle));
+    border-inline-start: 3px solid var(--entity-color);
+  }
+
+  /* A section label drawn across a hairline, as in «یا خودتان شروع کنید». */
+  .divider-title {
+    @apply flex items-center gap-3 text-sm font-extrabold text-text-secondary;
+  }
+
+  .divider-title::before,
+  .divider-title::after {
+    @apply h-px flex-1 bg-border;
+    content: "";
+  }
+
+  .manual-tile {
+    @apply flex min-h-24 w-full flex-col items-center justify-center gap-2 rounded-[1.375rem] bg-surface text-sm font-extrabold shadow-sm transition hover:shadow-md active:scale-[0.98];
+  }
+
+  /* ---------- Privacy ---------- */
+  .promise-icon {
+    @apply flex size-9 items-center justify-center rounded-xl;
+  }
+
+  .promise-icon[data-tone="positive"] {
+    @apply bg-positive-tint text-positive;
+  }
+
+  .promise-icon[data-tone="attention"] {
+    @apply bg-attention-tint text-attention;
+  }
+
+  .promise-icon[data-tone="ai"] {
+    color: var(--color-ai-icon);
+    background: var(--ai-fill);
+  }
+
+  /* Erasure: a card washed from the attention colour, because it cannot be undone. */
+  .erase-card {
+    @apply rounded-[1.75rem] border p-5 shadow-sm sm:p-6;
+    border-color: color-mix(in srgb, var(--color-attention) 18%, var(--color-border-subtle));
+    background: linear-gradient(160deg, var(--color-attention-tint) 0%, var(--color-surface) 55%);
+  }
+
+  /* ---------- Welcome and first-run guides (phones, before sign-in) ---------- */
+  /* The welcome: the photograph full screen, the mark at the top, «شروع» at the foot. */
+  .welcome {
+    @apply relative min-h-dvh overflow-hidden bg-[#0f1720];
+  }
+
+  .welcome-veil {
+    @apply absolute inset-0;
+    background: linear-gradient(180deg, rgb(10 18 28 / 0.35) 0%, rgb(10 18 28 / 0) 30%, rgb(10 18 28 / 0) 55%, rgb(10 18 28 / 0.65) 100%);
+  }
+
+  .welcome-mark {
+    @apply flex size-15 items-center justify-center rounded-[1.1875rem] bg-white/95 font-display text-[2rem] font-bold text-[#1c2e34];
+    box-shadow: 0 16px 34px -14px rgb(0 0 0 / 0.6);
+  }
+
+  .welcome-start {
+    @apply absolute inset-x-6 flex h-14.5 items-center justify-center gap-2 rounded-[1.25rem] bg-white/95 text-[1.0625rem] font-extrabold text-[#1c2e34] backdrop-blur-sm transition active:scale-[0.98];
+    bottom: calc(2.75rem + env(safe-area-inset-bottom));
+    box-shadow: 0 20px 40px -18px rgb(0 0 0 / 0.7);
+  }
+
+  /* A guide: progress and skip, the example, the promise, then next and back. */
+  .guide {
+    @apply mx-auto flex min-h-dvh max-w-md flex-col bg-canvas px-4 pt-3.5 text-text-primary;
+    padding-bottom: calc(1.75rem + env(safe-area-inset-bottom));
+  }
+
+  .guide-progress {
+    @apply h-1 flex-1 rounded-full bg-border;
+  }
+
+  .guide-progress[data-done="true"] {
+    @apply bg-accent;
+  }
+
+  .guide-scene {
+    @apply relative mt-2 h-[min(29rem,56dvh)] overflow-hidden rounded-[2.125rem];
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-moon) 14%, var(--color-surface)) 0%, color-mix(in srgb, var(--color-sun) 12%, var(--color-surface)) 100%);
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  }
+
+  /* Rings rising from the foot of the example, with a warm glow at their centre. */
+  .guide-ring {
+    @apply absolute left-1/2 -translate-x-1/2 translate-y-1/2 rounded-full;
+    bottom: 0;
+    border: 1px solid color-mix(in srgb, var(--color-moon) 30%, transparent);
+  }
+
+  .guide-ring:nth-child(1) { width: 21.25rem; height: 21.25rem; }
+  .guide-ring:nth-child(2) { width: 15.625rem; height: 15.625rem; }
+  .guide-ring:nth-child(3) { width: 10.625rem; height: 10.625rem; }
+
+  .guide-ring:nth-child(4) {
+    width: 7.5rem;
+    height: 7.5rem;
+    border: 0;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--color-sun) 38%, transparent), transparent);
+  }
+
+  .guide-card {
+    @apply w-full rounded-[1.375rem] border border-border-subtle bg-surface px-4 py-3.5 shadow-md;
+  }
+
+  .guide-ai {
+    @apply inline-flex h-9.5 items-center gap-2 rounded-full px-3.5 text-xs font-extrabold;
+    color: var(--color-ai-ink);
+    background: var(--ai-fill);
+    box-shadow: var(--ai-shadow);
+  }
+
+  .guide-badge {
+    @apply inline-flex h-7.5 items-center gap-1.5 rounded-[0.625rem] bg-sun-tint px-3 text-[0.8125rem] font-extrabold text-sun-strong;
+  }
+
+  .guide-title {
+    @apply font-display text-[1.5625rem] font-bold leading-[1.55] outline-none;
   }
 
   /* ---------- Date picker ---------- */
