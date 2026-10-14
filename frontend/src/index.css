@@ -214,6 +214,11 @@ select:not(:disabled),
     padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1.5rem);
   }
 
+  /* A focused flow has no tab bar beneath it; its own footer sits at the bottom edge. */
+  .app-frame[data-focused] {
+    padding-bottom: 0;
+  }
+
   /* Phones: the strip only fades the page out beneath the dock; taps pass through it. */
   .tabbar {
     @apply pointer-events-none fixed inset-x-0 bottom-0 z-10 flex justify-center px-3 pt-6;
@@ -406,15 +411,20 @@ select:not(:disabled),
 
   /* ---------- Stepper ---------- */
   .stepper {
-    @apply flex items-center gap-1.5;
+    @apply flex w-full items-center gap-1.5;
   }
 
   .stepper-step {
     @apply flex shrink-0 items-center gap-1.5 text-xs font-bold text-text-tertiary;
   }
 
+  /* The connector before every step but the first stretches, so the four steps span the row. */
+  .stepper-step + .stepper-step {
+    @apply min-w-0 flex-1;
+  }
+
   .stepper-step + .stepper-step::before {
-    @apply h-0.5 w-4 rounded-full bg-border sm:w-6;
+    @apply h-0.5 min-w-3 flex-1 rounded-full bg-border;
     content: "";
   }
 
@@ -1054,16 +1064,194 @@ select:not(:disabled),
     background: color-mix(in srgb, var(--entity-color, var(--color-text-tertiary)) 12%, var(--color-surface));
   }
 
-  /* A proposed item in a planning draft: its entity colour in one corner, its switches in a bar underneath. */
-  .proposal-card {
-    @apply overflow-hidden rounded-[1.375rem] border shadow-sm;
-    border-color: color-mix(in srgb, var(--entity-color) 18%, var(--color-border-subtle));
-    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 10%, var(--color-surface)) 0%, var(--color-surface) 40%);
+  /* ---------- Planning ---------- */
+  /* The top of a focused step: the way back to the writing at the start, a close or the manual path at the end. */
+  .flow-bar {
+    @apply mb-3 flex min-h-12 items-center justify-between gap-3;
   }
 
-  .proposal-card[data-excluded="true"] {
-    @apply border-border-subtle text-text-secondary;
-    background: var(--color-surface);
+  .flow-back {
+    @apply -ms-2 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-extrabold text-text-secondary transition hover:text-text-primary;
+  }
+
+  /* The step's one decision, kept at the bottom edge while the step scrolls. */
+  .flow-footer {
+    @apply sticky bottom-0 z-5 -mx-4 mt-6 border-t border-border-subtle bg-canvas/95 px-4 pt-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.875rem);
+  }
+
+  .intent-card {
+    @apply rounded-[1.75rem] bg-surface p-4 shadow-md sm:p-6;
+  }
+
+  /* What the plan is about: nothing, or one Goal or Project already there. */
+  .scope-chip {
+    @apply inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border-[1.5px] border-border px-3.5 text-[0.8125rem] font-bold text-text-secondary transition hover:text-text-primary active:scale-[0.98];
+  }
+
+  .scope-chip[aria-pressed="true"] {
+    @apply border-accent bg-accent-tint text-text-primary;
+  }
+
+  /* One clarification question: its number, the question, why it is asked, then its answers. */
+  .question-card {
+    @apply rounded-[1.5rem] bg-surface p-4 shadow-sm sm:p-5;
+  }
+
+  .question-number {
+    @apply flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface-sunken text-[0.8125rem] font-extrabold;
+  }
+
+  .answer-chip {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center rounded-[0.875rem] border-[1.5px] border-border bg-surface px-3.5 text-[0.875rem] font-bold text-text-primary transition duration-200 ease-standard hover:border-text-tertiary active:scale-[0.97];
+  }
+
+  .answer-chip[aria-pressed="true"] {
+    @apply border-accent bg-accent text-on-accent;
+  }
+
+  /* «چیز دیگر…» is the product's own answer, so it is drawn apart: dashed until it is chosen. */
+  .answer-chip[data-other] {
+    @apply gap-1.5 border-dashed text-text-secondary;
+  }
+
+  .answer-chip[data-other][aria-pressed="true"] {
+    @apply border-solid text-on-accent;
+  }
+
+  .answer-progress {
+    @apply h-1.5 flex-1 overflow-hidden rounded-full bg-border;
+  }
+
+  .answer-progress > span {
+    @apply block h-full rounded-full bg-accent transition-[width] duration-300;
+  }
+
+  .draft-summary {
+    @apply rounded-[1.75rem] bg-surface p-4 shadow-md sm:p-6;
+  }
+
+  .draft-quote {
+    @apply mt-3 border-s-[3px] border-border ps-3 text-sm leading-7 text-text-secondary;
+  }
+
+  /* Totals by entity, each in its own tint. */
+  .count-tile {
+    @apply flex min-h-16 flex-col items-center justify-center rounded-2xl text-[0.75rem] font-extrabold;
+    color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--entity-color) 12%, var(--color-surface));
+  }
+
+  .count-tile b {
+    @apply text-lg leading-6;
+  }
+
+  /*
+   * The proposed structure: a Goal washed in its colour holds its Projects, a
+   * Project its rows. The coloured edge at the start says which is which.
+   */
+  .plan-goal {
+    @apply overflow-hidden rounded-[1.5rem] border p-2.5 shadow-sm;
+    border-color: color-mix(in srgb, var(--entity-color) 22%, var(--color-border-subtle));
+    border-inline-start: 4px solid var(--entity-color);
+    background: linear-gradient(170deg, color-mix(in srgb, var(--entity-color) 12%, var(--color-surface)) 0%, color-mix(in srgb, var(--entity-color) 5%, var(--color-surface)) 60%);
+  }
+
+  .plan-project {
+    @apply overflow-hidden rounded-[1.25rem] border bg-surface;
+    border-color: color-mix(in srgb, var(--entity-color) 22%, var(--color-border-subtle));
+    border-inline-start: 3px solid var(--entity-color);
+  }
+
+  .plan-group {
+    @apply overflow-hidden rounded-[1.25rem] border border-border-subtle bg-surface;
+  }
+
+  .plan-head {
+    @apply flex items-center gap-2.5 px-3 py-2.5;
+  }
+
+  .plan-row {
+    @apply flex items-center gap-2.5 px-3 py-2;
+  }
+
+  .plan-project > .plan-head {
+    background: color-mix(in srgb, var(--entity-color) 11%, var(--color-surface));
+  }
+
+  .plan-row + .plan-row,
+  .plan-head + .plan-row {
+    @apply border-t border-border-subtle;
+  }
+
+  .plan-goal[data-excluded="true"],
+  .plan-project[data-excluded="true"],
+  .plan-row[data-excluded="true"] {
+    @apply opacity-70;
+  }
+
+  .plan-goal[data-excluded="true"] .plan-title,
+  .plan-project[data-excluded="true"] .plan-title,
+  .plan-row[data-excluded="true"] .plan-title {
+    @apply text-text-secondary line-through decoration-1;
+  }
+
+  /* The switch of one proposed item: filled in its entity colour while it is in the plan. */
+  .plan-check {
+    @apply size-6 shrink-0 cursor-pointer appearance-none rounded-lg border-[1.5px] border-border bg-surface transition;
+  }
+
+  .plan-check:checked {
+    border-color: var(--entity-color);
+    background: var(--entity-color) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat;
+  }
+
+  /* A reason an item cannot be created as it stands, with the way to fix it beside it. */
+  .plan-issue {
+    @apply mx-2 mb-2 flex items-center gap-2 rounded-xl bg-attention-tint px-3 py-2 text-[0.8125rem] font-bold leading-6 text-attention;
+  }
+
+  /* The next seven days as columns, one bar per dated item. */
+  .plan-day {
+    @apply flex min-h-14 flex-col items-center justify-end gap-1 rounded-xl bg-surface-sunken px-1 pb-2;
+  }
+
+  .plan-day[data-today="true"] {
+    @apply bg-accent-tint;
+  }
+
+  .plan-bar {
+    @apply h-1.5 w-full max-w-6 rounded-full;
+    background: var(--entity-color);
+  }
+
+  /* A planning detail the draft offers to remember: a sun chip while kept, dashed once let go. */
+  .fact-chip {
+    @apply inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-xl border-[1.5px] border-sun/30 bg-sun-tint px-3 text-[0.8125rem] font-bold text-sun-strong transition active:scale-[0.98];
+  }
+
+  .fact-chip[aria-pressed="false"] {
+    @apply border-dashed border-border bg-transparent text-text-secondary;
+  }
+
+  /* The confirmation's tree: the same nesting, read-only. */
+  .apply-goal {
+    @apply rounded-[1.25rem] border p-2.5;
+    border-color: color-mix(in srgb, var(--entity-color) 22%, var(--color-border-subtle));
+    border-inline-start: 4px solid var(--entity-color);
+    background: color-mix(in srgb, var(--entity-color) 7%, var(--color-surface));
+  }
+
+  .apply-box {
+    @apply mt-2 rounded-2xl border bg-surface px-3 py-2;
+    border-color: color-mix(in srgb, var(--entity-color, var(--color-border)) 22%, var(--color-border-subtle));
+    border-inline-start: 3px solid var(--entity-color, var(--color-border));
+  }
+
+  /* The optional satisfaction prompt, in the moonstone's light because it asks about the AI's answer. */
+  .ai-feedback {
+    @apply rounded-[1.5rem] border border-border-subtle p-4 shadow-sm;
+    background: var(--ai-tint);
   }
 
   /* ---------- Today ---------- */
@@ -1731,12 +1919,12 @@ select:not(:disabled),
     box-shadow: var(--ai-shadow);
   }
 
-  .first-input {
+  .intent-input {
     @apply mt-3.5 block min-h-28 w-full resize-none rounded-2xl bg-canvas p-3.5 text-base leading-8 text-text-primary placeholder:text-text-tertiary focus:outline-none;
     box-shadow: inset 0 0 0 1px var(--color-border);
   }
 
-  .first-input:focus {
+  .intent-input:focus {
     box-shadow: inset 0 0 0 1.5px var(--color-accent), 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent);
   }
 

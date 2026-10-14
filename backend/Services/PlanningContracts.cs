@@ -99,7 +99,7 @@ public sealed record PlanningDraftContent(
 
 public static class PlanningJson
 {
-    public const string SchemaVersion = "2026-10-03.1";
+    public const string SchemaVersion = "2026-10-14.1";
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     public static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Options);
@@ -191,9 +191,47 @@ public static class PlanningBlockReasons
         value is TooVague or Contradictory or UnsupportedRequest or MissingConstraint;
 }
 
-public sealed record PlanningQuestion(string Id, string Text);
+/// <summary>
+/// What a clarification question is about (028 §2.5), following the 013 §6 reasons for asking. It is
+/// the only part of a question that is measured; labels and answers never are.
+/// </summary>
+public static class PlanningQuestionKinds
+{
+    public const string Timing = "TIMING";
+    public const string Recurrence = "RECURRENCE";
+    public const string Constraint = "CONSTRAINT";
+    public const string Content = "CONTENT";
+    public const string Ownership = "OWNERSHIP";
+    public const string EntityType = "ENTITY_TYPE";
+    public const string Contradiction = "CONTRADICTION";
 
-public sealed record PlanningAnswer(string QuestionId, string Text);
+    public static readonly string[] All = [Timing, Recurrence, Constraint, Content, Ownership, EntityType, Contradiction];
+
+    public static bool IsKnown(string? value) => value is not null && All.Contains(value, StringComparer.Ordinal);
+}
+
+/// <summary>
+/// One clarification question (028 §2.1): its text, an optional one-line reason saying what the answer
+/// changes, its kind, and zero or two to seven short options, one or several of which may be chosen.
+/// The product adds «چیز دیگر…» itself, so the options never hold an "other". Every label is model
+/// output and is shown as plain text only.
+/// </summary>
+public sealed record PlanningQuestion(string Id, string Text)
+{
+    public string? Reason { get; init; }
+    public string? Kind { get; init; }
+    public IReadOnlyList<string> Options { get; init; } = [];
+    public bool Multiple { get; init; }
+}
+
+/// <summary>
+/// The answer to one question: the zero-based positions of the chosen options, the «چیز دیگر…» text,
+/// or both. The server, not the client, turns positions into labels for the model.
+/// </summary>
+public sealed record PlanningAnswer(string QuestionId, string? Text = null)
+{
+    public IReadOnlyList<int> Options { get; init; } = [];
+}
 
 /// <summary>One finished clarification turn: what was asked and what the user answered.</summary>
 public sealed record PlanningTurn(IReadOnlyList<PlanningQuestion> Questions, IReadOnlyList<PlanningAnswer> Answers);
@@ -218,20 +256,95 @@ public static partial class PlanningClarificationRules
     [System.Text.RegularExpressions.GeneratedRegex("^[A-Za-z0-9_-]{1,40}$")]
     private static partial System.Text.RegularExpressions.Regex IdPattern();
 
-    /// <summary>A clarification asks one to three distinct questions; a blocked input names a known reason and says why.</summary>
-    public static bool IsValid(string outcome, PlanningClarification? value)
+    public const int ReasonLength = 120;
+    public const int MinOptions = 2;
+    public const int MaxOptions = 7;
+    public const int OptionLength = 40;
+
+    // A free-text "other" in the forms a model is likely to write it. The product adds its own
+    // «چیز دیگر…», so a second one would duplicate it and break the OTHER measurement (028 §2.2).
+    private static readonly HashSet<string> OtherLabels = new(StringComparer.Ordinal)
     {
-        if (value is null || value.Message is { Length: > MessageLength }) return false;
+        "other", "others", "otheroption", "somethingelse", "else",
+        "سایر", "سایرموارد", "دیگر", "دیگری", "مورددیگر", "موارددیگر", "گزینهدیگر", "گزینهدیگری",
+        "چیزدیگر", "چیزدیگری", "غیره", "غیرازاین", "غیرازاینها", "پاسخدیگر", "جوابدیگر",
+        "خودممینویسم", "خودمبنویسم", "نوشتنپاسخ", "پاسخخودم"
+    };
+
+    /// <summary>A clarification asks one to three distinct questions; a blocked input names a known reason and says why.</summary>
+    public static bool IsValid(string outcome, PlanningClarification? value) => Error(outcome, value) is null;
+
+    /// <summary>The first rule a clarification or blocked input breaks, or null when it is valid.</summary>
+    public static string? Error(string outcome, PlanningClarification? value)
+    {
+        if (value is null) return "CLARIFICATION_MISSING";
+        if (value.Message is { Length: > MessageLength }) return "MESSAGE_TOO_LONG";
         var questions = value.Questions ?? [];
         if (outcome == PlanningOutcomes.InputBlocked)
             return questions.Count == 0 && PlanningBlockReasons.IsKnown(value.BlockReason) &&
-                !string.IsNullOrWhiteSpace(value.Message);
-        return outcome == PlanningOutcomes.Clarification && value.BlockReason is null &&
-            questions.Count is >= 1 and <= MaxQuestions &&
-            questions.All(x => x.Id is not null && IdPattern().IsMatch(x.Id) &&
-                x.Text is { Length: > 0 and <= QuestionLength } && !string.IsNullOrWhiteSpace(x.Text)) &&
-            questions.Select(x => x.Id).Distinct(StringComparer.Ordinal).Count() == questions.Count;
+                !string.IsNullOrWhiteSpace(value.Message) ? null : "BLOCKED_INVALID";
+        if (outcome != PlanningOutcomes.Clarification || value.BlockReason is not null ||
+            questions.Count is < 1 or > MaxQuestions) return "QUESTION_COUNT_INVALID";
+        if (questions.Select(x => x.Id).Distinct(StringComparer.Ordinal).Count() != questions.Count)
+            return "QUESTION_ID_DUPLICATE";
+        return questions.Select(QuestionError).FirstOrDefault(x => x is not null);
     }
+
+    /// <summary>The first 028 §2.1–§2.2 rule one question breaks, or null.</summary>
+    public static string? QuestionError(PlanningQuestion question)
+    {
+        if (question.Id is null || !IdPattern().IsMatch(question.Id)) return "QUESTION_ID_INVALID";
+        if (question.Text is not { Length: > 0 and <= QuestionLength } || string.IsNullOrWhiteSpace(question.Text))
+            return "QUESTION_TEXT_INVALID";
+        if (question.Reason is not null && (question.Reason.Length > ReasonLength ||
+                string.IsNullOrWhiteSpace(question.Reason) || question.Reason.Any(char.IsControl)))
+            return "QUESTION_REASON_INVALID";
+        if (!PlanningQuestionKinds.IsKnown(question.Kind)) return "QUESTION_KIND_INVALID";
+        var options = question.Options ?? [];
+        if (options.Count == 0) return question.Multiple ? "QUESTION_MULTIPLE_WITHOUT_OPTIONS" : null;
+        if (options.Count is < MinOptions or > MaxOptions) return "QUESTION_OPTION_COUNT_INVALID";
+        if (options.Any(x => x is null || x.Length is 0 or > OptionLength || string.IsNullOrWhiteSpace(x) ||
+                x.Any(char.IsControl)))
+            return "QUESTION_OPTION_INVALID";
+        if (options.Select(Comparable).Distinct(StringComparer.Ordinal).Count() != options.Count)
+            return "QUESTION_OPTION_DUPLICATE";
+        return options.Any(IsOther) ? "QUESTION_OPTION_OTHER" : null;
+    }
+
+    /// <summary>True for a label that only means "something else": the product's own «چیز دیگر…» covers it.</summary>
+    public static bool IsOther(string label)
+    {
+        var key = Comparable(label);
+        return OtherLabels.Contains(key) || key.StartsWith("چیزدیگر", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A label reduced for comparison: lower case, Arabic yeh and kaf as Persian, and without spaces,
+    /// zero-width joiners, tatweel and punctuation, so «چیز دیگر…» and «چیزِ دیگر؟» compare equal.
+    /// </summary>
+    private static string Comparable(string label)
+    {
+        var builder = new System.Text.StringBuilder(label.Length);
+        foreach (var c in label.ToLowerInvariant())
+        {
+            if (char.IsWhiteSpace(c) || char.IsPunctuation(c) || char.IsSymbol(c) || char.IsControl(c) ||
+                c is '\u200c' or '\u200d' or '\u0640' || char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.NonSpacingMark)
+                continue;
+            builder.Append(c switch { '\u064a' or '\u0649' => '\u06cc', '\u0643' => '\u06a9', _ => c });
+        }
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// What an answer says about its question for measurement (028 §2.5): the chosen positions and
+    /// whether «چیز دیگر…» was written. Neither means UNANSWERED. Never the labels or the text.
+    /// </summary>
+    public static object AnswerCode(PlanningQuestion question, PlanningAnswer? answer) => new
+    {
+        kind = question.Kind ?? "UNKNOWN",
+        chosen = answer?.Options ?? [],
+        other = !string.IsNullOrEmpty(answer?.Text)
+    };
 }
 
 // ---- Generator port ----

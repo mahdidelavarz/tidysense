@@ -210,6 +210,18 @@ public sealed class PlanningAttemptRunner(
             attempt.Status = PlanningAttemptStatuses.Succeeded;
             attempt.Outcome = outcome;
             attempt.ClarificationJson = PlanningJson.Serialize(clarification);
+            if (outcome == PlanningOutcomes.Clarification)
+                // What was asked, as kinds and shapes only (027 §5, 028 §2.5).
+                PlanningEvents.Add(db, attempt.UserId, EventActors.SystemDeterministic, "PlanningAttempt", attempt.Id, 1,
+                    PlanningEventTypes.ClarificationAsked, JsonSerializer.Serialize(new
+                    {
+                        flowId = await PlanningEvents.FlowIdAsync(db, attempt, cancellationToken),
+                        turn = attempt.ClarificationTurn + 1,
+                        questions = clarification.Questions.Select(x => new
+                        {
+                            kind = x.Kind ?? "UNKNOWN", optionCount = x.Options.Count, multiple = x.Multiple
+                        }).ToArray()
+                    }), now);
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             logger.LogInformation("Planning attempt completed. AttemptId: {AttemptId}, Status: {Status}, Outcome: {Outcome}",
@@ -263,8 +275,11 @@ public sealed class PlanningAttemptRunner(
                     generator = attempt.GeneratorKey,
                     contextScope = item.Context.Scope?.Type ?? "NONE",
                     proposalCount = content!.Proposals.Count,
-                    factCount = content.Facts.Count
-                }), now);
+                    factCount = content.Facts.Count,
+                    // Version 2: the flow, so a draft joins the questions asked before it.
+                    flowId = await PlanningEvents.FlowIdAsync(db, attempt, cancellationToken),
+                    clarificationTurns = attempt.ClarificationTurn
+                }), now, eventVersion: 2);
         }
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -277,11 +292,12 @@ internal static class PlanningEvents
 {
     /// <summary>A durable planning event written outside a user command, with its outbox intent.</summary>
     public static void Add(AppDbContext context, Guid userId, string actor, string aggregateType,
-        Guid aggregateId, long version, string eventType, string payloadJson, DateTimeOffset now)
+        Guid aggregateId, long version, string eventType, string payloadJson, DateTimeOffset now,
+        int eventVersion = 1)
     {
         var domainEvent = new DomainEvent
         {
-            EventId = Guid.NewGuid(), EventType = eventType, EventVersion = 1, OccurredAt = now,
+            EventId = Guid.NewGuid(), EventType = eventType, EventVersion = eventVersion, OccurredAt = now,
             RecordedAt = now, UserId = userId, Actor = actor, AggregateType = aggregateType,
             AggregateId = aggregateId, AggregateVersion = version, TransactionId = Guid.NewGuid(),
             CorrelationId = Guid.NewGuid().ToString("N"), PayloadJson = payloadJson
@@ -291,5 +307,19 @@ internal static class PlanningEvents
         {
             Id = Guid.NewGuid(), EventId = domainEvent.EventId, CreatedAt = now
         });
+    }
+
+    /// <summary>
+    /// The first attempt of a planning flow: the one every clarification turn and the draft go back to.
+    /// It joins the measurement events of one flow after the attempts themselves are purged (R3).
+    /// </summary>
+    public static async Task<Guid> FlowIdAsync(AppDbContext context, PlanningAttempt attempt,
+        CancellationToken cancellationToken)
+    {
+        var current = attempt;
+        // A flow has at most three clarification turns, so this walks at most three rows.
+        while (current.PreviousAttemptId is { } earlier)
+            current = await context.PlanningAttempts.AsNoTracking().SingleAsync(x => x.Id == earlier, cancellationToken);
+        return current.Id;
     }
 }

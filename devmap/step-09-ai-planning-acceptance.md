@@ -60,13 +60,22 @@
 
 33. Every provider call, and every operation that was blocked before a call, writes one `AiInvocations` row (R4) and one structured log line. Fields are listed in `backend/logging-observability.md`. No prompt, response or user text is stored.
 
+### Questions with options (STEP-18, Discussion 028 §2)
+
+27a. A question has `id`, `text` (1–300), `reason` (null or one line of 1–120), `kind` (`TIMING`, `RECURRENCE`, `CONSTRAINT`, `CONTENT`, `OWNERSHIP`, `ENTITY_TYPE`, `CONTRADICTION`), `options` (none, or 2–7 labels of 1–40 characters, one line each, all different once spaces, zero-width joiners and punctuation are ignored) and `multiple` (true only with options).
+27b. The gate rejects the whole output for an unknown or missing kind, a broken option count or label, a duplicate label, `multiple` without options, or an option that only means "something else" or "write your own" (`PlanningClarificationRules.IsOther`: «چیز دیگر…», «سایر», «غیره», «خودم می‌نویسم», "Other" and their spellings). «نمی‌دانم» and «هیچ‌کدام» are real answers and pass. Its correction names the rule and never repeats a label. Labels are model output: the client shows them as plain text only.
+28a. An answer is `{ questionId, options[], text }`: the zero-based positions of the chosen options, the «چیز دیگر…» text, or both. Positions must be offered by that question, each once, and at most one unless the question is `multiple`; otherwise `400`. An answer with neither is a skipped question. The server, not the client, turns positions into labels: the model receives each answer as `{ questionId, chosen[labels], text }`.
+28b. Measurement (027 §5, 028 §2.5) is recorded as two R1 events with kinds, counts and positions only, never a label or a text: `PLANNING_CLARIFICATION_ASKED` (actor `SYSTEM_DETERMINISTIC`, aggregate the asking attempt; `flowId`, `turn`, `questions[{kind, optionCount, multiple}]`) when questions are stored, and `PLANNING_CLARIFICATION_ANSWERED` (actor `USER`; `flowId`, `turn`, `draftNow`, `answers[{kind, chosen[], other}]`, one per question asked, in order) when they are answered or skipped with «بدون پاسخ بساز». `PLANNING_DRAFT_CREATED` version 2 adds `flowId` and `clarificationTurns`. `flowId` is the first attempt of the flow, so the events of one flow still join after the attempts are purged (R3).
+28c. Output schema `2026-10-14.1`, prompt `2026-10-14.1`. The prompt states the question shape, the kinds, when to offer options and that the program adds «چیز دیگر…» itself.
+
 ## API surface
 
 - `POST /api/v1/planning/attempts` additionally accepts `previousAttemptId`, `answers[] { questionId, text }` and `draftNow`, and may return `429` and `503`.
 - `PlanningAttemptDto` adds `outcome` and `clarification { questions[], blockReason, message, turn }`.
 - `PlanningActiveDto` adds `clarification` and `sampleGenerator`.
+- STEP-18: `PlanningQuestion` adds `reason`, `kind`, `options`, `multiple`; `answers[]` items add `options` (positions) and `text` becomes optional.
 
-Persian UI terms: the questions screen is «چند پرسش پیش از ساخت پیش‌نویس», draft now is «همین حالا پیش‌نویس بساز».
+Persian UI terms: the questions screen is «سه پرسش کوتاه» (by count), draft now is «بدون پاسخ بساز» (STEP-18; before, «همین حالا پیش‌نویس بساز»).
 
 ## Recorded deviations and assumptions
 

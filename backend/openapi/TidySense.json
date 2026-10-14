@@ -7821,8 +7821,7 @@
       },
       "PlanningAnswer": {
         "required": [
-          "questionId",
-          "text"
+          "questionId"
         ],
         "type": "object",
         "properties": {
@@ -7830,7 +7829,21 @@
             "type": "string"
           },
           "text": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
           }
         }
       },
@@ -8697,6 +8710,27 @@
           },
           "text": {
             "type": "string"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "multiple": {
+            "type": "boolean"
           }
         }
       },

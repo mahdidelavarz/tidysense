@@ -6,6 +6,7 @@
 // solar calendar with Persian digits.
 const shortFormatter = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long', year: 'numeric' })
 const longFormatter = new Intl.DateTimeFormat('fa-IR', { weekday: 'long', day: 'numeric', month: 'long' })
+const dayMonthFormatter = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long' })
 const numberFormatter = new Intl.NumberFormat('fa-IR', { useGrouping: false })
 
 /** Parses an ISO `yyyy-MM-dd` local date at local midnight (never UTC, which could shift the day). */
@@ -29,6 +30,11 @@ export function formatLocalDate(value: string | null | undefined): string {
 /** Formats an ISO local date with its weekday, such as «دوشنبه ۶ مهر». */
 export function formatLongDate(value: string): string {
   return longFormatter.format(parseIsoDate(value))
+}
+
+/** Formats an ISO local date as day and month only, such as «۶ مهر». */
+export function formatDayMonth(value: string): string {
+  return dayMonthFormatter.format(parseIsoDate(value))
 }
 
 /** Renders a number with Persian digits. */

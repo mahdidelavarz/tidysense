@@ -4712,7 +4712,8 @@ export interface components {
         };
         PlanningAnswer: {
             questionId: string;
-            text: string;
+            text?: null | string;
+            options?: (number | string)[];
         };
         PlanningApplyResultDto: {
             /** Format: uuid */
@@ -4912,6 +4913,10 @@ export interface components {
         PlanningQuestion: {
             id: string;
             text: string;
+            reason?: null | string;
+            kind?: null | string;
+            options?: string[];
+            multiple?: boolean;
         };
         PlanningRecurrence: {
             type: string;

@@ -15,7 +15,7 @@ public sealed record PlanningPrompt(string System, string User, string ContextRe
 /// </summary>
 public static class PlanningPromptRenderer
 {
-    public const string PromptVersion = "2026-10-09.1";
+    public const string PromptVersion = "2026-10-14.1";
     public const string DataOpen = "<planning_request_data>";
     public const string DataClose = "</planning_request_data>";
 
@@ -69,10 +69,20 @@ public static class PlanningPromptRenderer
         var data = new
         {
             intention = request.Intention,
+            // The user's answers as text: the labels they chose and what they wrote themselves (028 §2.3).
             clarificationTurns = request.Turns.Select(turn => new
             {
-                questions = turn.Questions,
-                answers = turn.Answers
+                questions = turn.Questions.Select(x => new { id = x.Id, text = x.Text, options = x.Options }).ToArray(),
+                answers = turn.Answers.Select(answer =>
+                {
+                    var options = turn.Questions.FirstOrDefault(x => x.Id == answer.QuestionId)?.Options ?? [];
+                    return new
+                    {
+                        questionId = answer.QuestionId,
+                        chosen = answer.Options.Where(i => i >= 0 && i < options.Count).Select(i => options[i]).ToArray(),
+                        text = answer.Text
+                    };
+                }).ToArray()
             }).ToArray(),
             clarificationAllowed = request.AllowClarification,
             today = context.Today,
@@ -115,7 +125,11 @@ public static class PlanningPromptRenderer
           "kind": "DRAFT" | "CLARIFICATION" | "INPUT_BLOCKED",
           "message": string or null,
           "blockReason": "TOO_VAGUE" | "CONTRADICTORY" | "UNSUPPORTED_REQUEST" | "MISSING_CONSTRAINT" | null,
-          "questions": [ { "id": "q1", "text": string } ],
+          "questions": [ {
+            "id": "q1" | "q2" | "q3", "text": string, "reason": string or null,
+            "kind": "TIMING" | "RECURRENCE" | "CONSTRAINT" | "CONTENT" | "OWNERSHIP" | "ENTITY_TYPE" | "CONTRADICTION",
+            "options": [ string ], "multiple": boolean
+          } ],
           "draft": {
             "summary": string,
             "proposals": [ {
@@ -142,18 +156,28 @@ public static class PlanningPromptRenderer
 
         EXACT SHAPE
         The validating program rejects the whole output for any deviation, so follow the shape literally:
-        - Every object holds only the fields shown for it above. Never add a field of your own (no reviewDate, priority, duration, estimate, status, notes, tags, id, reason, or any other name), at any level.
+        - Every object holds only the fields shown for it above. Never add a field of your own (no reviewDate, priority, duration, estimate, status, notes, tags, or any other name), at any level.
         - Every value written between double quotes above is a closed list: use one of the listed values exactly, in capitals, and never invent a new one. This includes "code" in warnings: if none of the five codes fits, do not add a warning.
         - "draftId", "title", "summary" and every "text" are JSON strings and are never null or missing where the shape does not say "or null". "kind", "entityType", "source", "confidence", "factType", "strength", "severity" and "code" are always present.
         - A date is a JSON string "YYYY-MM-DD" in the Gregorian calendar, like the dates in the input, with four-digit year and two-digit month and day. Never a time, a weekday name, a Persian-calendar date or a relative word.
         - "timesOfDay" items are 24-hour "HH:mm" strings with two digits each, such as "07:30"; never "7:30", "07:30:00" or a word.
         - "daysOfWeek", "weekdays" and "dayOfMonth" hold JSON whole numbers, never strings or names. "underContext" is true or false.
+        - "options" holds JSON strings and "multiple" is true or false.
         - "questions", "proposals", "facts", "assumptions", "warnings" and "unresolvedQuestions" are JSON arrays, empty when there is nothing to put in them.
         - "draftId" inside assumptions, warnings and unresolvedQuestions is null or the draftId of a proposal or fact in this same output. "parentDraftId" and "scopeDraftId" are null or the draftId of a proposal in this same output.
 
         KIND
         - DRAFT: "draft" is an object; "questions" is empty; "blockReason" is null.
         - CLARIFICATION: allowed only when clarificationAllowed is true. "draft" is null; "questions" has 1 to 3 items with ids q1, q2, q3, each at most 300 characters. "message" may state a boundary in at most 500 characters.
+
+        QUESTIONS
+        - Questions asked together belong to the same draft and each can be answered on its own; never three unrelated questions.
+        - "kind" says what the answer decides: TIMING (dates and deadlines), RECURRENCE (how often, which days or times), CONSTRAINT (the user's availability or another hard limit), CONTENT (what the work actually is, including the starting point), OWNERSHIP (which Goal or Project it belongs to), ENTITY_TYPE (Task, Routine, Project or Goal), CONTRADICTION (two statements that cannot both hold).
+        - "reason" is null or one short line, at most 120 characters, saying what the answer changes in the draft.
+        - "options" is empty, or 2 to 7 likely answers the user can pick, each at most 40 characters and all different. Prefer options whenever the likely answers are few and concrete; leave it empty when only the user's own words can answer.
+        - Never add an option meaning "something else", "other" or "write your own": the program always offers that itself. An option such as «نمی‌دانم» is allowed when it is a useful answer.
+        - "multiple" is true only when several options may be chosen together (for example several weekdays); it is false when "options" is empty.
+        - In clarificationTurns each answer gives the labels the user chose in "chosen" and what they wrote themselves in "text"; either may be empty. A question with no answer was skipped: do not ask it again, use a visible assumption.
         - INPUT_BLOCKED: "draft" is null; "questions" is empty; "blockReason" is set and "message" (at most 500 characters) names the single blocking problem.
 
         WHEN TO ASK

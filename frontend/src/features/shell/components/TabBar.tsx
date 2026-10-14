@@ -10,6 +10,7 @@ import { AttentionCount, PlaceLink, places, useAttentionCount } from './Navigati
 export function TabBar() {
   const openCreate = useUiStore(state => state.openCreate)
   const attention = useAttentionCount()
+  if (useUiStore(state => state.focused)) return null
 
   return (
     <>

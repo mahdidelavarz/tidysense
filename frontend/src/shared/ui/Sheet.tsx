@@ -8,8 +8,10 @@ import { EntityIcon, type EntityKind } from './EntityUi'
  * panel from tablet width up. Use ConfirmationDialog instead for a short
  * yes/no decision.
  */
-export function Sheet({ title, description, entity, children, onClose, locked = false }: {
+export function Sheet({ title, description, entity, aside, children, onClose, locked = false }: {
   title: string
+  /** A small mark beside the close button, such as the step of a flow («۴ از ۴»). */
+  aside?: ReactNode
   /** What the sheet makes or acts on: its icon sits before the title and its colour marks the fields. */
   entity?: EntityKind
   description?: string
@@ -48,6 +50,7 @@ export function Sheet({ title, description, entity, children, onClose, locked = 
             <h2 className="display-title text-[1.4375rem]" id={titleId}>{title}</h2>
             {description && <p className="mt-1 text-sm leading-6 text-text-secondary" id={descriptionId}>{description}</p>}
           </div>
+          {aside}
           <button className="icon-button -me-2 -mt-1" type="button" onClick={onClose} disabled={locked} aria-label="بستن">
             <X size={22} aria-hidden="true" />
           </button>

@@ -75,7 +75,7 @@ function FirstEntry() {
         <textarea
           ref={input}
           id="first-entry-intention"
-          className="first-input"
+          className="intent-input"
           rows={3}
           maxLength={2000}
           placeholder="هر چه در ذهن دارید بنویسید، یا یکی از این‌ها را انتخاب کنید…"

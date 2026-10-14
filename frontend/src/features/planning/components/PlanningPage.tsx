@@ -1,16 +1,15 @@
 import { Link } from '@tanstack/react-router'
-import { CircleCheck, CircleSlash, FileClock, LoaderCircle, Sparkles } from '../../../shared/ui/icons'
-import { type ReactNode, useState } from 'react'
+import { ArrowRight, CircleCheck, CircleSlash, FileClock, Sparkles, X } from '../../../shared/ui/icons'
+import { type ReactNode, useEffect, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatNumber } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
-import { useGoal } from '../../goals/hooks/goal-hooks'
+import { Stepper } from '../../../shared/ui/Stepper'
 import { AiFeedbackCard } from '../../feedback/components/AiFeedbackCard'
 import { PilotQuestion } from '../../pilot/components/PilotQuestion'
-import { useProject } from '../../projects/hooks/project-hooks'
 import {
   useCancelPlanningAttempt,
   useCancelPlanningDraft,
@@ -28,9 +27,12 @@ import { PlanningApplyDialog } from './PlanningApplyDialog'
 import { PlanningClarification } from './PlanningClarification'
 import { PlanningDraftReview } from './PlanningDraftReview'
 import { PlanningIntentForm } from './PlanningIntentForm'
+import { RememberedFactsCard } from './PlanningFactsSection'
 import { PlanningStartError } from './PlanningStartError'
 
 const pageTitle = 'برنامه‌ریزی'
+/** Every planning entry walks the same four steps (028 §3); a step the model skipped still shows as passed. */
+const steps = ['نوشتن', 'پرسش‌ها', 'مرور', 'تأیید'] as const
 
 /**
  * Planning page: one intention in, one reviewable draft out, and nothing
@@ -47,16 +49,23 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   const cancelDraft = useCancelPlanningDraft()
   const revise = useRevisePlanningDraft()
   const openCreate = useUiStore(state => state.openCreate)
+  const setFocused = useUiStore(state => state.setFocused)
+  // What the plan is about: the Goal or Project it was opened from, or the one chosen while writing.
+  const [scope, setScope] = useState<PlanningScopeInput>(goalId ? { goalId } : projectId ? { projectId } : {})
 
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [draftId, setDraftId] = useState<string | null>(null)
   // Once the user has chosen what to do, the page stops following the flow it found on arrival.
   const [detached, setDetached] = useState(false)
   const [replace, setReplace] = useState(false)
+  // The draft a rewrite from the review will replace, so it can be asked about once it has ended.
+  const [replacing, setReplacing] = useState<string | null>(null)
   const [intention, setIntention] = useState(initialIntention)
   // A draft the user ended without applying it: cancelled, or replaced by a new flow. It may be
   // asked about (an applied draft gets the pilot question instead), until the page is left.
   const [endedDraftId, setEndedDraftId] = useState<string | null>(null)
+  // The attempt being made answers questions, so the «پرسش‌ها» step is behind it.
+  const [answered, setAnswered] = useState(false)
 
   const found = detached ? undefined : active.data
   // Unanswered questions are resumed like a running attempt: by the id of the attempt that asked them.
@@ -68,6 +77,7 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
 
   const manual = () => openCreate('menu')
   const restart = () => {
+    setAnswered(false)
     setAttemptId(null)
     setDraftId(null)
     setDetached(true)
@@ -80,14 +90,15 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   }
   const begin = (text: string) => {
     setIntention(text)
-    const replaced = replace ? active.data?.draft?.id ?? null : null
-    start.mutate({ intention: text, goalId, projectId, replaceActive: replace }, {
+    const replaced = replace ? replacing ?? active.data?.draft?.id ?? null : null
+    start.mutate({ intention: text, goalId: scope.goalId, projectId: scope.projectId, replaceActive: replace }, {
       onSuccess: data => {
         if (replaced) setEndedDraftId(replaced)
         setAttemptId(data.id)
         setDraftId(null)
         setDetached(true)
         setReplace(false)
+        setReplacing(null)
       },
       onError: error => {
         // An unfinished flow appeared in the meantime (for example in another tab): ask, never replace silently.
@@ -103,6 +114,7 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   /** Answers the questions of an attempt, or asks for a draft without answering them. */
   const answer = (asked: PlanningAttemptDto, answers: PlanningAnswer[], draftNow: boolean) => {
     setIntention(asked.intention)
+    setAnswered(true)
     start.mutate({
       intention: asked.intention, goalId: asked.goalId ?? undefined, projectId: asked.projectId ?? undefined,
       replaceActive: false, previousAttemptId: asked.id, answers, draftNow,
@@ -125,31 +137,45 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
     applied: apply.result !== null,
   })
 
-  const form = (scopeTitle?: string) => (
-    <PlanningIntentForm
-      // Remounts with the preserved text after a failure or a cancellation.
-      key={intention}
-      initialIntention={intention}
-      scopeTitle={scopeTitle}
-      pending={start.isPending}
-      error={start.error && toApiError(start.error).code !== 'PLANNING_DRAFT_ACTIVE' ? start.error : null}
-      onSubmit={begin}
-      onManual={manual}
-    />
-  )
+  // Questions, a draft being made and a draft under review have the phone screen to themselves.
+  const focused = phase === 'clarifying' || phase === 'queued' || phase === 'running' || (phase !== 'commandSucceeded' && draft.data?.status === 'REVIEWABLE')
+  useEffect(() => {
+    setFocused(focused)
+    return () => setFocused(false)
+  }, [focused, setFocused])
 
-  const frame = (content: ReactNode) => (
+  /** The first step: the page's own header, then the step it is on. */
+  const frame = (content: ReactNode, step = 0) => (
     <div className="page">
-      <PageHeader
-        title={pageTitle}
-        description="بگویید می‌خواهید روی چه چیزی پیش بروید؛ یک پیش‌نویس می‌بینید، آن را مرور و ویرایش می‌کنید و فقط با تأیید خودتان چیزی ساخته می‌شود."
-      />
+      <PageHeader title={pageTitle} description="از یک جمله تا یک برنامه‌ی روشن" />
+      <div className="mb-4"><Stepper steps={steps} current={step} label="مراحل برنامه‌ریزی" /></div>
       {endedDraftId && <AiFeedbackCard key={endedDraftId} surface="PLANNING_DRAFT" subjectId={endedDraftId} />}
       {content}
     </div>
   )
 
-  if (apply.result) return frame(<PlanningResult result={apply.result} draftId={currentDraftId} onAgain={restart} />)
+  /**
+   * A later step: the way back to the writing and the step it is on, no page
+   * header. `end` is the step's own exit (close, or the manual path).
+   */
+  const flow = (content: ReactNode, step: number, onBack: () => void, end: ReactNode) => (
+    <div className="page">
+      <div className="flow-bar">
+        <button className="flow-back" type="button" onClick={onBack}>
+          <ArrowRight size={20} aria-hidden="true" />
+          ویرایش نوشته
+        </button>
+        {end}
+      </div>
+      <div className="mb-4"><Stepper steps={steps} current={step} label="مراحل برنامه‌ریزی" /></div>
+      {/* A draft just replaced by this flow may be asked about here, beside the new one being made. */}
+      {endedDraftId && <AiFeedbackCard key={endedDraftId} surface="PLANNING_DRAFT" subjectId={endedDraftId} />}
+      {content}
+    </div>
+  )
+  const manualButton = <button className="secondary-button min-h-10 rounded-xl px-3 text-xs" type="button" onClick={manual}>خودم دستی می‌سازم</button>
+
+  if (apply.result) return frame(<PlanningResult result={apply.result} draftId={currentDraftId} onAgain={restart} />, steps.length)
   if (!detached && active.isPending) return frame(<LoadingState text="در حال آماده‌سازی برنامه‌ریزی…" />)
   if ((!detached && active.isError) || attempt.isError || draft.isError) {
     return frame(
@@ -187,10 +213,10 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   }
 
   if (phase === 'queued' || phase === 'running' || (currentAttemptId !== null && attempt.isPending) || (currentDraftId !== null && draft.isPending)) {
-    return frame(
+    return flow(
       <section className="state-panel" aria-label="ساخت پیش‌نویس">
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-accent-tint text-accent-strong" aria-hidden="true">
-          <LoaderCircle size={26} className="animate-spin" />
+        <div className="ai-tile ai-aura size-14 rounded-2xl" aria-hidden="true">
+          <Sparkles size={26} />
         </div>
         <p className="mt-4 text-lg font-bold" role="status">{phase === 'queued' ? 'در صف ساخت پیش‌نویس…' : 'در حال ساخت پیش‌نویس…'}</p>
         <p className="mt-1 max-w-sm text-sm text-text-secondary">تا پیش‌نویس کامل و بررسی نشود چیزی نمایش داده نمی‌شود. می‌توانید صفحه را ببندید و بعداً برگردید.</p>
@@ -206,6 +232,10 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
           </button>
         )}
       </section>,
+      // Made from answers, the questions are behind; otherwise they may still come.
+      answered ? 2 : 1,
+      () => { setIntention(attempt.data?.intention ?? intention); restart() },
+      manualButton,
     )
   }
 
@@ -231,20 +261,24 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   if (phase === 'clarifying' && attempt.data?.clarification) {
     const asked = attempt.data
     const clarification = attempt.data.clarification
-    return frame(
+    return flow(
       <PlanningClarification
         // A new set of questions starts with empty answers.
         key={asked.id}
-        attempt={asked}
         clarification={clarification}
         pending={start.isPending}
         error={start.error}
         onAnswer={answers => answer(asked, answers, false)}
         onDraftNow={() => answer(asked, [], true)}
-        onEdit={() => { setIntention(asked.intention); restart() }}
-        onManual={manual}
-        onCancel={() => { setIntention(''); restart() }}
       />,
+      1,
+      () => { setIntention(asked.intention); restart() },
+      <span className="flex items-center gap-1">
+        {manualButton}
+        <button className="icon-button" type="button" aria-label="انصراف از برنامه‌ریزی" disabled={start.isPending} onClick={() => { setIntention(''); restart() }}>
+          <X size={22} aria-hidden="true" />
+        </button>
+      </span>,
     )
   }
 
@@ -288,55 +322,55 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
 
   if (draft.data) {
     const current = draft.data
-    return frame(
+    const written = attempt.data?.intention ?? intention
+    return flow(
       <>
         <PlanningDraftReview
           draft={current}
+          intention={written}
           busy={revise.isPending || cancelDraft.isPending}
           error={revise.error ?? cancelDraft.error}
           onEdit={(edit, onStored) => revise.mutate({ draft: current, edit }, { onSuccess: onStored })}
           onApprove={() => apply.request(Number(current.revision))}
           onCancel={() => cancelDraft.mutate(current, { onSuccess: () => setEndedDraftId(current.id) })}
-          onManual={manual}
         />
         <PlanningApplyDialog flow={apply} draft={current} />
       </>,
+      apply.open ? 3 : 2,
+      // Rewriting starts a new flow that replaces this draft, which stays until the new one is asked for.
+      () => {
+        setIntention(written)
+        restart()
+        setReplace(true)
+        setReplacing(current.id)
+      },
+      manualButton,
     )
   }
 
   return frame(
     <div className="space-y-4">
-      <p className="flex items-start gap-3 rounded-2xl border border-accent/20 bg-linear-to-bl from-accent-tint to-surface p-4 text-sm leading-7 text-text-secondary">
-        <Sparkles size={20} className="mt-1 shrink-0 text-accent" aria-hidden="true" />
-        {active.data?.sampleGenerator === false
-          ? 'هوش مصنوعی فقط پیشنهاد می‌دهد؛ تا پیش‌نویس را مرور و تأیید نکنید، چیزی ساخته یا تغییر داده نمی‌شود.'
-          : 'در این نسخه پیش‌نویس به‌صورت نمونه و بدون هوش مصنوعی ساخته می‌شود تا مسیر مرور و تأیید قابل استفاده باشد.'}
-      </p>
       {replace && <p className="notice">با ساخت پیش‌نویس تازه، پیش‌نویس قبلی کنار گذاشته می‌شود.</p>}
-      {goalId
-        ? <GoalScopedForm goalId={goalId} render={form} />
-        : projectId
-          ? <ProjectScopedForm projectId={projectId} render={form} />
-          : form()}
+      <PlanningIntentForm
+        // Remounts with the preserved text after a failure or a cancellation.
+        key={intention}
+        initialIntention={intention}
+        scope={scope}
+        pending={start.isPending}
+        error={start.error && toApiError(start.error).code !== 'PLANNING_DRAFT_ACTIVE' ? start.error : null}
+        onScope={setScope}
+        onSubmit={begin}
+      />
+      {(scope.goalId || scope.projectId) && <RememberedFactsCard scope={scope} />}
+      {/* The sample generator is never presented as the work of a model (STEP-09). */}
+      {active.data?.sampleGenerator !== false && (
+        <p className="px-2 text-center text-xs leading-6 text-text-secondary">در این نسخه پیش‌نویس به‌صورت نمونه و بدون هوش مصنوعی ساخته می‌شود تا مسیر مرور و تأیید قابل استفاده باشد.</p>
+      )}
+      <button className="mx-auto flex min-h-11 items-center px-3 text-sm font-extrabold text-text-secondary hover:text-text-primary" type="button" onClick={manual}>
+        یا خودم دستی می‌سازم
+      </button>
     </div>,
   )
-
-}
-
-/** Reads the Goal a contextual planning flow starts from, so the form can name it. */
-function GoalScopedForm({ goalId, render }: { goalId: string; render: (title?: string) => ReactNode }) {
-  const goal = useGoal(goalId)
-  if (goal.isPending) return <LoadingState text="در حال دریافت هدف…" />
-  if (goal.isError) return <ErrorState title="این هدف پیدا نشد." action={<Link className="text-link" to="/goals">بازگشت به هدف‌ها</Link>} />
-  return render(goal.data.title)
-}
-
-/** Reads the Project a contextual planning flow starts from, so the form can name it. */
-function ProjectScopedForm({ projectId, render }: { projectId: string; render: (title?: string) => ReactNode }) {
-  const project = useProject(projectId)
-  if (project.isPending) return <LoadingState text="در حال دریافت پروژه…" />
-  if (project.isError) return <ErrorState title="این پروژه پیدا نشد." action={<Link className="text-link" to="/projects">بازگشت به پروژه‌ها</Link>} />
-  return render(project.data.title)
 }
 
 /** Shown only after the command itself answered: what was actually created. */

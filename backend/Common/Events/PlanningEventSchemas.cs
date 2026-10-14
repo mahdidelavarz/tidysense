@@ -10,6 +10,8 @@ public static class PlanningEventTypes
     public const string DraftApplied = "PLANNING_DRAFT_APPLIED";
     public const string FactCreated = "PLANNING_FACT_CREATED";
     public const string FactRemoved = "PLANNING_FACT_REMOVED";
+    public const string ClarificationAsked = "PLANNING_CLARIFICATION_ASKED";
+    public const string ClarificationAnswered = "PLANNING_CLARIFICATION_ANSWERED";
 }
 
 public static class PlanningDraftEndReasons
@@ -42,6 +44,27 @@ public static class PlanningEventSchemas
             new EventPayloadFieldPolicy("generator", true, IsShortText),
             new EventPayloadFieldPolicy("contextScope", true, value => Allowed(value, ContextScopes)),
             Count("proposalCount"), Count("factCount"));
+        // Version 2 (STEP-18) adds the flow and how many clarification turns came before the draft.
+        yield return new EventPayloadSchema(PlanningEventTypes.DraftCreated, 2,
+            new EventPayloadFieldPolicy("generator", true, IsShortText),
+            new EventPayloadFieldPolicy("contextScope", true, value => Allowed(value, ContextScopes)),
+            Count("proposalCount"), Count("factCount"), Id("flowId"), Count("clarificationTurns"));
+        // Clarification measurement (027 §5, 028 §2.5): kinds, option counts and chosen positions only.
+        yield return new EventPayloadSchema(PlanningEventTypes.ClarificationAsked, 1,
+            Id("flowId"), Turn(),
+            new EventPayloadFieldPolicy("questions", true, value => Items(value, item =>
+                Only(item, "kind", "optionCount", "multiple") && IsKind(item.GetProperty("kind")) &&
+                item.GetProperty("optionCount").ValueKind == JsonValueKind.Number &&
+                item.GetProperty("optionCount").TryGetInt32(out var count) && count is >= 0 and <= 7 &&
+                IsBoolean(item.GetProperty("multiple")))));
+        yield return new EventPayloadSchema(PlanningEventTypes.ClarificationAnswered, 1,
+            Id("flowId"), Turn(),
+            new EventPayloadFieldPolicy("draftNow", true, IsBoolean),
+            new EventPayloadFieldPolicy("answers", true, value => Items(value, item =>
+                Only(item, "kind", "chosen", "other") && IsKind(item.GetProperty("kind")) &&
+                item.GetProperty("chosen") is { ValueKind: JsonValueKind.Array } chosen && chosen.GetArrayLength() <= 7 &&
+                chosen.EnumerateArray().All(x => x.ValueKind == JsonValueKind.Number && x.TryGetInt32(out var i) && i is >= 0 and < 7) &&
+                IsBoolean(item.GetProperty("other")))));
         yield return new EventPayloadSchema(PlanningEventTypes.DraftRevised, 1,
             Count("revision"), Count("includedCount"), Count("excludedCount"));
         yield return new EventPayloadSchema(PlanningEventTypes.DraftCancelled, 1,
@@ -62,6 +85,32 @@ public static class PlanningEventSchemas
         yield return new EventPayloadSchema(PlanningEventTypes.FactRemoved, 1,
             new EventPayloadFieldPolicy("factType", true, value => Allowed(value, FactTypes)));
     }
+
+    private static readonly HashSet<string> QuestionKinds = new(StringComparer.Ordinal)
+    {
+        "TIMING", "RECURRENCE", "CONSTRAINT", "CONTENT", "OWNERSHIP", "ENTITY_TYPE", "CONTRADICTION",
+        // A question stored before kinds existed.
+        "UNKNOWN"
+    };
+
+    private static EventPayloadFieldPolicy Id(string name) => new(name, true, value =>
+        value.ValueKind == JsonValueKind.String && Guid.TryParse(value.GetString(), out var id) && id != Guid.Empty);
+
+    private static EventPayloadFieldPolicy Turn() => new("turn", true, value =>
+        value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var turn) && turn is >= 1 and <= 3);
+
+    /// <summary>One to three objects, one per question, each passing the item rule.</summary>
+    private static bool Items(JsonElement value, Func<JsonElement, bool> item) =>
+        value.ValueKind == JsonValueKind.Array && value.GetArrayLength() is >= 1 and <= 3 &&
+        value.EnumerateArray().All(x => x.ValueKind == JsonValueKind.Object && item(x));
+
+    private static bool Only(JsonElement item, params string[] names) =>
+        item.EnumerateObject().Select(x => x.Name).Order(StringComparer.Ordinal)
+            .SequenceEqual(names.Order(StringComparer.Ordinal), StringComparer.Ordinal);
+
+    private static bool IsKind(JsonElement value) => Allowed(value, QuestionKinds);
+
+    private static bool IsBoolean(JsonElement value) => value.ValueKind is JsonValueKind.True or JsonValueKind.False;
 
     private static EventPayloadFieldPolicy Count(string name) => new(name, true, value =>
         value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var count) && count >= 0);

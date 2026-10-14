@@ -82,11 +82,29 @@ public sealed class DeterministicPlanningGenerator : IPlanningGenerator
         PlanningFixtures.Clarify when request.Turns.Count == 0 && request.AllowClarification =>
             new PlanningClarification(
             [
-                new PlanningQuestion("q1", "هر هفته چند روز می‌توانید برای این کار وقت بگذارید؟"),
+                // One of each answer shape: several options, one option, and free text only.
+                new PlanningQuestion("q1", "کدام روزهای هفته برای این کار وقت دارید؟")
+                {
+                    Kind = PlanningQuestionKinds.Recurrence, Reason = "تا روتین‌ها همان روزها بنشینند.", Multiple = true,
+                    Options = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"]
+                },
                 new PlanningQuestion("q2", "آیا تاریخ مشخصی برای رسیدن به نتیجه در نظر دارید؟")
+                {
+                    Kind = PlanningQuestionKinds.Timing, Reason = "تا مهلت‌ها درست بنشینند.",
+                    Options = ["تا یک ماه دیگر", "تا سه ماه دیگر", "تاریخ مشخصی ندارم"]
+                },
+                new PlanningQuestion("q3", "از کجا شروع می‌کنید؟")
+                {
+                    Kind = PlanningQuestionKinds.Content, Reason = "تا قدم اول نه خیلی ساده باشد نه خیلی سخت."
+                }
             ], null, null),
         PlanningFixtures.ClarifyAlways => new PlanningClarification(
-            [new PlanningQuestion("q1", $"پرسش شماره {request.Turns.Count + 1}: دقیق‌تر توضیح می‌دهید؟")], null, null),
+            [
+                new PlanningQuestion("q1", $"پرسش شماره {request.Turns.Count + 1}: دقیق‌تر توضیح می‌دهید؟")
+                {
+                    Kind = PlanningQuestionKinds.Content
+                }
+            ], null, null),
         _ => null
     };
 
