@@ -85,7 +85,7 @@ Confirmed with the owner on 2026-10-03 unless marked otherwise.
 - **Clarification with the sample generator** exists only through the development fixtures `clarify`, `clarify-always` and `input-blocked`.
 - **No new product event** for a clarification, a rejected output or an AI failure; they are operational records. `PLANNING_DRAFT_CREATED` already names the generator.
 - **Raw prompts and responses are not stored**, not even short-lived.
-- **Sending text to the provider** is disclosed on the planning screen. Consent and data-location review for the pilot are STEP-12 matters. *(Not yet discussed with the owner.)*
+- **Sending text to the provider** is disclosed on the planning screen. Consent and data-location review for the pilot are STEP-12 matters. *(Not yet discussed with the owner.)* **Superseded by STEP-13 (Discussion 027):** no consent step and no disclosure line in planning; the privacy page discloses without naming the provider.
 - **The generation timeout of the runner is 120 seconds and a lost attempt is failed after 3 minutes**, so the runtime's own deadline (100 seconds) is the one that reports.
 
 ## Verification evidence

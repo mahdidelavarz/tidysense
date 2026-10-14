@@ -577,8 +577,7 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
         var user = new User
         {
             Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000),
-            IsActive = true, SetupComplete = true, CreatedAt = now, AiConsentProvider = "deepseek",
-            AiConsentNoticeVersion = "2026-10-09.1", AiConsentAt = now, AiConsentRevision = 1
+            IsActive = true, SetupComplete = true, CreatedAt = now
         };
         var run = new OperationsRecord { Id = Guid.NewGuid(), Kind = OperationsRecordKinds.MaintenanceRun, CreatedAt = now };
         PilotFeedbackResponse Answer(Action<PilotFeedbackResponse>? set = null)
@@ -603,10 +602,6 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
         Assert.Equal("CK_PilotFeedbackResponses_Answer", await ConstraintAsync());
         db.Add(Answer(x => { x.SubjectId = Guid.NewGuid(); x.Instrument = "H9_OTHER"; }));
         Assert.Equal("CK_PilotFeedbackResponses_Instrument", await ConstraintAsync());
-        // Consent is a provider, a notice version and a time together, or nothing.
-        var half = await db.Users.SingleAsync(x => x.Id == user.Id, cancellationToken);
-        half.AiConsentAt = null;
-        Assert.Equal("CK_Users_AiConsent", await ConstraintAsync());
 
         await migrator.MigrateAsync("20261008155127_Step11ReconcileExposure", cancellationToken);
         // The earlier schema knows no digest record; the account and the maintenance run are untouched.
@@ -617,11 +612,112 @@ public sealed class DeliveryMigrationTests(PostgresWebApplicationFactory factory
         Assert.Equal(1, await db.Database.SqlQuery<int>(
             $"SELECT COUNT(*)::int AS \"Value\" FROM \"Users\" WHERE \"Id\" = {user.Id}").SingleAsync(cancellationToken));
         await migrator.MigrateAsync(cancellationToken: cancellationToken);
-        var restored = await db.Users.AsNoTracking().SingleAsync(x => x.Id == user.Id, cancellationToken);
-        Assert.Null(restored.AiConsentProvider);
-        Assert.Equal(0, restored.AiConsentRevision);
+        Assert.True(await db.Users.AnyAsync(x => x.Id == user.Id, cancellationToken));
         Assert.Equal(0, await db.PilotFeedbackResponses.CountAsync(x => x.UserId == user.Id, cancellationToken));
         await db.OperationsRecords.Where(x => x.Id == run.Id).ExecuteDeleteAsync(cancellationToken);
+        await db.Users.Where(x => x.Id == user.Id).ExecuteDeleteAsync(cancellationToken);
+
+        async Task<string?> ConstraintAsync()
+        {
+            var failure = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(cancellationToken));
+            db.ChangeTracker.Clear();
+            return ((Npgsql.PostgresException)failure.InnerException!).ConstraintName;
+        }
+    }
+
+    [Fact]
+    public async Task Step13_retires_the_consent_state_and_keeps_the_account()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync("20261009084704_Step11PilotGaps", cancellationToken);
+
+        // An account that agreed under the Step 11 consent gate.
+        var id = Guid.NewGuid();
+        var phone = "+989" + Random.Shared.Next(100000000, 1000000000);
+        var now = DateTimeOffset.UtcNow;
+        await db.Database.ExecuteSqlInterpolatedAsync($@"
+            INSERT INTO ""Users"" (""Id"", ""PhoneNumber"", ""IsActive"", ""SetupComplete"", ""CreatedAt"", ""SessionEpoch"",
+                ""AiConsentProvider"", ""AiConsentNoticeVersion"", ""AiConsentAt"", ""AiConsentRevision"")
+            VALUES ({id}, {phone}, TRUE, TRUE, {now}, 0, 'deepseek', '2026-10-09.1', {now}, 1)", cancellationToken);
+
+        // The current-state columns and their constraint go; the account stays.
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        Assert.Equal(0, await ConsentColumnsAsync());
+        Assert.Equal(0, await ConsentConstraintsAsync());
+        Assert.True(await db.Users.AnyAsync(x => x.Id == id, cancellationToken));
+
+        // Rolling back restores the schema empty: the earlier gate would ask again.
+        await migrator.MigrateAsync("20261009084704_Step11PilotGaps", cancellationToken);
+        Assert.Equal(4, await ConsentColumnsAsync());
+        Assert.Equal(1, await ConsentConstraintsAsync());
+        Assert.Equal(1, await db.Database.SqlQuery<int>($@"
+            SELECT COUNT(*)::int AS ""Value"" FROM ""Users""
+            WHERE ""Id"" = {id} AND ""AiConsentProvider"" IS NULL AND ""AiConsentRevision"" = 0").SingleAsync(cancellationToken));
+
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        await db.Users.Where(x => x.Id == id).ExecuteDeleteAsync(cancellationToken);
+
+        Task<int> ConsentColumnsAsync() => db.Database.SqlQuery<int>($@"
+            SELECT COUNT(*)::int AS ""Value"" FROM information_schema.columns
+            WHERE table_name = 'Users' AND column_name LIKE 'AiConsent%'").SingleAsync(cancellationToken);
+        Task<int> ConsentConstraintsAsync() => db.Database.SqlQuery<int>($@"
+            SELECT COUNT(*)::int AS ""Value"" FROM pg_constraint WHERE conname = 'CK_Users_AiConsent'").SingleAsync(cancellationToken);
+    }
+
+    [Fact]
+    public async Task Step14_satisfaction_records_round_trip_with_their_constraints()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var user = new User
+        {
+            Id = Guid.NewGuid(), PhoneNumber = "+989" + Random.Shared.Next(100000000, 1000000000),
+            IsActive = true, SetupComplete = true, CreatedAt = now
+        };
+        db.Add(user);
+        await db.SaveChangesAsync(cancellationToken);
+        AiResponseFeedback Row(Action<AiResponseFeedback>? set = null)
+        {
+            var row = new AiResponseFeedback
+            {
+                Id = Guid.NewGuid(), UserId = user.Id, Surface = AiResponseFeedbackSurfaces.PlanningDraft,
+                SubjectId = Guid.NewGuid(), InstrumentVersion = 1, ShownOn = DateOnly.FromDateTime(now.UtcDateTime),
+                ShownAt = now
+            };
+            set?.Invoke(row);
+            return row;
+        }
+        var subject = Guid.NewGuid();
+        db.Add(Row(x => x.SubjectId = subject));
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Asked once per response; only an answer has a rating; a reason only for a low one.
+        db.Add(Row(x => x.SubjectId = subject));
+        Assert.Equal("IX_AiResponseFeedback_UserId_Surface_SubjectId", await ConstraintAsync());
+        db.Add(Row(x => x.Rating = 3));
+        Assert.Equal("CK_AiResponseFeedback_Rating", await ConstraintAsync());
+        db.Add(Row(x => { x.Outcome = AiResponseFeedbackOutcomes.Answered; x.Rating = 4; x.Reason = "خوب"; x.RespondedAt = now; }));
+        Assert.Equal("CK_AiResponseFeedback_Reason", await ConstraintAsync());
+        db.Add(Row(x => x.Outcome = AiResponseFeedbackOutcomes.Closed));
+        Assert.Equal("CK_AiResponseFeedback_Responded", await ConstraintAsync());
+        db.Add(Row(x => x.Surface = "RECONCILE_EXPLANATION"));
+        Assert.Equal("CK_AiResponseFeedback_Surface", await ConstraintAsync());
+
+        await migrator.MigrateAsync("20261013192816_Step13RetireAiConsent", cancellationToken);
+        Assert.Equal(0, await db.Database.SqlQuery<int>($@"
+            SELECT COUNT(*)::int AS ""Value"" FROM information_schema.tables WHERE table_name = 'AiResponseFeedback'")
+            .SingleAsync(cancellationToken));
+        Assert.True(await db.Users.AnyAsync(x => x.Id == user.Id, cancellationToken));
+        await migrator.MigrateAsync(cancellationToken: cancellationToken);
+        Assert.Equal(0, await db.AiResponseFeedback.CountAsync(x => x.UserId == user.Id, cancellationToken));
         await db.Users.Where(x => x.Id == user.Id).ExecuteDeleteAsync(cancellationToken);
 
         async Task<string?> ConstraintAsync()

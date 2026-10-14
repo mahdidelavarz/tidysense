@@ -11,7 +11,7 @@ test('the privacy notice is readable before signing in and from the account menu
   await expect(page.getByText(/۳۰ روز پس از پایان پیش‌نویس/)).toBeVisible()
   await expect(page.getByText(/۱۸۰ روز پس از بسته‌شدن/)).toBeVisible()
   // The isolated backend runs on the samples (see auth-e2e.ps1), and the notice says so instead of naming a provider.
-  await expect(page.getByText('در این نسخه هیچ متنی برای سرویس هوش مصنوعی بیرونی فرستاده نمی‌شود.')).toBeVisible()
+  await expect(page.getByText('در این نسخه هیچ متنی برای مدل هوش مصنوعی بیرونی فرستاده نمی‌شود.')).toBeVisible()
   const erasure = page.getByRole('region', { name: 'حذف حساب و داده‌ها' })
   await expect(erasure.getByText('support@tidysense.test')).toBeVisible()
   await expect(erasure.getByText(/حداکثر تا ۳۰ روز بعد از بین می‌روند/)).toBeVisible()

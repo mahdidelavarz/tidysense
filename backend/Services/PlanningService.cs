@@ -28,7 +28,6 @@ public sealed partial class PlanningService(
     PlanningAttemptCancellation cancellations,
     IPlanningGenerator generator,
     IOptionsMonitor<AiOptions> ai,
-    AiConsentPolicy consent,
     IHostEnvironment environment)
 {
     private const string ApplyActionType = "APPLY_PLANNING_DRAFT";
@@ -96,8 +95,6 @@ public sealed partial class PlanningService(
         // A switched-off AI path is said plainly before anything is stored; manual creation is unaffected.
         var settings = ai.CurrentValue;
         if (settings.GlobalKillSwitch || settings.Planning.KillSwitch) throw new AiUnavailableException();
-        // No text is stored for, or sent to, a provider the user has not agreed to.
-        await AiConsentService.RequireAsync(db, consent, owner, cancellationToken);
         var context = await contexts.BuildAsync(owner, goalId, projectId, cancellationToken);
 
         var now = dates.UtcNow;
@@ -517,14 +514,21 @@ public sealed partial class PlanningService(
             draft.UpdatedAt = now;
             draft.Version++;
             var items = built.Preview.Items;
+            // Removed before accepting: proposals the user left out, and those left out with their parent.
+            var excluded = built.Content.Proposals.Where(x =>
+                built.Evaluation.Proposals[x.DraftId].State == PlanningReviewStates.Excluded).ToList();
             return new CommandMutation("PlanningDraft", draft.Id, draft.Version,
-                PlanningEventTypes.DraftApplied, 1, JsonSerializer.Serialize(new
+                PlanningEventTypes.DraftApplied, 2, JsonSerializer.Serialize(new
                 {
                     goalCount = items.Count(x => x.EntityType == PlanningEntityTypes.Goal),
                     projectCount = items.Count(x => x.EntityType == PlanningEntityTypes.Project),
                     taskCount = items.Count(x => x.EntityType == PlanningEntityTypes.Task),
                     routineCount = items.Count(x => x.EntityType == PlanningEntityTypes.Routine),
-                    factCount = built.Preview.Facts.Count
+                    factCount = built.Preview.Facts.Count,
+                    excludedGoalCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Goal),
+                    excludedProjectCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Project),
+                    excludedTaskCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Task),
+                    excludedRoutineCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Routine)
                 }), now, cascades, confirmationId);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);

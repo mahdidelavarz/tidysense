@@ -140,3 +140,44 @@ test('clarifying questions are answered before a draft exists', async ({ page })
   // Leave the shared test user without an unfinished planning flow.
   expect((await cancelDraft(after.draft)).ok()).toBeTruthy()
 })
+
+test('a cancelled draft may be rated once, with a reason for a low rating, and only once a day', async ({ page }) => {
+  const session = await page.request.post('/api/v1/dev/test-session', { data: {}, headers: { Origin: origin } })
+  expect(session.ok()).toBeTruthy()
+  const active = await (await page.request.get('/api/v1/planning/active')).json() as
+    { draft: { id: string; revision: number } | null; attempt: { id: string } | null }
+  if (active.attempt) {
+    await page.request.post(`/api/v1/planning/attempts/${active.attempt.id}/cancel`, { data: {}, headers: { Origin: origin } })
+  }
+  if (active.draft) {
+    await page.request.post(`/api/v1/planning/drafts/${active.draft.id}/cancel`, {
+      data: { expectedRevision: active.draft.revision }, headers: { Origin: origin, 'Idempotency-Key': randomUUID() },
+    })
+  }
+  const question = page.getByRole('heading', { name: 'از پیش‌نویسی که کنار گذاشتید چقدر راضی بودید؟' })
+  const draftAndCancel = async (text: string) => {
+    await page.getByLabel('می‌خواهید روی چه چیزی پیش بروید؟').fill(text)
+    await page.getByRole('button', { name: 'ساخت پیش‌نویس' }).click()
+    await expect(page.getByRole('heading', { name: 'ساختار پیشنهادی' })).toBeVisible({ timeout: 15_000 })
+    // Nothing is asked while the draft is under review.
+    await expect(question).toHaveCount(0)
+    await page.getByRole('button', { name: 'لغو پیش‌نویس' }).click()
+    await expect(page.getByText('برنامه‌ریزی لغو شد.')).toBeVisible()
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/planning')
+  await draftAndCancel(`پیش‌نویسی برای کنار گذاشتن ${Date.now()}`)
+  await expect(question).toBeVisible()
+  await page.getByRole('button', { name: 'ضعیف' }).click()
+  await page.getByLabel(/چه چیزی خوب نبود؟/).fill('کارها برای یک هفته خیلی زیاد بودند')
+  await page.screenshot({ path: 'test-results/step-14-satisfaction.png', fullPage: true })
+  await page.getByRole('button', { name: 'ارسال' }).click()
+  await expect(page.getByText('ممنون؛ پاسخ شما ثبت شد.')).toBeVisible()
+
+  // A second draft ended the same day is not asked about.
+  await page.getByRole('button', { name: 'شروع دوباره' }).click()
+  await draftAndCancel(`پیش‌نویس دوم ${Date.now()}`)
+  await page.waitForLoadState('networkidle')
+  await expect(question).toHaveCount(0)
+})

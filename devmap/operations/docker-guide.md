@@ -74,7 +74,7 @@ It prints `{"code":"1234"}`. The code lives two minutes. The number `09120000001
 
 ### Try the real AI provider locally
 
-In `local.env` set `AI_PLANNING_PROVIDER=deepseek` and `DEEPSEEK_API_KEY=<your key>`, then run the start command again. Planning now shows the consent card first and makes paid calls after you agree. Do not commit the key; put it back to `mock` and empty afterwards.
+In `local.env` set `AI_PLANNING_PROVIDER=deepseek` and `DEEPSEEK_API_KEY=<your key>`, then run the start command again. Planning now makes paid calls to the provider. Do not commit the key; put it back to `mock` and empty afterwards.
 
 ### Try the Production profile locally
 

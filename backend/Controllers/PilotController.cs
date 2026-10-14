@@ -5,6 +5,7 @@ using TidySense.Common.Errors;
 using TidySense.DTOs.Pilot;
 using TidySense.Models;
 using TidySense.Services;
+using TidySense.Services.Ai;
 using TidySense.Services.Operations;
 
 namespace TidySense.Controllers;
@@ -14,7 +15,7 @@ namespace TidySense.Controllers;
 [Route("api/v1/pilot")]
 public sealed class PilotController(
     PilotFeedbackService feedback,
-    AiConsentPolicy consent,
+    IPlanningGenerator generator,
     IOptionsMonitor<OperationsOptions> operations,
     IOptionsMonitor<PilotOptions> pilot) : ControllerBase
 {
@@ -26,7 +27,7 @@ public sealed class PilotController(
     {
         var retention = operations.CurrentValue.Retention;
         var settings = pilot.CurrentValue;
-        return Ok(new PilotNoticeDto(AiConsentPolicy.NoticeVersion, consent.ProviderName, retention.R2DaysAfterClose,
+        return Ok(new PilotNoticeDto(PrivacyNotice.Version, generator is AiPlanningGenerator, retention.R2DaysAfterClose,
             retention.R3DaysAfterExpiry, retention.R4Days, settings.ErasureCompletionDays,
             string.IsNullOrWhiteSpace(settings.SupportContact) ? null : settings.SupportContact.Trim(),
             PilotInstruments.Version));

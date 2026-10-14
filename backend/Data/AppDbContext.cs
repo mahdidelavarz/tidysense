@@ -25,6 +25,7 @@ public sealed class AppDbContext(
     public DbSet<ReconcilePrompt> ReconcilePrompts => Set<ReconcilePrompt>();
     public DbSet<ReconcileExposure> ReconcileExposures => Set<ReconcileExposure>();
     public DbSet<PilotFeedbackResponse> PilotFeedbackResponses => Set<PilotFeedbackResponse>();
+    public DbSet<AiResponseFeedback> AiResponseFeedback => Set<AiResponseFeedback>();
     public DbSet<ActionConfirmation> ActionConfirmations => Set<ActionConfirmation>();
     public DbSet<PlanningAttempt> PlanningAttempts => Set<PlanningAttempt>();
     public DbSet<PlanningDraft> PlanningDrafts => Set<PlanningDraft>();
@@ -57,15 +58,8 @@ public sealed class AppDbContext(
             entity.HasKey(x => x.Id);
             entity.Property(x => x.PhoneNumber).HasMaxLength(16).IsRequired();
             entity.Property(x => x.DisplayName).HasMaxLength(200);
-            entity.Property(x => x.AiConsentProvider).HasMaxLength(64);
-            entity.Property(x => x.AiConsentNoticeVersion).HasMaxLength(16);
             entity.HasIndex(x => x.PhoneNumber).IsUnique();
-            entity.ToTable(t =>
-            {
-                t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0");
-                // Consent names a provider, a notice version and a time together, or nothing at all.
-                t.HasCheckConstraint("CK_Users_AiConsent", "(\"AiConsentProvider\" IS NULL) = (\"AiConsentNoticeVersion\" IS NULL) AND (\"AiConsentProvider\" IS NULL) = (\"AiConsentAt\" IS NULL)");
-            });
+            entity.ToTable(t => t.HasCheckConstraint("CK_Users_SessionEpoch", "\"SessionEpoch\" >= 0"));
         });
 
         modelBuilder.Entity<OtpChallenge>(entity =>
@@ -396,6 +390,31 @@ public sealed class AppDbContext(
             entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             entity.ToTable(t => t.HasCheckConstraint("CK_ReconcileExposures_Severity",
                 "\"Severity\" IN ('NONE', 'LIGHT', 'MEDIUM', 'RECOVERY')"));
+        });
+
+        modelBuilder.Entity<AiResponseFeedback>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Surface).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Outcome).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Reason).HasMaxLength(AiResponseFeedbackInstrument.ReasonMaxLength);
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            // Asked once per response.
+            entity.HasIndex(x => new { x.UserId, x.Surface, x.SubjectId }).IsUnique();
+            entity.HasIndex(x => new { x.UserId, x.Surface, x.ShownOn });
+            entity.HasIndex(x => x.ShownAt);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_AiResponseFeedback_Surface", "\"Surface\" IN ('PLANNING_DRAFT')");
+                t.HasCheckConstraint("CK_AiResponseFeedback_Outcome", "\"Outcome\" IN ('SHOWN', 'ANSWERED', 'CLOSED')");
+                // Only an answer has a rating; shown and closed are non-responses, never low scores.
+                t.HasCheckConstraint("CK_AiResponseFeedback_Rating",
+                    "(\"Outcome\" = 'ANSWERED') = (\"Rating\" IS NOT NULL) AND (\"Rating\" IS NULL OR \"Rating\" BETWEEN 1 AND 5)");
+                t.HasCheckConstraint("CK_AiResponseFeedback_Reason", "\"Reason\" IS NULL OR \"Rating\" <= 2");
+                t.HasCheckConstraint("CK_AiResponseFeedback_Responded", "(\"Outcome\" = 'SHOWN') = (\"RespondedAt\" IS NULL)");
+                t.HasCheckConstraint("CK_AiResponseFeedback_InstrumentVersion", "\"InstrumentVersion\" > 0");
+            });
         });
 
         modelBuilder.Entity<PilotFeedbackResponse>(entity =>

@@ -13,8 +13,7 @@ public sealed class AuthService(
     JwtTokenService tokens,
     AppDbContext dbContext,
     ICurrentUser currentUser,
-    OperatorAccess operators,
-    AiConsentPolicy consent)
+    OperatorAccess operators)
 {
     public Task<int> RequestOtpAsync(string phoneNumber, string ip, CancellationToken cancellationToken) =>
         otp.RequestAsync(phoneNumber, ip, cancellationToken);
@@ -41,9 +40,8 @@ public sealed class AuthService(
                 .SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow), cancellationToken);
     }
 
-    public CurrentUserDto ToDto(Models.User user) => ToDto(user, operators, consent);
+    public CurrentUserDto ToDto(Models.User user) => ToDto(user, operators);
 
-    public static CurrentUserDto ToDto(Models.User user, OperatorAccess operators, AiConsentPolicy consent) =>
-        new(user.Id, user.PhoneNumber, user.DisplayName, user.SetupComplete, operators.IsOperator(user.PhoneNumber),
-            consent.Required, consent.IsGranted(user));
+    public static CurrentUserDto ToDto(Models.User user, OperatorAccess operators) =>
+        new(user.Id, user.PhoneNumber, user.DisplayName, user.SetupComplete, operators.IsOperator(user.PhoneNumber));
 }

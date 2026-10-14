@@ -32,7 +32,7 @@ A person, NVDA and about an hour. Automated tests check roles and names; they ca
 | Step | Expected to hear | Result |
 |---|---|---|
 | Open Planning | what the page does; whether drafts are samples or made by AI | |
-| (With a real provider only) the consent card | the provider's name, that text leaves the country, the two choices | |
+| The privacy page, AI section (with a real provider) | that planning text reaches an AI model only to build the draft, leaves the country and is not kept; no model or provider named | |
 | Write an intention, start | "in queue" then "being made" announced as status, without focus jumping | |
 | The draft | the structure as headings and lists; each item's kind, title, date and state; issues tied to the item they belong to | |
 | Edit one item in the sheet, exclude another | the change reflected and announced; an excluded item still findable and named as excluded | |

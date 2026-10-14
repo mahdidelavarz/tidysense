@@ -7,9 +7,8 @@ import { useUiStore } from '../../../shared/lib/ui-store'
 import { FormError } from '../../../shared/ui/FormUi'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
-import { useCurrentUser } from '../../auth/hooks/auth-hooks'
 import { useGoal } from '../../goals/hooks/goal-hooks'
-import { AiConsentCard } from '../../pilot/components/AiConsentCard'
+import { AiFeedbackCard } from '../../feedback/components/AiFeedbackCard'
 import { PilotQuestion } from '../../pilot/components/PilotQuestion'
 import { useProject } from '../../projects/hooks/project-hooks'
 import {
@@ -48,9 +47,6 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   const cancelDraft = useCancelPlanningDraft()
   const revise = useRevisePlanningDraft()
   const openCreate = useUiStore(state => state.openCreate)
-  // The server refuses to send text without consent; this only decides what the page offers.
-  const user = useCurrentUser().data
-  const needsConsent = user?.aiConsentRequired === true && !user.aiConsentGranted
 
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [draftId, setDraftId] = useState<string | null>(null)
@@ -58,6 +54,9 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   const [detached, setDetached] = useState(false)
   const [replace, setReplace] = useState(false)
   const [intention, setIntention] = useState(initialIntention)
+  // A draft the user ended without applying it: cancelled, or replaced by a new flow. It may be
+  // asked about (an applied draft gets the pilot question instead), until the page is left.
+  const [endedDraftId, setEndedDraftId] = useState<string | null>(null)
 
   const found = detached ? undefined : active.data
   // Unanswered questions are resumed like a running attempt: by the id of the attempt that asked them.
@@ -81,8 +80,10 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   }
   const begin = (text: string) => {
     setIntention(text)
+    const replaced = replace ? active.data?.draft?.id ?? null : null
     start.mutate({ intention: text, goalId, projectId, replaceActive: replace }, {
       onSuccess: data => {
+        if (replaced) setEndedDraftId(replaced)
         setAttemptId(data.id)
         setDraftId(null)
         setDetached(true)
@@ -143,6 +144,7 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
         title={pageTitle}
         description="بگویید می‌خواهید روی چه چیزی پیش بروید؛ یک پیش‌نویس می‌بینید، آن را مرور و ویرایش می‌کنید و فقط با تأیید خودتان چیزی ساخته می‌شود."
       />
+      {endedDraftId && <AiFeedbackCard key={endedDraftId} surface="PLANNING_DRAFT" subjectId={endedDraftId} />}
       {content}
     </div>
   )
@@ -294,7 +296,7 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
           error={revise.error ?? cancelDraft.error}
           onEdit={(edit, onStored) => revise.mutate({ draft: current, edit }, { onSuccess: onStored })}
           onApprove={() => apply.request(Number(current.revision))}
-          onCancel={() => cancelDraft.mutate(current)}
+          onCancel={() => cancelDraft.mutate(current, { onSuccess: () => setEndedDraftId(current.id) })}
           onManual={manual}
         />
         <PlanningApplyDialog flow={apply} draft={current} />
@@ -302,15 +304,12 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
     )
   }
 
-  // Asked where a new text would be written. A draft already made stays reviewable above.
-  if (needsConsent) return frame(<AiConsentCard onManual={manual} />)
-
   return frame(
     <div className="space-y-4">
       <p className="flex items-start gap-3 rounded-2xl border border-accent/20 bg-linear-to-bl from-accent-tint to-surface p-4 text-sm leading-7 text-text-secondary">
         <Sparkles size={20} className="mt-1 shrink-0 text-accent" aria-hidden="true" />
         {active.data?.sampleGenerator === false
-          ? 'پیش‌نویس با کمک هوش مصنوعی و با اجازه‌ای که داده‌اید ساخته می‌شود: نوشته شما و خلاصه‌ای از همین حساب برای سرویس هوش مصنوعی بیرون از ایران فرستاده می‌شود. هوش مصنوعی فقط پیشنهاد می‌دهد و چیزی را تغییر نمی‌دهد.'
+          ? 'هوش مصنوعی فقط پیشنهاد می‌دهد؛ تا پیش‌نویس را مرور و تأیید نکنید، چیزی ساخته یا تغییر داده نمی‌شود.'
           : 'در این نسخه پیش‌نویس به‌صورت نمونه و بدون هوش مصنوعی ساخته می‌شود تا مسیر مرور و تأیید قابل استفاده باشد.'}
       </p>
       {replace && <p className="notice">با ساخت پیش‌نویس تازه، پیش‌نویس قبلی کنار گذاشته می‌شود.</p>}

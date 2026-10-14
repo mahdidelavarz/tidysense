@@ -10,9 +10,9 @@ Plan → Execute → Adapt
 
 ## Canonical reading order
 
-1. [[02-Decisions/accepted-decision-inventory-001-021]] — consolidated Discussions 001–026
+1. [[02-Decisions/accepted-decision-inventory-001-021]] — consolidated Discussions 001–028
 2. [[04-Specs/ai-native-mvp-baseline]] — current scope and model
-3. [[01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context]] through [[01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights]] — latest product amendments
+3. [[01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context]] through [[01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop]] — latest product amendments
 4. [[01-Closed-Discussions/022-updated-mvp-implementation-plan]] — consolidated implementation sequence/status
 5. [[05-Implementation/backend-domain-package/README]] — canonical schema projection
 6. [[../devmap/README]] and [[../devmap/decisions/README]] — development architecture and technical decisions
@@ -29,6 +29,8 @@ Plan → Execute → Adapt
 - There is no AI consent step; the privacy notice discloses that planning text goes to an unnamed AI model, is not stored and leaves the country.
 - A sampled 1–5 satisfaction prompt follows AI responses, with an optional reason for low ratings; the operator sees reasons without identity in a product-insights view.
 - In Reconcile, single-item Complete and Carry-to-today apply on tap with undo; other date changes, Drop and bulk actions still need preview and confirmation.
+- Clarification questions offer up to seven model-proposed options plus a product-added «چیز دیگر…», up to three related questions per turn, all optional; only the question kind and answer type are measured.
+- Planning has the same four steps everywhere; phones show a welcome and three guide pages once before login; desktop is in the pilot with its own layouts and no extra behaviour.
 
 ## Safety rules that remain
 

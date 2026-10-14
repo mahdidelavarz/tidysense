@@ -4,6 +4,10 @@ namespace TidySense.Common.Events;
 
 public static class AccountEventTypes
 {
+    /// <summary>
+    /// Retired with the consent step (Discussion 027 §2): nothing records it any more. Decisions
+    /// recorded before that remain R1 history, so the schema stays registered.
+    /// </summary>
     public const string AiConsentChanged = "AI_CONSENT_CHANGED";
 }
 

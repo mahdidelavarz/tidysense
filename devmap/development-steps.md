@@ -315,7 +315,7 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Status:** `DONE`
 
-**Evidence:** [Step 11 acceptance contract, recorded deviations, drill record and open gaps](step-11-operations-acceptance.md), [metric dictionary](operations/metric-dictionary.md) and [its definitions](../backend/Services/Operations/PilotMetricCatalog.cs), [runbooks](operations/runbooks.md), [drill script](../ops-drill.ps1), [retention catalog](../backend/Services/Operations/RetentionCatalog.cs), [maintenance run](../backend/Services/Operations/OperationsMaintenance.cs), [account erasure and operator commands](../backend/Services/Operations/UserErasureService.cs), [alert rules](../backend/Services/Operations/OperationsAlertRules.cs), [runtime view](../backend/Services/Operations/OperationsHealthService.cs), [Operations API](../backend/Controllers/OperationsController.cs), [schema migration](../backend/Migrations/20261008134254_Step11Operations.cs) and [its follow-up](../backend/Migrations/20261008155127_Step11ReconcileExposure.cs), [metric tests](../backend.Tests/OperationsMetricsTests.cs), [retention and erasure tests](../backend.Tests/OperationsRetentionTests.cs), [access, alert and audit tests](../backend.Tests/OperationsApiTests.cs), [operator page](../frontend/src/features/operations/components/OperationsPage.tsx), [browser acceptance](../frontend/e2e/operations.spec.ts). Verified 2026-10-08: `./dev.ps1 check` passed (214 backend tests with the two real-provider smokes skipped, 60 frontend tests, typecheck/lint/build/OpenAPI) against local PostgreSQL 18; `./auth-e2e.ps1` passed all 13 Chrome scenarios on an isolated PostgreSQL database, including "an operator reads alerts, the AI runtime and the evidence tables with their denominators"; EF reported no pending model changes; `./ops-drill.ps1` passed its kill-switch, maintenance, backup/restore, rollback and erasure drills on an isolated database. Decisions confirmed with the owner: an in-app operator page instead of an external monitoring stack; provisional retention of 90/30/180 days for R4/R3/R2; kill switches stay configuration; erasure as an operator command. A follow-up the same day closed seven of the stated gaps (family and provider switches in the drill, batched purge, the eligible-exposure record and `H2.ELIGIBLE_START_RATE`, tracked token prices, a dependency audit with one build-time advisory fixed, a keyboard pass over the manual Task flow, and the display of a maintenance run that never happened): `./dev.ps1 check` then passed with 215 backend and 61 frontend tests, `./auth-e2e.ps1` with all 14 Chrome scenarios, and `./ops-drill.ps1` again. Open and stated in the acceptance contract: alerts are not delivered outside the application and nothing was rehearsed on a deployed environment (`DEC-011`); retention durations and the R2 treatment of confirmations await legal and Security/Privacy review; the metric dictionary is a draft with five required metrics lacking an instrument; database-level access classes are not enforced; no manual operator check on real data, screen-reader pass or security review was done. None of these is waived; they are inputs to STEP-12. Gap closure on 2026-10-09, after the owner accepted the recommendation for each of the twelve open gaps: [pilot deployment decision](decisions/ADR-007-pilot-deployment-topology.md) with its [definition](../deploy/docker-compose.yml) and [procedure](operations/deployment.md), a tested [daily alert digest](../backend/Services/Operations/OperationsAlertDigest.cs), a server-side [consent gate for the AI provider](../backend/Services/AiConsentService.cs) with its consent card and [privacy page](../frontend/src/features/pilot/components/PrivacyPage.tsx), two in-app [pilot questions](../backend/Services/PilotFeedbackService.cs) with their metrics and a [research protocol](operations/pilot-research-protocol.md), the [schema migration](../backend/Migrations/20261009084704_Step11PilotGaps.cs), the 019C amendment on confirmation retention, a [security review](quality/security-review-2026-10-09.md), a [screen-reader checklist](quality/screen-reader-pass.md) and a prepared freeze-register sign-off, with [tests](../backend.Tests/PilotReadinessTests.cs). Verified 2026-10-09: `./dev.ps1 check` passed (227 backend tests with the two real-provider smokes skipped, 66 frontend tests, typecheck/lint/build/OpenAPI); `./auth-e2e.ps1` passed all 16 Chrome scenarios; `./ops-drill.ps1` passed on the new schema; both dependency audits were clean. Still owed, and stated in the contract's gap table: nothing is deployed (the Compose stack was built and exercised on a developer machine on 2026-10-09, see the [Docker guide](operations/docker-guide.md), but no server exists), the 30-day limit for logs and backups is a server setting not yet made, two security findings need the owner (credentials in git history, the four-digit login code), no freeze-register row is signed, the wording of the consent text and the two questions is not approved, and neither the moderated sessions nor the screen-reader pass has been held.
+**Evidence:** [Step 11 acceptance contract, recorded deviations, drill record and open gaps](step-11-operations-acceptance.md), [metric dictionary](operations/metric-dictionary.md) and [its definitions](../backend/Services/Operations/PilotMetricCatalog.cs), [runbooks](operations/runbooks.md), [drill script](../ops-drill.ps1), [retention catalog](../backend/Services/Operations/RetentionCatalog.cs), [maintenance run](../backend/Services/Operations/OperationsMaintenance.cs), [account erasure and operator commands](../backend/Services/Operations/UserErasureService.cs), [alert rules](../backend/Services/Operations/OperationsAlertRules.cs), [runtime view](../backend/Services/Operations/OperationsHealthService.cs), [Operations API](../backend/Controllers/OperationsController.cs), [schema migration](../backend/Migrations/20261008134254_Step11Operations.cs) and [its follow-up](../backend/Migrations/20261008155127_Step11ReconcileExposure.cs), [metric tests](../backend.Tests/OperationsMetricsTests.cs), [retention and erasure tests](../backend.Tests/OperationsRetentionTests.cs), [access, alert and audit tests](../backend.Tests/OperationsApiTests.cs), [operator page](../frontend/src/features/operations/components/OperationsPage.tsx), [browser acceptance](../frontend/e2e/operations.spec.ts). Verified 2026-10-08: `./dev.ps1 check` passed (214 backend tests with the two real-provider smokes skipped, 60 frontend tests, typecheck/lint/build/OpenAPI) against local PostgreSQL 18; `./auth-e2e.ps1` passed all 13 Chrome scenarios on an isolated PostgreSQL database, including "an operator reads alerts, the AI runtime and the evidence tables with their denominators"; EF reported no pending model changes; `./ops-drill.ps1` passed its kill-switch, maintenance, backup/restore, rollback and erasure drills on an isolated database. Decisions confirmed with the owner: an in-app operator page instead of an external monitoring stack; provisional retention of 90/30/180 days for R4/R3/R2; kill switches stay configuration; erasure as an operator command. A follow-up the same day closed seven of the stated gaps (family and provider switches in the drill, batched purge, the eligible-exposure record and `H2.ELIGIBLE_START_RATE`, tracked token prices, a dependency audit with one build-time advisory fixed, a keyboard pass over the manual Task flow, and the display of a maintenance run that never happened): `./dev.ps1 check` then passed with 215 backend and 61 frontend tests, `./auth-e2e.ps1` with all 14 Chrome scenarios, and `./ops-drill.ps1` again. Open and stated in the acceptance contract: alerts are not delivered outside the application and nothing was rehearsed on a deployed environment (`DEC-011`); retention durations and the R2 treatment of confirmations await legal and Security/Privacy review; the metric dictionary is a draft with five required metrics lacking an instrument; database-level access classes are not enforced; no manual operator check on real data, screen-reader pass or security review was done. None of these is waived; they are inputs to STEP-12. Gap closure on 2026-10-09, after the owner accepted the recommendation for each of the twelve open gaps: [pilot deployment decision](decisions/ADR-007-pilot-deployment-topology.md) with its [definition](../deploy/docker-compose.yml) and [procedure](operations/deployment.md), a tested [daily alert digest](../backend/Services/Operations/OperationsAlertDigest.cs), a server-side consent gate for the AI provider (retired in STEP-13) with its consent card and [privacy page](../frontend/src/features/pilot/components/PrivacyPage.tsx), two in-app [pilot questions](../backend/Services/PilotFeedbackService.cs) with their metrics and a [research protocol](operations/pilot-research-protocol.md), the [schema migration](../backend/Migrations/20261009084704_Step11PilotGaps.cs), the 019C amendment on confirmation retention, a [security review](quality/security-review-2026-10-09.md), a [screen-reader checklist](quality/screen-reader-pass.md) and a prepared freeze-register sign-off, with [tests](../backend.Tests/PilotReadinessTests.cs). Verified 2026-10-09: `./dev.ps1 check` passed (227 backend tests with the two real-provider smokes skipped, 66 frontend tests, typecheck/lint/build/OpenAPI); `./auth-e2e.ps1` passed all 16 Chrome scenarios; `./ops-drill.ps1` passed on the new schema; both dependency audits were clean. Still owed, and stated in the contract's gap table: nothing is deployed (the Compose stack was built and exercised on a developer machine on 2026-10-09, see the [Docker guide](operations/docker-guide.md), but no server exists), the 30-day limit for logs and backups is a server setting not yet made, two security findings need the owner (credentials in git history, the four-digit login code), no freeze-register row is signed, the wording of the consent text and the two questions is not approved, and neither the moderated sessions nor the screen-reader pass has been held.
 
 ---
 
@@ -351,10 +351,12 @@ Added on 2026-10-13 after the owner's design phase. These steps carry [Discussio
 
 **Design source.** The canvas "Adaptive Planner — Dawn", page «در کد — پیاده‌سازی» (<https://claude.ai/artifact/AjMm5oPxveG52ZfhmHFNKe>, private to the owner). Each step names its boards. A board is the visual reference for layout, hierarchy, copy and both themes. It is not a data contract; sample data on a board is not a requirement. Behaviour still comes from the Mind Map; where a board and an accepted decision disagree, the decision wins and the gap is reported.
 
-**Product gates.** Two parts of the design rest on product behaviour no accepted discussion defines yet. The step that needs it stays `BLOCKED` until the Mind Map records it:
+**Product gates (resolved).** Two parts of the design rested on product behaviour no accepted discussion defined. [Discussion 028](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md), closed by the owner on 2026-10-13, now defines them:
 
-- **Choice-based clarification questions** (STEP-18, and the question-code rows of STEP-20). The boards show model-proposed options, single or multiple choice, a free-text «چیز دیگر…» answer and a one-line reason under each question. Discussion 013 and the 014/020c output contract define a question as text only, while 027 §5 already counts "the code of each clarification option chosen". The option format, option codes, limits and gate rules must be decided first.
-- **Welcome and first-run guides** (STEP-17). The boards add a welcome image and three guide pages before login on phones, shown once. The Day-0 path (`Login → OTP → First Entry → Today`) does not include them. The amendment must say where the "already seen" mark lives (device or account), and that each promise on the guides ("under 2 minutes", "under 5 seconds", "one tap") is checked against measured pilot behaviour.
+- **Choice-based clarification questions** (STEP-18, and the question-code rows of STEP-20): the question shape, option limits, the product-added «چیز دیگر…», up to three related questions per turn, the gate rules and the measurement codes (§2).
+- **Welcome and first-run guides** (STEP-17): phones only, before login, once per device, nothing recorded on the server, and promises that must hold in the measured product (§4).
+
+It also fixes the four-step flow on every planning entry (§3) and keeps desktop free of extra behaviour (§5).
 
 Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order their dependencies allow, then STEP-21.
 
@@ -376,20 +378,46 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Implementation checklist:**
 
-- [ ] Remove the consent check from attempt start and generation; prove a fresh account can plan with AI.
-- [ ] Retire the consent endpoint, fields and error code; regenerate OpenAPI and client types.
-- [ ] Decide and migrate the consent rows (retained as history or removed under their retention class), with a rollback test.
-- [ ] Remove the provider name from user-facing responses; keep it on operator surfaces and in configuration.
-- [ ] Ship the 027 §3 privacy wording with a new notice version.
-- [ ] Update `active-conventions.md` (consent rule), runbook 9, `RetentionCatalog` and the STEP-11 contract's gap table.
+- [x] Remove the consent check from attempt start and generation; prove a fresh account can plan with AI.
+- [x] Retire the consent endpoint, fields and error code; regenerate OpenAPI and client types.
+- [x] Decide and migrate the consent rows (retained as history or removed under their retention class), with a rollback test. *Decided:* the account's current-state columns are dropped; the decisions stay as R1 events, so nothing of the history is lost. Rolling back restores the columns empty.
+- [x] Remove the provider name from user-facing responses; keep it on operator surfaces and in configuration.
+- [x] Ship the 027 §3 privacy wording with a new notice version (`PrivacyNotice.Version` `2026-10-13.1`).
+- [x] Update `active-conventions.md` (consent rule), runbook 9, `RetentionCatalog` and the STEP-11 contract's gap table. `RetentionCatalog` needed no change: it had no consent entry, and the events stay R1.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1`; an API test that no user-facing response carries the provider name; a migration rollback test; the manual path sends nothing to a model.
 
 **Completion criteria:** No consent prompt, endpoint or refusal remains; users learn what is sent only from the privacy notice; the provider is invisible to users and visible to operators.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:** [migration](../backend/Migrations/20261013192816_Step13RetireAiConsent.cs), [privacy notice version](../backend/Services/PrivacyNotice.cs), [notice endpoint](../backend/Controllers/PilotController.cs), [privacy page](../frontend/src/features/pilot/components/PrivacyPage.tsx), [readiness tests](../backend.Tests/PilotReadinessTests.cs), [migration round trip](../backend.Tests/DeliveryMigrationTests.cs), [privacy page tests](../frontend/src/features/pilot/components/PrivacyPage.test.tsx), [planning page tests](../frontend/src/features/planning/components/PlanningPage.test.tsx), [browser privacy scenario](../frontend/e2e/privacy.spec.ts).
+
+What the tests show:
+
+- A fresh account on a model-backed host plans at once with one provider call.
+- `/users/me`, the notice and the attempt carry no consent field and no provider or model name.
+- The consent route no longer exists, and no decision is recorded.
+- A decision recorded the Step 11 way stays R1 and is tombstoned on erasure.
+- `Step13RetireAiConsent` drops the four columns and their constraint, keeps the account, and rolls back to empty columns.
+
+Verified 2026-10-13 on Linux:
+
+- 235 backend tests passed, with the two real-provider smokes skipped, against local PostgreSQL 16.
+- 66 frontend tests passed; typecheck, lint and build were clean.
+- All 15 browser scenarios passed in Chromium against an isolated database with the `auth-e2e.ps1` settings. The consent-card scenario was removed.
+
+**Decisions and deviations:**
+
+- **The planning screen's disclosure line was replaced** by a statement that AI only proposes and nothing is created before review, as 027 §2 requires. The Reconcile explanation card still says it sends only codes and counts. That is not a consent or provider statement, and it is kept.
+- **`Ai:Providers:<key>:DisplayName` was removed**, because nothing user-facing may carry a provider name.
+- **The `AI_CONSENT_CHANGED` schema stays registered** for history. An old attempt that failed with `AI_CONSENT_REQUIRED` shows the generic failure text.
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- Owner approval of the privacy wording.
+- One look at the page against the real provider.
 
 ---
 
@@ -399,7 +427,7 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Scope:** The 027 §4 prompt record (surface, subject, rating 1–5, optional reason text, instrument version, time; R2, 180 days, removed on erasure); the pilot sampling rule (every AI response, at most once per account, per surface, per local day, always the first draft and first explanation, never a subject that receives `H1_USEFULNESS` or `H2_UNDERSTANDING` in the same flow); shown, answered and closed recorded apart; the post-pilot rate as configuration; derived fields: entity type of each item removed before acceptance, Task and Routine origin (AI draft or manual) from command provenance, and an internal-account marker; the feedback card on the existing draft and explanation screens; metric dictionary and research protocol updates; frozen definitions with an instrument version.
 
-**Out of scope:** Clarification option codes (they wait on the STEP-18 product gate), the insights view (STEP-20), restyling the draft and explanation screens.
+**Out of scope:** Clarification question kinds and answer types (Discussion 028 §2.5; recorded with the new question shape in STEP-18), the insights view (STEP-20), restyling the draft and explanation screens.
 
 **Required DevMap context:** [metric dictionary](operations/metric-dictionary.md), [pilot research protocol](operations/pilot-research-protocol.md), [logging](backend/logging-observability.md), [schema change workflow](workflows/schema-change.md), [STEP-11 acceptance contract](step-11-operations-acceptance.md).
 
@@ -411,20 +439,55 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Implementation checklist:**
 
-- [ ] Persist the satisfaction record with its retention class, erasure path and instrument version.
-- [ ] Implement the sampling rule server-side; the client only asks whether to show the prompt for a subject.
-- [ ] Record shown, answered and closed as separate facts; closing is never a rating.
-- [ ] Record removed-item entity types, Task/Routine origin and the internal-account marker.
-- [ ] Add the feedback card (ratings 1–2 open the optional reason field), inside the response, never modal or blocking.
-- [ ] Freeze the definitions in the metric dictionary and research protocol.
+- [x] Persist the satisfaction record with its retention class, erasure path and instrument version.
+- [x] Implement the sampling rule server-side; the client only asks whether to show the prompt for a subject.
+- [x] Record shown, answered and closed as separate facts; closing is never a rating.
+- [x] Record removed-item entity types, Task/Routine origin and the internal-account marker.
+- [x] Add the feedback card (ratings 1–2 open the optional reason field), inside the response, never modal or blocking.
+- [x] Freeze the definitions in the metric dictionary and research protocol.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` with a draft rated 2 with a reason, and a closed prompt; PostgreSQL tests for sampling limits, no double asking with H1/H2, erasure and retention purge.
 
 **Completion criteria:** Every AI response the rule selects can be rated once; non-response is distinguishable from a low score; every derived field 027 §5 needs, except option codes, is recorded.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:** [migration](../backend/Migrations/20261014032809_Step14AiResponseFeedback.cs), [record](../backend/Models/AiResponseFeedback.cs), [sampling rule and responses](../backend/Services/AiResponseFeedbackService.cs), [endpoints](../backend/Controllers/FeedbackController.cs), [apply payload v2](../backend/Common/Events/PlanningEventSchemas.cs), [retention](../backend/Services/Operations/RetentionCatalog.cs), [card](../frontend/src/features/feedback/components/AiFeedbackCard.tsx) and its [wording](../frontend/src/features/feedback/types/feedback.format.ts), [metric dictionary](operations/metric-dictionary.md#satisfaction-with-ai-responses-discussion-027-4), [research protocol](operations/pilot-research-protocol.md), [owner resolution in 027 §8](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md), [backend tests](../backend.Tests/AiResponseFeedbackTests.cs), [card tests](../frontend/src/features/feedback/components/AiFeedbackCard.test.tsx), [browser scenario](../frontend/e2e/planning.spec.ts).
+
+**What the tests show:**
+
+- A draft under review is not asked about. A cancelled one is asked, and a reload returns the same prompt.
+- A second ended draft the same day is not asked; the next day one is.
+- A closed prompt cannot be answered, and an answer is accepted once.
+- A reason is refused with a rating above 2, and a wrong instrument version is refused.
+- Another account gets `404`.
+- An applied draft is never asked, but takes its H1 answer.
+- After the pilot the first ended draft is still asked, and later ones follow the rate.
+- Applying writes `PLANNING_DRAFT_APPLIED` version 2 with the excluded counts. Created Tasks and Routines share the apply's transaction, and a manual Task does not.
+- The purge removes records past R2, erasure removes them with the account, and the migration round-trips with its constraints.
+
+**Verified 2026-10-14 on Linux:**
+
+- 239 backend tests passed, with the two real-provider smokes skipped, against PostgreSQL 16.
+- 72 frontend tests passed; typecheck, lint and build were clean.
+- All 16 browser scenarios passed in Chromium against an isolated database, including "a cancelled draft may be rated once, with a reason for a low rating, and only once a day".
+
+**Decisions and deviations:**
+
+- **When the prompt appears.** The owner decided on 2026-10-14, recorded in 027 §8.3–8.4:
+  - planning drafts are asked only once they ended unapplied, so H1 stays unchanged;
+  - the Reconcile explanation is not asked during the pilot.
+
+  The board shows the card on the draft under review; it appears above the planning page after cancelling or replacing instead. The surface constraint allows only `PLANNING_DRAFT` until a Reconcile moment exists.
+- **Origin and the internal-account marker add no stored field.** Origin is derived from R1 event provenance, and the internal marker is the existing phone configuration. Both are frozen in the metric dictionary.
+- **Drafts from the sample generator are not refused at capture.** They are excluded when read, through the generator named in `PLANNING_DRAFT_CREATED`; production runs only the model.
+- **The privacy notice is now version `2026-10-14.1`.** It gained the feedback retention row.
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- Owner approval of the question wording.
+- The insights figures themselves (STEP-20).
 
 ---
 
@@ -499,13 +562,13 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Required DevMap context:** as STEP-16, plus [auth/security](backend/auth-security-transactions.md) for the login screens.
 
-**Required Mind Map context:** [Day-0 onboarding](../mindmap/04-Specs/day-0-onboarding.md) as amended by the welcome/guide product gate, [core model](../mindmap/01-Closed-Discussions/012-core-product-model.md), [Discussion 027 §3](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md) for privacy copy.
+**Required Mind Map context:** [Day-0 onboarding](../mindmap/04-Specs/day-0-onboarding.md), [Discussion 028 §4](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md), [core model](../mindmap/01-Closed-Discussions/012-core-product-model.md), [Discussion 027 §3](../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md) for privacy copy.
 
 **Design boards:** `CodeLogin`, `CodeFirstEntry`, `CodeGoals`, `CodeGoalDetail`, `CodeGoalTerminal`, `CodeProjects`, `CodeProjectDetail`, `CodePrivacy`, `CodeWelcome`, `CodeGuide1`–`CodeGuide3`.
 
-**Dependencies:** STEP-13 and STEP-15; the welcome/guide product gate recorded in the Mind Map.
+**Dependencies:** STEP-13 and STEP-15.
 
-**Implementation checklist:** Rebuild each screen; add the welcome and guides with skip and back; store the "seen" mark where the amendment says; replace the placeholder welcome image with the owner's image.
+**Implementation checklist:** Rebuild each screen; add the welcome and guides with skip and back; keep the "seen" mark on the device and record nothing on the server (028 §4.2); check each guide's promise against measurement (028 §4.3) before the pilot; replace the placeholder welcome image with the owner's image.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` with a first visit that sees the guides and a second visit that does not; screenshots in both themes.
 
@@ -527,13 +590,13 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Required DevMap context:** AI Planning route in [context routing](context/context-routing.md), [STEP-08](step-08-planning-acceptance.md) and [STEP-09](step-09-ai-planning-acceptance.md) acceptance contracts, [API contract](shared/api-contracts.md).
 
-**Required Mind Map context:** [planning conversation](../mindmap/01-Closed-Discussions/013-ai-planning-entry-and-conversation-flow.md), [output contract](../mindmap/01-Closed-Discussions/014-ai-planning-output-contract.md), [structured output](../mindmap/01-Closed-Discussions/020c-structured-output-reliability-and-cost-controls.md), [planning facts](../mindmap/01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context.md), and the choice-question product gate.
+**Required Mind Map context:** [planning conversation](../mindmap/01-Closed-Discussions/013-ai-planning-entry-and-conversation-flow.md), [output contract](../mindmap/01-Closed-Discussions/014-ai-planning-output-contract.md), [structured output](../mindmap/01-Closed-Discussions/020c-structured-output-reliability-and-cost-controls.md), [planning facts](../mindmap/01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context.md), [Discussion 028 §2–§3](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md).
 
 **Design boards:** `CodePlanning`, `CodePlanningQuestions`, `CodePlanningDraft`, `CodePlanningApply`.
 
-**Dependencies:** STEP-14 and STEP-15; the choice-question product gate recorded in the Mind Map.
+**Dependencies:** STEP-14 and STEP-15.
 
-**Implementation checklist:** Extend the question contract and gate; update the prompt and fixtures; build the four screens; keep manual fallback at every step; measure time from first word to reviewable draft.
+**Implementation checklist:** Extend the question contract and gate to 028 §2 (reason, `kind`, options, `multiple`, no model "other"); record `kind` and answer type for STEP-20; update the prompt and fixtures; build the four screens; keep manual fallback at every step; measure time from first word to reviewable draft.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1`; gate fixtures for valid, missing and hostile options; a real-provider smoke run; time to draft measured against the "under 2 minutes" promise.
 
@@ -611,7 +674,7 @@ Order: STEP-13 → STEP-14 → STEP-15, then STEP-16 to STEP-20 in any order the
 
 **Required DevMap context:** [layout and navigation](frontend/layout-and-navigation.md), [design system](frontend/design-system.md), [testing and performance](frontend/testing-performance.md).
 
-**Required Mind Map context:** Those of the phone step each screen mirrors.
+**Required Mind Map context:** [Discussion 028 §5](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md), plus those of the phone step each screen mirrors.
 
 **Design boards:** `CodeDesktopToday`, `CodeDesktopTasks`, `CodeDesktopRoutines`, `CodeDesktopGoals`, `CodeDesktopPlanningIntent`, `CodeDesktopPlanningQuestions`, `CodeDesktopPlanning`, `CodeDesktopReconcile`, `CodeInsights`.
 

@@ -358,6 +358,202 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/feedback/ai-responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RequestAiResponseFeedbackRequest"];
+                    "text/json": components["schemas"]["RequestAiResponseFeedbackRequest"];
+                    "application/*+json": components["schemas"]["RequestAiResponseFeedbackRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AiResponseFeedbackPromptDto"];
+                        "application/json": components["schemas"]["AiResponseFeedbackPromptDto"];
+                        "text/json": components["schemas"]["AiResponseFeedbackPromptDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feedback/ai-responses/{promptId}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    promptId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AnswerAiResponseFeedbackRequest"];
+                    "text/json": components["schemas"]["AnswerAiResponseFeedbackRequest"];
+                    "application/*+json": components["schemas"]["AnswerAiResponseFeedbackRequest"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feedback/ai-responses/{promptId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    promptId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/goals": {
         parameters: {
             query?: never;
@@ -4047,84 +4243,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/me/ai-consent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    "Idempotency-Key": string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SetAiConsentRequest"];
-                    "text/json": components["schemas"]["SetAiConsentRequest"];
-                    "application/*+json": components["schemas"]["SetAiConsentRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["CurrentUserDto"];
-                        "application/json": components["schemas"]["CurrentUserDto"];
-                        "text/json": components["schemas"]["CurrentUserDto"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ApiProblemDto"];
-                        "application/json": components["schemas"]["ApiProblemDto"];
-                        "text/json": components["schemas"]["ApiProblemDto"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ApiProblemDto"];
-                        "application/json": components["schemas"]["ApiProblemDto"];
-                        "text/json": components["schemas"]["ApiProblemDto"];
-                    };
-                };
-                /** @description Unprocessable Entity */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ApiProblemDto"];
-                        "application/json": components["schemas"]["ApiProblemDto"];
-                        "text/json": components["schemas"]["ApiProblemDto"];
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4183,6 +4301,19 @@ export interface components {
             gate: null | string;
             /** Format: int32 */
             count: number | string;
+        };
+        AiResponseFeedbackPromptDto: {
+            /** Format: uuid */
+            promptId: null | string;
+            /** Format: int32 */
+            instrumentVersion: number | string;
+        };
+        AnswerAiResponseFeedbackRequest: {
+            /** Format: int32 */
+            instrumentVersion: number | string;
+            /** Format: int32 */
+            rating: number | string;
+            reason: null | string;
         };
         ApiProblemDto: {
             type: string;
@@ -4335,8 +4466,6 @@ export interface components {
             displayName: null | string;
             setupComplete: boolean;
             isOperator: boolean;
-            aiConsentRequired: boolean;
-            aiConsentGranted: boolean;
         };
         CursorPageDtoOfCaptureDto: {
             items: components["schemas"]["CaptureDto"][];
@@ -4465,7 +4594,7 @@ export interface components {
         };
         PilotNoticeDto: {
             noticeVersion: string;
-            aiProviderName: null | string;
+            aiReceivesPlanningText: boolean;
             /** Format: int32 */
             sessionHistoryDays: number | string;
             /** Format: int32 */
@@ -4933,6 +5062,11 @@ export interface components {
             /** Format: int64 */
             expectedVersion: number | string;
         };
+        RequestAiResponseFeedbackRequest: {
+            surface: string;
+            /** Format: uuid */
+            subjectId: string;
+        };
         RequestOtpDto: {
             phoneNumber: string;
             purpose: string;
@@ -5039,10 +5173,6 @@ export interface components {
             resolvedAt: null | string;
             /** Format: int64 */
             version: number | string;
-        };
-        SetAiConsentRequest: {
-            granted: boolean;
-            noticeVersion: null | string;
         };
         StartPlanningAttemptRequest: {
             clientAttemptId: string;

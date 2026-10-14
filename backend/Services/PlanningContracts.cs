@@ -275,7 +275,6 @@ public static class PlanningFailureCodes
     public const string AiUnavailable = "AI_UNAVAILABLE";
     public const string AiBudgetExhausted = "AI_BUDGET_EXHAUSTED";
     public const string ContextTooLarge = "CONTEXT_TOO_LARGE";
-    public const string ConsentRequired = "AI_CONSENT_REQUIRED";
 }
 
 /// <summary>

@@ -99,7 +99,6 @@ public sealed class PlanningAttemptRunner(
     IPlanningGenerator generator,
     PlanningAttemptCancellation cancellations,
     ApplicationDateService dates,
-    AiConsentPolicy consent,
     ILogger<PlanningAttemptRunner> logger)
 {
     // Longer than the AI operation deadline, so the runtime's own timeout is the one that reports.
@@ -124,8 +123,6 @@ public sealed class PlanningAttemptRunner(
         try
         {
             running.CancelAfter(GenerationTimeout);
-            // Checked again where the text would leave: consent may have been withdrawn since the attempt was queued.
-            await AiConsentService.RequireAsync(db, consent, item.UserId, running.Token);
             var result = await generator.GenerateAsync(
                 new PlanningGenerationRequest(item.AttemptId, item.Intention, item.Context, item.Fixture)
                 {
@@ -156,10 +153,6 @@ public sealed class PlanningAttemptRunner(
         catch (PlanningGenerationException exception)
         {
             failure = exception.FailureCode;
-        }
-        catch (AiConsentRequiredException)
-        {
-            failure = PlanningFailureCodes.ConsentRequired;
         }
         catch (Exception exception)
         {

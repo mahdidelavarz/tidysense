@@ -49,6 +49,11 @@ public static class PlanningEventSchemas
         yield return new EventPayloadSchema(PlanningEventTypes.DraftApplied, 1,
             Count("goalCount"), Count("projectCount"), Count("taskCount"), Count("routineCount"),
             Count("factCount"));
+        // Version 2 (STEP-14) adds what the user removed before accepting, by entity type (027 §5).
+        yield return new EventPayloadSchema(PlanningEventTypes.DraftApplied, 2,
+            Count("goalCount"), Count("projectCount"), Count("taskCount"), Count("routineCount"),
+            Count("factCount"), Count("excludedGoalCount"), Count("excludedProjectCount"),
+            Count("excludedTaskCount"), Count("excludedRoutineCount"));
         yield return new EventPayloadSchema(PlanningEventTypes.FactCreated, 1,
             new EventPayloadFieldPolicy("factType", true, value => Allowed(value, FactTypes)),
             new EventPayloadFieldPolicy("strength", true, value => Allowed(value, Strengths)),

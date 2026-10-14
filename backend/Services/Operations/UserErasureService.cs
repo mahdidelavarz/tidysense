@@ -35,7 +35,7 @@ public sealed partial class UserErasureService(AppDbContext db, ApplicationDateS
         if (user is null) return null;
 
         var tombstone = Guid.NewGuid();
-        // An event about the account itself (a consent decision) names the account as its aggregate too.
+        // An event about the account itself (a consent decision recorded before Discussion 027) names the account as its aggregate too.
         await db.DomainEvents.Where(x => x.UserId == userId && x.AggregateId == userId)
             .ExecuteUpdateAsync(x => x.SetProperty(e => e.AggregateId, tombstone), cancellationToken);
         await db.CommandResults.Where(x => x.UserId == userId && x.AggregateId == userId)
@@ -62,6 +62,8 @@ public sealed partial class UserErasureService(AppDbContext db, ApplicationDateS
         deleted["reconcileExposures"] = await db.ReconcileExposures.Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
         deleted["pilotFeedbackResponses"] = await db.PilotFeedbackResponses.Where(x => x.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken);
+        deleted["aiResponseFeedback"] = await db.AiResponseFeedback.Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
         deleted["planningFacts"] = await db.PlanningFacts.Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
