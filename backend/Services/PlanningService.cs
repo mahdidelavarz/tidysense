@@ -52,10 +52,12 @@ public sealed partial class PlanningService(
         if (!(environment.IsDevelopment() || environment.IsEnvironment("Testing")) ||
             fixture is null || !FixturePattern().IsMatch(fixture)) fixture = null;
         var owner = currentUser.UserId;
+        // An answer is the chosen options, the «چیز دیگر…» text, or both; one with neither is a skipped question.
         var answers = (request.Answers ?? [])
-            .Select(x => new PlanningAnswer(x.QuestionId ?? string.Empty, (x.Text ?? string.Empty).Trim()))
-            .Where(x => x.Text.Length > 0).ToArray();
-        if (answers.Any(x => x.Text.Length > PlanningClarificationRules.AnswerLength))
+            .Select(x => new PlanningAnswer(x.QuestionId ?? string.Empty,
+                string.IsNullOrWhiteSpace(x.Text) ? null : x.Text.Trim()) { Options = x.Options ?? [] })
+            .Where(x => x.Text is not null || x.Options.Count > 0).ToArray();
+        if (answers.Any(x => x.Text is { Length: > PlanningClarificationRules.AnswerLength }))
             throw new ArgumentException("An answer is too long.");
         var hash = CommandExecutionRequest.HashCanonicalRequest(JsonSerializer.SerializeToUtf8Bytes(new
         {
@@ -78,10 +80,15 @@ public sealed partial class PlanningService(
             if (previous.Outcome != PlanningOutcomes.Clarification)
                 throw new DomainRuleException("CLARIFICATION_NOT_PENDING", "The attempt has no questions to answer.");
             var asked = PlanningJson.Deserialize<PlanningClarification>(previous.ClarificationJson!).Questions
-                .Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
-            if (answers.Any(x => !asked.Contains(x.QuestionId)) ||
+                .ToDictionary(x => x.Id, StringComparer.Ordinal);
+            if (answers.Any(x => !asked.ContainsKey(x.QuestionId)) ||
                 answers.Select(x => x.QuestionId).Distinct(StringComparer.Ordinal).Count() != answers.Length)
                 throw new ArgumentException("An answer does not belong to a question of the attempt.");
+            // Options are chosen by position among those the question offered, once each, and one only unless it allows several.
+            if (answers.Any(x => x.Options.Distinct().Count() != x.Options.Count ||
+                    x.Options.Any(i => i < 0 || i >= (asked[x.QuestionId].Options ?? []).Count) ||
+                    (x.Options.Count > 1 && !asked[x.QuestionId].Multiple)))
+                throw new ArgumentException("An answer chooses an option the question does not offer.");
             if (answers.Length == 0 && !request.DraftNow)
                 throw new ArgumentException("Answer at least one question or ask for a draft now.");
             intention = previous.Intention;
@@ -153,6 +160,20 @@ public sealed partial class PlanningService(
             AnswersJson = previous is null ? null : PlanningJson.Serialize(answers)
         };
         db.PlanningAttempts.Add(attempt);
+        if (previous is not null)
+        {
+            // What kind of question was answered and how, for measurement (027 §5, 028 §2.5): never a label or a text.
+            var questions = PlanningJson.Deserialize<PlanningClarification>(previous.ClarificationJson!).Questions;
+            PlanningEvents.Add(db, owner, EventActors.User, "PlanningAttempt", previous.Id, 1,
+                PlanningEventTypes.ClarificationAnswered, JsonSerializer.Serialize(new
+                {
+                    flowId = await PlanningEvents.FlowIdAsync(db, previous, cancellationToken),
+                    turn = previous.ClarificationTurn + 1,
+                    draftNow = request.DraftNow,
+                    answers = questions.Select(question => PlanningClarificationRules.AnswerCode(question,
+                        answers.FirstOrDefault(x => x.QuestionId == question.Id))).ToArray()
+                }), now);
+        }
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         // The turn budget and "draft now" both end the questions: the next result must be a draft or a blocked input.

@@ -97,8 +97,14 @@ public static partial class PlanningOutputGate
             {
                 reader.Path = $"questions[{index}]";
                 var item = reader.Object(node);
-                reader.Only(item, "id", "text");
-                return new PlanningQuestion(reader.Required(item, "id"), reader.Required(item, "text").Trim());
+                reader.Only(item, "id", "text", "reason", "kind", "options", "multiple");
+                return new PlanningQuestion(reader.Required(item, "id"), reader.Required(item, "text").Trim())
+                {
+                    Reason = reader.Text(item, "reason")?.Trim(),
+                    Kind = reader.RequiredEnum(item, "kind", PlanningQuestionKinds.All),
+                    Options = reader.Strings(item, "options").Select(x => x.Trim()).ToArray(),
+                    Multiple = reader.Flag(item, "multiple")
+                };
             }).ToArray();
             reader.Path = string.Empty;
             var blockReason = reader.Enum(root, "blockReason", BlockReasons);
@@ -107,8 +113,10 @@ public static partial class PlanningOutputGate
             if (kind != PlanningOutcomes.Draft)
             {
                 var clarification = new PlanningClarification(questions, blockReason, message?.Trim());
-                if (draftNode is not null || !PlanningClarificationRules.IsValid(kind, clarification))
-                    throw Schema($"kind {kind}: the KIND rule for \"draft\", \"questions\", \"blockReason\" and \"message\" was not met");
+                if (draftNode is not null)
+                    throw Schema($"kind {kind}: \"draft\" must be null");
+                if (PlanningClarificationRules.Error(kind, clarification) is { } error)
+                    throw Schema($"kind {kind}: {ExplainQuestions(error)}");
                 // Asking again after the turn budget or after "draft now" is not an acceptable answer.
                 if (kind == PlanningOutcomes.Clarification && !allowClarification)
                     throw new GateFailure(GatePolicy, AiFailureClasses.Policy,
@@ -144,6 +152,23 @@ public static partial class PlanningOutputGate
             };
         }
     }
+
+    /// <summary>A clarification rule in words the model can act on, never quoting the rejected output.</summary>
+    private static string ExplainQuestions(string error) => error switch
+    {
+        "MESSAGE_TOO_LONG" => "\"message\" has at most 500 characters",
+        "BLOCKED_INVALID" => "INPUT_BLOCKED needs an empty \"questions\", a listed \"blockReason\" and a non-empty \"message\"",
+        "QUESTION_COUNT_INVALID" => "CLARIFICATION needs 1 to 3 questions and \"blockReason\" null",
+        "QUESTION_ID_DUPLICATE" or "QUESTION_ID_INVALID" => "question ids are q1, q2, q3, each used once",
+        "QUESTION_TEXT_INVALID" => "each question \"text\" has 1 to 300 characters",
+        "QUESTION_REASON_INVALID" => "a question \"reason\" is null or one line of 1 to 120 characters",
+        "QUESTION_MULTIPLE_WITHOUT_OPTIONS" => "\"multiple\" is true only for a question that has options",
+        "QUESTION_OPTION_COUNT_INVALID" => "a question has no options, or 2 to 7 options",
+        "QUESTION_OPTION_INVALID" => "each option is one line of 1 to 40 characters",
+        "QUESTION_OPTION_DUPLICATE" => "the options of one question are all different",
+        "QUESTION_OPTION_OTHER" => "an option must not mean \"something else\" or invite the user to write their own answer; the program adds that choice itself",
+        _ => error
+    };
 
     /// <summary>A structural rule in words the model can act on. An unlisted rule is named by its code.</summary>
     private static string Explain(string error) => error switch
@@ -322,6 +347,10 @@ public static partial class PlanningOutputGate
             JsonArray array => array.ToArray(),
             _ => throw Fail(name, "must be an array")
         };
+
+        public string[] Strings(JsonObject value, string name) => Items(value, name)
+            .Select(x => x?.GetValueKind() == JsonValueKind.String ? x.GetValue<string>() : throw Fail(name, "must be an array of JSON strings"))
+            .ToArray();
 
         public int[] Integers(JsonObject value, string name) => Items(value, name)
             .Select(x => Integer(x ?? throw Fail(name, "must be an array of whole numbers"), name)).ToArray();

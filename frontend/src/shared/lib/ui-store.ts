@@ -14,6 +14,12 @@ type UiState = {
   /** The owner a new item starts under, as `goal:<id>` or `project:<id>`, when it is made from that owner's page. */
   createParent: string | null
   toasts: Toast[]
+  /**
+   * A multi-step flow (planning's questions and review) has the phone screen to itself: the tab bar
+   * and the create button step aside, and the flow carries its own way back. Desktop keeps the rail.
+   */
+  focused: boolean
+  setFocused: (focused: boolean) => void
   openAccount: () => void
   closeAccount: () => void
   openCreate: (target: CreateTarget, parent?: string) => void
@@ -29,6 +35,8 @@ export const useUiStore = create<UiState>(set => ({
   createTarget: null,
   createParent: null,
   toasts: [],
+  focused: false,
+  setFocused: focused => set({ focused }),
   openAccount: () => set({ accountOpen: true }),
   closeAccount: () => set({ accountOpen: false }),
   openCreate: (target, parent) => set({ createTarget: target, createParent: parent ?? null, accountOpen: false }),

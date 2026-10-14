@@ -6,6 +6,7 @@ import { useUiStore } from '../../../shared/lib/ui-store'
 import { currentUser } from '../../auth/services/auth-api'
 import type { CurrentUser } from '../../auth/types/auth.types'
 import { answerAiFeedback, requestAiFeedbackPrompt } from '../../feedback/services/feedback-api'
+import { listGoals } from '../../goals/services/goals-api'
 import { getPilotNotice, submitPilotFeedback } from '../../pilot/services/pilot-api'
 import {
   cancelPlanningAttempt,
@@ -38,6 +39,10 @@ vi.mock('../../pilot/services/pilot-api', () => ({
 }))
 vi.mock('../../feedback/services/feedback-api', () => ({
   requestAiFeedbackPrompt: vi.fn(), answerAiFeedback: vi.fn(), closeAiFeedback: vi.fn(),
+}))
+vi.mock('../../goals/services/goals-api', () => ({ listGoals: vi.fn() }))
+vi.mock('../../projects/services/projects-api', () => ({
+  listProjects: vi.fn().mockResolvedValue({ items: [], page: { nextCursor: null, hasMore: false } }),
 }))
 vi.mock('../services/planning-api', () => ({
   getPlanningActive: vi.fn(), startPlanningAttempt: vi.fn(), getPlanningAttempt: vi.fn(),
@@ -132,7 +137,8 @@ async function openDraft(value: PlanningDraftDto) {
 describe('PlanningPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useUiStore.setState({ toasts: [], createTarget: null })
+    useUiStore.setState({ toasts: [], createTarget: null, focused: false })
+    vi.mocked(listGoals).mockResolvedValue({ items: [], page: { nextCursor: null, hasMore: false } })
     vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: null, sampleGenerator: true })
     vi.mocked(currentUser).mockResolvedValue(account())
     vi.mocked(requestAiFeedbackPrompt).mockResolvedValue({ promptId: null, instrumentVersion: 1 })
@@ -142,11 +148,35 @@ describe('PlanningPage', () => {
     vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: null, sampleGenerator: false })
     renderPage()
 
-    expect(await screen.findByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).toBeInTheDocument()
-    expect(screen.getByText(/هوش مصنوعی فقط پیشنهاد می‌دهد/)).toBeInTheDocument()
+    expect(await screen.findByLabelText('روی چه چیزی می‌خواهید پیش بروید؟')).toBeInTheDocument()
+    expect(screen.getByText('تا خودتان تأیید نکنید، چیزی ساخته نمی‌شود.')).toBeInTheDocument()
+    // The same four steps on every entry, starting at «نوشتن»; a real model is not called a sample.
+    const steps = within(screen.getByRole('list', { name: 'مراحل برنامه‌ریزی' }))
+    expect(steps.getAllByRole('listitem').map(item => item.textContent)).toEqual(['۱نوشتن', '۲پرسش‌ها', '۳مرور', '۴تأیید'])
+    expect(steps.getByRole('listitem', { current: 'step' })).toHaveTextContent('نوشتن')
+    expect(screen.queryByText(/به‌صورت نمونه/)).not.toBeInTheDocument()
+    expect(useUiStore.getState().focused).toBe(false)
     // Disclosure lives on the privacy page only (Discussion 027): no consent card, provider or data-location line here.
     expect(screen.queryByText(/اجازه|بیرون از ایران|سرویس/)).not.toBeInTheDocument()
     expect(getPilotNotice).not.toHaveBeenCalled()
+  })
+
+  it('plans inside an existing Goal when one is chosen while writing', async () => {
+    vi.mocked(listGoals).mockResolvedValue({
+      items: [{ id: goalId, title: 'آلمانی تا B1', status: 'ACTIVE' } as never],
+      page: { nextCursor: null, hasMore: false },
+    })
+    vi.mocked(startPlanningAttempt).mockResolvedValue(attempt('QUEUED'))
+    vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('QUEUED'))
+    renderPage()
+    const none = await screen.findByRole('button', { name: 'هیچ‌کدام' })
+    expect(none).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(await screen.findByRole('button', { name: 'آلمانی تا B1' }))
+    expect(screen.getByRole('button', { name: 'آلمانی تا B1' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.change(screen.getByLabelText('روی چه چیزی می‌خواهید پیش بروید؟'), { target: { value: intention } })
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
+    await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(startPlanningAttempt).mock.calls[0][1]).toMatchObject({ goalId, projectId: undefined })
   })
 
   it('starts one attempt, polls it by id and shows the validated draft as an unapproved hierarchy', async () => {
@@ -160,7 +190,7 @@ describe('PlanningPage', () => {
     }))
     renderPage()
 
-    const input = await screen.findByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')
+    const input = await screen.findByLabelText('روی چه چیزی می‌خواهید پیش بروید؟')
     fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
     expect(await screen.findByText('بنویسید می‌خواهید روی چه چیزی پیش بروید.')).toBeInTheDocument()
     expect(startPlanningAttempt).not.toHaveBeenCalled()
@@ -176,24 +206,30 @@ describe('PlanningPage', () => {
     expect(screen.queryByRole('heading', { name: 'ساختار پیشنهادی' })).not.toBeInTheDocument()
 
     await waitFor(() => expect(getPlanningAttempt).toHaveBeenCalledWith(attemptId), { timeout: 3000 })
-    expect(await screen.findByText('پیش‌نویس تأییدنشده', {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(await screen.findByText('پیش‌نویس؛ هنوز چیزی ساخته نشده', {}, { timeout: 3000 })).toBeInTheDocument()
     // Reconnecting or polling never starts another generation.
     expect(startPlanningAttempt).toHaveBeenCalledTimes(1)
+    // No questions were asked, so «پرسش‌ها» shows as passed, not hidden; the review has the screen to itself.
+    const steps = within(screen.getByRole('list', { name: 'مراحل برنامه‌ریزی' }))
+    expect(steps.getByRole('listitem', { current: 'step' })).toHaveTextContent('مرور')
+    expect(steps.getByText(/پرسش‌ها/)).toHaveTextContent('پرسش‌ها، انجام شد')
+    expect(useUiStore.getState().focused).toBe(true)
+    expect(screen.getByText(`«${intention}»`)).toBeInTheDocument()
 
-    const goalCard = screen.getByRole('article', { name: goal.title })
-    expect(within(goalCard).getByText('مستقل')).toBeInTheDocument()
-    expect(within(goalCard).getByText(/\(پیش‌فرض\)/)).toBeInTheDocument()
-    const stepCard = screen.getByRole('article', { name: step.title })
-    expect(within(stepCard).getByText(`زیر «${goal.title}»`)).toBeInTheDocument()
-    expect(within(stepCard).getByText(/فرض: تاریخ‌ها پیشنهادی‌اند/)).toBeInTheDocument()
     // The child is nested under its parent, not flattened beside it.
-    expect(goalCard.closest('li')).toContainElement(stepCard)
+    const goalCard = within(screen.getByRole('article', { name: goal.title }))
+    expect(goalCard.getByRole('checkbox', { name: `در برنامه باشد: ${step.title}` })).toBeInTheDocument()
+    expect(goalCard.getByText('فرض: تاریخ‌ها پیشنهادی‌اند.')).toBeInTheDocument()
+    expect(goalCard.getByText('مستقیم زیر این هدف')).toBeInTheDocument()
+    expect(screen.getByText('مستقل')).toBeInTheDocument()
 
-    const blocked = within(screen.getByRole('article', { name: far.title }))
-    expect(blocked.getByText('نیازمند اصلاح')).toBeInTheDocument()
-    expect(blocked.getByText(/تاریخ بیرون از هفت روز پیش رو است/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'مرور نهایی و تأیید' })).toBeDisabled()
-    expect(screen.getByText(/دست‌کم یک مورد را در برنامه نگه دارید/)).toBeInTheDocument()
+    // A blocked item says why, offers its fix, and the decision at the foot leads there instead of being dead.
+    expect(screen.getByText(/نیازمند اصلاح: تاریخ بیرون از هفت روز پیش رو است/)).toBeInTheDocument()
+    expect(screen.getByText('۱ مورد نیاز به اصلاح دارد.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'مرور نهایی و تأیید' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'اول ۱ مورد را اصلاح کنید' }))
+    expect(screen.getByRole('button', { name: `اصلاح: ${far.title}` })).toHaveFocus()
+    expect(createPlanningPreview).not.toHaveBeenCalled()
   })
 
   it('may ask about a draft once it was cancelled, never while it is under review', async () => {
@@ -203,7 +239,7 @@ describe('PlanningPage', () => {
     await openDraft(draft())
     expect(requestAiFeedbackPrompt).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'لغو پیش‌نویس' }))
+    fireEvent.click(screen.getByRole('button', { name: 'لغو' }))
     expect(await screen.findByText('برنامه‌ریزی لغو شد.')).toBeInTheDocument()
     await waitFor(() => expect(requestAiFeedbackPrompt).toHaveBeenCalledWith('PLANNING_DRAFT', draftId))
     // The prompt sits inside the page and blocks nothing: the next step stays available.
@@ -219,6 +255,10 @@ describe('PlanningPage', () => {
     // A linked confirmation is not success: the draft is still only reviewable.
     expect(screen.queryByText('برنامه ساخته شد.')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'مرور نهایی و تأیید' })).toBeEnabled()
+    // Rewriting from the review says the draft will be replaced, and replaces it only when asked to.
+    fireEvent.click(screen.getByRole('button', { name: 'ویرایش نوشته' }))
+    expect(screen.getByText('با ساخت پیش‌نویس تازه، پیش‌نویس قبلی کنار گذاشته می‌شود.')).toBeInTheDocument()
+    expect(useUiStore.getState().focused).toBe(false)
     page.unmount()
 
     vi.mocked(startPlanningAttempt).mockResolvedValue(attempt('QUEUED'))
@@ -226,7 +266,7 @@ describe('PlanningPage', () => {
     renderPage()
     fireEvent.click(await screen.findByRole('button', { name: 'شروع تازه و کنار گذاشتن قبلی' }))
     expect(screen.getByText('با ساخت پیش‌نویس تازه، پیش‌نویس قبلی کنار گذاشته می‌شود.')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('می‌خواهید روی چه چیزی پیش بروید؟'), { target: { value: intention } })
+    fireEvent.change(screen.getByLabelText('روی چه چیزی می‌خواهید پیش بروید؟'), { target: { value: intention } })
     fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledTimes(1))
     expect(vi.mocked(startPlanningAttempt).mock.calls[0][1]).toMatchObject({ replaceActive: true })
@@ -238,7 +278,7 @@ describe('PlanningPage', () => {
     vi.mocked(startPlanningAttempt).mockResolvedValue(attempt('QUEUED'))
     vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('FAILED', { failureCode: 'DRAFT_INVALID' }))
     renderPage()
-    fireEvent.change(await screen.findByLabelText('می‌خواهید روی چه چیزی پیش بروید؟'), { target: { value: intention } })
+    fireEvent.change(await screen.findByLabelText('روی چه چیزی می‌خواهید پیش بروید؟'), { target: { value: intention } })
     fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
 
     expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('ساخت پیش‌نویس انجام نشد')
@@ -256,7 +296,7 @@ describe('PlanningPage', () => {
     expect(second[0]).not.toBe(first[0])
 
     fireEvent.click(await screen.findByRole('button', { name: 'ویرایش نوشته' }, { timeout: 3000 }))
-    expect(screen.getByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).toHaveValue(intention)
+    expect(screen.getByLabelText('روی چه چیزی می‌خواهید پیش بروید؟')).toHaveValue(intention)
   })
 
   it('resumes a running attempt by id and shows a cancellation as cancelled, not as a failure', async () => {
@@ -293,13 +333,14 @@ describe('PlanningPage', () => {
     expect(edit.proposals.map(item => [item.draftId, item.included])).toEqual([['goal', false], ['step-1', true]])
     expect(edit.facts).toHaveLength(1)
 
-    const child = within(await screen.findByRole('article', { name: step.title }))
-    expect(await child.findByText('چون مورد بالاتر کنار گذاشته شده، این مورد هم ساخته نمی‌شود.')).toBeInTheDocument()
-    expect(child.getByRole('checkbox')).toBeChecked()
+    expect(await screen.findByText('چون مورد بالاتر کنار گذاشته شده، این مورد هم ساخته نمی‌شود.')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: `در برنامه باشد: ${step.title}` })).toBeChecked()
 
     // A stale edit is reported; the stored draft is not overwritten locally.
     vi.mocked(revisePlanningDraft).mockRejectedValueOnce(apiError(409, 'CONFLICT_STALE_VERSION'))
-    fireEvent.click(screen.getByRole('checkbox', { name: /^روزهای غیرقابل‌استفاده هفته: جمعه/ }))
+    const remembered = screen.getByRole('button', { name: /^یادم بماند: روزهای غیرقابل‌استفاده هفته: جمعه/ })
+    expect(remembered).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(remembered)
     expect(await screen.findByText(/در جای دیگری تغییر کرده است/)).toBeInTheDocument()
     expect(vi.mocked(revisePlanningDraft).mock.calls[1][1]).toBe(2)
   })
@@ -341,7 +382,9 @@ describe('PlanningPage', () => {
     expect(await dialog.findByText(goal.title)).toBeInTheDocument()
     expect(submitPlanningConfirmation).not.toHaveBeenCalled()
 
-    const submit = dialog.getByRole('button', { name: 'تأیید و ساخت' })
+    // The four steps end here, and the button names how much is made.
+    expect(dialog.getByText('۴ از ۴')).toBeInTheDocument()
+    const submit = dialog.getByRole('button', { name: 'تأیید و ساخت ۲ مورد' })
     expect(submit).toBeDisabled()
     fireEvent.click(dialog.getByRole('checkbox'))
     expect(submit).toBeEnabled()
@@ -351,10 +394,10 @@ describe('PlanningPage', () => {
     // Stale: nothing was created, and the only way forward is a fresh preview and a fresh acknowledgement.
     expect(await dialog.findByText(/هیچ موردی ساخته نشد/)).toBeInTheDocument()
     expect(screen.queryByText('برنامه ساخته شد.')).not.toBeInTheDocument()
-    expect(dialog.queryByRole('button', { name: 'تأیید و ساخت' })).not.toBeInTheDocument()
+    expect(dialog.queryByRole('button', { name: /^تأیید و ساخت/ })).not.toBeInTheDocument()
     fireEvent.click(dialog.getByRole('button', { name: 'پیش‌نمایش تازه' }))
     await waitFor(() => expect(createPlanningPreview).toHaveBeenCalledTimes(2))
-    const fresh = await screen.findByRole('button', { name: 'تأیید و ساخت' })
+    const fresh = await screen.findByRole('button', { name: /^تأیید و ساخت/ })
     expect(fresh).toBeDisabled()
     fireEvent.click(screen.getByRole('checkbox', { name: /زیر یک مورد کنارگذاشته‌شده/ }))
     fireEvent.click(fresh)
@@ -371,7 +414,7 @@ describe('PlanningPage', () => {
     vi.mocked(getPlanningConfirmation).mockResolvedValue(confirmation({ status: 'RESOLVED', result }))
 
     fireEvent.click(screen.getByRole('button', { name: 'مرور نهایی و تأیید' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'تأیید و ساخت' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^تأیید و ساخت/ }))
     await waitFor(() => expect(getPlanningConfirmation).toHaveBeenCalledWith(confirmationId))
     expect(await screen.findByText('برنامه ساخته شد.')).toBeInTheDocument()
     expect(submitPlanningConfirmation).toHaveBeenCalledTimes(1)
@@ -391,7 +434,10 @@ describe('PlanningPage', () => {
     const asking = attempt('SUCCEEDED', {
       draftId: null, outcome: 'CLARIFICATION',
       clarification: {
-        questions: [{ id: 'q1', text: 'هر هفته چند روز وقت دارید؟' }, { id: 'q2', text: 'تاریخ مشخصی در نظر دارید؟' }],
+        questions: [
+          { id: 'q1', text: 'کدام روزها وقت دارید؟', reason: 'تا روتین‌ها همان روزها بنشینند.', kind: 'RECURRENCE', options: ['شنبه', 'یکشنبه', 'دوشنبه'], multiple: true },
+          { id: 'q2', text: 'تاریخ مشخصی در نظر دارید؟', reason: null, kind: 'TIMING', options: ['تا یک ماه', 'تا سه ماه'], multiple: false },
+        ],
         blockReason: null, message: null, turn: 1,
       },
     })
@@ -400,29 +446,40 @@ describe('PlanningPage', () => {
       id === nextAttemptId ? attempt('SUCCEEDED', { id: nextAttemptId, outcome: 'DRAFT' }) : asking)
     vi.mocked(getPlanningDraft).mockResolvedValue(draft({ attemptId: nextAttemptId }))
     renderPage()
-    fireEvent.change(await screen.findByLabelText('می‌خواهید روی چه چیزی پیش بروید؟'), { target: { value: intention } })
+    fireEvent.change(await screen.findByLabelText('روی چه چیزی می‌خواهید پیش بروید؟'), { target: { value: intention } })
     fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
 
     // Questions are not a draft: nothing reviewable is shown and nothing can be approved.
-    expect(await screen.findByRole('heading', { name: 'چند پرسش پیش از ساخت پیش‌نویس' }, { timeout: 3000 })).toBeInTheDocument()
-    expect(screen.getByText(/گام ۱ از حداکثر ۳/)).toBeInTheDocument()
-    expect(screen.getByText(intention)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'دو پرسش کوتاه' }, { timeout: 3000 })).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'مراحل برنامه‌ریزی' })).getByRole('listitem', { current: 'step' })).toHaveTextContent('پرسش‌ها')
+    expect(useUiStore.getState().focused).toBe(true)
+    expect(screen.getByText('تا روتین‌ها همان روزها بنشینند.')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('۰ از ۲ پاسخ')
     expect(screen.queryByRole('heading', { name: 'ساختار پیشنهادی' })).not.toBeInTheDocument()
     expect(getPlanningDraft).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'ادامه' }))
-    expect(await screen.findByText(/دست‌کم به یکی از پرسش‌ها پاسخ دهید/)).toBeInTheDocument()
-    expect(startPlanningAttempt).toHaveBeenCalledTimes(1)
+    // Several days on the first question, and a word of one's own beside them.
+    const days = within(screen.getByRole('group', { name: 'کدام روزها وقت دارید؟' }))
+    fireEvent.click(days.getByRole('button', { name: 'شنبه' }))
+    fireEvent.click(days.getByRole('button', { name: 'دوشنبه' }))
+    fireEvent.click(days.getByRole('button', { name: 'چیز دیگر…' }))
+    fireEvent.change(screen.getByLabelText('پاسخ خودتان: کدام روزها وقت دارید؟'), { target: { value: '  عصرها  ' } })
+    // One choice only on the second: choosing again replaces it.
+    const when = within(screen.getByRole('group', { name: 'تاریخ مشخصی در نظر دارید؟' }))
+    fireEvent.click(when.getByRole('button', { name: 'تا یک ماه' }))
+    fireEvent.click(when.getByRole('button', { name: 'تا سه ماه' }))
+    expect(when.getByRole('button', { name: 'تا یک ماه' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('status')).toHaveTextContent('۲ از ۲ پاسخ')
 
     vi.mocked(startPlanningAttempt).mockResolvedValueOnce(attempt('QUEUED', { id: nextAttemptId }))
-    fireEvent.change(screen.getByLabelText('هر هفته چند روز وقت دارید؟'), { target: { value: '  سه روز  ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'ادامه' }))
+    fireEvent.click(screen.getByRole('button', { name: 'پیش‌نویس را بساز' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledTimes(2))
     const [first, second] = vi.mocked(startPlanningAttempt).mock.calls
-    // Only the answered question is sent, under a new attempt identity that points at the questions.
+    // Options go by position (the server turns them into labels), under a new attempt identity that points at the questions.
     expect(second[1]).toEqual({
       intention, goalId: undefined, projectId: undefined, replaceActive: false, previousAttemptId: attemptId,
-      answers: [{ questionId: 'q1', text: 'سه روز' }], draftNow: false,
+      answers: [{ questionId: 'q1', options: [0, 2], text: 'عصرها' }, { questionId: 'q2', options: [1], text: null }],
+      draftNow: false,
     })
     expect(second[0]).not.toBe(first[0])
     expect(await screen.findByRole('heading', { name: 'ساختار پیشنهادی' }, { timeout: 3000 })).toBeInTheDocument()
@@ -432,7 +489,7 @@ describe('PlanningPage', () => {
     const asking = attempt('SUCCEEDED', {
       draftId: null, outcome: 'CLARIFICATION',
       clarification: {
-        questions: [{ id: 'q1', text: 'هر هفته چند روز وقت دارید؟' }], blockReason: null,
+        questions: [{ id: 'q1', text: 'از کجا شروع می‌کنید؟', kind: 'CONTENT', options: [], multiple: false }], blockReason: null,
         message: 'برنامه درمانی نمی‌سازم، اما می‌توانم کارهای خودتان را مرتب کنم.', turn: 2,
       },
     })
@@ -441,15 +498,16 @@ describe('PlanningPage', () => {
     vi.mocked(startPlanningAttempt).mockResolvedValue(attempt('QUEUED', { id: '00000000-0000-0000-0000-000000000a03' }))
     const page = renderPage()
 
-    expect(await screen.findByLabelText('هر هفته چند روز وقت دارید؟')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'یک پرسش کوتاه' })).toBeInTheDocument()
     expect(screen.getByText(/برنامه درمانی نمی‌سازم/)).toBeInTheDocument()
-    expect(screen.getByText(/گام ۲ از حداکثر ۳/)).toBeInTheDocument()
+    expect(screen.getByText(/این دور ۲ از حداکثر ۳ است/)).toBeInTheDocument()
     expect(startPlanningAttempt).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: 'خودم دستی می‌سازم' }))
     expect(useUiStore.getState().createTarget).toBe('menu')
 
-    fireEvent.click(screen.getByRole('button', { name: 'همین حالا پیش‌نویس بساز' }))
+    // Building with nothing answered is «بدون پاسخ بساز».
+    fireEvent.click(screen.getByRole('button', { name: 'پیش‌نویس را بساز' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledTimes(1))
     expect(vi.mocked(startPlanningAttempt).mock.calls[0][1]).toMatchObject({
       previousAttemptId: attemptId, answers: [], draftNow: true, intention,
@@ -457,8 +515,11 @@ describe('PlanningPage', () => {
     page.unmount()
 
     renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'بدون پاسخ بساز' }))
+    await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(startPlanningAttempt).mock.calls[1][1]).toMatchObject({ answers: [], draftNow: true })
     fireEvent.click(await screen.findByRole('button', { name: 'ویرایش نوشته' }))
-    expect(screen.getByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).toHaveValue(intention)
+    expect(screen.getByLabelText('روی چه چیزی می‌خواهید پیش بروید؟')).toHaveValue(intention)
   })
 
   it('explains a blocked input and an unavailable or rate-limited assistant without losing the text', async () => {
@@ -468,7 +529,7 @@ describe('PlanningPage', () => {
       clarification: { questions: [], blockReason: 'TOO_VAGUE', message: 'بنویسید دقیقاً روی چه چیزی کار می‌کنید.', turn: 1 },
     }))
     renderPage()
-    fireEvent.change(await screen.findByLabelText('می‌خواهید روی چه چیزی پیش بروید؟'), { target: { value: intention } })
+    fireEvent.change(await screen.findByLabelText('روی چه چیزی می‌خواهید پیش بروید؟'), { target: { value: intention } })
     fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
 
     expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('برای این نوشته نمی‌توان پیش‌نویس ساخت')
@@ -477,15 +538,15 @@ describe('PlanningPage', () => {
     expect(screen.queryByRole('button', { name: 'تلاش دوباره' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'ویرایش نوشته' }))
-    const input = screen.getByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')
+    const input = screen.getByLabelText('روی چه چیزی می‌خواهید پیش بروید؟')
     expect(input).toHaveValue(intention)
 
     // The assistant is switched off: said plainly, nothing changed, manual creation still works.
     vi.mocked(startPlanningAttempt).mockRejectedValueOnce(apiError(503, 'PLANNING_AI_UNAVAILABLE'))
     fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
     expect(await screen.findByText(/دستیار برنامه‌ریزی فعلاً در دسترس نیست/)).toBeInTheDocument()
-    expect(screen.getByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).toHaveValue(intention)
-    fireEvent.click(screen.getByRole('button', { name: 'خودم دستی می‌سازم' }))
+    expect(screen.getByLabelText('روی چه چیزی می‌خواهید پیش بروید؟')).toHaveValue(intention)
+    fireEvent.click(screen.getByRole('button', { name: 'یا خودم دستی می‌سازم' }))
     expect(useUiStore.getState().createTarget).toBe('menu')
 
     vi.mocked(startPlanningAttempt).mockRejectedValueOnce(apiError(429, 'AI_RATE_LIMITED'))
@@ -501,7 +562,7 @@ describe('PlanningPage', () => {
     expect(await screen.findByText('این پیش‌نویس دیگر قابل مرور نیست.')).toBeInTheDocument()
     expect(screen.getByText(/مهلت مرور آن تمام شده است/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'شروع دوباره' }))
-    expect(await screen.findByLabelText('می‌خواهید روی چه چیزی پیش بروید؟')).toBeInTheDocument()
+    expect(await screen.findByLabelText('روی چه چیزی می‌خواهید پیش بروید؟')).toBeInTheDocument()
     page.unmount()
 
     vi.mocked(getPlanningActive).mockRejectedValue(apiError(500, 'UNEXPECTED_ERROR'))

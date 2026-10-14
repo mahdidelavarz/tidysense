@@ -635,7 +635,7 @@ Verified 2026-10-13 on Linux:
 
 **Decisions and deviations:**
 
-- **A new Task's day starts at «امروز».** This follows the board and the D028 §4.3 promise of a one-line Task in under 5 seconds. A title with no date and no owner is still saved as a quick capture (026 §10), now by choosing «بدون تاریخ» with «مستقل». *This changes what a bare title does, from a capture to a Task for today, and is for the owner to confirm.*
+- **A new Task's day starts at «امروز».** This follows the board and the D028 §4.3 promise of a one-line Task in under 5 seconds. A title with no date and no owner is still saved as a quick capture (026 §10), now by choosing «بدون تاریخ» with «مستقل». *This changes what a bare title does, from a capture to a Task for today.* **Confirmed by the owner on 2026-10-14.**
 - **The day wheel shows the three days before today as context only.** They cannot be chosen; earlier work is Reconcile's. Days that fade out of the wheel are out of keyboard reach until a nearer day is chosen.
 - **Origin dates.** "Since 17 Mehr" is shown on the Tasks list from the planned date, where it is the fact. Today and Task detail show how many times a Task was moved, because no origin date is stored.
 - **Done and waiting rows are faded to 85%,** not the board's 62%, which would drop their text to 2.8:1. Quiet meta text uses `text-secondary`, not the boards' tertiary grey (3.4:1).
@@ -711,7 +711,7 @@ Verified 2026-10-13 on Linux:
 **Decisions and deviations:**
 
 - **Guides show below 1024px,** tablets included, because the layout is the phone layout up to there; 028 says "phones".
-- **The welcome uses the sunset photograph** already chosen for Today. The checklist's "replace with the owner's image" is not done: no other image was supplied.
+- **The welcome uses the sunset photograph** already chosen for Today. The checklist's "replace with the owner's image" is not done: no other image was supplied. *The owner decided on 2026-10-14 to keep it for now and replace it themselves.*
 - **Lists read the options endpoints** (up to 100 Goals or Projects), which is ample for the pilot and keeps one request per page.
 - **No filter button and no «…» menu** on the lists or details: closed items are folded at the foot, and editing is the pencil in the header. The boards' extra buttons had no action.
 - **Wording:** «به این هدف رسیدم» for achieving a Goal; «توقف پروژه» rather than the board's «کنار گذاشتن پروژه», which is the Task verb; formal address throughout, as in STEP-15 and STEP-16.
@@ -749,9 +749,78 @@ Verified 2026-10-13 on Linux:
 
 **Completion criteria:** One flow on every entry; options are gated like every other model output; the measured time supports the guide's promise or the promise is changed.
 
-**Status:** `NOT_STARTED`
+**Status:** `IN_PROGRESS` — built and verified with the sample generator. Still needed: the real-provider smoke run and the time-to-draft measurement with that provider, the third completion criterion. No provider key is available in the build environment.
 
-**Evidence:** None.
+**Evidence:**
+
+- **Question contract and gate** (028 §2, [STEP-09 contract](step-09-ai-planning-acceptance.md) statements 27a–28c):
+  - [question, answer and kind contracts and their rules](../backend/Services/PlanningContracts.cs), including `IsOther`;
+  - [gate](../backend/Services/Ai/PlanningOutputGate.cs), [prompt](../backend/Services/Ai/PlanningPromptRenderer.cs) (schema and prompt `2026-10-14.1`);
+  - [sample-generator fixtures](../backend/Services/DeterministicPlanningGenerator.cs): `clarify` asks one question of each answer shape.
+- **Answers and measurement:**
+  - [answer validation and the ANSWERED event](../backend/Services/PlanningService.cs);
+  - [the ASKED event, `PLANNING_DRAFT_CREATED` version 2 and `flowId`](../backend/Services/PlanningAttemptRunner.cs);
+  - [payload schemas](../backend/Common/Events/PlanningEventSchemas.cs);
+  - [metric dictionary](operations/metric-dictionary.md) row for STEP-20.
+- **Four steps:**
+  - [page](../frontend/src/features/planning/components/PlanningPage.tsx) with the shared [stepper](../frontend/src/shared/ui/Stepper.tsx) and the phone [focus mode](../frontend/src/shared/lib/ui-store.ts);
+  - [writing](../frontend/src/features/planning/components/PlanningIntentForm.tsx), [questions](../frontend/src/features/planning/components/PlanningClarification.tsx), [review](../frontend/src/features/planning/components/PlanningDraftReview.tsx), [confirmation](../frontend/src/features/planning/components/PlanningApplyDialog.tsx);
+  - [remembered details](../frontend/src/features/planning/components/PlanningFactsSection.tsx), [satisfaction card](../frontend/src/features/feedback/components/AiFeedbackCard.tsx).
+- **Measurement tool:** [time to draft](../frontend/e2e/time-to-draft.spec.ts), opt-in (`TIDYSENSE_MEASURE_TIME_TO_DRAFT=<runs>`).
+- **Docs:** [components](frontend/components.md), [layout and navigation](frontend/layout-and-navigation.md), [STEP-08](step-08-planning-acceptance.md) and [STEP-09](step-09-ai-planning-acceptance.md) contracts.
+
+**What the tests show:**
+
+- [Gate](../backend.Tests/PlanningOutputGateTests.cs):
+  - valid: a reason, a kind, options and `multiple`; free text only; a kind in another case;
+  - missing: no kind; one option; no options with `multiple`;
+  - hostile, 20 cases: unknown kind, eight options, a 41-character label, an empty label, duplicates (also «سه‌شنبه» against «سه شنبه»), «سایر», «چیز دیگر…», "Other", «خودم می‌نویسم», `multiple` as a string, numbers or objects as labels, a label that carries a newline and an instruction, a long or two-line reason, an unknown field;
+  - each case rejects the whole output, and the correction never repeats the label;
+  - markup and a link in a label pass as plain text; «سایر روزهای هفته», «هیچ‌کدام» and «نمی‌دانم» are real answers.
+- [Runtime](../backend.Tests/AiPlanningRuntimeTests.cs): a chosen option reaches the model as its label, never as a position.
+- [Planning API](../backend.Tests/PlanningModuleTests.cs):
+  - three questions of three shapes;
+  - an option out of range, negative, repeated, two on a one-choice question, or on a free-text question returns `400`;
+  - options and text are stored together;
+  - ASKED, ANSWERED and DRAFT_CREATED v2 carry kinds, positions and the flow, and no label or answer text.
+- [Planning page](../frontend/src/features/planning/components/PlanningPage.test.tsx):
+  - four steps on every path, with «پرسش‌ها» shown as passed when nothing was asked;
+  - choosing a Goal while writing plans inside it;
+  - several options plus one's own words, and a one-choice question replacing its choice;
+  - building with nothing answered is «بدون پاسخ بساز»;
+  - the footer leads to the first item to fix;
+  - the confirmation reads «تأیید و ساخت ۲ مورد» at «۴ از ۴»;
+  - rewriting from the review announces the replacement;
+  - the satisfaction card follows an ended draft and never the one under review;
+  - the manual path is offered at every step.
+- Browser: [planning](../frontend/e2e/planning.spec.ts) answers the three fixture questions by option, by several options and by its own words.
+
+**Verified 2026-10-14 on Linux:**
+
+- 93 frontend tests passed; typecheck, lint and build were clean.
+- All 19 browser scenarios passed in Chromium against a fresh isolated database; the opt-in time-to-draft scenario was skipped, as it is by default.
+- 263 backend tests passed; 2 skipped (the real-provider smoke runs).
+- Screenshots at 390 px in both themes were compared with `CodePlanning`, `CodePlanningQuestions`, `CodePlanningDraft` and `CodePlanningApply`.
+- Time to draft with the sample generator and the `clarify` fixture: 5 runs, median **25.6 s**.
+  - The scripted person typed an 83-character intention at 150 ms per character, took 2.5 s per question and answered three questions.
+  - That person accounts for about 22.5 s; the app and the sample generator for about 3 s.
+  - The STEP-09 real-provider calls took 2.2 s (questions) and 4.7 s (draft), which suggests about half a minute. **This is an estimate, not the measurement the step requires.**
+
+**Decisions and deviations:**
+
+- **The satisfaction card is not on the draft under review.** `CodePlanningDraft` shows it there, but 027 §8.3 (owner, 2026-10-14) asks only after a draft ends unapplied. The Mind Map wins: the card, restyled to the board, appears after a cancel or a replacement, in the step that follows.
+- **A blocked draft's button leads to the fix.** The board's «اول ۱ مورد را اصلاح کن» is disabled; here it moves focus to the first «اصلاح». The board's one-tap date fix («۲۴ مهر کن») is not built: the server returns an issue code, not a proposed value, so «اصلاح» opens the item's edit sheet.
+- **The tree omits item details** (outcome, completion meaning, review date). They are in each item's edit sheet.
+- **Focus mode.** On phones the tab bar and the create button step aside during questions, generation and review, as in the boards. This is a new shell behaviour.
+- **Formal address,** as in STEPs 15–17 («می‌خواهید», «اصلاح کنید»).
+- **Measurement is two new R1 events,** not columns on the attempt. Attempts are purged 30 days after they end (R3), which would lose half of a two-month pilot.
+
+**Still owed (the owner, with a provider key):**
+
+- `TIDYSENSE_AI_SMOKE_KEY=… dotnet test --filter Real_provider_smoke`: the gate on a real answer under the new schema.
+- `TIDYSENSE_MEASURE_TIME_TO_DRAFT=5 npx playwright test e2e/time-to-draft.spec.ts` against a backend on the real provider. Keep «زیر ۲ دقیقه» if the median holds under 120 s; otherwise change guide 1's copy (028 §4.3).
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- A screen-reader pass of the option chips and the tree.
 
 ---
 

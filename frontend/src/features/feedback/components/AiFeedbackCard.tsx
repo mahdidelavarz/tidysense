@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { X } from '../../../shared/ui/icons'
+import { Sparkles, X } from '../../../shared/ui/icons'
 import { FormError } from '../../../shared/ui/FormUi'
 import { useAiFeedbackPrompt, useAnswerAiFeedback, useCloseAiFeedback } from '../hooks/feedback-hooks'
 import {
@@ -34,11 +34,14 @@ export function AiFeedbackCard({ surface, subjectId }: { surface: AiFeedbackSurf
   const send = (value: number, text: string | null) => answer.mutate({ promptId, rating: value, reason: text })
 
   return (
-    <section className="card mb-4 rounded-3xl text-start" aria-labelledby={titleId}>
+    <section className="ai-feedback mb-4 text-start" aria-labelledby={titleId}>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs text-text-secondary">یک پرسش اختیاری</p>
-          <h2 className="mt-1 font-bold" id={titleId}>{aiFeedbackQuestions[surface]}</h2>
+        <div className="flex items-start gap-2.5">
+          <span className="ai-tile size-8 rounded-[0.625rem]" aria-hidden="true"><Sparkles size={16} /></span>
+          <div>
+            <p className="text-xs text-text-secondary">یک پرسش اختیاری</p>
+            <h2 className="mt-0.5 font-extrabold" id={titleId}>{aiFeedbackQuestions[surface]}</h2>
+          </div>
         </div>
         <button
           className="icon-button -me-2 -mt-2"
@@ -57,7 +60,7 @@ export function AiFeedbackCard({ surface, subjectId }: { surface: AiFeedbackSurf
           return (
             <button
               key={label}
-              className="choice-chip min-h-12 px-0 text-sm font-bold"
+              className="answer-chip min-h-12 px-0 text-sm"
               type="button"
               aria-pressed={rating === value}
               disabled={busy}

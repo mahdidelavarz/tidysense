@@ -10,16 +10,6 @@ export const intentionSchema = z.object({
 
 export type IntentionFields = z.infer<typeof intentionSchema>
 
-/** One answer per question, in the order asked. Unanswered questions are simply left empty. */
-export const clarificationSchema = z.object({
-  answers: z.array(z.string().trim().max(500, 'پاسخ بیش از حد طولانی است.')),
-}).refine(value => value.answers.some(answer => answer.length > 0), {
-  path: ['answers'],
-  message: 'دست‌کم به یکی از پرسش‌ها پاسخ دهید یا «همین حالا پیش‌نویس بساز» را انتخاب کنید.',
-})
-
-export type ClarificationFields = z.infer<typeof clarificationSchema>
-
 /** One form for every proposal type; fields that do not belong to the type are simply not shown. */
 export const proposalFieldsSchema = z.object({
   entityType: z.string(),

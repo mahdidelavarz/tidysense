@@ -381,7 +381,7 @@ public sealed class AiPlanningRuntimeTests
     [Fact]
     public async Task Questions_are_returned_only_while_they_are_allowed()
     {
-        var asking = """{"kind":"CLARIFICATION","draft":null,"questions":[{"id":"q1","text":"چند روز در هفته؟"}]}""";
+        var asking = """{"kind":"CLARIFICATION","draft":null,"questions":[{"id":"q1","text":"چند روز در هفته؟","kind":"RECURRENCE"}]}""";
         var harness = new Harness();
         harness.Provider.Reply(Completion(asking));
         var result = await harness.GenerateAsync(allowClarification: true);
@@ -396,7 +396,12 @@ public sealed class AiPlanningRuntimeTests
         Assert.Equal(PlanningOutputGate.GatePolicy, harness.Log.Rows[^1].Gate);
         Assert.Contains("clarificationAllowed is false", Messages(harness.Provider.Calls[^1]).System);
         // Finished turns are part of the request data.
-        var turns = new[] { new PlanningTurn([new PlanningQuestion("q1", "چند روز؟")], [new PlanningAnswer("q1", "سه روز")]) };
+        var turns = new[]
+        {
+            new PlanningTurn([new PlanningQuestion("q1", "چند روز؟")], [new PlanningAnswer("q1", "سه روز")]),
+            new PlanningTurn([new PlanningQuestion("q1", "کدام روزها؟") { Kind = "RECURRENCE", Options = ["شنبه", "دوشنبه", "جمعه"], Multiple = true }],
+                [new PlanningAnswer("q1") { Options = [0, 2] }])
+        };
         harness.Provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
         await harness.Generator.GenerateAsync(new PlanningGenerationRequest(Guid.NewGuid(), Intention, harness.Context, null)
         {
@@ -406,6 +411,10 @@ public sealed class AiPlanningRuntimeTests
         var user = body.RootElement.GetProperty("messages")[1].GetProperty("content").GetString()!;
         Assert.Contains("سه روز", user);
         Assert.Contains("چند روز؟", user);
+        // A chosen option reaches the model as its label, never as a bare position.
+        using var data = JsonDocument.Parse(user[(user.IndexOf('\n') + 1)..user.LastIndexOf('\n')]);
+        var chosen = data.RootElement.GetProperty("clarificationTurns")[1].GetProperty("answers")[0].GetProperty("chosen");
+        Assert.Equal(["شنبه", "جمعه"], chosen.EnumerateArray().Select(x => x.GetString()));
     }
 
     [Fact]

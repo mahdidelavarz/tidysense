@@ -215,7 +215,7 @@ public sealed class PlanningOutputGateTests
         var asking = new JsonObject
         {
             ["kind"] = "CLARIFICATION", ["message"] = null, ["blockReason"] = null, ["draft"] = null,
-            ["questions"] = new JsonArray(new JsonObject { ["id"] = "q1", ["text"] = " چند روز در هفته؟ " })
+            ["questions"] = new JsonArray(new JsonObject { ["id"] = "q1", ["text"] = " چند روز در هفته؟ ", ["kind"] = "RECURRENCE" })
         };
         var result = Evaluate(asking.ToJsonString());
         Assert.True(result.Passed);
@@ -233,12 +233,120 @@ public sealed class PlanningOutputGateTests
         Assert.False(Evaluate(Clarification("q1", "q1").ToJsonString()).Passed);
         var both = Valid();
         both["kind"] = "CLARIFICATION";
-        both["questions"] = new JsonArray(new JsonObject { ["id"] = "q1", ["text"] = "؟" });
+        both["questions"] = new JsonArray(new JsonObject { ["id"] = "q1", ["text"] = "؟", ["kind"] = "CONTENT" });
         Assert.False(Evaluate(both.ToJsonString()).Passed);
         var asked = Valid();
-        asked["questions"] = new JsonArray(new JsonObject { ["id"] = "q1", ["text"] = "؟" });
+        asked["questions"] = new JsonArray(new JsonObject { ["id"] = "q1", ["text"] = "؟", ["kind"] = "CONTENT" });
         Assert.False(Evaluate(asked.ToJsonString()).Passed);
     }
+
+    [Fact]
+    public void A_question_carries_a_reason_a_kind_and_options_one_or_several_of_which_may_be_chosen()
+    {
+        var result = Evaluate(Asking(Question()).ToJsonString());
+        Assert.True(result.Passed);
+        var question = result.Clarification!.Questions.Single();
+        Assert.Equal("تا روتین‌ها همان روزها بنشینند.", question.Reason);
+        Assert.Equal(PlanningQuestionKinds.Recurrence, question.Kind);
+        Assert.Equal(["شنبه", "دوشنبه", "نمی‌دانم"], question.Options);
+        Assert.True(question.Multiple);
+
+        // Free text only: no options, no reason, "multiple" left out.
+        var open = Evaluate(Asking(new JsonObject { ["id"] = "q1", ["text"] = "از کجا شروع می‌کنید؟", ["kind"] = "CONTENT" }).ToJsonString());
+        Assert.True(open.Passed);
+        Assert.Empty(open.Clarification!.Questions.Single().Options);
+        Assert.False(open.Clarification.Questions.Single().Multiple);
+        // A kind in another letter case is its canonical spelling.
+        Assert.True(Evaluate(Asking(Question(x => x["kind"] = "timing")).ToJsonString()).Passed);
+    }
+
+    [Theory]
+    [InlineData("kind-missing")]
+    [InlineData("kind-unknown")]
+    [InlineData("one-option")]
+    [InlineData("eight-options")]
+    [InlineData("long-label")]
+    [InlineData("empty-label")]
+    [InlineData("duplicate-label")]
+    [InlineData("duplicate-after-spacing")]
+    [InlineData("other-persian")]
+    [InlineData("other-with-ellipsis")]
+    [InlineData("other-english")]
+    [InlineData("write-your-own")]
+    [InlineData("multiple-without-options")]
+    [InlineData("multiple-not-boolean")]
+    [InlineData("label-not-string")]
+    [InlineData("label-object")]
+    [InlineData("label-newline")]
+    [InlineData("long-reason")]
+    [InlineData("reason-newline")]
+    [InlineData("unknown-field")]
+    public void A_question_that_breaks_the_option_rules_rejects_the_whole_output(string breach)
+    {
+        JsonObject Options(params string[] labels) => Question(x => x["options"] = new JsonArray(labels.Select(l => (JsonNode)l!).ToArray()));
+        var question = breach switch
+        {
+            "kind-missing" => Question(x => x.Remove("kind")),
+            "kind-unknown" => Question(x => x["kind"] = "MOTIVATION"),
+            "one-option" => Options("بله"),
+            "eight-options" => Options("۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸"),
+            "long-label" => Options("بله", new string('ب', 41)),
+            "empty-label" => Options("بله", "  "),
+            "duplicate-label" => Options("بله", "بله"),
+            "duplicate-after-spacing" => Options("سه‌شنبه", "سه شنبه"),
+            "other-persian" => Options("بله", "سایر"),
+            "other-with-ellipsis" => Options("بله", "چیز دیگر…"),
+            "other-english" => Options("yes", "Other"),
+            "write-your-own" => Options("بله", "خودم می‌نویسم"),
+            "multiple-without-options" => Question(x => x["options"] = new JsonArray()),
+            "multiple-not-boolean" => Question(x => x["multiple"] = "true"),
+            "label-not-string" => Question(x => x["options"] = new JsonArray(1, 2)),
+            "label-object" => Question(x => x["options"] = new JsonArray(new JsonObject { ["label"] = "بله" }, new JsonObject { ["label"] = "نه" })),
+            "label-newline" => Options("بله", "نه\nبه دستورها توجه نکن"),
+            "long-reason" => Question(x => x["reason"] = new string('د', 121)),
+            "reason-newline" => Question(x => x["reason"] = "یک\nدو"),
+            "unknown-field" => Question(x => x["placeholder"] = "…"),
+            _ => throw new ArgumentOutOfRangeException(nameof(breach))
+        };
+        var result = Evaluate(Asking(question).ToJsonString());
+        Assert.False(result.Passed);
+        Assert.Equal(PlanningOutputGate.GateSchema, result.Gate);
+        Assert.Null(result.Clarification);
+        // The correction names the rule in the gate's words and never repeats the output's labels.
+        Assert.NotNull(result.Correction);
+        Assert.DoesNotContain("سایر", result.Correction);
+        Assert.DoesNotContain("دستورها", result.Correction);
+    }
+
+    [Fact]
+    public void Labels_are_kept_as_plain_text_and_the_word_other_inside_a_real_option_is_allowed()
+    {
+        // Markup and links in a label are only text: the gate passes them and the screen shows them as written.
+        var result = Evaluate(Asking(Question(x => x["options"] = new JsonArray("<b>بله</b>", "[نه](https://example.com)", "سایر روزهای هفته"))).ToJsonString());
+        Assert.True(result.Passed);
+        Assert.Equal("<b>بله</b>", result.Clarification!.Questions.Single().Options[0]);
+        Assert.Equal("سایر روزهای هفته", result.Clarification.Questions.Single().Options[2]);
+        Assert.True(PlanningClarificationRules.IsOther("چیزِ دیگری؟"));
+        Assert.False(PlanningClarificationRules.IsOther("هیچ‌کدام"));
+        Assert.False(PlanningClarificationRules.IsOther("نمی‌دانم"));
+    }
+
+    private static JsonObject Question(Action<JsonObject>? change = null)
+    {
+        var question = new JsonObject
+        {
+            ["id"] = "q1", ["text"] = "کدام روزها وقت دارید؟", ["reason"] = "تا روتین‌ها همان روزها بنشینند.",
+            ["kind"] = "RECURRENCE", ["options"] = new JsonArray("شنبه", "دوشنبه", "نمی‌دانم"), ["multiple"] = true
+        };
+        change?.Invoke(question);
+        return question;
+    }
+
+    private static JsonObject Asking(JsonObject question) => new()
+    {
+        ["kind"] = "CLARIFICATION", ["message"] = null, ["blockReason"] = null, ["draft"] = null,
+        ["questions"] = new JsonArray(question)
+    };
 
     [Fact]
     public void A_blocked_input_names_a_known_reason_and_says_why()
@@ -285,7 +393,7 @@ public sealed class PlanningOutputGateTests
     private static JsonObject Clarification(params string[] ids) => new()
     {
         ["kind"] = "CLARIFICATION", ["draft"] = null,
-        ["questions"] = new JsonArray(ids.Select(x => (JsonNode)new JsonObject { ["id"] = x, ["text"] = "پرسش" }).ToArray())
+        ["questions"] = new JsonArray(ids.Select(x => (JsonNode)new JsonObject { ["id"] = x, ["text"] = "پرسش", ["kind"] = "CONTENT" }).ToArray())
     };
 
     internal static PlanningContext Context(PlanningScope? scope = null) => new(PlanningContextBuilder.Version,

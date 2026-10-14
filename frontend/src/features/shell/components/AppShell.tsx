@@ -18,9 +18,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const accountOpen = useUiStore(state => state.accountOpen)
   const closeAccount = useUiStore(state => state.closeAccount)
   const online = useOnline()
+  const focused = useUiStore(state => state.focused)
 
   return (
-    <div className="app-frame bg-canvas text-text-primary">
+    <div className="app-frame bg-canvas text-text-primary" data-focused={focused || undefined}>
       <a className="fixed start-4 top-3 z-60 -translate-y-20 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-on-accent transition focus:translate-y-0" href="#main-content">
         رفتن به محتوای اصلی
       </a>

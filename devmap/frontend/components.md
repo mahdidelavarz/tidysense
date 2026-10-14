@@ -33,7 +33,14 @@ Never put two primary buttons on one screen. A terminal or destructive action ne
 | `.positive-button` | the quiet positive answer at the foot of a Goal or Project («به این هدف رسیدم», «این پروژه تمام شد») |
 | `.add-row` | a dashed row that adds one more item in place («کار جدید در این پروژه») |
 | `.glass-card`, `.glass-chip`, `.glass-button`, `.glass-close` | a frosted card on the photograph: an icon tile, a title, chips (`data-tone="warm"` for age), a 44px arrow link and a small corner close with a full-size target |
-| `.proposal-card` | a proposed item in a planning draft, in its entity's corner wash, with its include switch and edit button in a bar underneath; `data-excluded` drops the wash |
+| `.flow-bar`, `.flow-footer` | a focused step's top (the way back at the start, a close or the manual path at the end) and its decision kept at the bottom edge |
+| `.question-card`, `.answer-chip` | one clarification question (number, text, reason) and its answers: options as toggle buttons (`aria-pressed`, ink when chosen), «چیز دیگر…» dashed (`data-other`) opening a text field; `.answer-progress` counts answered questions |
+| `.plan-goal`, `.plan-project`, `.plan-group`, `.plan-head`, `.plan-row`, `.plan-check`, `.plan-issue` | the draft's proposed tree: a Goal washed in its colour holds its Projects and a «مستقیم زیر این هدف» group, a Project its rows; each item has its include switch in its entity colour and its edit; a blocking reason is a tinted line with «اصلاح» beside it; `data-excluded` fades and strikes through |
+| `.count-tile` | a total per entity in its tint (draft and confirmation) |
+| `.plan-day`, `.plan-bar` | «هفت روز پیش رو»: a column per day, a bar per dated Task or Routine slot in its colour |
+| `.fact-chip` | a planning detail offered for later: a sun chip while kept (`aria-pressed="true"`), dashed when let go |
+| `.apply-goal`, `.apply-box` | the confirmation's read-only tree |
+| `.ai-feedback` | the optional satisfaction prompt, in the moonstone's light |
 | `.state-panel` | the panel behind `EmptyState`, `ErrorState` (`data-tone="attention"`) and the "building draft" state |
 | `.timeline`, `.timeline-row`, `.timeline-node`, `.timeline-mark`, `.timeline-card` | a list as a timeline (Today, Tasks, a Task's sequence): each row has a 28px node on the start side joined to the next by a line, and a card. The card's title is a `.stretched-link` that covers the card under its own controls; `data-state="done"` fades it with the title struck through, `"waiting"` fades its content on an opaque card. `.timeline-page` runs one line behind several groups, each opened by a `.timeline-head` dot, label and `.count-pill` |
 | `.ring-button` / `.ring-done` / `.ring-lock` / `.ring-planned` / `.ring-routine` | timeline nodes: completing a Task (a 24px ring in the Task colour in a 44px target), done, waiting for an earlier step, planned for a later day, a Routine's planet |
@@ -117,7 +124,9 @@ Background refetches keep the content on screen and show a small "updating" hint
 
 In [`features/shell`](../../frontend/src/features/shell/components): `AppShell`, `Rail` (desktop), `TabBar` (phones, with the floating create button), `AccountButton`, `AccountPanel`, `CreateSheet`, and `Navigation` (the five places, `PlaceLink`, the Reconcile count). They compose features, so they live in a feature, not in `shared`.
 
-`Stepper` ([`shared/ui/Stepper.tsx`](../../frontend/src/shared/ui/Stepper.tsx)) shows a fixed sequence of named steps (`aria-current="step"` on the current one, a tick on passed ones, only the current label on a phone). It is for the four-step planning flow (STEP-18).
+`Stepper` ([`shared/ui/Stepper.tsx`](../../frontend/src/shared/ui/Stepper.tsx)) shows a fixed sequence of named steps (`aria-current="step"` on the current one, a tick on passed ones, every label shown; the connectors stretch to fill the row). It is the four-step planning flow (STEP-18): a step the model skipped shows as passed.
+
+`Sheet` takes an `aside` beside its close button, for a mark such as «۴ از ۴».
 
 ## Cross-feature UI state
 

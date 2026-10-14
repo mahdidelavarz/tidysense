@@ -27,14 +27,14 @@ test('an intention becomes a reviewed draft and only the confirmed plan is creat
   await page.goto('/today')
   await page.getByRole('navigation', { name: 'ناوبری اصلی' }).getByRole('link', { name: 'برنامه‌ریزی' }).click()
   await expect(page).toHaveURL(/\/planning$/)
-  await page.getByLabel('می‌خواهید روی چه چیزی پیش بروید؟').fill(intention)
+  await page.getByLabel('روی چه چیزی می‌خواهید پیش بروید؟').fill(intention)
   await page.getByRole('button', { name: 'ساخت پیش‌نویس' }).click()
 
   // The draft appears only once it is complete and validated.
   await expect(page.getByRole('heading', { name: 'ساختار پیشنهادی' })).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByText('پیش‌نویس تأییدنشده')).toBeVisible()
-  const goalCard = page.getByRole('article', { name: intention, exact: true })
-  await expect(goalCard.getByText('(پیش‌فرض)')).toBeVisible()
+  await expect(page.getByText('پیش‌نویس؛ هنوز چیزی ساخته نشده')).toBeVisible()
+  await expect(page.getByRole('list', { name: 'مراحل برنامه‌ریزی' }).getByRole('listitem').nth(2)).toHaveAttribute('aria-current', 'step')
+  await expect(page.getByRole('article', { name: intention, exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'هفت روز پیش رو' })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-08-draft-review.png', fullPage: true })
 
@@ -42,24 +42,25 @@ test('an intention becomes a reviewed draft and only the confirmed plan is creat
   expect((await get<Listed>('goals?limit=100')).items.some(goal => goal.title === intention)).toBe(false)
 
   // Planning details are approved separately from the work.
-  await page.getByRole('checkbox', { name: /^وسیله در دسترس/ }).click()
-  await expect(page.getByRole('checkbox', { name: /^وسیله در دسترس/ })).not.toBeChecked()
+  await page.getByRole('button', { name: /^یادم بماند: وسیله در دسترس/ }).click()
+  await expect(page.getByRole('button', { name: /^یادم نماند: وسیله در دسترس/ })).toHaveAttribute('aria-pressed', 'false')
 
   await page.getByRole('button', { name: 'ویرایش: روشن‌کردن اولین قدم' }).click()
   const sheet = page.getByRole('dialog', { name: 'ویرایش کار پیشنهادی' })
   await sheet.getByLabel('عنوان').fill(editedTitle)
   await sheet.getByRole('button', { name: 'ذخیره در پیش‌نویس' }).click()
   await expect(sheet).toBeHidden()
-  await expect(page.getByRole('article', { name: editedTitle })).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: `در برنامه باشد: ${editedTitle}` })).toBeVisible()
   expect((await get<Listed>('tasks?limit=100')).items.some(task => task.title === editedTitle)).toBe(false)
 
   // One server preview, one explicit confirmation.
   await page.getByRole('button', { name: 'مرور نهایی و تأیید' }).click()
   const review = page.getByRole('dialog', { name: 'مرور نهایی و تأیید' })
-  await expect(review.getByRole('list', { name: 'مواردی که ساخته می‌شوند' }).getByRole('listitem')).toHaveCount(7)
+  await expect(review.getByRole('list', { name: 'مواردی که ساخته می‌شوند' })).toBeVisible()
+  await expect(review.getByText('۴ از ۴')).toBeVisible()
   await expect(review.getByText(/روزهای غیرقابل‌استفاده هفته/)).toBeVisible()
   await page.screenshot({ path: 'test-results/step-08-confirm.png', fullPage: true })
-  await review.getByRole('button', { name: 'تأیید و ساخت' }).click()
+  await review.getByRole('button', { name: 'تأیید و ساخت ۷ مورد' }).click()
   await expect(page.getByText('برنامه ساخته شد.')).toBeVisible()
   await page.screenshot({ path: 'test-results/step-08-result.png', fullPage: true })
   // The optional pilot question sits under the result, is answered once and leaves the way on untouched.
@@ -84,9 +85,9 @@ test('an intention becomes a reviewed draft and only the confirmed plan is creat
   await page.screenshot({ path: 'test-results/step-08-goal-planning-details.png', fullPage: true })
   await page.getByRole('link', { name: 'برنامه‌ریزی قدم‌های بعدی' }).click()
   await expect(page).toHaveURL(new RegExp(`/planning\\?goalId=${goal.id}`))
-  await expect(page.getByText(`این برنامه‌ریزی برای «${intention}» است`)).toBeVisible()
+  await expect(page.getByRole('button', { name: intention, exact: true })).toHaveAttribute('aria-pressed', 'true')
   // Manual creation stays one click away from the planning entry.
-  await page.getByRole('button', { name: 'خودم دستی می‌سازم' }).click()
+  await page.getByRole('button', { name: 'یا خودم دستی می‌سازم' }).click()
   await expect(page.getByRole('dialog', { name: 'چه چیزی اضافه می‌کنید؟' })).toBeVisible()
 })
 
@@ -112,11 +113,10 @@ test('clarifying questions are answered before a draft exists', async ({ page })
 
   const intention = `تمرین منظم ${Date.now()}`
   await page.goto('/planning')
-  await page.getByLabel('می‌خواهید روی چه چیزی پیش بروید؟').fill(intention)
+  await page.getByLabel('روی چه چیزی می‌خواهید پیش بروید؟').fill(intention)
   await page.getByRole('button', { name: 'ساخت پیش‌نویس' }).click()
 
-  await expect(page.getByRole('heading', { name: 'چند پرسش پیش از ساخت پیش‌نویس' })).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByText('گام ۱ از حداکثر ۳')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'سه پرسش کوتاه' })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByRole('heading', { name: 'ساختار پیشنهادی' })).toBeHidden()
   await page.screenshot({ path: 'test-results/step-09-clarification.png', fullPage: true })
   // Questions are not a draft, and they survive a reload as the unfinished flow.
@@ -124,13 +124,18 @@ test('clarifying questions are answered before a draft exists', async ({ page })
   expect(waiting.draft).toBeNull()
   expect(waiting.clarification).not.toBeNull()
   await page.reload()
-  const firstQuestion = page.getByLabel('هر هفته چند روز می‌توانید برای این کار وقت بگذارید؟')
-  await expect(firstQuestion).toBeVisible()
+  const days = page.getByRole('group', { name: 'کدام روزهای هفته برای این کار وقت دارید؟' })
+  await expect(days).toBeVisible()
 
-  await page.getByRole('button', { name: 'ادامه' }).click()
-  await expect(page.getByText(/دست‌کم به یکی از پرسش‌ها پاسخ دهید/)).toBeVisible()
-  await firstQuestion.fill('سه روز در هفته')
-  await page.getByRole('button', { name: 'ادامه' }).click()
+  // Several days, one date choice, and the third answered in one's own words.
+  await days.getByRole('button', { name: 'شنبه', exact: true }).click()
+  await days.getByRole('button', { name: 'سه‌شنبه' }).click()
+  await page.getByRole('group', { name: 'آیا تاریخ مشخصی برای رسیدن به نتیجه در نظر دارید؟' }).getByRole('button', { name: 'تاریخ مشخصی ندارم' }).click()
+  await page.getByRole('group', { name: 'از کجا شروع می‌کنید؟' }).getByRole('button', { name: 'چیز دیگر…' }).click()
+  await page.getByLabel('پاسخ خودتان: از کجا شروع می‌کنید؟').fill('از صفر')
+  await expect(page.getByText('۳ از ۳ پاسخ')).toBeVisible()
+  await page.screenshot({ path: 'test-results/step-18-questions.png', fullPage: true })
+  await page.getByRole('button', { name: 'پیش‌نویس را بساز' }).click()
 
   await expect(page.getByRole('heading', { name: 'ساختار پیشنهادی' })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByRole('article', { name: intention, exact: true })).toBeVisible()
@@ -156,12 +161,12 @@ test('a cancelled draft may be rated once, with a reason for a low rating, and o
   }
   const question = page.getByRole('heading', { name: 'از پیش‌نویسی که کنار گذاشتید چقدر راضی بودید؟' })
   const draftAndCancel = async (text: string) => {
-    await page.getByLabel('می‌خواهید روی چه چیزی پیش بروید؟').fill(text)
+    await page.getByLabel('روی چه چیزی می‌خواهید پیش بروید؟').fill(text)
     await page.getByRole('button', { name: 'ساخت پیش‌نویس' }).click()
     await expect(page.getByRole('heading', { name: 'ساختار پیشنهادی' })).toBeVisible({ timeout: 15_000 })
     // Nothing is asked while the draft is under review.
     await expect(question).toHaveCount(0)
-    await page.getByRole('button', { name: 'لغو پیش‌نویس' }).click()
+    await page.getByRole('button', { name: 'لغو', exact: true }).click()
     await expect(page.getByText('برنامه‌ریزی لغو شد.')).toBeVisible()
   }
 

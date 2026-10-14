@@ -16,7 +16,7 @@ export function Stepper({ steps, current, label = 'مراحل' }: { steps: reado
             <span className="stepper-dot" aria-hidden="true">
               {state === 'done' ? <Check size={13} /> : formatNumber(index + 1)}
             </span>
-            <span className={state === 'current' ? '' : 'max-sm:sr-only'}>
+            <span>
               {step}
               {state === 'done' && <span className="sr-only">، انجام شد</span>}
             </span>
