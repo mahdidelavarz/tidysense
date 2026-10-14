@@ -21,6 +21,8 @@ export const routineKeys = {
   list: ['routines', 'list'] as const,
   /** This local week of every active Routine. Under `all`, so every Routine write refreshes it. */
   week: ['routines', 'week'] as const,
+  /** The last four weeks of one Routine, for its detail page. */
+  month: (id: string) => ['routines', 'week', id] as const,
   detail: (id: string) => ['routines', 'detail', id] as const,
   occurrences: (id: string) => ['routines', 'occurrences', id] as const,
 }
@@ -37,7 +39,12 @@ export function useRoutines(status?: string) {
 
 /** This local week of every active Routine, for the week strips on Today and the Routines page. */
 export function useRoutineWeek() {
-  return useQuery({ queryKey: routineKeys.week, queryFn: getRoutineWeek })
+  return useQuery({ queryKey: routineKeys.week, queryFn: () => getRoutineWeek() })
+}
+
+/** The last four weeks of one Routine, whatever its status, for the heatmap on its detail page. */
+export function useRoutineMonth(routineId: string) {
+  return useQuery({ queryKey: routineKeys.month(routineId), queryFn: () => getRoutineWeek(4, routineId) })
 }
 
 /** Fetches one Routine for the Routine detail page. */

@@ -166,6 +166,21 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
             Assert.Equal(Day.AddDays(2), Assert.Single(once).LocalDate);
         else
             Assert.Empty(once);
+
+        // Four weeks of one Routine, stopped or not, end with this week.
+        var month = (await client.GetFromJsonAsync<RoutineWeeksDto>(
+            $"/api/v1/routines/week?weeks=4&routineId={stopped.Id}"))!;
+        Assert.Equal(week.WeekStart.AddDays(-21), month.WeekStart);
+        var stoppedWeeks = Assert.Single(month.Routines);
+        Assert.Equal(stopped.Id, stoppedWeeks.RoutineId);
+        Assert.Equal(28, stoppedWeeks.Days.Count);
+        // Its slot today still stands; nothing is scheduled after it stopped.
+        Assert.Equal(1, stoppedWeeks.Days.Single(x => x.LocalDate == Day).Scheduled);
+        Assert.All(stoppedWeeks.Days.Where(x => x.LocalDate > Day), x => Assert.Equal(0, x.Scheduled));
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await client.GetAsync("/api/v1/routines/week?weeks=5")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await client.GetAsync($"/api/v1/routines/week?routineId={Guid.NewGuid()}")).StatusCode);
     }
 
     [Fact]

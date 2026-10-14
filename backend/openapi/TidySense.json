@@ -4716,6 +4716,31 @@
         "tags": [
           "Routines"
         ],
+        "parameters": [
+          {
+            "name": "weeks",
+            "in": "query",
+            "schema": {
+              "maximum": 4,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "routineId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",

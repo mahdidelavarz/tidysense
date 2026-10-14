@@ -1410,6 +1410,10 @@ select:not(:disabled),
     @apply flex max-w-8 flex-1 flex-col items-center gap-0.75 text-[0.65625rem] leading-3 font-semibold text-text-tertiary;
   }
 
+  .week-bars[data-wide] .week-day {
+    @apply max-w-none;
+  }
+
   .week-bar {
     @apply h-1.75 w-full rounded-full;
     background: linear-gradient(270deg, var(--color-entity-routine) var(--fill), var(--bar-rest) var(--fill));
@@ -1419,6 +1423,15 @@ select:not(:disabled),
   .week-day[data-when="past"] .week-bar {
     --bar-rest: var(--color-surface-sunken);
     box-shadow: inset 0 0 0 1px var(--color-border);
+  }
+
+  .week-day[data-when="off"] {
+    @apply opacity-60;
+  }
+
+  .week-day[data-when="off"] .week-bar {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
   }
 
   .week-day[data-when="today"] {
@@ -1433,6 +1446,59 @@ select:not(:disabled),
 
   .week-day[data-when="past"][data-complete="true"] .week-bar {
     box-shadow: none;
+  }
+
+  /* A Routine's last four weeks, one cell per day. */
+  .month-day {
+    @apply flex aspect-square items-center justify-center rounded-[0.625rem] text-xs font-bold text-text-tertiary;
+  }
+
+  .month-day[data-state="full"],
+  .month-key[data-state="full"] {
+    @apply bg-entity-routine text-surface;
+  }
+
+  .month-day[data-state="part"],
+  .month-key[data-state="part"] {
+    background: linear-gradient(270deg, var(--color-entity-routine) var(--fill), color-mix(in srgb, var(--color-entity-routine) 12%, var(--color-surface)) var(--fill));
+    color: var(--color-text-primary);
+  }
+
+  .month-day[data-state="none"],
+  .month-key[data-state="none"] {
+    @apply bg-surface-sunken text-text-secondary;
+  }
+
+  .month-day[data-state="later"] {
+    box-shadow: inset 0 0 0 1px var(--color-border);
+  }
+
+  .month-day[data-today="true"] {
+    @apply text-text-primary;
+    box-shadow: inset 0 0 0 2px var(--color-entity-routine);
+  }
+
+  .month-key {
+    @apply inline-block size-2.5 rounded-[0.1875rem];
+  }
+
+  /* A slot of a Routine today on its detail page: a tile per time. */
+  .slot-tile {
+    @apply relative flex min-h-16 items-center gap-3 rounded-2xl border p-3 text-start transition duration-200;
+    border-color: var(--color-border);
+  }
+
+  button.slot-tile {
+    @apply hover:bg-surface-sunken active:scale-[0.98] disabled:opacity-50;
+  }
+
+  .slot-tile[data-status="DONE"] {
+    border-color: var(--color-entity-routine);
+    background: color-mix(in srgb, var(--color-entity-routine) 10%, var(--color-surface));
+  }
+
+  .slot-tile[data-status="MISSED"] {
+    @apply border-dashed;
   }
 
   /* One slot of a Routine today: its time, with a ring to complete it or the filled ring once done. */

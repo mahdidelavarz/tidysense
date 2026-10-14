@@ -261,20 +261,23 @@ public sealed class RoutineService(
     }
 
     /// <summary>
-    /// This local week (Saturday to Friday) for every active Routine. Past days and today read the
-    /// occurrences that exist; later days apply the schedule, which is what will be created.
+    /// The local weeks (Saturday to Friday) ending with this one, for every active Routine or for
+    /// one owned Routine whatever its status. Past days and today read the occurrences that exist;
+    /// later days apply the schedule, which is what will be created (nothing once stopped).
     /// </summary>
-    public async Task<RoutineWeeksDto> WeekAsync(CancellationToken cancellationToken)
+    public async Task<RoutineWeeksDto> WeekAsync(int weeks, Guid? routineId, CancellationToken cancellationToken)
     {
         var localNow = dates.LocalNow;
         await EvaluateAsync(localNow, cancellationToken);
         var today = localNow.Date;
         // DayOfWeek counts from Sunday = 0; Saturday starts the Persian week.
-        var start = today.AddDays(-(((int)today.DayOfWeek + 1) % 7));
-        var end = start.AddDays(6);
-        var routines = await db.Routines.AsNoTracking()
-            .Where(x => x.UserId == currentUser.UserId && x.Status == RoutineStatuses.Active)
-            .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(cancellationToken);
+        var start = today.AddDays(-(((int)today.DayOfWeek + 1) % 7) - 7 * (weeks - 1));
+        var days = 7 * weeks;
+        var query = db.Routines.AsNoTracking().Where(x => x.UserId == currentUser.UserId);
+        query = routineId is { } id ? query.Where(x => x.Id == id) : query.Where(x => x.Status == RoutineStatuses.Active);
+        var routines = await query.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(cancellationToken);
+        if (routineId is { } missing && routines.Count == 0)
+            throw new ResourceNotFoundException("Routine", missing);
         var ids = routines.Select(x => x.Id).ToArray();
         var counts = (await db.RoutineOccurrences.AsNoTracking()
                 .Where(x => ids.Contains(x.RoutineId) && x.ScheduledLocalDate >= start && x.ScheduledLocalDate <= today)
@@ -287,14 +290,14 @@ public sealed class RoutineService(
         {
             var recurrence = RoutineSchedule.Parse(routine.RecurrenceDefinition);
             var slots = RoutineSchedule.SlotsFor(routine.TimesOfDay).Count;
-            return new RoutineWeekDto(routine.Id, ToRecurrenceDto(recurrence), slots, Enumerable.Range(0, 7).Select(offset =>
+            return new RoutineWeekDto(routine.Id, ToRecurrenceDto(recurrence), slots, Enumerable.Range(0, days).Select(offset =>
             {
                 var date = start.AddDays(offset);
                 if (date <= today)
                     return counts.TryGetValue((routine.Id, date), out var day)
                         ? new RoutineWeekDayDto(date, day.Scheduled, day.Done)
                         : new RoutineWeekDayDto(date, 0, 0);
-                var scheduled = RoutineSchedule.OccursOn(recurrence, date) &&
+                var scheduled = routine.Status == RoutineStatuses.Active && RoutineSchedule.OccursOn(recurrence, date) &&
                     RoutineSchedule.IsEligible(routine.EffectiveFromLocalDate, routine.EffectiveUntilLocalDate, date)
                     ? slots : 0;
                 return new RoutineWeekDayDto(date, scheduled, 0);

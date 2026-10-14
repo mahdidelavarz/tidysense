@@ -24,9 +24,14 @@ export async function listRoutines(status?: string, cursor?: string, limit = 20)
   return response.data
 }
 
-/** Fetches this local week (Saturday to Friday) of every active Routine: slots scheduled and done per day. */
-export async function getRoutineWeek(): Promise<RoutineWeeksDto> {
-  const response = await http.get<RoutineWeeksDto>('/routines/week')
+/**
+ * Fetches local weeks (Saturday to Friday) ending with this one: slots
+ * scheduled and done per day, for every active Routine or for one Routine.
+ */
+export async function getRoutineWeek(weeks = 1, routineId?: string): Promise<RoutineWeeksDto> {
+  const response = await http.get<RoutineWeeksDto>('/routines/week', {
+    params: { ...(weeks > 1 ? { weeks } : {}), ...(routineId ? { routineId } : {}) },
+  })
   return response.data
 }
 

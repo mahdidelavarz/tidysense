@@ -1,71 +1,64 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarDays, ChevronLeft, CircleDashed, Clock, FolderKanban, Target } from '../../../shared/ui/icons'
-import { formatTime } from '../../../shared/lib/date'
-import { EntityIcon, StatusBadge } from '../../../shared/ui/EntityUi'
-import { recurrenceLabel, weekdayOptions } from '../types/routine.format'
-import type { RoutineDto } from '../types/routine.types'
+import { Clock, Repeat } from '../../../shared/ui/icons'
+import { formatNumber, formatTime } from '../../../shared/lib/date'
+import { StatusBadge } from '../../../shared/ui/EntityUi'
+import { TaskParent } from '../../tasks/components/TaskFacts'
+import { recurrenceLabel, slotsLabel } from '../types/routine.format'
+import type { RoutineDto, RoutineOccurrenceDto, RoutineWeekDto } from '../types/routine.types'
+import { RoutineWeekBars, weekProgress } from './RoutineWeekBars'
 
 /**
- * One Routine row in the Routines list. The whole row opens the Routine.
- * Its week is drawn as seven dots, so the rhythm reads without the words.
+ * One Routine in the Routines list; the card opens it. Its schedule in
+ * words, this week as bars, where it belongs and, when it has slots today,
+ * the next one still open.
  */
-export function RoutineCard({ routine, parentTitle }: {
+export function RoutineCard({ routine, parentTitle, week, today, slots }: {
   routine: RoutineDto
   /** Title of the Goal or Project the Routine belongs to, when it is known. */
   parentTitle?: string
+  week?: RoutineWeekDto
+  today: string
+  /** Its occurrences today, if any. */
+  slots: RoutineOccurrenceDto[]
 }) {
-  const ParentIcon = routine.projectId ? FolderKanban : routine.goalId ? Target : CircleDashed
-  const parentKind = routine.projectId ? 'پروژه' : routine.goalId ? 'هدف' : 'مستقل'
-  const monthly = routine.recurrence.type === 'MONTHLY_ON_DAY'
-  const weekdays = (routine.recurrence.daysOfWeek ?? []).map(Number)
   const closed = routine.status !== 'ACTIVE'
+  const progress = week && weekProgress(week)
+  const next = slots.find(slot => slot.status === 'PENDING')
   return (
-    <Link className="list-row" to="/routines/$routineId" params={{ routineId: routine.id }}>
-      <EntityIcon entity="routine" />
-      <div className="min-w-0 flex-1">
-        <h2 className={`truncate font-bold leading-7 ${closed ? 'text-text-secondary' : ''}`}>{routine.title}</h2>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          {monthly ? (
-            <span className="meta-chip">
-              <CalendarDays size={13} className="shrink-0" aria-hidden="true" />
-              {recurrenceLabel(routine.recurrence)}
-            </span>
-          ) : (
-            <>
-              <span className="sr-only">{recurrenceLabel(routine.recurrence)}</span>
-              <span className="flex gap-1" aria-hidden="true">
-                {weekdayOptions.map(day => (
-                  <span
-                    key={day.value}
-                    className="week-dot"
-                    data-on={!closed && (routine.recurrence.type === 'DAILY' || weekdays.includes(day.value))}
-                  >
-                    {day.label.charAt(0)}
-                  </span>
-                ))}
+    <article className="timeline-card entity-routine p-3.5" data-state={closed ? 'done' : undefined}>
+      <div className="flex items-start gap-3">
+        <span className="entity-icon size-11 rounded-[0.875rem]" aria-hidden="true"><Repeat size={22} /></span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="timeline-title text-base">
+              <Link className="stretched-link" to="/routines/$routineId" params={{ routineId: routine.id }}>{routine.title}</Link>
+            </h3>
+            {progress && progress.scheduled > 0 && (
+              <span className="entity-ink shrink-0 text-[0.8125rem] font-extrabold">
+                {formatNumber(progress.complete)}
+                <span className="text-[0.6875rem] font-semibold text-text-tertiary"> از {formatNumber(progress.scheduled)}</span>
+                <span className="sr-only"> روز کامل این هفته</span>
               </span>
-            </>
-          )}
-          {routine.timesOfDay.length > 0 && (
-            <span className="meta-chip">
-              <Clock size={13} className="shrink-0" aria-hidden="true" />
-              {/* Each time is its own left-to-right run, so a list of them keeps its order in RTL. */}
-              {routine.timesOfDay.map((time, index) => (
-                <span key={time}>
-                  {index > 0 && '، '}
-                  <bdi dir="ltr">{formatTime(time)}</bdi>
-                </span>
-              ))}
-            </span>
-          )}
-          <span className="meta-chip">
-            <ParentIcon size={13} className="shrink-0" aria-hidden="true" />
-            <span className="truncate">{parentTitle ? `${parentKind}: ${parentTitle}` : parentKind}</span>
-          </span>
-          {closed && <StatusBadge status={routine.status} />}
+            )}
+            {closed && <StatusBadge status={routine.status} />}
+          </div>
+          <p className="mt-0.5 text-xs font-semibold text-text-secondary">
+            {recurrenceLabel(routine.recurrence)}، {routine.timesOfDay.length > 0 ? slotsLabel(routine.timesOfDay) : 'بدون ساعت'}
+          </p>
         </div>
       </div>
-      <ChevronLeft size={20} className="shrink-0 text-text-tertiary" aria-hidden="true" />
-    </Link>
+      {week && !closed && <RoutineWeekBars week={week} today={today} everyDay />}
+      <div className="mt-2.5 flex items-center justify-between gap-2">
+        <TaskParent task={routine} parentTitle={parentTitle} />
+        {next ? (
+          <span className="entity-chip shrink-0">
+            <Clock size={13} aria-hidden="true" />
+            {next.scheduledLocalTime ? <>بعدی <bdi dir="ltr">{formatTime(next.scheduledLocalTime)}</bdi></> : 'امروز'}
+          </span>
+        ) : slots.length > 0 && slots.every(slot => slot.status !== 'PENDING') ? (
+          <span className="text-xs font-bold text-text-tertiary">امروز تمام شد</span>
+        ) : null}
+      </div>
+    </article>
   )
 }

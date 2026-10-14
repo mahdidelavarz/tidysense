@@ -3243,7 +3243,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    weeks?: number | string;
+                    routineId?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
