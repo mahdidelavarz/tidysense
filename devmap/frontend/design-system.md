@@ -7,8 +7,8 @@ This document supersedes the earlier compact foundation (Tahoma, `#4f7a88` accen
 ## Principles
 
 1. **One obvious next step.** Every page has at most one primary (filled) action. Everything else is secondary, an action tile, or a row.
-2. **An app, not a website.** No top application bar. Navigation sits at the edge of the screen (sidebar or tab bar) and each page carries its own title and actions on the canvas.
-3. **Designed per size, not shrunk.** Phones get a tab bar, a drawer and bottom sheets; desktops get a sidebar and side panels. See the layout document.
+2. **An app, not a website.** No top application bar. Navigation sits at the edge of the screen (icon rail or tab bar) and each page carries its own title and actions on the canvas.
+3. **Designed per size, not shrunk.** Phones get a tab bar, a floating create button and bottom sheets; desktops get an icon rail, a page panel and side panels. See the layout document.
 4. **Calm.** Warm paper by day, ink-blue by night, one ink action. Colour marks meaning (today's sun, yesterday's moon, entity, status, danger) and is never the only cue.
 5. **Say what will happen.** Consequential actions carry a one-line explanation before they are pressed and a confirmation dialog after.
 6. **Persian first.** RTL layout, Jalali dates, Persian digits, a Persian typeface.
@@ -20,8 +20,8 @@ Two themes defined by the same tokens. Light values live in `@theme`; `:root[dat
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `canvas` | `#f3f1ec` | `#0f1720` | page background |
-| `surface` | `#ffffff` | `#18222c` | cards, grouped lists, sidebar, fields |
-| `surface-raised` | `#ffffff` | `#1a2530` | sheets, dialogs, drawer, menus |
+| `surface` | `#ffffff` | `#18222c` | cards, grouped lists, the rail, fields |
+| `surface-raised` | `#ffffff` | `#1a2530` | sheets, dialogs, the account panel, menus |
 | `surface-sunken` | `#ebe7df` | `#141d26` | notices, segmented track, action tray |
 | `accent` | `#1c2e34` | `#ede8dd` | the action: primary button, create button, selected day, current tab |
 | `accent-strong` | `#2f525c` | `#f7f3ea` | hover of accent; accent-coloured text |
@@ -38,10 +38,15 @@ Two themes defined by the same tokens. Light values live in `@theme`; `:root[dat
 | `text-tertiary` | `#8c8992` | `#6b7580` | placeholders, rings and decorative icons only (below 4.5:1) |
 | `border` / `border-subtle` | `#dcd7cc` / `#eeeae2` | `#2a3642` / `#222d38` | field outlines / hairlines between rows |
 | `scrim` | 45% `#162228` | 60% `#03060a` | behind sheets and dialogs |
-| `entity-goal` | `#a8732a` | `#e8b567` | Goal identity |
-| `entity-project` | `#4f7380` | `#8fb1bc` | Project identity |
-| `entity-task` | `#356e4e` | `#8cc7a1` | Task identity |
-| `entity-routine` | `#7a5c84` | `#c2a3ce` | Routine identity (the design's orbit) |
+| `entity-goal` | `#a83e78` | `#e29ac0` | Goal identity |
+| `entity-project` | `#1d7f86` | `#7cc9cf` | Project identity |
+| `entity-task` | `#2e6fb3` | `#86b8ea` | Task identity |
+| `entity-routine` | `#7652c4` | `#b9a3ec` | Routine identity (the design's orbit) |
+| `ai-icon` / `ai-ink` / `ai-spark` | `#34405e` / `#34405e` / `#dfa455` | `#1a2238` / `#cdd4ee` / `#ffffff` | the AI («سنگ ماه», moonstone): the icon on its fill, its text on the canvas, its accent spark |
+
+**Moonstone, the AI.** Everything the AI offers wears one material, never a button colour (there is no purple on buttons): `--ai-fill` (a pale blue-to-sand gradient by day, a brighter one by night), `--ai-glow` (the slowly turning halo of `.ai-aura`), `--ai-tint` (a quiet wash for AI sections) and `--ai-shadow`. They are custom properties on `:root`, redefined in the dark block, because Tailwind colour tokens cannot hold gradients. Used today by the Planning tab and rail item; the planning, draft and explanation screens adopt it in their own steps.
+
+Entity colours changed on 2026-10-14 (STEP-15) to the canvas set: Goal magenta, Project teal, Task blue, Routine violet, so Task no longer shares `positive`'s green. Every chip and icon pair stays at least 4.5:1 (lowest: Project icon 4.79:1 by day).
 
 The design's own grey for meta text (`#7d7a84`) is 4.2:1 on white, so `text-secondary` is a step darker; every text pair above is at least 4.5:1 in both themes (`on-accent` on `accent` 12.5:1 light, 14.8:1 dark). The design palette had no Goal or Project colour; they were mapped into its family (ochre summit, cloud blue). Feature code uses these tokens through Tailwind utilities (`bg-accent`, `text-on-accent`) and never raw hex values, `white` or `black`: a colour mixed toward the surface is mixed with `var(--color-surface)`, toward ink with `var(--color-text-primary)`, so it works in both themes. The two exceptions are drawings that keep their own palette: the sky (`.sky[data-phase]`, one set per time of day and theme) and the sign-in panel, which is the night sky in both themes.
 
@@ -76,18 +81,19 @@ Buttons are 14px extra-bold. The `font: inherit` reset for controls lives in `@l
 ## Space, shape and elevation
 
 - **Spacing scale:** 4, 8, 12, 16, 20, 24, 32, 48px. Page gutters are 16px on phones, 24px from `sm`, 40px from `lg`. Lists use 12px gaps; sections are separated by 32px.
-- **Radius:** 13–14px icon tiles, leaves and small controls; 15px fields; 18px buttons, choice tiles and day tiles; 22px cards, rows and grouped lists; 28px detail/entity cards, sidebar, drawer, dialogs and empty states; 30px the top of a bottom sheet; full for chips.
+- **Radius:** 13–14px icon tiles, leaves and small controls; 15px fields; 18px buttons, choice tiles and day tiles; 22px cards, rows and grouped lists; 28px detail/entity cards, dialogs, the account panel and empty states; 34px the desktop page panel; 38px the rail; 30px the top of a bottom sheet; full for chips.
 - **Elevation:** by day surfaces lift with a soft long shadow (`shadow-sm` resting, `shadow-md` hovered and the primary action, `shadow-lg` sheets and dialogs); by night the same tokens become an inner top highlight plus a deep shadow, and raised surfaces are lighter. Cards and rows have no outline; hairlines (`border-subtle`) separate rows inside a grouped list. Fields and secondary buttons keep a 1.5px outline.
 - **Touch targets:** at least 44×44px (`min-h-11`); buttons and fields are 48px. The completion ring is drawn at 28px inside a 44px target.
 - **Fields:** `.field-input` is a 1.5px `border` outline on `surface`; focus turns the outline `accent` with a 4px `accent` halo at 10%. The first field of a create/edit form is the design's underlined line (`FormField prominent`): the label as a Naskh question, a 2px `accent` underline that turns `sun` with a sun caret while typing. An invalid field uses `attention`. All of it transitions in 200ms.
-- **Layers:** navigation `10`, the Today sky `20`, backdrop `40`, sheet/dialog/drawer `50`, toast and skip link `60`.
+- **Layers:** navigation and the create button `10`, the Today sky `20`, backdrop `40`, sheet/dialog/account panel `50`, toast and skip link `60`.
 
 ## Motion
 
 | Token | Use |
 |---|---|
 | 200ms, `cubic-bezier(.2,0,0,1)` | hover, colour and state transitions; dialog and toast entrance |
-| 280ms, same easing | sheet and drawer entrance |
+| 280ms, same easing | sheet entrance, the account sheet on phones |
+| 7s linear loop | the moonstone halo (`.ai-aura`) |
 
 | 320ms, same easing | the Today sky collapsing and opening |
 | 4s ease-in-out loop | the sun's halo breathing |
@@ -112,7 +118,9 @@ Direction: the layout is RTL, so "back" is `ArrowRight`/`ChevronRight` and "forw
 | Goal | `Target` | `target` |
 | Routine (the design's orbit) | `Repeat` | `planet` |
 | Reconcile | `RefreshCcw` | `restart` |
-| Planning | `Compass` | `compass` |
+| Planning (account panel) | `Compass` | `compass` |
+| Planning with the AI (tab, rail, create menu) | `Sparkles` | `magic-stick-3` |
+| account | `UserRound` | `user-rounded` |
 | create | `Plus` | `add` |
 | edit | `Pencil` | `pen` |
 | complete / achieve | `Check`, `CircleCheckBig` | `check`, `check-circle` |

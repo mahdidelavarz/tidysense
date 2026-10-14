@@ -1,79 +1,58 @@
-import { Link } from '@tanstack/react-router'
-import { Activity, Compass, FolderKanban, ListChecks, type AppIcon, RefreshCcw, Repeat, Sun, Target } from '../../../shared/ui/icons'
+import { Link, useRouterState } from '@tanstack/react-router'
+import { type AppIcon, ListChecks, Repeat, Sparkles, Sun, Target } from '../../../shared/ui/icons'
 import { formatNumber } from '../../../shared/lib/date'
-import { useCurrentUser } from '../../auth/hooks/auth-hooks'
 import { useReconcileOverview } from '../../reconcile/hooks/reconcile-hooks'
 
-type Destination = {
-  to: '/today' | '/tasks' | '/routines' | '/reconcile' | '/planning' | '/projects' | '/goals' | '/operations'
+type Place = {
+  to: '/today' | '/tasks' | '/planning' | '/routines' | '/goals'
   label: string
   icon: AppIcon
-  /** Destinations with the same group sit together in the sidebar and drawer. */
-  group: 'daily' | 'review' | 'structure' | 'operations'
-  /** False keeps a destination out of the four-slot phone tab bar; it stays in the sidebar and drawer. */
-  tab?: false
-  /** True shows the destination to operator accounts only. */
-  operatorOnly?: true
+  /** Other routes this place stands for: the Goals place also covers Projects. */
+  also?: string[]
 }
 
 /**
- * The primary destinations, in order of daily use. Add an entry only when
- * its product step ships; the shell must not advertise future modules.
+ * The five places, in order of daily use, on both the phone tab bar and the
+ * desktop rail. Planning sits in the middle as the moonstone, the colour of
+ * the AI. Reconcile, Planning, privacy and the account live in the account
+ * panel; Reconcile's count is carried by Today, where it is offered.
  */
-export const destinations: Destination[] = [
-  { to: '/today', label: 'امروز', icon: Sun, group: 'daily' },
-  { to: '/tasks', label: 'کارها', icon: ListChecks, group: 'daily' },
-  // Routines are executed from Today, so their management page does not need a tab.
-  { to: '/routines', label: 'روتین‌ها', icon: Repeat, group: 'daily', tab: false },
-  // Reconcile is offered from Today when there is something to decide, so it does not need a tab either.
-  { to: '/reconcile', label: 'بازبینی', icon: RefreshCcw, group: 'review', tab: false },
-  // Planning is an occasional flow, also opened from a Goal or a Project, so it stays out of the tab bar.
-  { to: '/planning', label: 'برنامه‌ریزی', icon: Compass, group: 'review', tab: false },
-  { to: '/projects', label: 'پروژه‌ها', icon: FolderKanban, group: 'structure' },
-  { to: '/goals', label: 'هدف‌ها', icon: Target, group: 'structure' },
-  // Operational evidence is for operator accounts; nobody else is shown that it exists.
-  { to: '/operations', label: 'عملیات', icon: Activity, group: 'operations', tab: false, operatorOnly: true },
+export const places: Place[] = [
+  { to: '/today', label: 'امروز', icon: Sun },
+  { to: '/tasks', label: 'کارها', icon: ListChecks },
+  { to: '/planning', label: 'برنامه‌ریزی', icon: Sparkles },
+  { to: '/routines', label: 'روتین‌ها', icon: Repeat },
+  { to: '/goals', label: 'هدف‌ها', icon: Target, also: ['/projects'] },
 ]
 
-/** Product mark and name. Links home (Today). */
-export function Brand() {
+/** Whether the current page is one of these routes or below one of them. */
+export function useIsCurrent(paths: string[]) {
+  const pathname = useRouterState({ select: state => state.location.pathname })
+  return paths.some(path => pathname === path || pathname.startsWith(`${path}/`))
+}
+
+/** One compact count for everything waiting in Reconcile; its lanes stay separate on the page. */
+export function useAttentionCount() {
+  return Number(useReconcileOverview().data?.attentionCount ?? 0)
+}
+
+/** The count on Today: how many things wait in Reconcile. Read out with what it means. */
+export function AttentionCount({ count }: { count: number }) {
+  if (count <= 0) return null
   return (
-    <Link className="flex items-center gap-3 rounded-xl" to="/today" aria-label="تایدی‌سنس">
-      <span className="flex size-10 items-center justify-center rounded-xl bg-accent text-lg font-extrabold text-on-accent shadow-sm" aria-hidden="true">ت</span>
-      <span className="text-lg font-extrabold tracking-tight" aria-hidden="true">تایدی‌سنس</span>
-    </Link>
+    <span className="nav-count">
+      {formatNumber(count)}
+      <span className="sr-only"> مورد برای بازبینی</span>
+    </span>
   )
 }
 
-/** Vertical destination list shared by the desktop sidebar and the navigation drawer. */
-export function NavList({ onNavigate }: { onNavigate?: () => void }) {
-  const overview = useReconcileOverview()
-  // One compact count for everything waiting in Reconcile; its lanes stay separate on the page.
-  const attention = Number(overview.data?.attentionCount ?? 0)
-  const isOperator = useCurrentUser().data?.isOperator === true
-  const visible = destinations.filter(x => !x.operatorOnly || isOperator)
-  const groups = [...new Set(visible.map(x => x.group))]
+/** A place as a link that is marked current on its own route and on the routes it also stands for. */
+export function PlaceLink({ place, className, children }: { place: Place; className: string; children: React.ReactNode }) {
+  const current = useIsCurrent([place.to, ...(place.also ?? [])])
   return (
-    <div className="divide-y divide-border-subtle">
-      {groups.map(group => (
-        <ul key={group} className="space-y-1 py-3 first:pt-0 last:pb-0">
-          {visible.filter(x => x.group === group).map(({ to, label, icon: Icon }) => (
-            <li key={to}>
-              {/* The router marks the active link with aria-current="page", which the nav-item style keys on. */}
-              <Link className="nav-item" to={to} onClick={onNavigate}>
-                <Icon size={20} aria-hidden="true" />
-                {label}
-                {to === '/reconcile' && attention > 0 && (
-                  <span className="status-badge status-active ms-auto before:hidden">
-                    {formatNumber(attention)}
-                    <span className="sr-only"> مورد منتظر تصمیم</span>
-                  </span>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ))}
-    </div>
+    <Link className={className} to={place.to} aria-current={current ? 'page' : undefined}>
+      {children}
+    </Link>
   )
 }

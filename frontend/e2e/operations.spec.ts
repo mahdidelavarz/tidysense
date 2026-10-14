@@ -28,11 +28,11 @@ test('an operator reads alerts, the AI runtime and the evidence tables with thei
   await page.waitForTimeout(400)
   await page.screenshot({ path: 'test-results/ui-desktop-operations.png', fullPage: true })
 
-  // On a phone the page is reached through the drawer and never scrolls sideways.
+  // On a phone the page is reached through the account panel and never scrolls sideways.
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/today')
-  await page.getByRole('button', { name: 'باز کردن منو' }).click()
-  await page.getByRole('dialog', { name: 'منو' }).getByRole('link', { name: 'عملیات' }).click()
+  await page.getByRole('button', { name: 'حساب و تنظیمات' }).click()
+  await page.getByRole('dialog', { name: 'حساب شما' }).getByRole('link', { name: 'عملیات' }).click()
   await expect(page.getByRole('heading', { name: 'عملیات', exact: true })).toBeVisible()
   await expect(page.getByRole('table', { name: /وضعیت خانواده‌ها/ })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

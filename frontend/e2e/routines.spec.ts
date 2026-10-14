@@ -21,7 +21,7 @@ test('a multi-slot Routine and a Task are executed together from Today', async (
   })
   expect(task.ok()).toBeTruthy()
 
-  // Routines are reached from the sidebar; the create flow is the shared sheet.
+  // Routines are a place in the rail; the create flow is the shared sheet.
   await page.goto('/today')
   await page.getByRole('navigation', { name: 'ناوبری اصلی' }).getByRole('link', { name: 'روتین‌ها' }).click()
   await expect(page).toHaveURL(/\/routines$/)

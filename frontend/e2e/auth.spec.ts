@@ -10,9 +10,9 @@ async function codeFromToast(page: Page) {
   return match[0]
 }
 
-/** Sign-out lives in the account menu at the foot of the sidebar. */
+/** Sign-out lives in the account panel, opened from the rail on desktop and from the page header on a phone. */
 async function openAccountMenu(page: Page) {
-  await page.getByRole('button', { name: 'حساب کاربری' }).click()
+  await page.getByRole('button', { name: 'حساب و تنظیمات' }).click()
 }
 
 test('new user login, invalid code, reload, logout, and immediate login again', async ({ page }) => {
@@ -32,11 +32,11 @@ test('new user login, invalid code, reload, logout, and immediate login again', 
   await page.getByRole('link', { name: 'فعلاً بدون اضافه کردن چیزی وارد برنامه بشم' }).click()
   await expect(page).toHaveURL(/today/)
   await openAccountMenu(page)
-  await expect(page.getByRole('button', { name: 'خروج از این مرورگر' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'خروج از این دستگاه' })).toBeVisible()
   await page.screenshot({ path: 'test-results/auth-account.png' })
   await page.reload()
   await openAccountMenu(page)
-  await page.getByRole('button', { name: 'خروج از این مرورگر' }).click()
+  await page.getByRole('button', { name: 'خروج از این دستگاه' }).click()
   await expect(page).toHaveURL(/login/)
   await page.getByLabel('شماره موبایل').fill(phone)
   await page.getByRole('button', { name: 'دریافت کد' }).click()

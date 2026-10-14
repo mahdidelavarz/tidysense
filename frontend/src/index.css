@@ -37,10 +37,14 @@
   --color-moon-strong: #34405e;
   --color-scrim: rgb(22 34 40 / 0.45);
   --color-on-sun: #3a2a12;
-  --color-entity-goal: #a8732a;
-  --color-entity-project: #4f7380;
-  --color-entity-task: #356e4e;
-  --color-entity-routine: #7a5c84;
+  --color-entity-goal: #a83e78;
+  --color-entity-project: #1d7f86;
+  --color-entity-task: #2e6fb3;
+  --color-entity-routine: #7652c4;
+  /* Moonstone: the one colour of the AI. Its fills are gradients, defined below on :root. */
+  --color-ai-icon: #34405e;
+  --color-ai-ink: #34405e;
+  --color-ai-spark: #dfa455;
 
   --shadow-sm: 0 1px 2px rgb(40 35 20 / 0.04), 0 10px 28px -16px rgb(40 35 20 / 0.18);
   --shadow-md: 0 14px 30px -18px rgb(28 46 52 / 0.45);
@@ -105,10 +109,16 @@
   --color-moon-strong: #cdd4ee;
   --color-scrim: rgb(3 6 10 / 0.6);
   --color-on-sun: #1a1206;
-  --color-entity-goal: #e8b567;
-  --color-entity-project: #8fb1bc;
-  --color-entity-task: #8cc7a1;
-  --color-entity-routine: #c2a3ce;
+  --color-entity-goal: #e29ac0;
+  --color-entity-project: #7cc9cf;
+  --color-entity-task: #86b8ea;
+  --color-entity-routine: #b9a3ec;
+  --color-ai-icon: #1a2238;
+  --color-ai-ink: #cdd4ee;
+  --color-ai-spark: #ffffff;
+  --ai-fill: linear-gradient(150deg, #dfe4f5 0%, #9aa8d4 52%, #e9c48a 115%);
+  --ai-tint: linear-gradient(120deg, #1a2238, #2d2a22);
+  --ai-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.55), 0 10px 22px -10px rgb(154 168 212 / 0.55);
   --shadow-sm: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 30px -18px rgb(0 0 0 / 0.7);
   --shadow-md: 0 18px 40px -16px rgb(0 0 0 / 0.85);
   --shadow-lg: 0 -20px 50px -20px rgb(0 0 0 / 0.9), 0 24px 48px -16px rgb(0 0 0 / 0.6);
@@ -116,7 +126,13 @@
 
 :root {
   color-scheme: light;
-  --sidebar-width: 17.75rem;
+  /* Moonstone fills (light). The dark values are redefined with the dark tokens above. */
+  --ai-fill: linear-gradient(150deg, #eef0f7 0%, #cdd4ee 48%, #f7ead2 100%);
+  --ai-glow: conic-gradient(from 0deg, #9aa8d4, #f0c886, #cdd4ee, #ffffff, #9aa8d4);
+  --ai-tint: linear-gradient(120deg, #e8ebf3, #f7ead2);
+  --ai-shadow: inset 0 0 0 1px rgb(52 64 94 / 0.14), inset 0 1px 0 rgb(255 255 255 / 0.9), 0 10px 22px -12px rgb(52 64 94 / 0.55);
+  /* The desktop icon rail and the gap around it. */
+  --rail-width: 4.75rem;
   /* The floating dock plus the gap beneath it. */
   --tabbar-height: 5rem;
   color: var(--color-text-primary);
@@ -198,16 +214,7 @@ select:not(:disabled),
     padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1.5rem);
   }
 
-  /* A panel floating on the canvas, not a column glued to the screen edge. */
-  .sidebar {
-    @apply fixed z-10 hidden flex-col gap-5 rounded-[1.75rem] border border-border-subtle bg-surface p-4 shadow-sm;
-    --nav-pad: 1rem;
-    inset-block: 0.75rem;
-    inset-inline-start: 0.75rem;
-    width: calc(var(--sidebar-width) - 0.75rem);
-  }
-
-  /* The strip only fades the page out beneath the dock; taps pass through it. */
+  /* Phones: the strip only fades the page out beneath the dock; taps pass through it. */
   .tabbar {
     @apply pointer-events-none fixed inset-x-0 bottom-0 z-10 flex justify-center px-3 pt-6;
     padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
@@ -218,71 +225,219 @@ select:not(:disabled),
     @apply pointer-events-auto grid h-17 w-full max-w-md grid-cols-5 items-stretch rounded-[1.625rem] border border-border-subtle bg-surface/88 px-1.5 shadow-md backdrop-blur-lg;
   }
 
+  .tab-item {
+    @apply relative flex flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-semibold text-text-secondary transition-colors duration-200;
+  }
+
+  /* The current tab: ink label and a soft pill behind its icon. */
+  .tab-icon {
+    @apply flex h-7.5 w-13 items-center justify-center rounded-full transition-colors duration-200;
+  }
+
+  .tab-item[aria-current="page"] {
+    @apply font-extrabold text-text-primary;
+  }
+
+  .tab-item[aria-current="page"] .tab-icon {
+    @apply bg-accent-tint;
+  }
+
+  /* Planning sits in the middle as the moonstone tile, raised out of the dock. */
+  .tab-ai {
+    @apply -mt-5 flex size-14 items-center justify-center rounded-[1.25rem];
+    background: var(--ai-fill);
+    color: var(--color-ai-icon);
+    box-shadow: var(--ai-shadow);
+  }
+
+  .tab-item[aria-current="page"] .tab-ai {
+    box-shadow: var(--ai-shadow), 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-ai-ink);
+  }
+
+  /* A small count on an icon, in the moon of "yesterday". */
+  .nav-count {
+    @apply absolute -top-1 min-w-4.5 rounded-full bg-moon px-1 text-center text-[0.625rem] font-extrabold leading-4.5 text-moon-tint;
+    inset-inline-end: 0.25rem;
+    box-shadow: 0 0 0 2px var(--color-surface);
+  }
+
+  /* Phones: creating is one floating button above the dock, at the thumb's edge. */
+  .create-fab {
+    @apply fixed z-10 flex size-14 items-center justify-center rounded-[1.25rem] bg-accent text-on-accent transition duration-200 hover:bg-accent-strong active:scale-95;
+    inset-inline-start: 1rem;
+    bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
+    box-shadow: 0 16px 30px -12px rgb(0 0 0 / 0.45);
+  }
+
+  /* Desktop: a floating icon rail plugged into the edge of the page panel by a canvas-coloured ring. */
+  .rail {
+    @apply fixed z-10 hidden w-(--rail-width) flex-col items-center gap-2 rounded-[2.375rem] bg-surface py-3.5;
+    top: 50%;
+    inset-inline-start: 1.25rem;
+    transform: translateY(-50%);
+    max-height: calc(100dvh - 2.5rem);
+    box-shadow: 0 0 0 8px var(--color-canvas), var(--shadow-md);
+  }
+
+  .rail-brand {
+    @apply mb-1.5 flex size-12 items-center justify-center rounded-2xl text-xl font-extrabold text-on-accent;
+    background: linear-gradient(150deg, var(--color-accent-strong), var(--color-accent));
+  }
+
+  .rail-rule {
+    @apply my-1.5 h-px w-7 bg-border-subtle;
+  }
+
+  .rail-item {
+    @apply relative flex size-12 items-center justify-center rounded-2xl text-text-secondary transition duration-200 hover:bg-surface-sunken hover:text-text-primary;
+  }
+
+  .rail-item[aria-current="page"],
+  .rail-item[aria-expanded="true"] {
+    @apply bg-accent text-on-accent shadow-md hover:bg-accent hover:text-on-accent;
+  }
+
+  .rail-ai {
+    @apply relative my-2 flex size-14 items-center justify-center rounded-[1.1875rem];
+    background: var(--ai-fill);
+    color: var(--color-ai-icon);
+    box-shadow: var(--ai-shadow);
+  }
+
+  .rail-ai[aria-current="page"] {
+    box-shadow: var(--ai-shadow), 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-ai-ink);
+  }
+
+  /* The moonstone's slow halo; reduced motion stops it with every other animation. */
+  .ai-aura {
+    @apply pointer-events-none absolute -inset-1 -z-1 rounded-[1.375rem] opacity-55 blur-[9px];
+    background: var(--ai-glow);
+    animation: ai-aura 7s linear infinite;
+  }
+
+  @keyframes ai-aura {
+    to { transform: rotate(360deg); }
+  }
+
+  .rail .nav-count {
+    @apply -top-1 bg-sun text-on-sun;
+    inset-inline-end: -0.25rem;
+  }
+
+  /* A label for an icon-only control, shown on hover and on keyboard focus. */
+  .rail-tip {
+    @apply pointer-events-none absolute z-20 whitespace-nowrap rounded-[0.625rem] bg-accent px-3 py-1.5 text-xs font-extrabold text-on-accent opacity-0 shadow-md transition duration-150;
+    inset-inline-start: calc(100% + 0.875rem);
+    top: 50%;
+    transform: translate(-0.375rem, -50%);
+  }
+
+  .rail-item:hover .rail-tip,
+  .rail-item:focus-visible .rail-tip,
+  .rail-ai:hover .rail-tip,
+  .rail-ai:focus-visible .rail-tip {
+    @apply opacity-100;
+    transform: translate(0, -50%);
+  }
+
   @media (min-width: 64rem) {
     .app-frame {
-      padding-bottom: 0;
-      padding-inline-start: var(--sidebar-width);
+      padding: 1.25rem;
+      padding-inline-start: 3.625rem;
     }
 
-    .sidebar {
+    /* The page panel the rail plugs into. */
+    .app-panel {
+      @apply rounded-[2.125rem] border border-border-subtle shadow-sm;
+      min-height: calc(100dvh - 2.5rem);
+      padding-inline-start: 2.5rem;
+      padding-bottom: 2.5rem;
+      background: color-mix(in srgb, var(--color-surface) 55%, var(--color-canvas));
+    }
+
+    .rail {
       display: flex;
     }
 
-    .tabbar {
+    .tabbar,
+    .create-fab {
       display: none;
     }
   }
 
-  .nav-item,
   .menu-item {
-    @apply relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-text-secondary transition-colors duration-200 hover:bg-surface-sunken hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50;
+    @apply relative flex min-h-13 w-full items-center gap-3 px-3.5 text-sm font-bold text-text-primary transition-colors duration-200 hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50;
   }
 
-  .nav-item[aria-current="page"] {
-    @apply bg-accent-tint font-bold text-accent-strong;
+  /* Grouped rows in the account panel, on the canvas tone. */
+  .menu-group {
+    @apply divide-y divide-border-subtle overflow-hidden rounded-[1.125rem] bg-canvas;
   }
 
-  /* Marks the current destination on the edge of the panel that holds the list. */
-  .nav-item[aria-current="page"]::before {
-    position: absolute;
-    inset-block: 0.625rem;
-    inset-inline-start: calc(var(--nav-pad, 0px) * -1);
-    width: 3px;
+  /* Opens the account panel on phones; the rail holds it on desktop. */
+  .account-button {
+    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-tint font-display text-lg font-bold text-text-primary transition duration-200 active:scale-[0.98];
+    box-shadow: inset 0 0 0 2px var(--color-surface), 0 0 0 1px var(--color-border);
+  }
+
+  /* Phones: a bottom sheet. Desktop: a panel beside the rail. */
+  .account-panel {
+    @apply fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col gap-3 overflow-y-auto border-t border-border-subtle bg-surface-raised px-4 pt-0 shadow-lg;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
+    border-radius: 1.875rem 1.875rem 0 0;
+    animation: var(--animate-sheet-up);
+  }
+
+  @media (min-width: 64rem) {
+    .account-panel {
+      @apply rounded-[1.75rem] border pt-4;
+      inset-inline: calc(1.25rem + var(--rail-width) + 1rem) auto;
+      bottom: 1.25rem;
+      width: 22rem;
+      padding-bottom: 1rem;
+      animation: var(--animate-pop-in);
+    }
+
+    .account-panel .sheet-handle {
+      display: none;
+    }
+  }
+
+  /* ---------- Stepper ---------- */
+  .stepper {
+    @apply flex items-center gap-1.5;
+  }
+
+  .stepper-step {
+    @apply flex shrink-0 items-center gap-1.5 text-xs font-bold text-text-tertiary;
+  }
+
+  .stepper-step + .stepper-step::before {
+    @apply h-0.5 w-4 rounded-full bg-border sm:w-6;
     content: "";
-    background: var(--color-sun);
-    border-start-end-radius: 999px;
-    border-end-end-radius: 999px;
   }
 
-  .tab-item {
-    @apply flex flex-col items-center justify-center gap-px rounded-2xl text-[0.6875rem] font-semibold text-text-secondary transition-colors duration-200;
+  .stepper-step[data-state="done"] + .stepper-step::before {
+    @apply bg-accent;
   }
 
-  .tab-icon {
-    @apply flex h-7 w-12 items-center justify-center;
+  .stepper-step[data-state="current"] {
+    @apply text-text-primary;
   }
 
-  /* The current tab is ink with a small sun under its label, not a pill. */
-  .tab-item::after {
-    @apply mt-0.5 size-1 rounded-full;
-    content: "";
+  .stepper-step[data-state="done"] {
+    @apply text-text-secondary;
   }
 
-  .tab-item[aria-current="page"] {
-    @apply font-extrabold text-accent;
+  .stepper-dot {
+    @apply flex size-5.5 items-center justify-center rounded-full text-[0.6875rem] font-extrabold;
+    box-shadow: inset 0 0 0 1.5px var(--color-border);
   }
 
-  .tab-item[aria-current="page"]::after {
-    background: var(--color-sun);
-  }
-
-  .tab-create {
-    @apply m-auto flex size-13 items-center justify-center rounded-[1.125rem] bg-accent text-on-accent shadow-md transition duration-200 hover:bg-accent-strong active:scale-95;
-  }
-
-  /* Opens the drawer below the desktop breakpoint. */
-  .menu-button {
-    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-[0.875rem] border border-border-subtle bg-surface text-text-primary shadow-sm transition duration-200 hover:border-border hover:shadow-md active:scale-[0.98];
+  .stepper-step[data-state="done"] .stepper-dot,
+  .stepper-step[data-state="current"] .stepper-dot {
+    @apply bg-accent text-on-accent;
+    box-shadow: none;
   }
 
   /* ---------- Page ---------- */
@@ -416,6 +571,27 @@ select:not(:disabled),
     @apply flex size-10 shrink-0 items-center justify-center rounded-[0.8125rem];
     color: color-mix(in srgb, var(--entity-color, var(--color-accent)) 85%, var(--color-text-primary));
     background: color-mix(in srgb, var(--entity-color, var(--color-accent)) 12%, var(--color-surface));
+  }
+
+  /* The entity's own colour for a short line of text (an example, a parent name). */
+  .entity-ink {
+    color: color-mix(in srgb, var(--entity-color, var(--color-accent)) 78%, var(--color-text-primary));
+  }
+
+  /* One choice in the create menu: a card with the entity's colour on its far edge. */
+  .create-choice {
+    @apply relative flex w-full items-center gap-3 overflow-hidden rounded-[1.375rem] bg-canvas p-4 text-start transition duration-200 ease-standard hover:bg-surface-sunken active:scale-[0.98];
+  }
+
+  .create-choice::after {
+    @apply absolute inset-y-0 w-1;
+    inset-inline-end: 0;
+    content: "";
+    background: var(--entity-color, transparent);
+  }
+
+  .create-choice-ai {
+    @apply border-[1.5px] border-dashed border-border bg-transparent hover:bg-canvas;
   }
 
   /* ---------- Status ---------- */
@@ -623,21 +799,6 @@ select:not(:disabled),
   /* On phones the primary action takes the remaining width beside a compact cancel. */
   .sheet-actions > .primary-button {
     @apply flex-1 sm:flex-none;
-  }
-
-  .drawer-panel {
-    @apply fixed z-50 flex flex-col gap-5 overflow-y-auto rounded-[1.75rem] bg-surface-raised p-4 shadow-lg;
-    --nav-pad: 1rem;
-    top: calc(env(safe-area-inset-top) + 0.5rem);
-    bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
-    inset-inline-start: 0.5rem;
-    width: min(20rem, calc(100vw - 3.5rem));
-    animation: drawer-in 280ms var(--ease-standard);
-  }
-
-  @keyframes drawer-in {
-    from { transform: translateX(calc(100% + 0.5rem)); }
-    to { transform: translateX(0); }
   }
 
   .dialog-layer {
@@ -1021,13 +1182,13 @@ select:not(:disabled),
   }
 
   /* Controls sitting on the sky are frosted glass, so they read on every phase. */
-  .sky .menu-button,
+  .sky .account-button,
   .sky-action {
     @apply border-white/70 bg-white/35 shadow-none backdrop-blur-sm;
     color: var(--sky-title);
   }
 
-  [data-theme="dark"] .sky .menu-button,
+  [data-theme="dark"] .sky .account-button,
   [data-theme="dark"] .sky-action {
     @apply border-white/15 bg-white/8;
   }

@@ -509,18 +509,54 @@ Verified 2026-10-13 on Linux:
 
 **Implementation checklist:**
 
-- [ ] Update tokens and keep one token set for both themes.
-- [ ] Rebuild the shared components and the stepper.
-- [ ] Build the phone shell and the desktop rail with keyboard, focus and tooltip behaviour.
-- [ ] Replace "sidebar on desktop" with the rail in `active-conventions.md`, `design-system.md` and `layout-and-navigation.md`.
+- [x] Update tokens and keep one token set for both themes.
+- [x] Rebuild the shared components and the stepper.
+- [x] Build the phone shell and the desktop rail with keyboard, focus and tooltip behaviour.
+- [x] Replace "sidebar on desktop" with the rail in `active-conventions.md`, `design-system.md` and `layout-and-navigation.md`.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1`; screenshots at 390 and 1440 px in both themes compared with the boards; keyboard-only rail and drawer pass.
 
 **Completion criteria:** The shell matches the boards in both themes and widths, and existing pages still work inside it.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`
 
-**Evidence:** None.
+**Evidence:** [tokens and shell styles](../frontend/src/index.css), [places](../frontend/src/features/shell/components/Navigation.tsx), [tab bar and create button](../frontend/src/features/shell/components/TabBar.tsx), [rail](../frontend/src/features/shell/components/Rail.tsx), [account panel](../frontend/src/features/shell/components/AccountPanel.tsx), [create menu](../frontend/src/features/shell/components/CreateSheet.tsx), [stepper](../frontend/src/shared/ui/Stepper.tsx), [layout and navigation](frontend/layout-and-navigation.md), [design system](frontend/design-system.md).
+
+**What the tests show:**
+
+- [Shell tests](../frontend/src/features/shell/components/Shell.test.tsx):
+  - five places in order with Planning in the middle;
+  - the Reconcile count on Today;
+  - Goals current on `/projects`;
+  - the create button apart from the places;
+  - every rail icon named, Operations for operators only;
+  - the account panel's rows, count, sign-out and Escape.
+- [Create menu](../frontend/src/features/shell/components/CreateSheet.test.tsx): examples per kind, and the Planning card navigates and closes.
+- [Stepper](../frontend/src/shared/ui/Stepper.test.tsx) states.
+- Browser scenarios:
+  - [phone and desktop layouts](../frontend/e2e/responsive.spec.ts);
+  - [keyboard rail and account panel](../frontend/e2e/keyboard.spec.ts): Tab reaches a rail icon and shows its tooltip, Enter opens the panel, Tab stays inside, Escape returns focus to the rail, and a panel link closes it.
+
+**Verified 2026-10-14 on Linux:**
+
+- 78 frontend tests passed; typecheck, lint and build were clean.
+- All 17 browser scenarios passed in Chromium against an isolated database.
+- 239 backend tests passed, unchanged.
+- Screenshots at 390 and 1440 px in both themes were compared with `CodeDrawer`, `CodeCreateMenu`, `CodeToday` and `CodeDesktopTasks`.
+- Every new entity chip and icon pair is at least 4.5:1.
+
+**Decisions and deviations:**
+
+- **Projects are reached from the account panel** until STEP-17 builds the Goals/Projects switch the boards show. The Goals place is current on `/projects`.
+- **Desktop has no global create button,** as on the boards: pages keep their own "new" actions.
+- **The create menu and account panel copy use the app's formal address** («نمی‌دانید از کجا شروع کنید؟», «حساب شما»), where the boards mixed in «تو».
+- **The Today sky keeps its layout,** with the account button in the old menu slot. Its redesign belongs to STEP-16.
+- **The stepper is built but not yet used.** STEP-18 wires it into planning.
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- A screen-reader pass of the rail and account panel. Only the role-based automated checks ran.
 
 ---
 
@@ -568,7 +604,7 @@ Verified 2026-10-13 on Linux:
 
 **Dependencies:** STEP-13 and STEP-15.
 
-**Implementation checklist:** Rebuild each screen; add the welcome and guides with skip and back; keep the "seen" mark on the device and record nothing on the server (028 §4.2); check each guide's promise against measurement (028 §4.3) before the pilot; replace the placeholder welcome image with the owner's image.
+**Implementation checklist:** Rebuild each screen, including the Goals/Projects switch the boards show (then remove the temporary Projects row from the account panel added in STEP-15); add the welcome and guides with skip and back; keep the "seen" mark on the device and record nothing on the server (028 §4.2); check each guide's promise against measurement (028 §4.3) before the pilot; replace the placeholder welcome image with the owner's image.
 
 **Verification:** `./dev.ps1 check`; `./auth-e2e.ps1` with a first visit that sees the guides and a second visit that does not; screenshots in both themes.
 
