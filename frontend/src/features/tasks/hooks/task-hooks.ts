@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 import { useGoalOptions } from '../../goals/hooks/goal-hooks'
 import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
+import { progressKey } from '../../structure/hooks/progress-hooks'
 import { todayKey } from '../../today/hooks/today-hooks'
 import { carryTask, completeTask, createTask, dropTask, getTask, listTasks, restoreTask, updateTask } from '../services/tasks-api'
 import type { CreateTaskRequest, TaskDto, UpdateTaskRequest } from '../types/task.types'
@@ -78,6 +79,7 @@ function useTaskCacheSync() {
       client.invalidateQueries({ queryKey: taskKeys.options }),
       client.invalidateQueries({ queryKey: todayKey }),
       client.invalidateQueries({ queryKey: reconcileKeys.all }),
+      client.invalidateQueries({ queryKey: progressKey }),
     ])
   }, [client])
 }

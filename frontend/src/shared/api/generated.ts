@@ -2006,6 +2006,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProgressDto"];
+                        "application/json": components["schemas"]["ProgressDto"];
+                        "text/json": components["schemas"]["ProgressDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -4567,6 +4604,13 @@ export interface components {
             /** Format: date-time */
             terminalAt: null | string;
         };
+        GoalProgressDto: {
+            /** Format: uuid */
+            goalId: string;
+            /** Format: int32 */
+            activeProjectCount: number | string;
+            work: components["schemas"]["WorkProgressDto"];
+        };
         MetricResultDto: {
             id: string;
             /** Format: int32 */
@@ -4583,6 +4627,18 @@ export interface components {
             numerator: number | string;
             /** Format: int64 */
             denominator: number | string;
+        };
+        NextTaskDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: uuid */
+            projectId: null | string;
+            /** Format: date */
+            plannedDate: null | string;
+            isBlocked: boolean;
+            /** Format: int64 */
+            version: number | string;
         };
         OpenReconcileSessionRequest: {
             triggerType: string;
@@ -4869,6 +4925,10 @@ export interface components {
             affectedDraftIds: string[];
             warningHash: string;
         };
+        ProgressDto: {
+            goals: components["schemas"]["GoalProgressDto"][];
+            projects: components["schemas"]["ProjectProgressDto"][];
+        };
         ProjectDto: {
             /** Format: uuid */
             id: string;
@@ -4891,6 +4951,11 @@ export interface components {
             updatedAt: string;
             /** Format: date-time */
             terminalAt: null | string;
+        };
+        ProjectProgressDto: {
+            /** Format: uuid */
+            projectId: string;
+            work: components["schemas"]["WorkProgressDto"];
         };
         ReconcileAiDto: {
             availability: string;
@@ -5317,6 +5382,7 @@ export interface components {
             resourceType: string;
             /** Format: uuid */
             resourceId: string;
+            title: string;
             status: string;
             /** Format: int64 */
             version: number | string;
@@ -5325,6 +5391,7 @@ export interface components {
             resourceType: string;
             /** Format: uuid */
             resourceId: string;
+            title: string;
             resultingStatus: string;
             /** Format: int64 */
             version: number | string;
@@ -5417,6 +5484,22 @@ export interface components {
             phoneNumber: string;
             code: string;
             purpose: string;
+        };
+        WorkProgressDto: {
+            /** Format: int32 */
+            taskCount: number | string;
+            /** Format: int32 */
+            doneTaskCount: number | string;
+            /** Format: int32 */
+            openTaskCount: number | string;
+            /** Format: int32 */
+            todayTaskCount: number | string;
+            /** Format: int32 */
+            waitingTaskCount: number | string;
+            /** Format: int32 */
+            activeRoutineCount: number | string;
+            routineTitles: string[];
+            nextTasks: components["schemas"]["NextTaskDto"][];
         };
     };
     responses: never;

@@ -3,12 +3,15 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AxiosError } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { listGoals } from '../../goals/services/goals-api'
+import { getProgress } from '../../structure/services/progress-api'
 import { getProject, previewProjectTerminal, terminateProject, updateProject } from '../services/projects-api'
 import { ProjectReadView } from './ProjectReadView'
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
+  Link: ({ children, 'aria-label': label }: { children: React.ReactNode; 'aria-label'?: string }) => <a href="/" aria-label={label}>{children}</a>,
 }))
+vi.mock('../../structure/services/progress-api', () => ({ getProgress: vi.fn() }))
+vi.mock('../../today/services/today-api', () => ({ getToday: vi.fn().mockResolvedValue({ localDate: '2026-10-14', tasks: [], completedTasks: [], routineOccurrences: [] }) }))
 vi.mock('../../planning/services/planning-api', () => ({ listPlanningFacts: vi.fn().mockResolvedValue([]), removePlanningFact: vi.fn() }))
 vi.mock('../../goals/services/goals-api', () => ({ listGoals: vi.fn() }))
 vi.mock('../services/projects-api', () => ({
@@ -31,6 +34,7 @@ describe('ProjectReadView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(listGoals).mockResolvedValue({ items: [], page: { nextCursor: null, hasMore: false } })
+    vi.mocked(getProgress).mockResolvedValue({ goals: [], projects: [] })
   })
 
   it('announces the loading state', () => {
@@ -52,17 +56,17 @@ describe('ProjectReadView', () => {
     vi.mocked(previewProjectTerminal).mockResolvedValue({
       entityId: project.id, entityType: 'Project', currentStatus: 'ACTIVE', targetStatus: 'COMPLETED',
       expectedVersion: 1, canApply: true, blockers: [],
-      cascades: [{ resourceType: 'Routine', resourceId: '00000000-0000-0000-0000-000000000040', resultingStatus: 'STOPPED', version: 1 }],
+      cascades: [{ resourceType: 'Routine', resourceId: '00000000-0000-0000-0000-000000000040', title: 'مرور هفتگی', resultingStatus: 'STOPPED', version: 1 }],
       previewHash: 'a'.repeat(64),
     })
     vi.mocked(terminateProject).mockResolvedValue({ ...project, status: 'COMPLETED', version: 2 })
     renderProject()
     expect(await screen.findByRole('heading', { name: 'پروژه آزمایشی' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'تکمیل پروژه' }))
-    expect(await screen.findByRole('heading', { name: 'تأیید تکمیل پروژه' })).toBeInTheDocument()
-    // The Routines this confirmation will stop are shown before the user decides.
-    expect(screen.getByText('روتین‌های فعال این پروژه با تأیید شما متوقف می‌شوند:')).toBeInTheDocument()
-    expect(screen.getByText('مشاهده روتین')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'این پروژه تمام شد' }))
+    expect(await screen.findByRole('dialog', { name: 'تمام شدن پروژه' })).toBeInTheDocument()
+    // The Routines this confirmation will stop are shown, by name, before the user decides.
+    expect(screen.getByText('این روتین‌ها با تأیید شما متوقف می‌شوند:')).toBeInTheDocument()
+    expect(screen.getByText('مرور هفتگی')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'تأیید تکمیل پروژه' }))
     await waitFor(() => expect(terminateProject).toHaveBeenCalled())
     expect(await screen.findByText('تکمیل‌شده')).toBeInTheDocument()

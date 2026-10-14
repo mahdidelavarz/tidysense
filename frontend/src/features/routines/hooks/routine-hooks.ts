@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
+import { progressKey } from '../../structure/hooks/progress-hooks'
 import { todayKey } from '../../today/hooks/today-hooks'
 import {
   completeOccurrence,
@@ -69,6 +70,7 @@ function useRoutineInvalidation() {
     await Promise.all([
       client.invalidateQueries({ queryKey: routineKeys.all }),
       client.invalidateQueries({ queryKey: todayKey }),
+      client.invalidateQueries({ queryKey: progressKey }),
     ])
   }, [client])
 }

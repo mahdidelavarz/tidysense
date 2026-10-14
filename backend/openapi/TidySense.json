@@ -2876,6 +2876,35 @@
         }
       }
     },
+    "/api/v1/progress": {
+      "get": {
+        "tags": [
+          "Progress"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects": {
       "get": {
         "tags": [
@@ -7332,6 +7361,31 @@
           }
         }
       },
+      "GoalProgressDto": {
+        "required": [
+          "goalId",
+          "activeProjectCount",
+          "work"
+        ],
+        "type": "object",
+        "properties": {
+          "goalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activeProjectCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "work": {
+            "$ref": "#/components/schemas/WorkProgressDto"
+          }
+        }
+      },
       "MetricResultDto": {
         "required": [
           "id",
@@ -7395,6 +7449,51 @@
             "format": "int64"
           },
           "denominator": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "NextTaskDto": {
+        "required": [
+          "id",
+          "title",
+          "projectId",
+          "plannedDate",
+          "isBlocked",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "plannedDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "isBlocked": {
+            "type": "boolean"
+          },
+          "version": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -8663,6 +8762,27 @@
           }
         }
       },
+      "ProgressDto": {
+        "required": [
+          "goals",
+          "projects"
+        ],
+        "type": "object",
+        "properties": {
+          "goals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalProgressDto"
+            }
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectProgressDto"
+            }
+          }
+        }
+      },
       "ProjectDto": {
         "required": [
           "id",
@@ -8743,6 +8863,22 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "ProjectProgressDto": {
+        "required": [
+          "projectId",
+          "work"
+        ],
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "work": {
+            "$ref": "#/components/schemas/WorkProgressDto"
           }
         }
       },
@@ -10519,6 +10655,7 @@
         "required": [
           "resourceType",
           "resourceId",
+          "title",
           "status",
           "version"
         ],
@@ -10530,6 +10667,9 @@
           "resourceId": {
             "type": "string",
             "format": "uuid"
+          },
+          "title": {
+            "type": "string"
           },
           "status": {
             "type": "string"
@@ -10548,6 +10688,7 @@
         "required": [
           "resourceType",
           "resourceId",
+          "title",
           "resultingStatus",
           "version"
         ],
@@ -10559,6 +10700,9 @@
           "resourceId": {
             "type": "string",
             "format": "uuid"
+          },
+          "title": {
+            "type": "string"
           },
           "resultingStatus": {
             "type": "string"
@@ -10955,6 +11099,81 @@
             "type": "string"
           }
         }
+      },
+      "WorkProgressDto": {
+        "required": [
+          "taskCount",
+          "doneTaskCount",
+          "openTaskCount",
+          "todayTaskCount",
+          "waitingTaskCount",
+          "activeRoutineCount",
+          "routineTitles",
+          "nextTasks"
+        ],
+        "type": "object",
+        "properties": {
+          "taskCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "doneTaskCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "openTaskCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "todayTaskCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "waitingTaskCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activeRoutineCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "routineTitles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nextTasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NextTaskDto"
+            }
+          }
+        }
       }
     }
   },
@@ -10979,6 +11198,9 @@
     },
     {
       "name": "Planning"
+    },
+    {
+      "name": "Progress"
     },
     {
       "name": "Projects"

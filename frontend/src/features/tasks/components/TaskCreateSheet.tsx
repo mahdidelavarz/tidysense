@@ -1,5 +1,5 @@
 import { toIsoDate } from '../../../shared/lib/date'
-import { showToast } from '../../../shared/lib/ui-store'
+import { showToast, useUiStore } from '../../../shared/lib/ui-store'
 import { Sheet } from '../../../shared/ui/Sheet'
 import { useCreateCapture } from '../../captures/hooks/capture-hooks'
 import { useGoalOptions } from '../../goals/hooks/goal-hooks'
@@ -21,6 +21,7 @@ export function TaskCreateSheet({ onClose }: { onClose: () => void }) {
   const create = useCreateTask()
   const capture = useCreateCapture()
   const pending = create.isPending || capture.isPending
+  const parent = useUiStore(state => state.createParent)
   // The server's local date when it is known; the browser's until then (the pilot runs in one time zone).
   const today = useToday().data?.localDate ?? toIsoDate(new Date())
   return (
@@ -29,6 +30,7 @@ export function TaskCreateSheet({ onClose }: { onClose: () => void }) {
     >
       <TaskForm
         today={today}
+        parentScope={parent ?? undefined}
         goals={goals.data?.items ?? []}
         projects={projects.data?.items ?? []}
         tasks={tasks.data?.items ?? []}

@@ -1178,6 +1178,105 @@ select:not(:disabled),
     @apply hidden min-h-11 shrink-0 items-center gap-2 rounded-[0.875rem] px-3.5 text-sm font-extrabold transition duration-200 active:scale-[0.98] lg:inline-flex;
   }
 
+  /* A count beside a heading or tab, as in «کارهای امروز ۳». */
+  .count-pill {
+    @apply rounded-full bg-surface-sunken px-2 text-xs font-bold leading-5 text-text-secondary;
+  }
+
+  /* A row under the title on the photograph, such as the Goals/Projects switch. */
+  .hero-below {
+    @apply relative mt-3 px-4 transition duration-300 ease-standard sm:px-6;
+  }
+
+  .hero[data-collapsed="true"] .hero-below {
+    @apply pointer-events-none opacity-0;
+  }
+
+  /* The Goals/Projects switch: two tabs on frosted glass; the current one is solid. */
+  .structure-switch {
+    @apply grid grid-cols-2 gap-1 rounded-[1.125rem] border border-white/35 bg-white/18 p-1 backdrop-blur-md;
+  }
+
+  .structure-tab {
+    @apply flex min-h-11 items-center justify-center gap-2 rounded-[0.875rem] text-sm font-extrabold text-white transition;
+  }
+
+  .structure-tab .count-pill {
+    @apply bg-white/25 text-white;
+  }
+
+  .structure-tab[aria-current="page"] {
+    @apply bg-surface text-text-primary shadow-sm;
+  }
+
+  .structure-tab[aria-current="page"] svg {
+    color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
+  }
+
+  .structure-tab[aria-current="page"] .count-pill {
+    @apply bg-surface-sunken text-text-secondary;
+  }
+
+  /* A Goal or Project card: a wash of its colour from the start corner. */
+  .goal-card {
+    @apply relative rounded-[1.5rem] border p-4 shadow-sm transition hover:shadow-md;
+    border-color: color-mix(in srgb, var(--entity-color) 14%, var(--color-border-subtle));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 9%, var(--color-surface)) 0%, var(--color-surface) 45%);
+  }
+
+  .goal-card[data-closed="true"] {
+    @apply opacity-85;
+    background: var(--color-surface);
+  }
+
+  /* A Goal's own tile is solid in its colour; a Project's is its tint. */
+  .goal-tile {
+    @apply flex size-11 shrink-0 items-center justify-center rounded-[0.875rem] text-surface;
+    background: var(--entity-color);
+  }
+
+  .project-tile {
+    @apply flex size-11 shrink-0 items-center justify-center rounded-[0.875rem];
+    color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--entity-color) 12%, var(--color-surface));
+  }
+
+  /* A count of one kind of item, in that kind's tint. */
+  .count-chip {
+    @apply flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-2;
+    color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--entity-color) 12%, var(--color-surface));
+  }
+
+  /* What a Goal means or a Project finishing means, set off by a rule in its colour. */
+  .meaning-line {
+    @apply whitespace-pre-wrap ps-3 text-[0.9375rem] leading-8 text-text-secondary;
+    border-inline-start: 3px solid var(--entity-color);
+  }
+
+  /* How far a Goal or Project has come, washed in its colour. */
+  .progress-card {
+    @apply rounded-[1.5rem] border p-4;
+    border-color: color-mix(in srgb, var(--entity-color) 18%, var(--color-border-subtle));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 12%, var(--color-surface)) 0%, var(--color-surface) 70%);
+  }
+
+  /* The quiet positive answer at the foot of a Goal or Project: it was reached. */
+  .positive-button {
+    @apply inline-flex min-h-13 items-center justify-center gap-2 rounded-[1.125rem] bg-positive-tint px-6 text-[0.9375rem] font-extrabold text-positive transition hover:brightness-[0.98] active:scale-[0.98] disabled:opacity-50;
+  }
+
+  /* Adding one more item in place: a dashed row. */
+  .add-row {
+    @apply flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border text-sm font-extrabold text-entity-task transition hover:bg-surface-sunken;
+  }
+
+  /* A bar filled to the share of the work done, in the item's colour. */
+  .progress-bar {
+    @apply h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken;
+    background-image: linear-gradient(270deg, var(--entity-color) var(--share), transparent var(--share));
+  }
+
   /* What sits at the foot of the photograph (the Reconcile offer); it steps aside while collapsed. */
   .hero-foot {
     @apply absolute inset-x-4 bottom-3.5 transition duration-300 ease-standard sm:inset-x-6;
@@ -1333,10 +1432,6 @@ select:not(:disabled),
 
   .timeline-head[data-today="true"] .timeline-head-label {
     color: color-mix(in srgb, var(--color-entity-task) 80%, var(--color-text-primary));
-  }
-
-  .count-pill {
-    @apply rounded-full bg-surface-sunken px-2 text-xs font-bold leading-5 text-text-secondary;
   }
 
   .timeline-card {

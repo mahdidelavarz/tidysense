@@ -22,10 +22,12 @@ import { TaskSequenceSelect } from './TaskSequenceSelect'
  * no date and no owner is not yet a Task: it is handed to `onCapture` and
  * saved as a quick capture.
  */
-export function TaskForm({ task, today, goals, projects, tasks = [], pending, error, onSubmit, onCapture, onCancel }: {
+export function TaskForm({ task, today, parentScope, goals, projects, tasks = [], pending, error, onSubmit, onCapture, onCancel }: {
   task?: TaskDto
   /** Today's ISO local date: a new Task is for today unless another day (or none) is chosen. */
   today?: string
+  /** The owner a new Task starts under, when it is made from that owner's page. */
+  parentScope?: string
   goals: GoalDto[]
   projects: ProjectDto[]
   tasks?: TaskDto[]
@@ -40,7 +42,7 @@ export function TaskForm({ task, today, goals, projects, tasks = [], pending, er
     defaultValues: {
       title: task?.title ?? '',
       description: task?.description ?? '',
-      parentScope: task?.goalId ? `goal:${task.goalId}` : task?.projectId ? `project:${task.projectId}` : 'none',
+      parentScope: task?.goalId ? `goal:${task.goalId}` : task?.projectId ? `project:${task.projectId}` : parentScope ?? 'none',
       plannedDate: task ? task.plannedDate ?? '' : today ?? '',
       deadline: task?.deadline ?? '',
       sequenceChoice: 'none',

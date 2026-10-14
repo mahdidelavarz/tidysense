@@ -9,6 +9,7 @@ using TidySense.Common.Auth;
 using TidySense.Data;
 using TidySense.DTOs.Common;
 using TidySense.DTOs.Goals;
+using TidySense.DTOs.Progress;
 using TidySense.DTOs.Projects;
 using TidySense.DTOs.Tasks;
 using TidySense.DTOs.Today;
@@ -127,6 +128,7 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
         var blocker = Assert.Single(blockedPreview.Blockers);
         Assert.Equal("Task", blocker.ResourceType);
         Assert.Equal(task.Id, blocker.ResourceId);
+        Assert.Equal(task.Title, blocker.Title);
 
         var droppedResponse = await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{task.Id}/drop",
             new { expectedVersion = task.Version }, "drop-project-task");
@@ -151,6 +153,57 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
         var direct = await CreateTaskAsync(client, "goal-undated-task", goalId: goal.Id, plannedDate: null);
         var goalPreview = await PreviewAsync(client, "goals", goal.Id, "ACHIEVED", goal.Version);
         Assert.Contains(goalPreview.Blockers, x => x.ResourceType == "Task" && x.ResourceId == direct.Id);
+    }
+
+    [Fact]
+    public async Task Progress_counts_the_work_under_each_goal_and_project_and_lists_next_steps_in_order()
+    {
+        var session = await CreateSessionAsync();
+        using var client = Client(session.Token);
+        DateOnly today;
+        await using (var scope = factory.Services.CreateAsyncScope())
+            today = scope.ServiceProvider.GetRequiredService<ApplicationDateService>().Today;
+        var goal = await CreateGoalAsync(client, "progress-goal");
+        var project = await CreateProjectAsync(client, goal.Id, "progress-project");
+        var sequenceId = Guid.NewGuid();
+        var first = await CreateTaskAsync(client, "progress-first", projectId: project.Id, plannedDate: today,
+            sequenceId: sequenceId, sequenceOrder: 10);
+        var second = await CreateTaskAsync(client, "progress-second", projectId: project.Id,
+            plannedDate: today.AddDays(1), sequenceId: sequenceId, sequenceOrder: 20);
+        var undated = await CreateTaskAsync(client, "progress-undated", projectId: project.Id, plannedDate: null);
+        var direct = await CreateTaskAsync(client, "progress-direct", goalId: goal.Id, plannedDate: today);
+        var dropped = await CreateTaskAsync(client, "progress-dropped", goalId: goal.Id, plannedDate: null);
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{dropped.Id}/drop",
+            new { expectedVersion = dropped.Version }, "progress-drop")).EnsureSuccessStatusCode();
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{direct.Id}/complete",
+            new { expectedVersion = direct.Version, completedForLocalDate = today }, "progress-complete")).EnsureSuccessStatusCode();
+        (await SendAsync(client, HttpMethod.Post, "/api/v1/routines", new
+        {
+            title = "progress-routine", description = (string?)null, goalId = (Guid?)null, projectId = project.Id,
+            recurrence = new { type = "DAILY" }, timesOfDay = Array.Empty<string>(),
+        }, "progress-routine")).EnsureSuccessStatusCode();
+        var otherSession = await CreateSessionAsync();
+        using var otherClient = Client(otherSession.Token);
+        await CreateGoalAsync(otherClient, "progress-other");
+
+        var progress = (await client.GetFromJsonAsync<ProgressDto>("/api/v1/progress"))!;
+        // Only the caller's own Goals and Projects.
+        var goalProgress = Assert.Single(progress.Goals);
+        var projectProgress = Assert.Single(progress.Projects);
+        Assert.Equal(goal.Id, goalProgress.GoalId);
+        Assert.Equal(1, goalProgress.ActiveProjectCount);
+
+        // The Project: three open, one of them today and one waiting for the first step.
+        var work = projectProgress.Work;
+        Assert.Equal((3, 0, 3, 1, 1, 1), (work.TaskCount, work.DoneTaskCount, work.OpenTaskCount,
+            work.TodayTaskCount, work.WaitingTaskCount, work.ActiveRoutineCount));
+        Assert.Equal(["progress-routine"], work.RoutineTitles);
+        Assert.Equal([first.Id, second.Id, undated.Id], work.NextTasks.Select(x => x.Id));
+        Assert.Equal([false, true, false], work.NextTasks.Select(x => x.IsBlocked));
+
+        // The Goal adds its own Tasks: the completed one counts as done, the dropped one not at all.
+        Assert.Equal((4, 1, 3), (goalProgress.Work.TaskCount, goalProgress.Work.DoneTaskCount, goalProgress.Work.OpenTaskCount));
+        Assert.Equal(1, goalProgress.Work.ActiveRoutineCount);
     }
 
     [Fact]

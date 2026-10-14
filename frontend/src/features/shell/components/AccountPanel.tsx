@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState } from 'react'
-import { Activity, CalendarClock, ChevronLeft, Compass, FolderKanban, LogOut, Moon, ShieldCheck, Sun } from '../../../shared/ui/icons'
+import { Activity, CalendarClock, ChevronLeft, Compass, LogOut, Moon, ShieldCheck, Sun } from '../../../shared/ui/icons'
 import { formatNumber } from '../../../shared/lib/date'
 import { useModal } from '../../../shared/lib/use-modal'
 import { setThemePreference, type ThemePreference, useThemePreference } from '../../../shared/lib/theme'
@@ -36,7 +36,7 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
     logout.mutate(all, { onError: () => setFailed(true) })
   }
 
-  const row = (to: '/reconcile' | '/planning' | '/projects' | '/operations' | '/privacy', Icon: typeof Compass, label: string, extra?: React.ReactNode) => (
+  const row = (to: '/reconcile' | '/planning' | '/operations' | '/privacy', Icon: typeof Compass, label: string, extra?: React.ReactNode) => (
     <Link className="menu-item" to={to} onClick={onClose}>
       <Icon size={20} className="text-text-secondary" aria-hidden="true" />
       <span className="flex-1">{label}</span>
@@ -69,7 +69,6 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
           ))}
           {row('/planning', Compass, 'برنامه‌ریزی')}
           {/* Until the Goals page carries its Projects switch (STEP-17), Projects are reached here. */}
-          {row('/projects', FolderKanban, 'پروژه‌ها')}
           {user?.isOperator && row('/operations', Activity, 'عملیات')}
         </nav>
 

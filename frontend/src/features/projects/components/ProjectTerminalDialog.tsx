@@ -1,35 +1,31 @@
-import { Link } from '@tanstack/react-router'
 import { TerminalDialog } from '../../../shared/ui/TerminalDialog'
 import type { ProjectTerminalPreview } from '../types/project.types'
 
-/** Project-specific copy and blocker links around the shared terminal confirmation dialog. */
-export function ProjectTerminalDialog({ preview, pending, onCancel, onConfirm }: {
+/** Project-specific copy around the shared terminal confirmation. */
+export function ProjectTerminalDialog({ projectTitle, preview, pending, onCancel, onConfirm }: {
+  projectTitle: string
   preview: ProjectTerminalPreview
   pending: boolean
   onCancel: () => void
   onConfirm: () => void
 }) {
   const completed = preview.targetStatus === 'COMPLETED'
-  const action = completed ? 'تکمیل پروژه' : 'توقف پروژه'
   return (
     <TerminalDialog
-      title={`تأیید ${action}`}
-      description="وضعیت هدف بالادست با این کار خودکار تغییر نمی‌کند."
+      entity="project"
+      entityTitle={projectTitle}
+      title={completed ? 'تمام شدن پروژه' : 'توقف پروژه'}
       tone={completed ? 'positive' : 'attention'}
-      confirmLabel={`تأیید ${action}`}
-      pendingLabel="در حال ثبت…"
+      confirmLabel={completed ? 'تأیید تکمیل پروژه' : 'تأیید توقف پروژه'}
       pending={pending}
       canApply={preview.canApply}
-      blockersIntro="ابتدا کارهای فعال این پروژه را تعیین تکلیف کنید:"
-      blockers={preview.blockers.map(blocker => ({
-        id: blocker.resourceId,
-        label: <Link className="text-link" to="/tasks/$taskId" params={{ taskId: blocker.resourceId }}>مشاهده کار فعال</Link>,
-      }))}
-      consequencesIntro="روتین‌های فعال این پروژه با تأیید شما متوقف می‌شوند:"
-      consequences={preview.cascades.map(cascade => ({
-        id: cascade.resourceId,
-        label: <Link className="text-link" to="/routines/$routineId" params={{ routineId: cascade.resourceId }}>مشاهده روتین</Link>,
-      }))}
+      blockers={preview.blockers.map(blocker => ({ id: blocker.resourceId, kind: 'Task', title: blocker.title }))}
+      cascades={preview.cascades.map(cascade => ({ id: cascade.resourceId, kind: 'Routine', title: cascade.title }))}
+      notes={[
+        completed ? '«تکمیل‌شده» ثبت می‌شود و به «پایان‌یافته‌ها» می‌رود.' : '«متوقف‌شده» ثبت می‌شود و به «پایان‌یافته‌ها» می‌رود.',
+        'سابقه‌اش و کارهای انجام‌شده می‌مانند.',
+        'وضعیت هدف بالادست با این کار خودکار تغییر نمی‌کند.',
+      ]}
       onCancel={onCancel}
       onConfirm={onConfirm}
     />

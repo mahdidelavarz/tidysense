@@ -11,10 +11,12 @@ export type Toast = { id: number; message: string }
 type UiState = {
   accountOpen: boolean
   createTarget: CreateTarget | null
+  /** The owner a new item starts under, as `goal:<id>` or `project:<id>`, when it is made from that owner's page. */
+  createParent: string | null
   toasts: Toast[]
   openAccount: () => void
   closeAccount: () => void
-  openCreate: (target: CreateTarget) => void
+  openCreate: (target: CreateTarget, parent?: string) => void
   closeCreate: () => void
   showToast: (message: string) => void
   dismissToast: (id: number) => void
@@ -25,11 +27,12 @@ let nextToastId = 1
 export const useUiStore = create<UiState>(set => ({
   accountOpen: false,
   createTarget: null,
+  createParent: null,
   toasts: [],
   openAccount: () => set({ accountOpen: true }),
   closeAccount: () => set({ accountOpen: false }),
-  openCreate: target => set({ createTarget: target, accountOpen: false }),
-  closeCreate: () => set({ createTarget: null }),
+  openCreate: (target, parent) => set({ createTarget: target, createParent: parent ?? null, accountOpen: false }),
+  closeCreate: () => set({ createTarget: null, createParent: null }),
   showToast: message => set(state => ({ toasts: [...state.toasts, { id: nextToastId++, message }] })),
   dismissToast: id => set(state => ({ toasts: state.toasts.filter(toast => toast.id !== id) })),
 }))
