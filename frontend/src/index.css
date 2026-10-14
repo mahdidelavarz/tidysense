@@ -1580,6 +1580,85 @@ select:not(:disabled),
     @apply pt-4 lg:pt-3;
   }
 
+  /* ---------- Welcome and first-run guides (phones, before sign-in) ---------- */
+  /* The welcome: the photograph full screen, the mark at the top, «شروع» at the foot. */
+  .welcome {
+    @apply relative min-h-dvh overflow-hidden bg-[#0f1720];
+  }
+
+  .welcome-veil {
+    @apply absolute inset-0;
+    background: linear-gradient(180deg, rgb(10 18 28 / 0.35) 0%, rgb(10 18 28 / 0) 30%, rgb(10 18 28 / 0) 55%, rgb(10 18 28 / 0.65) 100%);
+  }
+
+  .welcome-mark {
+    @apply flex size-15 items-center justify-center rounded-[1.1875rem] bg-white/95 font-display text-[2rem] font-bold text-[#1c2e34];
+    box-shadow: 0 16px 34px -14px rgb(0 0 0 / 0.6);
+  }
+
+  .welcome-start {
+    @apply absolute inset-x-6 flex h-14.5 items-center justify-center gap-2 rounded-[1.25rem] bg-white/95 text-[1.0625rem] font-extrabold text-[#1c2e34] backdrop-blur-sm transition active:scale-[0.98];
+    bottom: calc(2.75rem + env(safe-area-inset-bottom));
+    box-shadow: 0 20px 40px -18px rgb(0 0 0 / 0.7);
+  }
+
+  /* A guide: progress and skip, the example, the promise, then next and back. */
+  .guide {
+    @apply mx-auto flex min-h-dvh max-w-md flex-col bg-canvas px-4 pt-3.5 text-text-primary;
+    padding-bottom: calc(1.75rem + env(safe-area-inset-bottom));
+  }
+
+  .guide-progress {
+    @apply h-1 flex-1 rounded-full bg-border;
+  }
+
+  .guide-progress[data-done="true"] {
+    @apply bg-accent;
+  }
+
+  .guide-scene {
+    @apply relative mt-2 h-[min(29rem,56dvh)] overflow-hidden rounded-[2.125rem];
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-moon) 14%, var(--color-surface)) 0%, color-mix(in srgb, var(--color-sun) 12%, var(--color-surface)) 100%);
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  }
+
+  /* Rings rising from the foot of the example, with a warm glow at their centre. */
+  .guide-ring {
+    @apply absolute left-1/2 -translate-x-1/2 translate-y-1/2 rounded-full;
+    bottom: 0;
+    border: 1px solid color-mix(in srgb, var(--color-moon) 30%, transparent);
+  }
+
+  .guide-ring:nth-child(1) { width: 21.25rem; height: 21.25rem; }
+  .guide-ring:nth-child(2) { width: 15.625rem; height: 15.625rem; }
+  .guide-ring:nth-child(3) { width: 10.625rem; height: 10.625rem; }
+
+  .guide-ring:nth-child(4) {
+    width: 7.5rem;
+    height: 7.5rem;
+    border: 0;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--color-sun) 38%, transparent), transparent);
+  }
+
+  .guide-card {
+    @apply w-full rounded-[1.375rem] border border-border-subtle bg-surface px-4 py-3.5 shadow-md;
+  }
+
+  .guide-ai {
+    @apply inline-flex h-9.5 items-center gap-2 rounded-full px-3.5 text-xs font-extrabold;
+    color: var(--color-ai-ink);
+    background: var(--ai-fill);
+    box-shadow: var(--ai-shadow);
+  }
+
+  .guide-badge {
+    @apply inline-flex h-7.5 items-center gap-1.5 rounded-[0.625rem] bg-sun-tint px-3 text-[0.8125rem] font-extrabold text-sun-strong;
+  }
+
+  .guide-title {
+    @apply font-display text-[1.5625rem] font-bold leading-[1.55] outline-none;
+  }
+
   /* ---------- Date picker ---------- */
   .calendar-day {
     @apply flex aspect-square w-full items-center justify-center rounded-xl text-sm transition-colors duration-150 hover:bg-surface-sunken;

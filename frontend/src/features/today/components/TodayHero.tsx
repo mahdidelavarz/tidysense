@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react'
-import heroPhoto from '../assets/today-hero.webp'
+import heroPhoto from '../../../shared/assets/sunset.webp'
 
 /**
  * Collapsed while the reader scrolls down past the photograph; open again as
