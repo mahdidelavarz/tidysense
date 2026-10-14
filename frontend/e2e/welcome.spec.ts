@@ -23,7 +23,7 @@ test('a first visit on a phone sees the welcome and the guides once, then goes t
   // The mark is on this device; the second visit goes straight to sign-in.
   await page.goto('/today')
   await expect(page).toHaveURL(/\/login$/)
-  await expect(page.getByRole('heading', { name: 'ورود به حساب' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'ورود یا ثبت‌نام' })).toBeVisible()
 })
 
 test('skipping the guides also counts as seen, and desktop never shows them', async ({ page, browser }) => {

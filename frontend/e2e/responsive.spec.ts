@@ -140,7 +140,7 @@ test('desktop layout uses the icon rail and has no tab bar', async ({ page }) =>
 test('login screen', async ({ page }) => {
   await page.setViewportSize(desktop)
   await page.goto('/login')
-  await expect(page.getByRole('heading', { name: 'ورود به حساب' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'ورود یا ثبت‌نام' })).toBeVisible()
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-desktop-login.png' })
   await page.setViewportSize(phone)

@@ -32,7 +32,10 @@ describe('LoginView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'دریافت کد' }))
     await waitFor(() => expect(requestOtp).toHaveBeenCalledWith('09121234567'))
     expect(screen.getByLabelText('کد تأیید')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /ارسال دوباره تا/ })).toBeDisabled()
+    // Resend is a countdown until the server allows it.
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && /^ارسال دوباره تا [۰-۹]+ ثانیه$/.test(element.textContent ?? ''))).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'ارسال دوباره کد' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'کد را وارد کنید' })).toBeInTheDocument()
     expect(await screen.findByRole('status')).toHaveTextContent('4321')
     expect(getDevelopmentOtp).toHaveBeenCalledWith('09121234567')
   })

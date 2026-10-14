@@ -15,6 +15,7 @@ import SolarClockCircleLinear from '~icons/solar/clock-circle-linear'
 import SolarCloseLinear from '~icons/solar/close-linear'
 import SolarCloudLinear from '~icons/solar/cloud-linear'
 import SolarCompassLinear from '~icons/solar/compass-linear'
+import SolarCopyLinear from '~icons/solar/copy-linear'
 import SolarDangerCircleLinear from '~icons/solar/danger-circle-linear'
 import SolarDatabaseLinear from '~icons/solar/database-linear'
 import SolarEyeLinear from '~icons/solar/eye-linear'
@@ -37,12 +38,14 @@ import SolarNotesLinear from '~icons/solar/notes-linear'
 import SolarPauseLinear from '~icons/solar/pause-linear'
 import SolarPenLinear from '~icons/solar/pen-linear'
 import SolarPlanetLinear from '~icons/solar/planet-linear'
+import SolarPlainLinear from '~icons/solar/plain-linear'
 import SolarPlayLinear from '~icons/solar/play-linear'
 import SolarPulseLinear from '~icons/solar/pulse-linear'
 import SolarRecordCircleLinear from '~icons/solar/record-circle-linear'
 import SolarRefreshLinear from '~icons/solar/refresh-linear'
 import SolarRestartLinear from '~icons/solar/restart-linear'
 import SolarShieldCheckLinear from '~icons/solar/shield-check-linear'
+import SolarSmartphoneLinear from '~icons/solar/smartphone-linear'
 import SolarStopCircleLinear from '~icons/solar/stop-circle-linear'
 import SolarStopLinear from '~icons/solar/stop-linear'
 import SolarSun2Linear from '~icons/solar/sun-2-linear'
@@ -93,6 +96,8 @@ export const RefreshCw = sized(SolarRefreshLinear)
 export const Play = sized(SolarPlayLinear)
 export const Pause = sized(SolarPauseLinear)
 export const Search = sized(SolarMagniferLinear)
+export const Copy = sized(SolarCopyLinear)
+export const Send = sized(SolarPlainLinear)
 export const Filter = sized(SolarFilterLinear)
 export const X = sized(SolarCloseLinear)
 export const Ellipsis = sized(SolarMenuDotsLinear)
@@ -129,6 +134,7 @@ export const Languages = sized(SolarTranslationLinear)
 export const Database = sized(SolarDatabaseLinear)
 export const SlidersHorizontal = sized(SolarTuning2Linear)
 export const UserRound = sized(SolarUserRoundedLinear)
+export const Smartphone = sized(SolarSmartphoneLinear)
 
 // Direction (RTL: back points right, forward points left)
 export const ChevronLeft = sized(SolarAltArrowLeftLinear)
