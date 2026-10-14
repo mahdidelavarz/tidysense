@@ -46,7 +46,6 @@ import SolarShieldCheckLinear from '~icons/solar/shield-check-linear'
 import SolarStopCircleLinear from '~icons/solar/stop-circle-linear'
 import SolarStopLinear from '~icons/solar/stop-linear'
 import SolarSun2Linear from '~icons/solar/sun-2-linear'
-import SolarSunriseLinear from '~icons/solar/sunrise-linear'
 import SolarTargetLinear from '~icons/solar/target-linear'
 import SolarTranslationLinear from '~icons/solar/translation-linear'
 import SolarTrashBinMinimalisticLinear from '~icons/solar/trash-bin-minimalistic-linear'
@@ -73,7 +72,6 @@ function sized(Svg: ComponentType<SVGProps<SVGSVGElement>>): AppIcon {
 }
 
 // Entities and destinations
-export const Today = sized(SolarSunriseLinear)
 export const Sun = sized(SolarSun2Linear)
 export const Moon = sized(SolarMoonLinear)
 export const ListChecks = sized(SolarChecklistMinimalisticLinear)

@@ -48,9 +48,9 @@ Two themes defined by the same tokens. Light values live in `@theme`; `:root[dat
 
 Entity colours changed on 2026-10-14 (STEP-15) to the canvas set: Goal magenta, Project teal, Task blue, Routine violet, so Task no longer shares `positive`'s green. Every chip and icon pair stays at least 4.5:1 (lowest: Project icon 4.79:1 by day).
 
-The design's own grey for meta text (`#7d7a84`) is 4.2:1 on white, so `text-secondary` is a step darker; every text pair above is at least 4.5:1 in both themes (`on-accent` on `accent` 12.5:1 light, 14.8:1 dark). The design palette had no Goal or Project colour; they were mapped into its family (ochre summit, cloud blue). Feature code uses these tokens through Tailwind utilities (`bg-accent`, `text-on-accent`) and never raw hex values, `white` or `black`: a colour mixed toward the surface is mixed with `var(--color-surface)`, toward ink with `var(--color-text-primary)`, so it works in both themes. The two exceptions are drawings that keep their own palette: the sky (`.sky[data-phase]`, one set per time of day and theme) and the sign-in panel, which is the night sky in both themes.
+The design's own grey for meta text (`#7d7a84`) is 4.2:1 on white, so `text-secondary` is a step darker; every text pair above is at least 4.5:1 in both themes (`on-accent` on `accent` 12.5:1 light, 14.8:1 dark). The design palette had no Goal or Project colour; they were mapped into its family (ochre summit, cloud blue). Feature code uses these tokens through Tailwind utilities (`bg-accent`, `text-on-accent`) and never raw hex values, `white` or `black`: a colour mixed toward the surface is mixed with `var(--color-surface)`, toward ink with `var(--color-text-primary)`, so it works in both themes. The exceptions keep their own palette: the Today hero, whose text is white over a dark veil on a photograph in both themes, and the sign-in panel, which is the night sky in both themes.
 
-Entity colours are never used as large solid fills. They appear through `.entity-chip`, `.entity-icon` and `.routine-tile`, which derive a 12% tint and a darker (light theme) or lighter (dark theme) foreground from `--entity-color`, and as the corner wash of `.entity-card`, `.detail-card` and `.proposal-card`.
+Entity colours mostly appear as tints: `.entity-chip`, `.entity-icon`, `.entity-ink` and the chosen chips of a sheet derive a 12% tint and a darker (light theme) or lighter (dark theme) foreground from `--entity-color`, and `.entity-card`, `.detail-card` and `.proposal-card` take its corner wash. Solid entity fills are kept to completion: a done ring or slot, the Routine calendar's complete days, its week bars, and a Task's one complete button (text in `canvas`, 4.6:1 light, 8.6:1 dark).
 
 ### Theme
 
@@ -61,11 +61,11 @@ The preference is `system` (the default), `light` or `dark`, chosen under «ظا
 Two families, both self-hosted so nothing loads from a third-party font host:
 
 - **Vazirmatn** (variable, `@fontsource-variable/vazirmatn`) for everything. Fallback: Tahoma, system UI.
-- **Noto Naskh Arabic** 700 (`@fontsource/noto-naskh-arabic`, Arabic subset only) for display titles: page titles (`.page-title`), the Today sky title, sheet and dialog titles and the question label of a create form (`.display-title`, `.title-label`). Never for body text, controls or numbers in tables.
+- **Noto Naskh Arabic** 700 (`@fontsource/noto-naskh-arabic`, Arabic subset only) for display titles: page titles (`.page-title`), the Today hero title, sheet and dialog titles and the question label of a create form (`.display-title`, `.title-label`). Never for body text, controls or numbers in tables.
 
 | Role | Size | Weight | Class |
 |---|---|---|---|
-| Today sky title | 40px Naskh | 700 | `.sky-title` |
+| Today hero title | 36px Naskh, white | 700 | `.hero-title` |
 | page title | 32px, 36px from `sm`, Naskh | 700 | `.page-title` |
 | sheet/dialog title | 23px Naskh | 700 | `.display-title` |
 | create-form question | 21px Naskh | 700 | `.title-label` |
@@ -83,9 +83,9 @@ Buttons are 14px extra-bold. The `font: inherit` reset for controls lives in `@l
 - **Spacing scale:** 4, 8, 12, 16, 20, 24, 32, 48px. Page gutters are 16px on phones, 24px from `sm`, 40px from `lg`. Lists use 12px gaps; sections are separated by 32px.
 - **Radius:** 13–14px icon tiles, leaves and small controls; 15px fields; 18px buttons, choice tiles and day tiles; 22px cards, rows and grouped lists; 28px detail/entity cards, dialogs, the account panel and empty states; 34px the desktop page panel; 38px the rail; 30px the top of a bottom sheet; full for chips.
 - **Elevation:** by day surfaces lift with a soft long shadow (`shadow-sm` resting, `shadow-md` hovered and the primary action, `shadow-lg` sheets and dialogs); by night the same tokens become an inner top highlight plus a deep shadow, and raised surfaces are lighter. Cards and rows have no outline; hairlines (`border-subtle`) separate rows inside a grouped list. Fields and secondary buttons keep a 1.5px outline.
-- **Touch targets:** at least 44×44px (`min-h-11`); buttons and fields are 48px. The completion ring is drawn at 28px inside a 44px target.
+- **Touch targets:** at least 44×44px (`min-h-11`); buttons and fields are 48px. The completion ring is drawn at 24px in the Task colour inside a 44px target.
 - **Fields:** `.field-input` is a 1.5px `border` outline on `surface`; focus turns the outline `accent` with a 4px `accent` halo at 10%. The first field of a create/edit form is the design's underlined line (`FormField prominent`): the label as a Naskh question, a 2px `accent` underline that turns `sun` with a sun caret while typing. An invalid field uses `attention`. All of it transitions in 200ms.
-- **Layers:** navigation and the create button `10`, the Today sky `20`, backdrop `40`, sheet/dialog/account panel `50`, toast and skip link `60`.
+- **Layers:** navigation and the create button `10`, the Today hero `20`, backdrop `40`, sheet/dialog/account panel `50`, toast and skip link `60`.
 
 ## Motion
 
@@ -95,10 +95,10 @@ Buttons are 14px extra-bold. The `font: inherit` reset for controls lives in `@l
 | 280ms, same easing | sheet entrance, the account sheet on phones |
 | 7s linear loop | the moonstone halo (`.ai-aura`) |
 
-| 320ms, same easing | the Today sky collapsing and opening |
-| 4s ease-in-out loop | the sun's halo breathing |
+| 320ms, same easing | the Today hero collapsing and opening |
+| 550ms, `cubic-bezier(.22,1,.36,1)` | the day wheel turning to the chosen day |
 
-Only `transform`, `opacity` and the sky's sticky `top` animate. Press feedback is a 2% scale-down, never a layout shift. `prefers-reduced-motion` collapses all durations.
+Only `transform`, `opacity` and the hero's sticky `top` animate. Press feedback is a 2% scale-down, never a layout shift. `prefers-reduced-motion` collapses all durations.
 
 ## Icons
 
@@ -111,8 +111,7 @@ Direction: the layout is RTL, so "back" is `ArrowRight`/`ChevronRight` and "forw
 | Meaning | Export | Solar icon |
 |---|---|---|
 | Today (navigation) | `Sun` | `sun-2` |
-| Today (sky metaphor) | `Today` | `sunrise` |
-| yesterday / Reconcile offer | `Moon` | `moon` |
+| appearance (account panel) | `Moon` | `moon` |
 | Task list | `ListChecks` | `checklist-minimalistic` |
 | Project (the design's stacked stones) | `FolderKanban` | `layers-minimalistic` |
 | Goal | `Target` | `target` |
@@ -123,6 +122,8 @@ Direction: the layout is RTL, so "back" is `ArrowRight`/`ChevronRight` and "forw
 | account | `UserRound` | `user-rounded` |
 | create | `Plus` | `add` |
 | edit | `Pencil` | `pen` |
+| filter (Tasks) | `Filter` | `filter` |
+| earlier days (Reconcile offer, times moved) | `History` | `history` |
 | complete / achieve | `Check`, `CircleCheckBig` | `check`, `check-circle` |
 | abandon / stop / drop | `CircleSlash` / `CircleStop` / `Trash2` | `forbidden-circle` / `stop-circle` / `trash-bin-minimalistic` |
 | no date | `CalendarOff` | `cloud` (the design's «بعداً») |

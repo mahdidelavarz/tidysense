@@ -101,7 +101,7 @@ export function TasksPage() {
                   <span className="timeline-head-dot" aria-hidden="true" />
                   <span className="timeline-head-label" id={`tasks-${group.id}`}>{group.label}</span>
                   <span className="count-pill" aria-hidden="true">{formatNumber(members.length)}</span>
-                  {dates[group.id] && <span className="text-xs font-semibold text-text-tertiary">{dates[group.id]}</span>}
+                  {dates[group.id] && <span className="text-xs font-semibold text-text-secondary">{dates[group.id]}</span>}
                 </h2>
                 <ol className="timeline">
                   {members.map(task => (

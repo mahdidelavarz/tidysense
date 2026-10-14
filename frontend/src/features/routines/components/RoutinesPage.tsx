@@ -75,7 +75,7 @@ export function RoutinesPage() {
               <h2 className="list-heading">
                 <span id="routines-due">امروز نوبت دارند</span>
                 <span className="count-pill" aria-hidden="true">{formatNumber(due.length)}</span>
-                <span className="text-xs font-semibold text-text-tertiary">{formatLongDate(today)}</span>
+                <span className="text-xs font-semibold text-text-secondary">{formatLongDate(today)}</span>
               </h2>
               <ul className="space-y-3">{due.map(card)}</ul>
             </section>
@@ -100,7 +100,7 @@ export function RoutinesPage() {
               >
                 <Pause size={20} className="text-text-secondary" aria-hidden="true" />
                 <span className="font-extrabold">متوقف‌شده</span>
-                <span className="text-xs text-text-tertiary">{formatNumber(stopped.length)} روتین</span>
+                <span className="text-xs text-text-secondary">{formatNumber(stopped.length)} روتین</span>
                 <ChevronDown size={18} className={`ms-auto text-text-tertiary transition-transform ${showStopped ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
               <ul className="mt-3 space-y-3" id="routines-stopped" hidden={!showStopped}>{stopped.map(card)}</ul>

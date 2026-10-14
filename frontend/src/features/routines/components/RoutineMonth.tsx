@@ -16,7 +16,7 @@ export function RoutineMonth({ weeks, today }: { weeks: RoutineWeekDto; today: s
     <div>
       <div className="mb-1.5 grid grid-cols-7 gap-1.5" aria-hidden="true">
         {letters.map(letter => (
-          <span key={letter} className="text-center text-[0.6875rem] font-bold text-text-tertiary">{letter}</span>
+          <span key={letter} className="text-center text-[0.6875rem] font-bold text-text-secondary">{letter}</span>
         ))}
       </div>
       <ol className="grid grid-cols-7 gap-1.5" aria-label="چهار هفته‌ی اخیر">

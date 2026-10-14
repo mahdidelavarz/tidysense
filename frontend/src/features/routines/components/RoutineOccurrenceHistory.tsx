@@ -54,7 +54,7 @@ export function RoutineOccurrenceHistory({ routineId, today }: {
               )}
               {occurrence.status === 'PENDING' ? (
                 // An open slot is always today's; it is completed from today's slots above.
-                <span className="px-1 text-xs font-bold text-text-tertiary">در پیش</span>
+                <span className="px-1 text-xs font-bold text-text-secondary">در پیش</span>
               ) : (
                 // The status is also the way to correct it, after a confirmation.
                 <button

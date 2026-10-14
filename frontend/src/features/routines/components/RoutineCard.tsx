@@ -36,7 +36,7 @@ export function RoutineCard({ routine, parentTitle, week, today, slots }: {
             {progress && progress.scheduled > 0 && (
               <span className="entity-ink shrink-0 text-[0.8125rem] font-extrabold">
                 {formatNumber(progress.complete)}
-                <span className="text-[0.6875rem] font-semibold text-text-tertiary"> از {formatNumber(progress.scheduled)}</span>
+                <span className="text-[0.6875rem] font-semibold text-text-secondary"> از {formatNumber(progress.scheduled)}</span>
                 <span className="sr-only"> روز کامل این هفته</span>
               </span>
             )}
@@ -56,7 +56,7 @@ export function RoutineCard({ routine, parentTitle, week, today, slots }: {
             {next.scheduledLocalTime ? <>بعدی <bdi dir="ltr">{formatTime(next.scheduledLocalTime)}</bdi></> : 'امروز'}
           </span>
         ) : slots.length > 0 && slots.every(slot => slot.status !== 'PENDING') ? (
-          <span className="text-xs font-bold text-text-tertiary">امروز تمام شد</span>
+          <span className="text-xs font-bold text-text-secondary">امروز تمام شد</span>
         ) : null}
       </div>
     </article>

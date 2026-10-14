@@ -327,14 +327,14 @@ function SequenceCard({ task }: { task: TaskDto }) {
                   <span className="truncate font-extrabold" aria-current="step">{step.title}</span>
                 ) : (
                   <Link
-                    className={`truncate font-semibold hover:underline ${state === 'done' ? 'text-text-tertiary line-through' : 'text-text-secondary'}`}
+                    className={`truncate font-semibold hover:underline ${state === 'done' ? 'text-text-secondary line-through' : 'text-text-secondary'}`}
                     to="/tasks/$taskId"
                     params={{ taskId: step.id }}
                   >
                     {step.title}
                   </Link>
                 )}
-                <span className={`shrink-0 text-xs font-bold ${self ? 'text-entity-task' : 'text-text-tertiary'}`}>
+                <span className={`shrink-0 text-xs font-bold ${self ? 'text-entity-task' : 'text-text-secondary'}`}>
                   {self ? 'همین کار' : formatNumber(index + 1)}
                 </span>
               </div>
