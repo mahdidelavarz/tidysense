@@ -953,6 +953,42 @@ select:not(:disabled),
     background: linear-gradient(155deg, color-mix(in srgb, var(--entity-color) 12%, var(--color-surface)) 0%, color-mix(in srgb, var(--entity-color) 3%, var(--color-surface)) 30%, var(--color-surface) 55%);
   }
 
+  /* Facts as rows of one card, divided by hairlines. */
+  .fact-list {
+    @apply rounded-[1.375rem] bg-surface px-4 shadow-sm;
+  }
+
+  .fact-row {
+    @apply flex min-h-16 items-center gap-3 py-3;
+  }
+
+  .fact-row + .fact-row {
+    @apply border-t border-border-subtle;
+  }
+
+  .fact-icon {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-sunken text-text-secondary;
+  }
+
+  .fact-icon[data-tone="caution"] {
+    @apply bg-caution-tint text-caution;
+  }
+
+  /* The one big action of a Task: complete it, in the Task colour. */
+  .complete-button {
+    @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-[1.25rem] px-5 text-base font-extrabold transition duration-200 hover:brightness-105 active:scale-[0.98] disabled:opacity-50;
+    color: var(--color-canvas);
+    background: var(--color-entity-task);
+    box-shadow: 0 14px 28px -14px color-mix(in srgb, var(--color-entity-task) 70%, transparent);
+  }
+
+  /* A link to the owner of an item, as a chip in the owner's colour. */
+  .parent-chip {
+    @apply inline-flex max-w-full items-center gap-2 rounded-2xl py-1.5 ps-1.5 pe-3 text-sm font-bold transition hover:brightness-[0.98];
+    color: color-mix(in srgb, var(--entity-color, var(--color-text-secondary)) 80%, var(--color-text-primary));
+    background: color-mix(in srgb, var(--entity-color, var(--color-text-tertiary)) 12%, var(--color-surface));
+  }
+
   .detail-facts {
     @apply mt-6 grid gap-5 border-t border-border-subtle pt-6 sm:grid-cols-2;
   }
@@ -1158,7 +1194,60 @@ select:not(:disabled),
   }
 
   .timeline-mark {
-    @apply relative mt-3 flex size-7 items-center justify-center rounded-full bg-canvas;
+    @apply relative mt-3 flex size-7 items-center justify-center rounded-full;
+    background: var(--page-bg, var(--color-canvas));
+  }
+
+  /*
+   * A page-long timeline of several groups (the Tasks and Routines lists):
+   * one line runs behind every node, and each group opens with a dot.
+   */
+  .timeline-page {
+    @apply relative;
+  }
+
+  .timeline-page::before {
+    @apply absolute top-4 bottom-8 w-0.5 rounded-full bg-border;
+    right: calc(0.875rem - 1px);
+    content: "";
+  }
+
+  .timeline-page .timeline-row > .timeline-node::after {
+    display: none;
+  }
+
+  .timeline-page section + section {
+    @apply mt-3;
+  }
+
+  .timeline-head {
+    @apply relative flex min-h-9 items-center gap-2.5 py-1.5 pb-2;
+  }
+
+  .timeline-head-label {
+    @apply text-sm font-extrabold;
+  }
+
+  .timeline-head-dot {
+    @apply flex w-7 shrink-0 justify-center;
+  }
+
+  .timeline-head-dot::before {
+    @apply size-2.5 rounded-full bg-text-secondary;
+    box-shadow: 0 0 0 4px var(--page-bg, var(--color-canvas));
+    content: "";
+  }
+
+  .timeline-head[data-today="true"] .timeline-head-dot::before {
+    @apply bg-entity-task;
+  }
+
+  .timeline-head[data-today="true"] .timeline-head-label {
+    color: color-mix(in srgb, var(--color-entity-task) 80%, var(--color-text-primary));
+  }
+
+  .count-pill {
+    @apply rounded-full bg-surface-sunken px-2 text-xs font-bold leading-5 text-text-secondary;
   }
 
   .timeline-card {

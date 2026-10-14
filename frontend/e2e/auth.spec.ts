@@ -101,6 +101,7 @@ test('manual task moves through Today to completion', async ({ page }) => {
 
   // The list defaults to active Tasks; a completed one is under "all".
   await page.getByRole('link', { name: 'کارها', exact: true }).click()
+  await page.getByRole('button', { name: 'فیلتر' }).click()
   await page.getByRole('button', { name: 'همه', exact: true }).click()
   await page.getByRole('heading', { name: title }).click()
   await expect(page.getByText('تکمیل‌شده')).toBeVisible()

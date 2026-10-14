@@ -18,6 +18,7 @@ import SolarCompassLinear from '~icons/solar/compass-linear'
 import SolarDangerCircleLinear from '~icons/solar/danger-circle-linear'
 import SolarDatabaseLinear from '~icons/solar/database-linear'
 import SolarEyeLinear from '~icons/solar/eye-linear'
+import SolarFilterLinear from '~icons/solar/filter-linear'
 import SolarFlagLinear from '~icons/solar/flag-linear'
 import SolarForbiddenCircleLinear from '~icons/solar/forbidden-circle-linear'
 import SolarHistoryLinear from '~icons/solar/history-linear'
@@ -94,6 +95,7 @@ export const RefreshCw = sized(SolarRefreshLinear)
 export const Play = sized(SolarPlayLinear)
 export const Pause = sized(SolarPauseLinear)
 export const Search = sized(SolarMagniferLinear)
+export const Filter = sized(SolarFilterLinear)
 export const X = sized(SolarCloseLinear)
 export const Ellipsis = sized(SolarMenuDotsLinear)
 export const LogOut = sized(SolarLogout2Linear)
