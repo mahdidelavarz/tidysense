@@ -30,7 +30,7 @@
 ### Grouping and actions
 
 15. The execution lane groups by owner (Project, direct Goal, standalone), then by sequence when two or more members are relevant, otherwise by Task.
-16. Every Reconcile mutation is a server preview followed by a confirmation. The preview stores the exact Task ids, versions, classifications, warnings and a hash, and expires after 15 minutes. Submit re-derives it under locks; any difference returns `CONFIRMATION_STALE` and changes nothing.
+16. Every Reconcile mutation is a server preview followed by a confirmation, except the two one-tap decisions of statements 26–31 (STEP-19, 027 §6). The preview stores the exact Task ids, versions, classifications, warnings and a hash, and expires after 15 minutes. Submit re-derives it under locks; any difference returns `CONFIRMATION_STALE` and changes nothing.
 17. Actions: `REPLAN_TASKS` (one explicit date; an undated Task is scheduled only with an acknowledged warning), `DROP_TASKS`, `KEEP_TASKS`, `SEQUENCE_CARRY_ALL`, `SEQUENCE_DROP_ALL`, `DETACH_DROPPED_PREDECESSOR`. Completion uses the existing Task command.
 18. `SEQUENCE_CARRY_ALL` anchors the first overdue remaining member on the chosen date and shifts every other dated remaining member by the same number of days. Classifications: `WILL_SHIFT_NORMALLY`, `HAS_PROTECTED_MANUAL_SCHEDULE` (individually rescheduled and dated today or later; kept unless explicitly included), `UNSCHEDULED_PARENT_OWNED` (never scheduled by this action), `HAS_TEMPORAL_CONFLICT` (would pass a deadline; blocks the action).
 19. A Drop that leaves a Project or Goal with no ACTIVE Task carries a `PARENT_LEFT_WITHOUT_ACTIVE_TASKS` warning that must be acknowledged. The parent stays ACTIVE.
@@ -47,9 +47,18 @@
 24. Opening Reconcile creates a `ReconcileSession` (`OPEN`, `COMPLETED`, `ABANDONED`, `EXPIRED`) with the evaluated local date, timezone, rules catalog version, severity, counts, facts and rule matches. One session is open per user; an open session from an earlier local date expires when a new one opens.
 25. Reconcile never blocks Today. At most one automatic prompt is shown per local date; dismiss or skip hides it for that date only.
 
+### One-tap decisions (STEP-19, Discussion 027 §6)
+
+26. Inside an `OPEN` session of the current local date, two single-Task decisions apply on tap: `COMPLETE_TASK` («انجام شد», completed for the session's local date) and `CARRY_TO_TODAY` («امروز», a Task planned for an earlier day moved to today). The control names the exact consequence; the tap confirms that one action. No preview is stored.
+27. The Task must be an actionable decision of the current evaluation whose allowed actions include `COMPLETE_TASK` or `REPLAN_TASKS`; otherwise `QUICK_ACTION_NOT_ALLOWED`. Under its lock (and its sequence lock) it is revalidated as the ordinary command would be: owned, `expectedVersion`, `ACTIVE`, no open predecessor for completion; for «امروز» a planned date before today and a deadline not before today. Idempotency, the `CommandResult` and the event are the ordinary ones (`TASK_COMPLETED`; `TASK_CARRIED` with scope `TASK`, counted as a Carry), with actor `USER`, the session id and no confirmation id.
+28. Each one is recorded as a `ReconcileQuickAction` (R2, removed with its session): the action, the prior planned date, the version it left the Task at and the event it wrote.
+29. Undo (`POST /reconcile/quick-actions/{id}/undo`) restores exactly the prior state: `ACTIVE` with no completion date, or the prior planned date. It writes `TASK_COMPLETION_UNDONE` or `TASK_CARRY_UNDONE` with actor `USER`, the session id and the reversed event as causation. An undone Carry is no longer evidence: it counts toward neither `carryCount`, an individual reschedule, nor the planning context's carried count.
+30. Undo is refused, and nothing changes, when the session is no longer open (`RECONCILE_SESSION_NOT_OPEN`), when it was already undone (`QUICK_ACTION_ALREADY_UNDONE`), when the Task's version differs from the one the action left (`409 QUICK_ACTION_STALE`), or, for a completion, when a later step of its sequence has been completed since (`409 QUICK_ACTION_STALE`). An undo racing another change of the same Task: exactly one of them commits.
+31. The session view lists its quick actions newest first with title, owner, prior date and `canUndo`. Carry to another date, Drop, Keep, every bulk or sequence action and Goal continuation still go through preview and confirmation. An AI recommendation never points at a one-tap control (`COMPLETE_TASK` is never recommended, and a recommended move asks for a date).
+
 ## Events
 
-`CAPTURE_CREATED`, `CAPTURE_RESOLVED`, `CAPTURE_DISCARDED`, `TASK_CARRIED`, `TASK_REVIEW_KEPT`, `GOAL_CONTINUATION_RESOLVED`, `PROJECT_REVIEW_RESOLVED`, `RECONCILE_SESSION_OPENED`, `RECONCILE_SESSION_COMPLETED`, `RECONCILE_PROMPT_RESOLVED`, `RECONCILE_ACTION_CONFIRMED`. Existing `TASK_CREATED`, `TASK_UPDATED`, `TASK_DROPPED` and `ROUTINE_CREATED` are reused. Payloads carry classification fields only.
+`CAPTURE_CREATED`, `CAPTURE_RESOLVED`, `CAPTURE_DISCARDED`, `TASK_CARRIED`, `TASK_REVIEW_KEPT`, `GOAL_CONTINUATION_RESOLVED`, `PROJECT_REVIEW_RESOLVED`, `RECONCILE_SESSION_OPENED`, `RECONCILE_SESSION_COMPLETED`, `RECONCILE_PROMPT_RESOLVED`, `RECONCILE_ACTION_CONFIRMED`, `TASK_COMPLETION_UNDONE` and `TASK_CARRY_UNDONE` (STEP-19). Existing `TASK_CREATED`, `TASK_UPDATED`, `TASK_DROPPED` and `ROUTINE_CREATED` are reused. Payloads carry classification fields only.
 
 Events written by a confirmed Reconcile action carry the confirmation id and session id.
 
@@ -72,6 +81,7 @@ Events written by a confirmed Reconcile action carry the confirmation id and ses
 - `GET /api/v1/reconcile/overview`, `POST /api/v1/reconcile/prompt`
 - `POST /api/v1/reconcile/sessions`, `GET /api/v1/reconcile/sessions/{id}`, `POST /api/v1/reconcile/sessions/{id}/complete`
 - `POST /api/v1/reconcile/sessions/{id}/previews`, `POST /api/v1/reconcile/confirmations/{id}/submit`
+- `POST /api/v1/reconcile/sessions/{id}/quick-actions` (`taskId`, `actionType`, `expectedVersion`), `POST /api/v1/reconcile/quick-actions/{id}/undo` (STEP-19); the session adds `quickActions[]` and `openedDecisionCount`
 - `POST /api/v1/goals/{id}/review`, `POST /api/v1/projects/{id}/review`
 
 Commands require `Idempotency-Key`; entity commands require `expectedVersion`.

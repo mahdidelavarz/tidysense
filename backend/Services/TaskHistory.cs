@@ -21,7 +21,7 @@ internal sealed record TaskSignals(
 internal static class TaskHistory
 {
     private static readonly string[] EventTypes =
-        [TaskEventTypes.TaskCarried, TaskEventTypes.TaskReviewKept, TaskEventTypes.TaskUpdated];
+        [TaskEventTypes.TaskCarried, TaskEventTypes.TaskReviewKept, TaskEventTypes.TaskUpdated, TaskEventTypes.TaskCarryUndone];
 
     public static async Task<IReadOnlyDictionary<Guid, TaskSignals>> LoadAsync(AppDbContext db,
         Guid userId, IReadOnlyCollection<Guid> taskIds, CancellationToken cancellationToken)
@@ -30,8 +30,12 @@ internal static class TaskHistory
         var events = await db.DomainEvents.AsNoTracking()
             .Where(x => x.UserId == userId && x.AggregateType == "Task" &&
                 taskIds.Contains(x.AggregateId) && EventTypes.Contains(x.EventType))
-            .Select(x => new { x.AggregateId, x.EventType, x.OccurredAt, x.RecordedAt, x.PayloadJson })
+            .Select(x => new { x.EventId, x.AggregateId, x.EventType, x.OccurredAt, x.RecordedAt, x.PayloadJson, x.CausationId })
             .ToListAsync(cancellationToken);
+        // A Carry taken back with «بازگردان» (027 §6) never happened as far as the evidence is concerned.
+        var undone = events.Where(x => x.EventType == TaskEventTypes.TaskCarryUndone && x.CausationId != null)
+            .Select(x => x.CausationId!.Value).ToHashSet();
+        events = events.Where(x => x.EventType != TaskEventTypes.TaskCarryUndone && !undone.Contains(x.EventId)).ToList();
         return events.GroupBy(x => x.AggregateId).ToDictionary(group => group.Key, group =>
         {
             var carryCount = 0;

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import {
   cancelReconcileExplanation,
+  applyReconcileQuickAction,
   completeReconcileSession,
   createReconcilePreview,
   dismissReconcileRecommendation,
@@ -11,12 +12,14 @@ import {
   requestReconcileExplanation,
   resolveReconcilePrompt,
   submitReconcileConfirmation,
+  undoReconcileQuickAction,
 } from '../services/reconcile-api'
 import type {
   ActionConfirmationDto,
   ConfirmationWarningDto,
   ReconcileActionDraft,
   ReconcilePromptState,
+  ReconcileQuickActionType,
   ReconcileSessionDto,
 } from '../types/reconcile.types'
 
@@ -132,6 +135,31 @@ export function useReconcileAction(sessionId: string) {
 }
 
 export type ReconcileActionFlow = ReturnType<typeof useReconcileAction>
+
+/**
+ * The two one-tap decisions and their undo. The session the server returns replaces the cached one
+ * at once, so the tapped item turns into its «بازگردان» row without a second request; everything
+ * the change touches elsewhere (Today, Tasks, the navigation count) is refreshed behind it.
+ */
+export function useReconcileQuickActions(sessionId: string) {
+  const client = useQueryClient()
+  const settle = async (data: ReconcileSessionDto) => {
+    client.setQueryData(reconcileKeys.session, data)
+    await client.invalidateQueries({ predicate: query => query.queryKey[0] !== 'reconcile' || query.queryKey[1] === 'overview' })
+  }
+  const apply = useMutation({
+    mutationFn: (value: { taskId: string; actionType: ReconcileQuickActionType; expectedVersion: number }) =>
+      applyReconcileQuickAction(sessionId, value),
+    onSuccess: settle,
+  })
+  const undo = useMutation({
+    mutationFn: (id: string) => undoReconcileQuickAction(id),
+    onSuccess: settle,
+    // A refused undo means the Task or the session moved on: re-read so the row stops offering it.
+    onError: () => client.invalidateQueries({ queryKey: reconcileKeys.session }),
+  })
+  return { apply, undo }
+}
 
 /**
  * The optional AI explanation of one session: ask, cancel, and decline a

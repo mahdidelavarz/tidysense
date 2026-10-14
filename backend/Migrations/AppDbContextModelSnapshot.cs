@@ -1501,6 +1501,67 @@ namespace TidySense.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TidySense.Models.ReconcileQuickAction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("AppliedEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("PreviousPlannedDate")
+                        .HasColumnType("date");
+
+                    b.Property<long>("ResultingVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UndoEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UndoneAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "CreatedAt");
+
+                    b.HasIndex("UserId", "TaskId");
+
+                    b.ToTable("ReconcileQuickActions", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReconcileQuickActions_ActionType", "\"ActionType\" IN ('COMPLETE_TASK', 'CARRY_TO_TODAY')");
+
+                            t.HasCheckConstraint("CK_ReconcileQuickActions_Carry", "(\"ActionType\" = 'CARRY_TO_TODAY') = (\"PreviousPlannedDate\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_ReconcileQuickActions_Status", "\"Status\" IN ('APPLIED', 'UNDONE')");
+
+                            t.HasCheckConstraint("CK_ReconcileQuickActions_Undone", "(\"Status\" = 'UNDONE') = (\"UndoneAt\" IS NOT NULL AND \"UndoEventId\" IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("TidySense.Models.ReconcileRecommendation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2274,6 +2335,17 @@ namespace TidySense.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TidySense.Models.ReconcileQuickAction", b =>
+                {
+                    b.HasOne("TidySense.Models.ReconcileSession", "Session")
+                        .WithMany("QuickActions")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
             modelBuilder.Entity("TidySense.Models.ReconcileRecommendation", b =>
                 {
                     b.HasOne("TidySense.Models.ReconcileExplanation", "ExplanationRecord")
@@ -2412,6 +2484,8 @@ namespace TidySense.Migrations
             modelBuilder.Entity("TidySense.Models.ReconcileSession", b =>
                 {
                     b.Navigation("Facts");
+
+                    b.Navigation("QuickActions");
 
                     b.Navigation("RuleMatches");
                 });

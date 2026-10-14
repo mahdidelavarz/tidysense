@@ -9,7 +9,7 @@
 1. The explanation is the port `IReconcileExplainer`. `Ai:Reconcile:Provider` selects the deterministic sample explainer (`mock`, key `reconcile.sample`) or the model-backed `AiReconcileExplainer` (key `reconcile.explanation`, output family `RECONCILE`).
 2. The deterministic evaluation always runs first and is the only input. If it fails, nothing is requested: there is no path from raw entities to a model.
 3. A session's facts, severity, counts, lanes and rule matches are returned without waiting for, and are never changed by, an explanation. Removing every explanation leaves the session complete.
-4. An explanation creates and changes nothing. A recommendation adds no authority: using one only prefills the ordinary Reconcile preview, which is built, confirmed, revalidated and applied exactly as without AI.
+4. An explanation creates and changes nothing. A recommendation adds no authority: using one only prefills the ordinary Reconcile preview, which is built, confirmed, revalidated and applied exactly as without AI. On the Task or sequence card it only rings the control it points at (STEP-19, 027 §6); tapping that control opens the same preview, citing the recommendation. It never points at a one-tap control.
 
 ### Eligibility
 

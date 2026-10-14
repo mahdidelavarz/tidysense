@@ -16,6 +16,10 @@ export type ReconcileExplanationDto = components['schemas']['ReconcileExplanatio
 export type ReconcileRecommendationDto = components['schemas']['ReconcileRecommendationDto']
 export type ReconcileRecommendationEvidenceDto = components['schemas']['ReconcileRecommendationEvidenceDto']
 export type ReconcileRecommendationDispositionDto = components['schemas']['ReconcileRecommendationDispositionDto']
+export type ReconcileQuickActionDto = components['schemas']['ReconcileQuickActionDto']
+
+/** The two decisions applied on tap in a session (027 §6); everything else is previewed first. */
+export type ReconcileQuickActionType = 'COMPLETE_TASK' | 'CARRY_TO_TODAY'
 
 export type ReconcilePromptState = 'DISMISSED' | 'SKIPPED'
 

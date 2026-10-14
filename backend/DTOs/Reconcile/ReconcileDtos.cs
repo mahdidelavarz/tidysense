@@ -93,7 +93,34 @@ public sealed record ReconcileSessionDto(
     IReadOnlyList<ReconcileReviewItemDto> CommitmentReviews,
     IReadOnlyList<CaptureDto> Captures,
     IReadOnlyList<ReconcileRuleMatchDto> RuleMatches,
-    ReconcileAiDto Ai);
+    ReconcileAiDto Ai,
+    IReadOnlyList<ReconcileQuickActionDto> QuickActions,
+    // What waited for a decision when the session opened, across all three lanes («از M»).
+    int OpenedDecisionCount);
+
+/// <summary>
+/// A decision applied on tap in this session (027 §6): «انجام شد» or «امروز». It stays listed, under
+/// the owner it belonged to, so it can be taken back while the session is open. <c>CanUndo</c> is
+/// false once the Task changed after the action, or the session closed.
+/// </summary>
+public sealed record ReconcileQuickActionDto(
+    Guid Id,
+    Guid TaskId,
+    string Title,
+    string ActionType,
+    string Status,
+    string OwnerType,
+    Guid? OwnerId,
+    string? OwnerTitle,
+    DateOnly? PreviousPlannedDate,
+    bool CanUndo,
+    DateTimeOffset CreatedAt);
+
+/// <summary>Applies one Task decision on tap. The tap is the confirmation of exactly this action.</summary>
+public sealed record ApplyReconcileQuickActionRequest(
+    Guid TaskId,
+    [Required, RegularExpression("^(COMPLETE_TASK|CARRY_TO_TODAY)$")] string ActionType,
+    [Range(1, long.MaxValue)] long ExpectedVersion);
 
 public sealed record OpenReconcileSessionRequest(
     [Required, RegularExpression("^(MANUAL|PROMPT)$")] string TriggerType);

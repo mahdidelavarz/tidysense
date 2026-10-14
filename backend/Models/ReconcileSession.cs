@@ -26,6 +26,44 @@ public sealed class ReconcileSession
     public string RetentionClass { get; set; } = "R2";
     public ICollection<ReconcileFact> Facts { get; set; } = [];
     public ICollection<RuleMatch> RuleMatches { get; set; } = [];
+    public ICollection<ReconcileQuickAction> QuickActions { get; set; } = [];
+}
+
+/// <summary>
+/// A single-item decision applied on tap inside a session (027 §6): a Task completed or carried to
+/// today. It keeps what undo needs: the Task's prior planned date, the version the action left it
+/// at, and the event it wrote. Undo is offered while the session is open and the Task is still as
+/// the action left it.
+/// </summary>
+public sealed class ReconcileQuickAction
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid SessionId { get; set; }
+    public Guid TaskId { get; set; }
+    public string ActionType { get; set; } = string.Empty;
+    public string Status { get; set; } = ReconcileQuickActionStatuses.Applied;
+    public DateOnly? PreviousPlannedDate { get; set; }
+    public long ResultingVersion { get; set; }
+    public Guid AppliedEventId { get; set; }
+    public Guid? UndoEventId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? UndoneAt { get; set; }
+    public ReconcileSession Session { get; set; } = null!;
+}
+
+public static class ReconcileQuickActionTypes
+{
+    public const string CompleteTask = "COMPLETE_TASK";
+    public const string CarryToToday = "CARRY_TO_TODAY";
+
+    public static bool IsKnown(string value) => value is CompleteTask or CarryToToday;
+}
+
+public static class ReconcileQuickActionStatuses
+{
+    public const string Applied = "APPLIED";
+    public const string Undone = "UNDONE";
 }
 
 public sealed class ReconcileFact

@@ -2961,6 +2961,160 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reconcile/sessions/{id}/quick-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ApplyReconcileQuickActionRequest"];
+                    "text/json": components["schemas"]["ApplyReconcileQuickActionRequest"];
+                    "application/*+json": components["schemas"]["ApplyReconcileQuickActionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileSessionDto"];
+                        "application/json": components["schemas"]["ReconcileSessionDto"];
+                        "text/json": components["schemas"]["ReconcileSessionDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconcile/quick-actions/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReconcileSessionDto"];
+                        "application/json": components["schemas"]["ReconcileSessionDto"];
+                        "text/json": components["schemas"]["ReconcileSessionDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reconcile/confirmations/{id}/submit": {
         parameters: {
             query?: never;
@@ -4413,6 +4567,13 @@ export interface components {
             /** Format: int64 */
             currentVersion: null | number | string;
         };
+        ApplyReconcileQuickActionRequest: {
+            /** Format: uuid */
+            taskId: string;
+            actionType: string;
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
         CaptureDto: {
             /** Format: uuid */
             id: string;
@@ -5032,6 +5193,24 @@ export interface components {
             localDate: string;
             state: string;
         };
+        ReconcileQuickActionDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            taskId: string;
+            title: string;
+            actionType: string;
+            status: string;
+            ownerType: string;
+            /** Format: uuid */
+            ownerId: null | string;
+            ownerTitle: null | string;
+            /** Format: date */
+            previousPlannedDate: null | string;
+            canUndo: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
         ReconcileRecommendationDispositionDto: {
             /** Format: uuid */
             id: string;
@@ -5131,6 +5310,9 @@ export interface components {
             captures: components["schemas"]["CaptureDto"][];
             ruleMatches: components["schemas"]["ReconcileRuleMatchDto"][];
             ai: components["schemas"]["ReconcileAiDto"];
+            quickActions: components["schemas"]["ReconcileQuickActionDto"][];
+            /** Format: int32 */
+            openedDecisionCount: number | string;
         };
         ReconcileTaskItemDto: {
             /** Format: uuid */

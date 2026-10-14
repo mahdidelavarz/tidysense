@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, CircleCheck, ListChecks, type AppIcon, StickyNote } from '../../../shared/ui/icons'
+import { CircleCheck } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
@@ -9,12 +9,12 @@ import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi
 import { CaptureLane } from '../../captures/components/CaptureLane'
 import { PilotQuestion } from '../../pilot/components/PilotQuestion'
 import { TaskCarrySheet } from '../../tasks/components/TaskCarrySheet'
-import { useCompleteTask } from '../../tasks/hooks/task-hooks'
-import { useCompleteReconcileSession, useReconcileAction, useReconcileSession } from '../hooks/reconcile-hooks'
+import { toApiError } from '../../../shared/api/http'
+import { useCompleteReconcileSession, useReconcileAction, useReconcileQuickActions, useReconcileSession } from '../hooks/reconcile-hooks'
 import { actionTitles, severityLabels } from '../types/reconcile.format'
 import type { ReconcileActionDraft, ReconcileSessionDto } from '../types/reconcile.types'
 import { AiExplanationCard } from './AiExplanationCard'
-import { ExecutionLane } from './ExecutionLane'
+import { ExecutionLane, type Suggestion } from './ExecutionLane'
 import { ReviewApplyDialog } from './ReviewApplyDialog'
 import { ReviewLane } from './ReviewLane'
 
@@ -43,19 +43,28 @@ export function ReconcilePage() {
 
 function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto; onRestart: () => void }) {
   const action = useReconcileAction(session.id)
-  const complete = useCompleteTask()
+  const quick = useReconcileQuickActions(session.id)
   const finish = useCompleteReconcileSession()
   // An action that needs a date waits here until the user picks one.
   const [dated, setDated] = useState<ReconcileActionDraft | null>(null)
   // The optional question is asked once, right after the user ends the session here; never on a later visit.
   const [justCompleted, setJustCompleted] = useState(false)
+  // The one-tap decision just applied, whose row takes the focus.
+  const [lastApplied, setLastApplied] = useState<string | undefined>(undefined)
 
   const counts = session.counts
   const severity = severityLabels[session.severity] ?? severityLabels.NONE
   const reviewTotal = Number(counts.reviewDueCount)
   const captureTotal = Number(counts.unresolvedCaptureCount)
+  const actionable = Number(counts.actionableBacklogCount)
+  const decided = session.quickActions.filter(item => item.status === 'APPLIED')
   const nothingLeft = session.executionGroups.length === 0 && session.commitmentReviews.length === 0 &&
     session.captures.length === 0
+  const remaining = actionable + reviewTotal + captureTotal
+  // New work can appear while the session is open, so the total is never below what remains.
+  const total = Math.max(Number(session.openedDecisionCount), remaining)
+  const suggestions = suggestedControls(session)
+  const busyId = quick.apply.isPending ? quick.apply.variables?.taskId : quick.undo.isPending ? quick.undo.variables : undefined
 
   if (session.status !== 'OPEN') {
     return (
@@ -81,13 +90,9 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
 
   return (
     <div className="page">
-      <PageHeader
-        title="بازبینی"
-        description="هر مورد یک تصمیم کوتاه می‌خواهد. هیچ تغییری بدون تأیید شما انجام نمی‌شود."
-        action={<Link className="secondary-button shrink-0" to="/today">امروز</Link>}
-      />
+      <PageHeader title="بازبینی" description={severity.title} />
 
-      {nothingLeft ? (
+      {nothingLeft && decided.length === 0 ? (
         <EmptyState
           icon={CircleCheck}
           title="چیزی برای بازبینی نمانده است."
@@ -95,38 +100,55 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
           action={<Link className="primary-button" to="/today">رفتن به امروز</Link>}
         />
       ) : (
-        <div className="space-y-8">
-          <section
-            className="rounded-3xl border border-caution/20 bg-linear-to-bl from-caution-tint via-surface to-surface p-4 shadow-sm sm:p-6"
-            aria-labelledby="reconcile-summary"
-          >
-            <h2 className="sr-only" id="reconcile-summary">خلاصه وضعیت</h2>
-            <p className="status-badge status-neutral">شدت: {severity.badge}</p>
-            <p className="mt-3 font-bold leading-7 sm:text-lg sm:leading-8">{severity.title}</p>
-            <p className="mt-1 text-xs leading-6 text-text-secondary sm:text-sm">{severity.description}</p>
-            <ul className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
-              <SummaryCount icon={ListChecks} label="کار مانده" value={Number(counts.actionableBacklogCount)} target="reconcile-execution" />
-              <SummaryCount icon={CalendarClock} label="مرور تعهد" value={reviewTotal} target="reconcile-reviews" />
-              <SummaryCount icon={StickyNote} label="یادداشت سریع" value={captureTotal} target="reconcile-captures" />
-            </ul>
+        <div className="space-y-7">
+          <section className="card p-4 sm:p-5" aria-labelledby="reconcile-summary">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-[0.9375rem] font-extrabold" id="reconcile-summary">
+                <span className="font-display text-2xl">{formatNumber(remaining)}</span>
+                {' '}تصمیم مانده، از {formatNumber(total)}
+              </h2>
+              <span className="rounded-lg bg-surface-sunken px-2.5 py-1 text-xs font-extrabold text-text-secondary">حجم: {severity.badge}</span>
+            </div>
+            <span className="answer-progress mt-3 block" aria-hidden="true">
+              <span style={{ width: `${total === 0 ? 100 : ((total - remaining) / total) * 100}%` }} />
+            </span>
+            <p className="mt-3 text-xs leading-6 text-text-secondary">
+              هر وقت خواستید تصمیم بگیرید؛ <Link className="text-link" to="/today">«امروز»</Link> همچنان در دسترس است.
+              {' '}«انجام شد» و «امروز» با یک لمس ثبت می‌شوند و تا پایان این بازبینی قابل بازگشت‌اند؛ بقیه پیش از اعمال پیش‌نمایش دارند.
+            </p>
           </section>
 
           <AiExplanationCard session={session} onAction={action.request} onDatedAction={setDated} />
 
-          <FormError error={complete.error} />
+          <QuickError error={quick.apply.error ?? quick.undo.error} />
 
-          {session.executionGroups.length > 0 && (
+          {(session.executionGroups.length > 0 || decided.length > 0) && (
             <ExecutionLane
               groups={session.executionGroups}
-              total={Number(counts.actionableBacklogCount)}
+              quickActions={session.quickActions}
+              total={actionable}
               today={session.localDate}
               onAction={action.request}
               onDatedAction={setDated}
-              busyTaskId={complete.isPending ? complete.variables?.taskId : undefined}
-              onComplete={task => complete.mutate(
-                { taskId: task.taskId, expectedVersion: Number(task.version), completedForLocalDate: session.localDate },
-                { onSuccess: () => showToast('کار انجام شد.') },
-              )}
+              onQuick={(task, actionType) => {
+                quick.undo.reset()
+                quick.apply.mutate(
+                  { taskId: task.taskId, actionType, expectedVersion: Number(task.version) },
+                  {
+                    onSuccess: data => {
+                      setLastApplied(data.quickActions.find(item => item.taskId === task.taskId && item.status === 'APPLIED')?.id)
+                      showToast(actionType === 'COMPLETE_TASK' ? 'انجام شد. تا پایان بازبینی قابل بازگشت است.' : 'به امروز آمد. تا پایان بازبینی قابل بازگشت است.')
+                    },
+                  },
+                )
+              }}
+              onUndo={item => {
+                quick.apply.reset()
+                quick.undo.mutate(item.id, { onSuccess: () => showToast('برگشت به حالت قبل.') })
+              }}
+              busyId={busyId}
+              suggestions={suggestions}
+              focusId={lastApplied}
             />
           )}
           {session.commitmentReviews.length > 0 && (
@@ -139,24 +161,22 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
           )}
           {session.captures.length > 0 && <CaptureLane captures={session.captures} total={captureTotal} />}
 
-          <section className="lane" aria-label="پایان بازبینی">
+          <section className="flex flex-col items-center gap-2 pt-2" aria-label="پایان بازبینی">
             <FormError error={finish.error} />
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                className="secondary-button"
-                type="button"
-                disabled={finish.isPending}
-                onClick={() => finish.mutate(session, {
-                  onSuccess: () => {
-                    setJustCompleted(true)
-                    showToast('بازبینی بسته شد.')
-                  },
-                })}
-              >
-                {finish.isPending ? 'در حال ثبت…' : 'پایان بازبینی'}
-              </button>
-              <p className="text-sm text-text-secondary">موارد باقی‌مانده حذف نمی‌شوند و بعداً دوباره در دسترس‌اند.</p>
-            </div>
+            <button
+              className="secondary-button min-w-48"
+              type="button"
+              disabled={finish.isPending}
+              onClick={() => finish.mutate(session, {
+                onSuccess: () => {
+                  setJustCompleted(true)
+                  showToast('بازبینی بسته شد.')
+                },
+              })}
+            >
+              {finish.isPending ? 'در حال ثبت…' : 'پایان بازبینی'}
+            </button>
+            <p className="text-center text-xs leading-6 text-text-secondary">موارد باقی‌مانده حذف نمی‌شوند و بعداً دوباره در دسترس‌اند. پس از پایان، «بازگردان» دیگر در دسترس نیست.</p>
           </section>
         </div>
       )}
@@ -182,26 +202,35 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
   )
 }
 
-/** One count of the summary. With something waiting it is also the way down to that part of the page. */
-function SummaryCount({ icon: Icon, label, value, target }: { icon: AppIcon; label: string; value: number; target: string }) {
-  const content = (
-    <>
-      <Icon size={18} className="text-text-secondary max-sm:hidden" aria-hidden="true" />
-      <span className="block text-xl font-extrabold leading-7 sm:mt-1.5 sm:text-2xl sm:leading-8">{formatNumber(value)}</span>
-      <span className="block text-[0.6875rem] text-text-secondary sm:text-xs">{label}</span>
-    </>
-  )
-  return (
-    <li>
-      {value > 0 ? (
-        <button
-          className="block w-full rounded-2xl border border-border-subtle bg-surface px-3 py-2 text-start shadow-sm sm:p-3 transition duration-200 hover:border-accent hover:bg-accent-tint active:scale-[0.98]"
-          type="button"
-          onClick={() => document.getElementById(target)?.scrollIntoView?.({ behavior: 'smooth' })}
-        >
-          {content}
-        </button>
-      ) : <div className="rounded-2xl border border-dashed border-border px-3 py-2 opacity-60 sm:p-3">{content}</div>}
-    </li>
-  )
+/**
+ * The controls an open AI recommendation points at, by Task or sequence. A
+ * recommendation only rings that control; nothing happens until the user taps
+ * it, and what it opens is the ordinary preview.
+ */
+function suggestedControls(session: ReconcileSessionDto): ReadonlyMap<string, Suggestion> {
+  const map = new Map<string, Suggestion>()
+  const explanation = session.ai.explanation
+  if (explanation?.status !== 'READY') return map
+  for (const recommendation of explanation.recommendations) {
+    if (recommendation.status !== 'OPEN') continue
+    const suggestion = { actionType: recommendation.actionType, recommendationId: recommendation.id }
+    if (recommendation.sequenceId) map.set(recommendation.sequenceId, suggestion)
+    else for (const taskId of recommendation.taskIds) map.set(taskId, suggestion)
+  }
+  return map
+}
+
+/** Why a tap or an undo did not go through, in the words of what happened. */
+function QuickError({ error }: { error: unknown }) {
+  if (!error) return null
+  const code = toApiError(error).code
+  const copy: Record<string, string> = {
+    QUICK_ACTION_STALE: 'این کار بعد از آن تصمیم تغییر کرده است، پس بازگرداندنش آن تغییر را پاک می‌کرد. چیزی تغییر نکرد.',
+    QUICK_ACTION_ALREADY_UNDONE: 'این تصمیم پیش‌تر بازگردانده شده است.',
+    RECONCILE_SESSION_NOT_OPEN: 'این بازبینی بسته شده است و تصمیم‌هایش دیگر بازگشت ندارند.',
+    QUICK_ACTION_NOT_ALLOWED: 'این کار دیگر منتظر تصمیم نیست. فهرست تازه شد.',
+    TASK_BLOCKED: 'این کار منتظر کار پیشین است و هنوز انجام‌شدنی نیست.',
+  }
+  if (code && copy[code]) return <p className="notice-attention" role="alert">{copy[code]}</p>
+  return <FormError error={error} />
 }

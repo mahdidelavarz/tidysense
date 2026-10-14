@@ -53,8 +53,12 @@ Never put two primary buttons on one screen. A terminal or destructive action ne
 | `.complete-button` | a Task's one big action, complete, in the Task colour |
 | `.parent-chip` | the owner of an item as a chip in the owner's colour, linking to it |
 | `.notice` / `.notice-attention` | neutral context / a problem that needs attention |
-| `.decision-card` | one item waiting for an answer (Reconcile): what it is on top (`.decision-head`, `.decision-title`), then a `.decision-bar` of `.decision-button`s, one per possible answer; tones `primary`, `positive`, `danger`. Below 640px the bar is one compact row with the icon over an 11px label; from 640px the answers are ordinary buttons |
-| `.lane` | a part of a page with its own kind of decision: a rule above, a `.lane-title` with a `.lane-count`, a `.lane-hint`, and `.lane-owner` pills naming the Goal or Project its cards belong to |
+| `.decision-card` | one item waiting for an answer (Reconcile): its title and chips, then a `.decision-bar`: a row of equal `.decision-button` tiles, icon over a short label. Tones: `done` (Task colour) and `today` (sun) for the two one-tap decisions, `danger`, `primary`; `aria-pressed` for a toggle such as «تک‌تک»; `data-suggested` rings the tile an AI recommendation points at, with a `.decision-spark` |
+| `.decided-row`, `.decided-tile`, `.undo-button` | a decision applied on tap, kept in its group: what happened and «بازگردان» while it can be undone |
+| `.review-card`, `.capture-card` | a due Goal or Project washed in its colour (continuing is its tinted tile); a quick capture on the sun |
+| `LaneHeading`, `.lane-tile`, `.lane-owner` | a Reconcile lane's heading: icon tile, name and count, one line of what to do; an owner's name in its colour above its cards |
+| `.ai-question` | the optional AI explanation of a session: a dashed moonstone card |
+| `ReviewApplyDialog` | Review & Apply as a bottom sheet: the action and its date in the title, «یک‌جا… یا هیچ‌کدام», each Task with its old date struck through and the new one, and «تأیید و {verb} N کار» |
 | `DateLeaf` | a planned date as a small calendar leaf (day over month), coloured by `when`; used by Task rows and Reconcile |
 | `Calendar` | a Jalali month grid, Saturday first, ISO values in and out; days before `min` are disabled, and a day can carry a deadline mark and a count of what is planned on it. `DateField` and the Carry sheet use it |
 | `DayChoice` | when something is for, as one-press chips: today, tomorrow, a picked day (opens the calendar) and, where allowed, none |

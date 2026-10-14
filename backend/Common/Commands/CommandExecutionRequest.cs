@@ -24,7 +24,10 @@ public sealed record CommandMutation(
     DateTimeOffset OccurredAt,
     IReadOnlyList<CascadeEvent>? CascadeEvents = null,
     Guid? ConfirmationId = null,
-    Guid? ReconcileSessionId = null);
+    Guid? ReconcileSessionId = null,
+    // Set when the command must know its own event id (to point at it later) or the event it answers.
+    Guid? EventId = null,
+    Guid? CausationId = null);
 
 /// <summary>
 /// A consequence of the confirmed command on another aggregate, recorded in the same

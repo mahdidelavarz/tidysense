@@ -421,7 +421,7 @@ public sealed class TaskService(
             throw new CommandRejectedException("SEQUENCE_ORDER_CONFLICT");
     }
 
-    private static Task<bool> HasUnresolvedPredecessorAsync(AppDbContext context, TaskItem item,
+    internal static Task<bool> HasUnresolvedPredecessorAsync(AppDbContext context, TaskItem item,
         CancellationToken cancellationToken) => item.SequenceId is not { } sequenceId ||
             item.SequenceOrder is not { } order
         ? Task.FromResult(false)
