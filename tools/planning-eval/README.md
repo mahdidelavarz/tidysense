@@ -54,3 +54,13 @@ Usefulness is not scored automatically. Read the digest.
 - The persona's answers come from a crude word match. A real person answers better, so the turn and question counts are an upper bound.
 - The date check covers a written day and Persian month, with an optional weekday or Gregorian date beside them. It is checked against the nearest such date after the run.
 - Nothing is stored about real users. The cases are invented.
+
+## Recorded runs (STEP-22, 2026-10-15)
+
+| File | What it measured |
+|---|---|
+| `baseline` | Prompt `2026-10-14.1` before STEP-22: 18/32 approvable. |
+| `v1-off` | First STEP-22 prompt and gate: 30/32. |
+| `v3-off`, `v3-on` | Prompt `2026-10-15.3` with thinking off (31/32) and on with 12000 tokens (27/32, 5 truncated). |
+| `v4-a`, `v4-b` | Found a reduced draft that was not judged again (an empty Project reached review). |
+| `final-a`, `final-b` | The pilot configuration after the fix: 31/32 each, every bar measure passes. |

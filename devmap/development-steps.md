@@ -749,9 +749,9 @@ Verified 2026-10-13 on Linux:
 
 **Completion criteria:** One flow on every entry; options are gated like every other model output; the measured time supports the guide's promise or the promise is changed.
 
-**Status:** `IN_PROGRESS` — built and verified with the sample generator.
+**Status:** `DONE` — closed by STEP-22's measurement on 2026-10-15.
 - **Real-provider run:** done on 2026-10-15. Ten intentions went through the endpoints, with a mean system time to draft of 8.6 s and thinking off. The results led to Discussion 029 (§1.1).
-- **Still open:** the time to draft including a person answering, the third completion criterion. It is measured under STEP-22, whose bar includes it. This step closes when STEP-22 verifies it.
+- **Time to draft:** measured under STEP-22 with the real provider. The median system time is 10–11 s, and about 12–15 s with 15 s allowed per question, so «زیر ۲ دقیقه» holds.
 
 **Evidence:**
 
@@ -1193,11 +1193,70 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
 - No draft hands the user a structural error from the model.
 - The time to draft supports guide 1, or its copy is changed (028 §4.3).
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE` — verified on 2026-10-15. Still owed: `./dev.ps1 check` and `./auth-e2e.ps1` on Windows.
 
 **Evidence:**
-- Baseline, 2026-10-15: ten intentions in three configurations, recorded in 029 §1.1.
-- The run used a temporary script outside the repository. The kept set and runner are part of this step.
+
+- **The bar of 029 §10 on the kept set**, pilot configuration: prompt `2026-10-15.3`, thinking off, 8000 output tokens.
+
+  Every measured run, in order:
+
+  | Run | Approvable | Entity-type q. | Public-fact asks | Empty parents | Date errors | Median s | Failed |
+  |---|---|---|---|---|---|---|---|
+  | baseline (prompt `2026-10-14.1`) | 18/32 | 8 | 2 | 0 | 4 | 8.7 | 3 |
+  | v1 | 30/32 | 0 | 1 | 0 | 2 | 14.8 | 2 |
+  | v3, thinking off | 31/32 | 0 | 0 | 0 | 0 | 10.7 | 1 |
+  | v3, thinking on, 12000 tokens | 27/32 | 0 | 0 | 0 | 0 | 33.7 | 5 |
+  | v4-a / v4-b | 31 / 30 of 32 | 0 | 1 / 1 | **1 / 1** | 0 | 10.7 / 12 | 0 / 1 |
+  | **final A / final B** | **31 / 31 of 32** | **0** | **1 / 1** | **0** | **0** | **10.2 / 11.2** | **1 / 1** |
+
+  "Median s" is system time.
+
+  - **v4 found a defect:** a draft reached review with `EMPTY_PARENT`, because leaving a Task out emptied its Project. It is fixed by judging the reduced draft again, and the final runs are on that code.
+  - **The cited runs and their digests are in `tools/planning-eval/results/`**: baseline, v1, v3, v4 and final.
+  - **An earlier "final" run of 30/32 is not kept:** it preceded the written-date check and the repeated judging.
+
+- **No structural error reaches the user:** every draft in both final runs was approvable as handed over.
+  - The four failures across the v4 and final runs ended in an explicit `DRAFT_INVALID`:
+    - questions with more than two options, twice;
+    - a wrong `parentDraftId`, twice;
+    - a truncated answer at 4000 tokens, before the limit was raised.
+  - Covered by:
+    - [gate tests](../backend.Tests/PlanningOutputGateTests.cs): sequences, over-limit Goals, broken details and notes, overloaded week, written dates, removal judged again;
+    - [runtime tests](../backend.Tests/AiPlanningRuntimeTests.cs): regeneration naming positions only, items left out after it, an unusable regeneration falling back to the first draft, no retry, nothing left.
+- **Model configuration:** thinking stays off.
+  - With thinking on, 5/32 answers were truncated even at 12000 output tokens, and the median time was three times longer.
+  - The planning output limit is now 8000 tokens (`appsettings.json`).
+- **Time to draft (guide 1, 028 §4.3):** the median is 10–11 s of system time and about 12–15 s with 15 s allowed per question, so «زیر ۲ دقیقه» holds. The allowance is an assumption; no person answered.
+- **Contract:**
+  - [STEP-09 contract](step-09-ai-planning-acceptance.md) statements 11, 13c–13f, 27, 28d;
+  - schema `2026-10-15.1`, prompt `2026-10-15.3`, repair policy `2026-10-15.1`;
+  - [renderer calendar](../backend/Services/Ai/PlanningPromptRenderer.cs), [written-date check](../backend/Services/Ai/PlanningTextDates.cs);
+  - [rules](../backend/Services/PlanningDraftRules.cs): `DATE_TOO_FAR`, `EMPTY_PARENT`, sequences, `Without`, `WithinFirstWeek`, `WithoutInvalidNotes`;
+  - apply creates durable sequences ([PlanningService](../backend/Services/PlanningService.cs));
+  - [event schema](../backend/Common/Events/PlanningEventSchemas.cs) and request accept four questions and answers.
+- **Bugs found by the evaluation and fixed**, each with a test:
+  - the clarification event schema allowed three questions, so a four-question turn hung until it was interrupted;
+  - the request allowed three answers;
+  - a reduced draft was not judged again.
+- **Frontend:**
+  - [questions](../frontend/src/features/planning/components/PlanningClarification.tsx): up to four, «خودت بنویس», free text open without options and without taking focus;
+  - [review](../frontend/src/features/planning/components/PlanningDraftReview.tsx): the one-week line, «(تخمینی)», the removed-items note, «قدم n از m، بعد از «…»» and «بدون ترتیب» removing a chain as one;
+  - the insights label is «خودت بنویس».
+- **Verified on Linux, 2026-10-15:**
+  - 286 backend tests passed, 2 skipped (the real-provider runs);
+  - 115 frontend tests passed; typecheck, lint and build were clean;
+  - all 22 browser scenarios passed on a fresh database with the sample generator, which now asks four questions and proposes a two-step sequence; the opt-in time-to-draft scenario was skipped;
+  - screenshots of the questions and the review with a sequence were inspected.
+
+**Known weaknesses, measured and left for later:**
+
+- **The model sometimes repeats a question across turns** despite the rule. Tax filing asked the deadline in all three turns of final A (11 questions); the scorer reports it as a public-fact ask.
+  - A deterministic guard against repeated questions is not built.
+  - The test persona's crude answers make it worse than a person would.
+- **The model prefers drafting to asking.** Moving assumed the end of Aban instead of asking the move date, which only the user knows.
+- **Later phases are thin:** one or two generic undated steps.
+- **The text of the one-week line promises STEP-24's continuation**, which is not built yet. STEP-12 depends on STEP-24, so the pilot will not run without it.
 
 ---
 
