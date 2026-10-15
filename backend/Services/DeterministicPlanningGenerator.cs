@@ -82,20 +82,24 @@ public sealed class DeterministicPlanningGenerator : IPlanningGenerator
         PlanningFixtures.Clarify when request.Turns.Count == 0 && request.AllowClarification =>
             new PlanningClarification(
             [
-                // One of each answer shape: several options, one option, and free text only.
-                new PlanningQuestion("q1", "کدام روزهای هفته برای این کار وقت دارید؟")
+                // The four questions a turn may ask, in each answer shape (029 §7): both options allowed, one of two, free text.
+                new PlanningQuestion("q1", "روی کدام بخش بیشتر کار کنیم؟")
                 {
-                    Kind = PlanningQuestionKinds.Recurrence, Reason = "تا روتین‌ها همان روزها بنشینند.", Multiple = true,
-                    Options = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"]
+                    Kind = PlanningQuestionKinds.Content, Reason = "تا تمرین‌ها همان‌جا بنشینند.", Multiple = true,
+                    Options = ["مکالمه", "نوشتن"]
                 },
                 new PlanningQuestion("q2", "آیا تاریخ مشخصی برای رسیدن به نتیجه در نظر دارید؟")
                 {
                     Kind = PlanningQuestionKinds.Timing, Reason = "تا مهلت‌ها درست بنشینند.",
-                    Options = ["تا یک ماه دیگر", "تا سه ماه دیگر", "تاریخ مشخصی ندارم"]
+                    Options = ["تا یک ماه دیگر", "تا سه ماه دیگر"]
                 },
-                new PlanningQuestion("q3", "از کجا شروع می‌کنید؟")
+                new PlanningQuestion("q3", "کدام روزهای هفته برای این کار وقت دارید؟")
                 {
-                    Kind = PlanningQuestionKinds.Content, Reason = "تا قدم اول نه خیلی ساده باشد نه خیلی سخت."
+                    Kind = PlanningQuestionKinds.Recurrence, Reason = "تا روتین‌ها همان روزها بنشینند."
+                },
+                new PlanningQuestion("q4", "روزی چقدر وقت می‌گذارید؟")
+                {
+                    Kind = PlanningQuestionKinds.Constraint
                 }
             ], null, null),
         PlanningFixtures.ClarifyAlways => new PlanningClarification(
@@ -133,8 +137,11 @@ public sealed class DeterministicPlanningGenerator : IPlanningGenerator
                 underContext: scope is not null));
         }
         var stepContext = projectId is null;
-        proposals.Add(Step("step-1", "روشن‌کردن اولین قدم", first, projectId, stepContext));
-        proposals.Add(Step("step-2", "انجام اولین قدم", second, projectId, stepContext));
+        // The first step needs the second's preparation done first: a sequence of two (029 §9).
+        proposals.Add(Step("step-1", "روشن‌کردن اولین قدم", first, projectId, stepContext) with
+            { SequenceKey = "first-steps", SequenceOrder = 1 });
+        proposals.Add(Step("step-2", "انجام اولین قدم", second, projectId, stepContext) with
+            { SequenceKey = "first-steps", SequenceOrder = 2 });
         proposals.Add(Step("step-3", "مرور پیشرفت هفته", third, projectId, stepContext));
         if (scope != PlanningContextTypes.Project)
             proposals.Add(Step("resources", "فهرست‌کردن منابع لازم", null, goalId, scope is not null));

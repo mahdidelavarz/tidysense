@@ -394,7 +394,8 @@ public sealed partial class PlanningService(
                 ReviewDateSource = redefault || (reviewEdited && edit.ReviewDate is null) ? null
                     : reviewEdited ? ReviewDateSources.User : old.ReviewDateSource,
                 PlannedDate = edit.PlannedDate, Deadline = edit.Deadline, Recurrence = edit.Recurrence,
-                TimesOfDay = edit.TimesOfDay, EffectiveFromLocalDate = edit.EffectiveFromLocalDate
+                TimesOfDay = edit.TimesOfDay, EffectiveFromLocalDate = edit.EffectiveFromLocalDate,
+                SequenceKey = edit.SequenceKey, SequenceOrder = edit.SequenceOrder
             };
         }).ToArray();
         var facts = current.Facts.Select(old =>
@@ -563,6 +564,10 @@ public sealed partial class PlanningService(
         var items = built.Preview.Items;
         var ids = items.ToDictionary(x => x.DraftId, _ => Guid.NewGuid(), StringComparer.Ordinal);
         var types = items.ToDictionary(x => x.DraftId, x => x.EntityType, StringComparer.Ordinal);
+        // A proposed sequence becomes one durable sequence of the approved Tasks, if two or more remain (025).
+        var sequences = items.Where(x => x.SequenceKey is not null)
+            .GroupBy(x => x.SequenceKey!, StringComparer.Ordinal).Where(x => x.Count() >= 2)
+            .ToDictionary(x => x.Key, _ => Guid.NewGuid(), StringComparer.Ordinal);
         var scope = built.Scope;
         var cascades = new List<CascadeEvent>();
 
@@ -609,15 +614,18 @@ public sealed partial class PlanningService(
                     }));
                     break;
                 case PlanningEntityTypes.Task:
+                    Guid? sequenceId = item.SequenceKey is { } key && sequences.TryGetValue(key, out var sequence)
+                        ? sequence : null;
                     context.Tasks.Add(new TaskItem
                     {
                         Id = id, UserId = owner, GoalId = goalId, ProjectId = projectId, Title = item.Title,
                         Description = item.Description, PlannedDate = item.PlannedDate,
-                        Deadline = item.Deadline, Source = CreationSources.AiAssisted,
-                        CreatedAt = now, UpdatedAt = now
+                        Deadline = item.Deadline, SequenceId = sequenceId,
+                        SequenceOrder = sequenceId is null ? null : item.SequenceOrder,
+                        Source = CreationSources.AiAssisted, CreatedAt = now, UpdatedAt = now
                     });
                     cascades.Add(new CascadeEvent("Task", id, 1, TaskEventTypes.TaskCreated, 1,
-                        TaskService.CreatedPayload(goalId, projectId, item.PlannedDate, null,
+                        TaskService.CreatedPayload(goalId, projectId, item.PlannedDate, sequenceId,
                             CreationSources.AiAssisted), EventActors.User));
                     break;
                 default:
@@ -811,7 +819,7 @@ public sealed partial class PlanningService(
             }).ToArray(),
             content.Assumptions, content.UnresolvedQuestions, Issues(evaluation.DraftIssues),
             evaluation.FirstWeek.Select(x => new PlanningFirstWeekEntryDto(x.DraftId, x.Date)).ToArray(),
-            status == PlanningDraftStatuses.Reviewable && evaluation.CanApply, draft.LinkedConfirmationId);
+            status == PlanningDraftStatuses.Reviewable && evaluation.CanApply, draft.LinkedConfirmationId, content.RemovedItems ?? []);
 
         static PlanningIssueDto[] Issues(IReadOnlyList<PlanningIssue> issues) =>
             issues.Select(x => new PlanningIssueDto(x.Code, x.Severity, x.Origin)).ToArray();

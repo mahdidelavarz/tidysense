@@ -191,7 +191,8 @@ public sealed class PlanningDraftRulesTests
 
         // Rejecting every detail leaves the work approvable and is disclosed, not blocked.
         var declined = PlanningDraftRules.Repair(
-            Content([Goal("g")], [fact with { ScopeDraftId = "g", Included = false }]), Today);
+            Content([Goal("g"), Work("t", Today) with { ParentDraftId = "g" }],
+                [fact with { ScopeDraftId = "g", Included = false }]), Today);
         var evaluation = PlanningDraftRules.Evaluate(declined, Rules());
         Assert.True(evaluation.CanApply);
         Assert.True(PlanningDraftRules.BuildPreview(Guid.NewGuid(), 1, declined, evaluation, "NONE").NoFactsRemembered);
@@ -268,6 +269,108 @@ public sealed class PlanningDraftRulesTests
         Assert.Equal(first.Hash, PlanningDraftRules.BuildPreview(id, 1, trimmed, evaluation, "GOAL:a:1").Hash);
         Assert.NotEqual(first.Hash, PlanningDraftRules.BuildPreview(id, 1, trimmed, evaluation, "GOAL:a:2").Hash);
         Assert.NotEqual(first.Hash, PlanningDraftRules.BuildPreview(id, 2, trimmed, evaluation, "GOAL:a:1").Hash);
+    }
+
+    [Fact]
+    public void Long_dates_may_lie_beyond_the_window_up_to_two_years_while_detailed_dates_stay_inside_it()
+    {
+        // 029 §2: a target date or a deadline far ahead is allowed; a planned date or a Routine start is not.
+        var goal = Goal("g") with { TargetDate = Today.AddMonths(PlanningLimits.MaxMonthsAhead) };
+        var child = Work("t", null) with { ParentDraftId = "g", Deadline = Today.AddMonths(12) };
+        var near = PlanningDraftRules.Evaluate(PlanningDraftRules.Repair(Content(goal, child), Today), Rules());
+        Assert.True(near.CanApply);
+
+        var far = PlanningDraftRules.Evaluate(PlanningDraftRules.Repair(Content(
+            goal with { TargetDate = Today.AddMonths(PlanningLimits.MaxMonthsAhead).AddDays(1) },
+            child with { Deadline = Today.AddMonths(30) }), Today), Rules());
+        Assert.Equal(PlanningIssueCodes.DateTooFar, far.Proposals["g"].Issues.Single().Code);
+        Assert.Equal(PlanningIssueCodes.DateTooFar, far.Proposals["t"].Issues.Single().Code);
+
+        // An undated Task whose deadline has passed, and a Routine that would start after the week.
+        var late = PlanningDraftRules.Evaluate(PlanningDraftRules.Repair(Content(goal,
+            child with { Deadline = Today.AddDays(-1) },
+            Routine("r", RecurrenceTypes.Daily) with { ParentDraftId = "g", EffectiveFromLocalDate = Today.AddDays(7) }), Today), Rules());
+        Assert.Equal(PlanningIssueCodes.DateInPast, late.Proposals["t"].Issues.Single().Code);
+        Assert.Equal(PlanningIssueCodes.DateOutsideWindow, late.Proposals["r"].Issues.Single().Code);
+    }
+
+    [Fact]
+    public void A_goal_or_project_is_never_proposed_empty()
+    {
+        var empty = PlanningDraftRules.Evaluate(PlanningDraftRules.Repair(Content(Goal("g"), Project("p") with { ParentDraftId = "g" }), Today), Rules());
+        Assert.Equal(PlanningIssueCodes.EmptyParent, empty.Proposals["g"].Issues.Single().Code);
+        Assert.Equal(PlanningIssueCodes.EmptyParent, empty.Proposals["p"].Issues.Single().Code);
+
+        // Work anywhere under it is enough, and the user excluding that work does not make it empty.
+        var filled = PlanningDraftRules.Repair(Content(Goal("g"), Project("p") with { ParentDraftId = "g" },
+            Work("t", Today) with { ParentDraftId = "p", Included = false }), Today);
+        var evaluation = PlanningDraftRules.Evaluate(filled, Rules());
+        Assert.Empty(evaluation.Proposals["g"].Issues);
+        Assert.Empty(evaluation.Proposals["p"].Issues);
+    }
+
+    [Fact]
+    public void A_sequence_is_two_or_more_tasks_of_one_owner_in_distinct_order()
+    {
+        PlanningProposal Step(string id, int? order, string? parent = "p", string? key = "s") =>
+            Work(id, Today) with { ParentDraftId = parent, SequenceKey = key, SequenceOrder = order };
+        IReadOnlyList<string> Errors(params PlanningProposal[] items) =>
+            PlanningDraftRules.StructuralErrors(PlanningDraftRules.Repair(Content([Project("p"), Project("q"), .. items]), Today), null);
+
+        Assert.Empty(Errors(Step("a", 1), Step("b", 2)));
+        Assert.Contains("SEQUENCE_INVALID", Errors(Step("a", 1)));
+        Assert.Contains("SEQUENCE_INVALID", Errors(Step("a", 1), Step("b", 1)));
+        Assert.Contains("SEQUENCE_INVALID", Errors(Step("a", 1), Step("b", 2, parent: "q")));
+        Assert.Contains("SEQUENCE_INVALID", Errors(Step("a", 1), Step("b", null)));
+        Assert.Contains("SEQUENCE_INVALID", Errors(Step("a", 0), Step("b", 1)));
+        // A Routine never carries a sequence; the repair drops what does not belong to its type.
+        var routine = Routine("r", RecurrenceTypes.Daily) with { SequenceKey = "s", SequenceOrder = 3 };
+        Assert.Null(PlanningDraftRules.Repair(Content(routine), Today).Proposals[0].SequenceKey);
+    }
+
+    [Fact]
+    public void Leaving_items_out_takes_what_hangs_on_them_and_names_them()
+    {
+        var friday = new PlanningFactValue([5], null, null, null, null);
+        var content = PlanningDraftRules.Repair(new PlanningDraftContent("خلاصه", Today, Today.AddDays(6),
+            [
+                Project("p"), Work("a", Today) with { ParentDraftId = "p" },
+                Work("b", Today) with { SequenceKey = "s", SequenceOrder = 1 },
+                Work("c", Today) with { SequenceKey = "s", SequenceOrder = 2 }
+            ],
+            [new PlanningFactProposal("f", PlanningFactTypes.UnavailableWeekday, PlanningFactStrengths.Hard, friday, "p", true)],
+            [new PlanningNote("a", "فرض"), new PlanningNote(null, "فرض کلی")],
+            [new PlanningWarning("p", PlanningSeverities.Info, PlanningWarningCodes.AssumedDates)], []), Today);
+
+        var without = PlanningDraftRules.Without(content, ["p", "c"])!;
+
+        Assert.Equal(["b"], without.Proposals.Select(x => x.DraftId));
+        // The sequence left with one member is no sequence; nothing is re-dated or re-parented.
+        Assert.Null(without.Proposals[0].SequenceKey);
+        Assert.Equal(Today, without.Proposals[0].PlannedDate);
+        Assert.Empty(without.Facts);
+        Assert.Equal(["فرض کلی"], without.Assumptions.Select(x => x.Text));
+        Assert.Empty(without.Warnings);
+        Assert.Equal(
+            [PlanningEntityTypes.Project, PlanningEntityTypes.Task, PlanningEntityTypes.Task, PlanningRemovedItemTypes.Fact],
+            without.RemovedItems!.Select(x => x.EntityType));
+        Assert.Null(without.RemovedItems![3].Title);
+
+        Assert.Null(PlanningDraftRules.Without(content, ["p", "b", "c"]));
+    }
+
+    [Fact]
+    public void The_measurement_of_a_turn_records_up_to_four_questions_and_never_five()
+    {
+        // 029 §7: one turn asks up to four questions; the event of what was asked holds one item each.
+        var validator = new TidySense.Common.Events.EventPayloadValidator(TidySense.Common.Events.PlanningEventSchemas.All());
+        string Asked(int count) => System.Text.Json.JsonSerializer.Serialize(new
+        {
+            flowId = Guid.NewGuid(), turn = 1,
+            questions = Enumerable.Range(0, count).Select(_ => new { kind = "CONTENT", optionCount = 2, multiple = false })
+        });
+        validator.Validate(TidySense.Common.Events.PlanningEventTypes.ClarificationAsked, 1, Asked(4));
+        Assert.Throws<ArgumentException>(() => validator.Validate(TidySense.Common.Events.PlanningEventTypes.ClarificationAsked, 1, Asked(5)));
     }
 
     private static async Task<PlanningDraftContent> GenerateAsync(string? fixture) =>

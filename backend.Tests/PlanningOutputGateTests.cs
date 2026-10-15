@@ -145,14 +145,141 @@ public sealed class PlanningOutputGateTests
     }
 
     [Fact]
-    public void An_unsupported_recurrence_is_kept_as_written_for_review_and_never_converted()
+    public void An_unsupported_recurrence_is_never_converted_and_the_routine_is_asked_for_again_or_left_out()
     {
+        // Kept as written, so it is never converted; the user could not approve it, so it is asked for
+        // again, and the fallback draft leaves the Routine out with a note (029 §8).
         var result = Evaluate(With(x => Proposal(x, 3)["recurrence"] = new JsonObject { ["type"] = "WEEKLY" }));
-        Assert.True(result.Passed);
-        Assert.Equal("WEEKLY", result.Draft!.Proposals[3].Recurrence!.Type);
-        Assert.Null(PlanningDraftRules.ValidRecurrence(result.Draft.Proposals[3]));
+        Assert.False(result.Passed);
+        Assert.Equal(PlanningOutputGate.GateSemantic, result.Gate);
+        Assert.Contains("draft.proposals[3]", result.Correction);
+        Assert.Contains("\"recurrence\" is not one of the three supported forms", result.Correction);
+        var fallback = result.Fallback!.Draft!;
+        Assert.DoesNotContain(fallback.Proposals, x => x.DraftId == "practice");
+        Assert.Equal([new PlanningRemovedItem(PlanningEntityTypes.Routine, "تمرین")], fallback.RemovedItems);
+        Assert.Contains(PlanningOutputGate.RemoveInvalidItems, result.Fallback.RepairRules);
         Assert.Equal(PlanningOutputGate.GateSchema,
             Evaluate(With(x => Proposal(x, 3)["recurrence"]!["type"] = "every other day")).Gate);
+    }
+
+    [Fact]
+    public void An_invalid_sequence_loses_only_its_order_and_the_draft_stands()
+    {
+        // A sequence of one Task is no sequence: its order is dropped and recorded, nothing else changes (029 §9).
+        var result = Evaluate(With(x =>
+        {
+            Proposal(x, 2)["sequenceKey"] = "s1";
+            Proposal(x, 2)["sequenceOrder"] = 1;
+        }));
+        Assert.True(result.Passed);
+        Assert.Null(result.Draft!.Proposals[2].SequenceKey);
+        Assert.Contains(PlanningOutputGate.DropInvalidSequence, result.RepairRules);
+        Assert.Empty(result.Draft.RemovedItems ?? []);
+    }
+
+    [Fact]
+    public void A_planning_detail_that_cannot_be_stored_is_asked_for_again_and_otherwise_left_out()
+    {
+        // A weekday detail with text instead of weekdays breaks the catalogue (FACT_INVALID).
+        var result = Evaluate(With(x => x["draft"]!["facts"]![0]!["value"] = new JsonObject { ["text"] = "جمعه‌ها" }));
+        Assert.False(result.Passed);
+        Assert.Contains("PLANNING DETAILS rules", result.Correction);
+        var fallback = result.Fallback!.Draft!;
+        Assert.Empty(fallback.Facts);
+        Assert.Equal(4, fallback.Proposals.Count);
+        Assert.Equal([new PlanningRemovedItem(PlanningRemovedItemTypes.Fact, null)], fallback.RemovedItems);
+    }
+
+    [Fact]
+    public void Written_persian_dates_must_be_real_days_with_their_own_weekday()
+    {
+        // Today is Saturday 11 Mehr 1405 (2026-10-03).
+        bool Wrong(string text) => PlanningTextDates.HasError([text], Today);
+        Assert.False(Wrong("شروع از شنبه ۱۱ مهر"));
+        Assert.False(Wrong("تا ۳۱ شهریور ۱۴۰۶ و نوروز ۱ فروردین"));
+        Assert.False(Wrong("پنج‌شنبه ۲۳ مهر و سه‌شنبه 14 مهر"));
+        Assert.True(Wrong("جمعه ۲۳ مهر"));
+        Assert.True(Wrong("تا ۳۱ مهر"));
+        Assert.True(Wrong("شنبه ۲۴ مهر"));
+        // Words that only start like a month are not dates.
+        Assert.False(Wrong("۲ دیگر و ۳ مهرماه"));
+    }
+
+    [Fact]
+    public void A_wrong_written_date_is_asked_for_again_and_otherwise_the_draft_is_kept_as_written()
+    {
+        var result = Evaluate(With(x => x["draft"]!["summary"] = "شروع از جمعه ۱۱ مهر"));
+        Assert.False(result.Passed);
+        Assert.Contains("exact \"persianDate\" from \"calendar\"", result.Correction);
+        Assert.Equal("شروع از جمعه ۱۱ مهر", result.Fallback!.Draft!.Summary);
+        Assert.Equal(4, result.Fallback.Draft.Proposals.Count);
+
+        var asking = Evaluate(Asking(Question(x => x["text"] = "از جمعه ۱۱ مهر شروع کنیم؟")).ToJsonString());
+        Assert.False(asking.Passed);
+        Assert.Single(asking.Fallback!.Clarification!.Questions);
+    }
+
+    [Fact]
+    public void Broken_notes_are_dropped_and_an_overloaded_week_loses_its_last_routines_when_not_corrected()
+    {
+        var noted = Evaluate(With(x => x["draft"]!["assumptions"]![0]!["text"] = new string('ف', 301)));
+        Assert.False(noted.Passed);
+        Assert.Empty(noted.Fallback!.Draft!.Assumptions);
+        Assert.Equal(4, noted.Fallback.Draft.Proposals.Count);
+
+        // Four daily Routines fill 28 days of the first week, more than 21.
+        var busy = Evaluate(With(x =>
+        {
+            // Without the HARD «Friday» detail, so the daily Routines conflict with nothing.
+            x["draft"]!["facts"] = new JsonArray();
+            var proposals = x["draft"]!["proposals"]!.AsArray();
+            Proposal(x, 3)["recurrence"] = new JsonObject { ["type"] = "DAILY" };
+            foreach (var id in new[] { "r2", "r3", "r4" })
+            {
+                var routine = JsonNode.Parse(Proposal(x, 3).ToJsonString())!;
+                routine["draftId"] = id;
+                routine["title"] = $"روتین {id}";
+                proposals.Add(routine);
+            }
+        }));
+        Assert.False(busy.Passed);
+        var fitted = busy.Fallback!.Draft!;
+        Assert.Equal(["روتین r4", "روتین r3"], fitted.RemovedItems!.Select(x => x.Title));
+        Assert.Equal(["goal", "project", "step", "practice", "r2"], fitted.Proposals.Select(x => x.DraftId));
+    }
+
+    [Fact]
+    public void Leaving_an_item_out_is_judged_again_so_a_parent_left_without_work_goes_too()
+    {
+        // The Project's only Task is dated past the window; without it the Project would be empty (029 §5).
+        var result = Evaluate(With(x => Proposal(x, 2)["plannedDate"] = "2026-10-20"));
+        var fallback = result.Fallback!.Draft!;
+        Assert.Equal(["goal", "practice"], fallback.Proposals.Select(x => x.DraftId));
+        Assert.Equal([PlanningEntityTypes.Task, PlanningEntityTypes.Project], fallback.RemovedItems!.Select(x => x.EntityType));
+        Assert.True(PlanningDraftRules.Evaluate(fallback, new PlanningRuleContext(Today, null, [])).CanApply);
+    }
+
+    [Fact]
+    public void Too_many_goals_are_asked_for_again_and_otherwise_the_later_one_is_left_out_with_its_work()
+    {
+        var result = Evaluate(With(x =>
+        {
+            var proposals = x["draft"]!["proposals"]!.AsArray();
+            var goal = JsonNode.Parse(Proposal(x, 0).ToJsonString())!;
+            goal["draftId"] = "goal-2";
+            goal["title"] = "تغییر شغل";
+            proposals.Add(goal);
+            var work = JsonNode.Parse(Proposal(x, 2).ToJsonString())!;
+            work["draftId"] = "step-2";
+            work["parentDraftId"] = "goal-2";
+            proposals.Add(work);
+        }));
+        Assert.False(result.Passed);
+        Assert.Contains("TOO_MANY_GOALS", result.Correction);
+        var fallback = result.Fallback!.Draft!;
+        Assert.Equal(["goal", "project", "step", "practice"], fallback.Proposals.Select(x => x.DraftId));
+        Assert.Equal(["تغییر شغل", "انتخاب کتاب"], fallback.RemovedItems!.Select(x => x.Title));
+        Assert.Contains(PlanningOutputGate.RemoveInvalidItems, result.Fallback.RepairRules);
     }
 
     [Theory]
@@ -229,7 +356,8 @@ public sealed class PlanningOutputGateTests
 
         // No questions, too many questions, a repeated id, or questions together with a draft.
         Assert.False(Evaluate(Clarification().ToJsonString()).Passed);
-        Assert.False(Evaluate(Clarification("q1", "q2", "q3", "q4").ToJsonString()).Passed);
+        Assert.True(Evaluate(Clarification("q1", "q2", "q3", "q4").ToJsonString()).Passed);
+        Assert.False(Evaluate(Clarification("q1", "q2", "q3", "q4", "q5").ToJsonString()).Passed);
         Assert.False(Evaluate(Clarification("q1", "q1").ToJsonString()).Passed);
         var both = Valid();
         both["kind"] = "CLARIFICATION";
@@ -248,7 +376,7 @@ public sealed class PlanningOutputGateTests
         var question = result.Clarification!.Questions.Single();
         Assert.Equal("تا روتین‌ها همان روزها بنشینند.", question.Reason);
         Assert.Equal(PlanningQuestionKinds.Recurrence, question.Kind);
-        Assert.Equal(["شنبه", "دوشنبه", "نمی‌دانم"], question.Options);
+        Assert.Equal(["شنبه", "دوشنبه"], question.Options);
         Assert.True(question.Multiple);
 
         // Free text only: no options, no reason, "multiple" left out.
@@ -264,7 +392,9 @@ public sealed class PlanningOutputGateTests
     [InlineData("kind-missing")]
     [InlineData("kind-unknown")]
     [InlineData("one-option")]
-    [InlineData("eight-options")]
+    [InlineData("three-options")]
+    [InlineData("kind-entity-type")]
+    [InlineData("write-it-yourself")]
     [InlineData("long-label")]
     [InlineData("empty-label")]
     [InlineData("duplicate-label")]
@@ -289,7 +419,10 @@ public sealed class PlanningOutputGateTests
             "kind-missing" => Question(x => x.Remove("kind")),
             "kind-unknown" => Question(x => x["kind"] = "MOTIVATION"),
             "one-option" => Options("بله"),
-            "eight-options" => Options("۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸"),
+            "three-options" => Options("۱", "۲", "۳"),
+            // The system decides structure; the user is never asked it (029 §7).
+            "kind-entity-type" => Question(x => x["kind"] = "ENTITY_TYPE"),
+            "write-it-yourself" => Options("بله", "خودت بنویس"),
             "long-label" => Options("بله", new string('ب', 41)),
             "empty-label" => Options("بله", "  "),
             "duplicate-label" => Options("بله", "بله"),
@@ -322,10 +455,12 @@ public sealed class PlanningOutputGateTests
     public void Labels_are_kept_as_plain_text_and_the_word_other_inside_a_real_option_is_allowed()
     {
         // Markup and links in a label are only text: the gate passes them and the screen shows them as written.
-        var result = Evaluate(Asking(Question(x => x["options"] = new JsonArray("<b>بله</b>", "[نه](https://example.com)", "سایر روزهای هفته"))).ToJsonString());
+        var result = Evaluate(Asking(Question(x => x["options"] = new JsonArray("<b>بله</b>", "[نه](https://example.com)"))).ToJsonString());
         Assert.True(result.Passed);
         Assert.Equal("<b>بله</b>", result.Clarification!.Questions.Single().Options[0]);
-        Assert.Equal("سایر روزهای هفته", result.Clarification.Questions.Single().Options[2]);
+        var other = Evaluate(Asking(Question(x => x["options"] = new JsonArray("شنبه", "سایر روزهای هفته"))).ToJsonString());
+        Assert.Equal("سایر روزهای هفته", other.Clarification!.Questions.Single().Options[1]);
+        Assert.True(PlanningClarificationRules.IsOther("خودت بنویس…"));
         Assert.True(PlanningClarificationRules.IsOther("چیزِ دیگری؟"));
         Assert.False(PlanningClarificationRules.IsOther("هیچ‌کدام"));
         Assert.False(PlanningClarificationRules.IsOther("نمی‌دانم"));
@@ -336,7 +471,7 @@ public sealed class PlanningOutputGateTests
         var question = new JsonObject
         {
             ["id"] = "q1", ["text"] = "کدام روزها وقت دارید؟", ["reason"] = "تا روتین‌ها همان روزها بنشینند.",
-            ["kind"] = "RECURRENCE", ["options"] = new JsonArray("شنبه", "دوشنبه", "نمی‌دانم"), ["multiple"] = true
+            ["kind"] = "RECURRENCE", ["options"] = new JsonArray("شنبه", "دوشنبه"), ["multiple"] = true
         };
         change?.Invoke(question);
         return question;

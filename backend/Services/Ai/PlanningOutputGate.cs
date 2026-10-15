@@ -21,6 +21,12 @@ public sealed record PlanningGateResult(
     /// cannot help.
     /// </summary>
     public string? Correction { get; init; }
+
+    /// <summary>
+    /// For a draft whose only fault is items that cannot be approved: the same draft without them
+    /// (029 §8), used when the answer is not asked for again. Null otherwise.
+    /// </summary>
+    public PlanningGateResult? Fallback { get; init; }
 }
 
 /// <summary>
@@ -31,7 +37,7 @@ public sealed record PlanningGateResult(
 /// </summary>
 public static partial class PlanningOutputGate
 {
-    public const string RepairPolicyVersion = "2026-10-03.1";
+    public const string RepairPolicyVersion = "2026-10-15.1";
     public const int MaxOutputChars = 60_000;
     public const int MaxCorrectionChars = 1_500;
 
@@ -47,6 +53,20 @@ public static partial class PlanningOutputGate
     public const string NormalizeEnumCase = "NORMALIZE_KNOWN_ENUM_CASE";
     public const string NormalizeDateSeparator = "NORMALIZE_YEAR_FIRST_DATE_SEPARATOR";
     public const string PadDate = "PAD_YEAR_FIRST_MONTH_OR_DAY";
+    public const string RemoveInvalidItems = "REMOVE_INVALID_ITEMS";
+    public const string DropInvalidSequence = "DROP_INVALID_SEQUENCE";
+
+    // Structural faults a draft can be cured of by leaving items out: its later items past a count
+    // limit, and planning details that break the catalogue.
+    private static readonly HashSet<string> RemovableErrors = new(StringComparer.Ordinal)
+    {
+        "TOO_MANY_PROPOSALS", "TOO_MANY_GOALS", "TOO_MANY_PROJECTS", "TOO_MANY_TASKS", "TOO_MANY_ROUTINES",
+        "FACT_INVALID", "NOTE_INVALID", "WARNING_INVALID", "TOO_MANY_ASSUMPTIONS", "TOO_MANY_WARNINGS",
+        "TOO_MANY_QUESTIONS"
+    };
+
+    private const string TextDateCorrection =
+        "a Persian date written in the text names a day its month does not have, or a weekday that is not that date's weekday: write a day only as an exact \"persianDate\" from \"calendar\", with its own \"weekday\"";
 
     private static readonly string[] Kinds =
         [PlanningOutcomes.Draft, PlanningOutcomes.Clarification, PlanningOutcomes.InputBlocked];
@@ -121,7 +141,11 @@ public static partial class PlanningOutputGate
                 if (kind == PlanningOutcomes.Clarification && !allowClarification)
                     throw new GateFailure(GatePolicy, AiFailureClasses.Policy,
                         "clarificationAllowed is false, so kind CLARIFICATION is not allowed: return a DRAFT with visible assumptions or INPUT_BLOCKED");
-                return new PlanningGateResult(kind, null, clarification, null, null, rules);
+                var asked = new PlanningGateResult(kind, null, clarification, null, null, rules);
+                // A wrong Persian date is asked for again once; otherwise the questions are kept as written.
+                if (PlanningTextDates.HasError(PlanningTextDates.Of(clarification), context.Today))
+                    throw new GateFailure(GateSemantic, AiFailureClasses.Semantic, TextDateCorrection) { Fallback = asked };
+                return asked;
             }
 
             if (draftNode is null || questions.Length > 0 || blockReason is not null)
@@ -131,11 +155,45 @@ public static partial class PlanningOutputGate
             try
             {
                 var draft = PlanningDraftRules.Repair(parsed, context.Today);
+                // An invalid sequence loses only its order; its Tasks stay (029 §9).
+                if (PlanningDraftRules.WithoutInvalidSequences(draft) is { } unchained)
+                {
+                    draft = unchained;
+                    rules.Add(DropInvalidSequence);
+                }
                 var errors = PlanningDraftRules.StructuralErrors(draft, context.Scope?.Type);
                 if (errors.Count > 0)
+                {
+                    // Too many items, or a detail that cannot be stored, is asked for again, and otherwise
+                    // the later items and the broken details are left out (029 §8).
+                    var trimmed = errors.All(RemovableErrors.Contains)
+                        ? PlanningDraftRules.Without(PlanningDraftRules.WithoutInvalidNotes(draft),
+                            [..PlanningDraftRules.OverLimits(draft), ..PlanningDraftRules.InvalidFacts(draft)])
+                        : null;
                     throw new GateFailure(GateSemantic, AiFailureClasses.Semantic,
-                        "the draft breaks these rules: " + string.Join("; ", errors.Select(Explain)));
-                return new PlanningGateResult(kind, draft, null, null, null, rules);
+                        "the draft breaks these rules: " + string.Join("; ", errors.Select(Explain)))
+                    {
+                        Fallback = trimmed is not null && PlanningDraftRules.StructuralErrors(trimmed, context.Scope?.Type).Count == 0
+                            ? Approvable(kind, trimmed, context, rules, out _) : null
+                    };
+                }
+                // The draft as handed over must be approvable: an item the user could not approve is
+                // asked for again, and otherwise left out with a note (029 §8).
+                var result = Approvable(kind, draft, context, rules, out var defects);
+                if (defects.Count == 0)
+                {
+                    // A wrong Persian date is asked for again once; otherwise the draft is kept as written.
+                    if (PlanningTextDates.HasError(PlanningTextDates.Of(draft), context.Today))
+                        throw new GateFailure(GateSemantic, AiFailureClasses.Semantic, TextDateCorrection) { Fallback = result };
+                    return result!;
+                }
+                throw new GateFailure(GateSemantic, AiFailureClasses.Semantic,
+                    "these items could not be approved as proposed: " + string.Join("; ", defects
+                        .Select(x => (Where: Where(draft, x.DraftId), x.Code))
+                        .Distinct().Select(x => $"{x.Where}: {ExplainIssue(x.Code)}")))
+                {
+                    Fallback = result
+                };
             }
             catch (Exception exception) when (exception is NullReferenceException or ArgumentException
                 or KeyNotFoundException or InvalidOperationException)
@@ -148,22 +206,91 @@ public static partial class PlanningOutputGate
         {
             return new PlanningGateResult(null, null, null, failure.Gate, failure.FailureClass, rules)
             {
-                Correction = failure.Detail is { Length: > MaxCorrectionChars } ? failure.Detail[..MaxCorrectionChars] : failure.Detail
+                Correction = failure.Detail is { Length: > MaxCorrectionChars } ? failure.Detail[..MaxCorrectionChars] : failure.Detail,
+                Fallback = failure.Fallback
             };
         }
     }
+
+    /// <summary>
+    /// The draft itself when the user could approve every item as handed over; otherwise the draft
+    /// without the items that block (marked by the repair rule), or null when nothing usable is left
+    /// or the whole draft is at fault. The blocking issues found are returned either way.
+    /// </summary>
+    private static PlanningGateResult? Approvable(string kind, PlanningDraftContent draft, PlanningContext context,
+        List<string> rules, out IReadOnlyList<(string? DraftId, string Code)> defects)
+    {
+        var ruleContext = new PlanningRuleContext(context.Today, context.Scope?.Type, context.Facts);
+        defects = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(draft, ruleContext));
+        var reduced = draft.RemovedItems is { Count: > 0 };
+        if (defects.Count == 0)
+            return new PlanningGateResult(kind, draft, null, null, null, reduced ? [..rules, RemoveInvalidItems] : rules);
+        // An overloaded first week is the only fault of the whole draft that leaving items out can cure.
+        var candidate = draft;
+        if (defects.Any(x => x.DraftId is null))
+        {
+            if (defects.Any(x => x.DraftId is null && x.Code != PlanningIssueCodes.FirstWeekOverloaded) ||
+                PlanningDraftRules.WithinFirstWeek(draft, ruleContext) is not { } fitted) return null;
+            candidate = fitted;
+        }
+        // Leaving an item out can make another unapprovable (a Project left without work), so the
+        // draft is judged again until nothing blocks; every round only removes.
+        for (var round = 0; round <= draft.Proposals.Count + draft.Facts.Count; round++)
+        {
+            var remaining = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(candidate, ruleContext));
+            if (remaining.Count == 0)
+                return new PlanningGateResult(kind, candidate, null, null, null, [..rules, RemoveInvalidItems]);
+            if (remaining.Any(x => x.DraftId is null) ||
+                PlanningDraftRules.Without(candidate, remaining.Select(x => x.DraftId!)) is not { } smaller) return null;
+            candidate = smaller;
+        }
+        return null;
+    }
+
+    /// <summary>Where an item sits in the output, by position only, so the correction never repeats its content.</summary>
+    private static string Where(PlanningDraftContent draft, string? draftId)
+    {
+        if (draftId is null) return "the draft as a whole";
+        var proposal = draft.Proposals.Select((x, i) => (x.DraftId, i)).FirstOrDefault(x => x.DraftId == draftId);
+        if (proposal.DraftId is not null) return $"draft.proposals[{proposal.i}]";
+        var fact = draft.Facts.Select((x, i) => (x.DraftId, i)).First(x => x.DraftId == draftId);
+        return $"draft.facts[{fact.i}]";
+    }
+
+    /// <summary>A review issue in words the model can act on. An unlisted issue is named by its code.</summary>
+    private static string ExplainIssue(string code) => code switch
+    {
+        PlanningIssueCodes.StandaloneTaskNeedsDate => "a TASK without a parent and not under the context needs a \"plannedDate\" inside the window; give it a date, or leave it out",
+        PlanningIssueCodes.DateOutsideWindow => "\"plannedDate\" and \"effectiveFromLocalDate\" must lie between windowStart and windowEnd",
+        PlanningIssueCodes.DateInPast => "a date is before today",
+        PlanningIssueCodes.DateAfterDeadline => "\"plannedDate\" is after the Task's own \"deadline\"",
+        PlanningIssueCodes.DateTooFar => $"\"targetDate\" and \"deadline\" may be at most {PlanningLimits.MaxMonthsAhead} months after today",
+        PlanningIssueCodes.HardConstraintConflict => "it falls on a day a HARD planning detail rules out; use another day",
+        PlanningIssueCodes.UnsupportedRecurrence => "\"recurrence\" is not one of the three supported forms with valid days",
+        PlanningIssueCodes.InvalidTimes => "\"timesOfDay\" must be distinct \"HH:mm\" times",
+        PlanningIssueCodes.StartInPast => "\"effectiveFromLocalDate\" is before today",
+        PlanningIssueCodes.TargetInPast => "\"targetDate\" is before today",
+        PlanningIssueCodes.NotAllowedInContext => "inside a GOAL context propose no GOAL; inside a PROJECT context propose only TASKs and ROUTINEs under the context",
+        PlanningIssueCodes.EmptyParent => "a GOAL or PROJECT needs at least one TASK or ROUTINE under it; add its real first steps, or leave it out",
+        PlanningIssueCodes.FactScopeUnsupported => "a fact needs \"scopeDraftId\" set to a proposed GOAL or to a proposed PROJECT without a parent; when there is none and planningContext is null, do not propose the fact (state it as an assumption instead)",
+        PlanningIssueCodes.FactAlreadyActive => "the same planning detail is already confirmed or repeated; do not propose it again",
+        PlanningIssueCodes.FactDatePassed => "the planning detail's dates are before today",
+        PlanningIssueCodes.FirstWeekOverloaded => $"the first week holds more than {PlanningLimits.FirstWeekEntries} Task and Routine occurrences; propose less",
+        _ => $"{code}: the item cannot be approved as proposed"
+    };
 
     /// <summary>A clarification rule in words the model can act on, never quoting the rejected output.</summary>
     private static string ExplainQuestions(string error) => error switch
     {
         "MESSAGE_TOO_LONG" => "\"message\" has at most 500 characters",
         "BLOCKED_INVALID" => "INPUT_BLOCKED needs an empty \"questions\", a listed \"blockReason\" and a non-empty \"message\"",
-        "QUESTION_COUNT_INVALID" => "CLARIFICATION needs 1 to 3 questions and \"blockReason\" null",
-        "QUESTION_ID_DUPLICATE" or "QUESTION_ID_INVALID" => "question ids are q1, q2, q3, each used once",
+        "QUESTION_COUNT_INVALID" => "CLARIFICATION needs 1 to 4 questions and \"blockReason\" null",
+        "QUESTION_ID_DUPLICATE" or "QUESTION_ID_INVALID" => "question ids are q1, q2, q3, q4, each used once",
+        "QUESTION_KIND_INVALID" => "a question \"kind\" is one of TIMING | RECURRENCE | CONSTRAINT | CONTENT | OWNERSHIP | CONTRADICTION",
         "QUESTION_TEXT_INVALID" => "each question \"text\" has 1 to 300 characters",
         "QUESTION_REASON_INVALID" => "a question \"reason\" is null or one line of 1 to 120 characters",
         "QUESTION_MULTIPLE_WITHOUT_OPTIONS" => "\"multiple\" is true only for a question that has options",
-        "QUESTION_OPTION_COUNT_INVALID" => "a question has no options, or 2 to 7 options",
+        "QUESTION_OPTION_COUNT_INVALID" => "a question has no options, or exactly 2 options",
         "QUESTION_OPTION_INVALID" => "each option is one line of 1 to 40 characters",
         "QUESTION_OPTION_DUPLICATE" => "the options of one question are all different",
         "QUESTION_OPTION_OTHER" => "an option must not mean \"something else\" or invite the user to write their own answer; the program adds that choice itself",
@@ -189,6 +316,7 @@ public static partial class PlanningOutputGate
         "FACT_SCOPE_INVALID" => "a fact's \"scopeDraftId\" must be null or the draftId of a proposal in this output",
         "NOTE_INVALID" => "each item of \"assumptions\" and \"unresolvedQuestions\" needs a \"text\" of 1 to 300 characters and a \"draftId\" that is null or the draftId of a proposal or fact in this output",
         "WARNING_INVALID" => "each warning needs a listed \"severity\" and \"code\" and a \"draftId\" that is null or the draftId of a proposal or fact in this output",
+        "SEQUENCE_INVALID" => "\"sequenceKey\" and \"sequenceOrder\" are set together and only on TASKs; a sequence has at least two Tasks with the same parent (or all standalone, or all under the context), each with a different positive \"sequenceOrder\"",
         _ => error
     };
 
@@ -202,7 +330,7 @@ public static partial class PlanningOutputGate
             // A review date is product policy; a model that supplies one fails here as an unknown field.
             reader.Only(item, "draftId", "entityType", "title", "description", "parentDraftId", "underContext",
                 "source", "confidence", "desiredOutcome", "completionMeaning", "targetDate", "plannedDate",
-                "deadline", "recurrence", "timesOfDay", "effectiveFromLocalDate");
+                "deadline", "recurrence", "timesOfDay", "effectiveFromLocalDate", "sequenceKey", "sequenceOrder");
             PlanningRecurrence? recurrence = null;
             if (reader.Node(item, "recurrence") is { } recurrenceNode)
             {
@@ -233,7 +361,9 @@ public static partial class PlanningOutputGate
                 reader.Date(item, "deadline"),
                 recurrence,
                 reader.Node(item, "timesOfDay") is null ? null : reader.Times(item, "timesOfDay"),
-                reader.Date(item, "effectiveFromLocalDate"));
+                reader.Date(item, "effectiveFromLocalDate"),
+                reader.Text(item, "sequenceKey"),
+                reader.Integer(item, "sequenceOrder"));
         }).ToArray();
         var facts = List("facts").Select((node, index) =>
         {
@@ -294,6 +424,7 @@ public static partial class PlanningOutputGate
         public string Gate { get; } = gate;
         public string FailureClass { get; } = failureClass;
         public string? Detail { get; } = detail;
+        public PlanningGateResult? Fallback { get; init; }
     }
 
     /// <summary>

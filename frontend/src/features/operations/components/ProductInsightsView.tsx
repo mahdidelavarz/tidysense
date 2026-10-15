@@ -219,7 +219,7 @@ function Questions({ f }: { f: Figures }) {
               <dl className="ops-stats mt-2">
                 <Stat label="پرسیده شد">{count(part(kind, 'ASKED').numerator)}</Stat>
                 <Stat label="جواب داده شد"><OfCount faint value={part(kind, 'ANSWERED')} /></Stat>
-                <Stat label="«چیز دیگر…»"><OfCount faint value={part(kind, 'OTHER')} /></Stat>
+                <Stat label="«خودت بنویس»"><OfCount faint value={part(kind, 'OTHER')} /></Stat>
                 <Stat label="رد شد"><OfCount faint value={part(kind, 'SKIPPED')} /></Stat>
               </dl>
             </li>

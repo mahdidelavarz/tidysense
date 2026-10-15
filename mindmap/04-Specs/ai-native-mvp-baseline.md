@@ -31,7 +31,8 @@ All canonical identities/FKs are UUID/.NET `Guid`; persisted records use optimis
 - Planning entry may be global or contextual and uses bounded clarification.
 - `PlanningDraft` is structured, editable, validated and non-canonical until explicit apply.
 - PlanningFact extraction requires individual approval; manual creation does not depend on it.
-- Detailed AI planning is limited to seven days and receives only bounded current/previous weekly context.
+- Detailed AI planning is limited to seven days and receives only bounded current/previous weekly context. Goal/Project target dates and Task deadlines may lie beyond it (up to 24 months); the next window is offered and generated on the user's tap from execution evidence (D029).
+- Clarification is up to three turns of up to four optional questions, each with zero or two model options plus «خودت بنویس»; the model never shows the user a structural error (D029).
 - Today is derived from active Tasks planned for the configured local today plus due Routine occurrences. Blocked planned Tasks may appear as non-actionable context.
 - Reconcile computes deterministic facts/severity first, groups Project → Sequence → Task, and keeps Capture as a separate non-severity lane.
 - Consequential changes show a server-authoritative preview, require explicit confirmation, revalidate ownership/version/invariants at commit and write atomically with semantic event intent.

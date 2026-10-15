@@ -4,17 +4,21 @@ import { Pencil, Sparkles } from '../../../shared/ui/icons'
 import type { PlanningAnswer, PlanningClarificationDto } from '../types/planning.types'
 import { PlanningStartError } from './PlanningStartError'
 
-const countWords = ['یک', 'دو', 'سه']
+const countWords = ['یک', 'دو', 'سه', 'چهار']
+const writeOwn = 'خودت بنویس'
 const answerLength = 500
 
-/** What the user has given for one question so far. «چیز دیگر…» is open when `other` is true. */
+/** What the user has given for one question so far. «خودت بنویس» is open when `other` is true. */
 type Draft = { options: number[]; other: boolean; text: string }
 
+/** A question without options is answered in words, so its field starts open (029 §7). */
+const blank = (options: string[]): Draft => ({ options: [], other: options.length === 0, text: '' })
+
 /**
- * Step two, «پرسش‌ها»: up to three questions the draft needs, each answered by
- * choosing among its options, by «چیز دیگر…» and one's own words, or by both.
- * Every question may be left unanswered; with no answer at all the draft is
- * built as it stands (028 §2). Nothing exists yet.
+ * Step two, «پرسش‌ها»: up to four questions the draft needs, each answered by
+ * choosing one of its two options, by «خودت بنویس» and one's own words, or by
+ * both. Every question may be left unanswered; with no answer at all the draft
+ * is built as it stands (028 §2, 029 §7). Nothing exists yet.
  */
 export function PlanningClarification({ clarification, pending, error, onAnswer, onDraftNow }: {
   clarification: PlanningClarificationDto
@@ -28,15 +32,15 @@ export function PlanningClarification({ clarification, pending, error, onAnswer,
   const turn = Number(clarification.turn)
 
   const answers = questions.flatMap(question => {
-    const draft = drafts[question.id]
+    const draft = drafts[question.id] ?? blank(question.options ?? [])
     const text = draft?.other ? draft.text.trim() : ''
     if (!draft || (draft.options.length === 0 && text.length === 0)) return []
     return [{ questionId: question.id, options: draft.options, text: text || null }]
   })
   const tooLong = questions.some(question => (drafts[question.id]?.text.length ?? 0) > answerLength)
 
-  const change = (id: string, next: (draft: Draft) => Draft) =>
-    setDrafts(current => ({ ...current, [id]: next(current[id] ?? { options: [], other: false, text: '' }) }))
+  const change = (id: string, options: string[], next: (draft: Draft) => Draft) =>
+    setDrafts(current => ({ ...current, [id]: next(current[id] ?? blank(options)) }))
 
   return (
     <form
@@ -55,7 +59,7 @@ export function PlanningClarification({ clarification, pending, error, onAnswer,
         {countWords[questions.length - 1] ?? formatNumber(questions.length)} پرسش کوتاه
       </h1>
       <p className="mt-1 text-sm leading-7 text-text-secondary">
-        یکی را انتخاب کنید، یا «چیز دیگر…» و خودتان بنویسید. همه اختیاری‌اند.
+        یکی را انتخاب کنید، یا «{writeOwn}». همه اختیاری‌اند.
         {turn > 1 && ` این دور ${formatNumber(turn)} از حداکثر ${formatNumber(3)} است.`}
       </p>
       {clarification.message && <p className="notice-attention mt-3 whitespace-pre-wrap wrap-break-word">{clarification.message}</p>}
@@ -69,9 +73,9 @@ export function PlanningClarification({ clarification, pending, error, onAnswer,
             reason={question.reason ?? null}
             options={question.options ?? []}
             multiple={question.multiple ?? false}
-            draft={drafts[question.id] ?? { options: [], other: false, text: '' }}
+            draft={drafts[question.id] ?? blank(question.options ?? [])}
             disabled={pending}
-            onChange={next => change(question.id, next)}
+            onChange={next => change(question.id, question.options ?? [], next)}
           />
         ))}
       </ol>
@@ -127,7 +131,7 @@ function Question({ number, text, reason, options, multiple, draft, disabled, on
         </div>
       </div>
       {/* biome-ignore lint/a11y/useSemanticElements: a fieldset would add an unwanted visible legend/border here. */}
-      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-labelledby={titleId} aria-describedby={reason ? reasonId : undefined}>
+      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-labelledby={titleId} aria-describedby={reason ? reasonId : undefined} hidden={options.length === 0}>
         {options.map((label, position) => (
           <button
             // Labels are unique within a question (the server's gate), so they are stable keys.
@@ -141,19 +145,21 @@ function Question({ number, text, reason, options, multiple, draft, disabled, on
             {label}
           </button>
         ))}
-        <button
-          className="answer-chip"
-          data-other=""
-          type="button"
-          aria-pressed={draft.other}
-          aria-expanded={draft.other}
-          aria-controls={textId}
-          disabled={disabled}
-          onClick={() => onChange(current => ({ ...current, other: !current.other }))}
-        >
-          <Pencil size={15} aria-hidden="true" />
-          چیز دیگر…
-        </button>
+        {options.length > 0 && (
+          <button
+            className="answer-chip"
+            data-other=""
+            type="button"
+            aria-pressed={draft.other}
+            aria-expanded={draft.other}
+            aria-controls={textId}
+            disabled={disabled}
+            onClick={() => onChange(current => ({ ...current, other: !current.other }))}
+          >
+            <Pencil size={15} aria-hidden="true" />
+            {writeOwn}
+          </button>
+        )}
       </div>
       {multiple && options.length > 0 && <p className="mt-2 text-xs text-text-secondary">می‌توانید چند گزینه انتخاب کنید.</p>}
       <div id={textId} hidden={!draft.other}>
@@ -167,8 +173,8 @@ function Question({ number, text, reason, options, multiple, draft, disabled, on
               placeholder="پاسخ خودتان را بنویسید"
               value={draft.text}
               disabled={disabled}
-              // biome-ignore lint/a11y/noAutofocus: the field was opened by the user's own press on «چیز دیگر…».
-              autoFocus
+              // biome-ignore lint/a11y/noAutofocus: only a field the user opened with «خودت بنویس» takes the focus.
+              autoFocus={options.length > 0}
               onChange={event => {
                 const value = event.target.value
                 onChange(current => ({ ...current, text: value }))

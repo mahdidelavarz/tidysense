@@ -32,6 +32,15 @@ public sealed record AiGateVerdict<T>(T? Value, string? Gate, string? FailureCla
 {
     /// <summary>What a rejected answer got wrong, in the gate's own words. Null when asking again cannot help.</summary>
     public string? Correction { get; init; }
+
+    /// <summary>
+    /// A usable, reduced result the gate built from a rejected answer, for a family that has one
+    /// (planning, 029 §8): taken when the answer is not asked for again, and kept in case the answer
+    /// asked for again is unusable. Its repair rules are <see cref="FallbackRepairRules"/>.
+    /// </summary>
+    public T? Fallback { get; init; }
+
+    public IReadOnlyList<string> FallbackRepairRules { get; init; } = [];
 }
 
 /// <summary>An operation that ended without a usable result. The class is internal; callers map it to a bounded code.</summary>
@@ -46,7 +55,7 @@ public sealed class AiOperationFailedException(string failureClass) : Exception(
 /// run under its own timeout inside the operation deadline and recorded as metadata. The answer
 /// is usable only through the supplied gate. The second call follows a transient failure or, for
 /// a family that supplies a correction, an answer its gate rejected; that answer passes the same
-/// gate or the operation fails.
+/// gate or the operation fails, unless the gate built a reduced result of a rejected answer.
 /// </summary>
 public sealed class AiOperationRunner(
     IAiCompletionClient client,
@@ -63,6 +72,10 @@ public sealed class AiOperationRunner(
     /// Builds the request that is sent again after a rejected answer, from the first request and the
     /// gate's correction. Null, or a null result, means a rejected answer ends the operation.
     /// </param>
+    /// <remarks>
+    /// A rejected answer is never repaired or used in part, except through the reduced result its
+    /// gate built (<see cref="AiGateVerdict{T}.Fallback"/>), taken only when no answer is asked for again.
+    /// </remarks>
     public async Task<T> RunAsync<T>(AiOperationSpec spec, Func<AiOptions, AiFamilyOptions> family, AiPrompt? prompt,
         Func<AiCompletionResult, AiGateVerdict<T>> gate, CancellationToken cancellationToken,
         Func<AiPrompt, string, AiPrompt?>? correct = null) where T : class
@@ -88,6 +101,8 @@ public sealed class AiOperationRunner(
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(settings.OperationDeadlineSeconds));
         string? retryReason = null;
+        // The gate's reduced result of a rejected answer, used if no better answer comes.
+        (T Value, int Sequence)? kept = null;
         for (var sequence = 1; ; sequence++)
         {
             var estimatedTokens = prompt.EstimatedTokens;
@@ -158,10 +173,15 @@ public sealed class AiOperationRunner(
                 row.OutputTokens = result.OutputTokens;
                 row.EstimatedCostMicros = Cost(provider, result.InputTokens ?? estimatedTokens,
                     result.OutputTokens ?? settings.MaxOutputTokens);
-                row.Outcome = verdict.Value is null ? AiInvocationOutcomes.Rejected : AiInvocationOutcomes.Succeeded;
-                row.Gate = verdict.Gate;
-                row.FailureClass = verdict.FailureClass;
-                row.RepairRulesJson = JsonSerializer.Serialize(verdict.RepairRules.Distinct());
+                // A rejected answer is sent for once more with what the gate rejected, while a call is left.
+                var resend = verdict.Value is null && sequence < MaxInvocations && verdict.Correction is { } correction &&
+                    family(options.CurrentValue).RetryEnabled ? correct?.Invoke(first, correction) : null;
+                if (verdict.Fallback is { } fallback) kept = (fallback, sequence);
+                var reduced = verdict.Value is null && resend is null && verdict.Fallback is not null;
+                row.Outcome = verdict.Value is not null || reduced ? AiInvocationOutcomes.Succeeded : AiInvocationOutcomes.Rejected;
+                row.Gate = reduced ? null : verdict.Gate;
+                row.FailureClass = reduced ? null : verdict.FailureClass;
+                row.RepairRulesJson = JsonSerializer.Serialize((reduced ? verdict.FallbackRepairRules : verdict.RepairRules).Distinct());
                 await RecordAsync(row);
                 if (verdict.Value is not null) return verdict.Value;
                 if (verdict.Correction is not null)
@@ -169,15 +189,13 @@ public sealed class AiOperationRunner(
                         "AI output rejected. Family: {Family}, Gate: {Gate}, Sequence: {Sequence}, AttemptId: {AttemptId}, ExplanationId: {ExplanationId}, Detail: {Detail}",
                         spec.Family, verdict.Gate, sequence, spec.PlanningAttemptId, spec.ReconcileExplanationId,
                         verdict.Correction);
-                // A rejected answer is never repaired or used in part. The request is sent once more with
-                // what the gate rejected, and that answer passes the same gate or the operation fails.
-                if (sequence < MaxInvocations && verdict.Correction is { } correction &&
-                    correct?.Invoke(first, correction) is { } corrected && family(options.CurrentValue).RetryEnabled)
+                if (resend is not null)
                 {
-                    prompt = corrected;
+                    prompt = resend;
                     retryReason = verdict.FailureClass;
                     continue;
                 }
+                if (kept is { } usable) return Reduced(usable);
                 throw new AiOperationFailedException(verdict.FailureClass!);
             }
 
@@ -196,7 +214,16 @@ public sealed class AiOperationRunner(
                 retryReason = failure;
                 continue;
             }
+            if (kept is { } earlier) return Reduced(earlier);
             throw new AiOperationFailedException(failure);
+        }
+
+        T Reduced((T Value, int Sequence) kept)
+        {
+            logger.LogInformation(
+                "AI output used without the items its gate removed. Family: {Family}, Sequence: {Sequence}, AttemptId: {AttemptId}",
+                spec.Family, kept.Sequence, spec.PlanningAttemptId);
+            return kept.Value;
         }
 
         AiInvocation Row(int sequence, DateTimeOffset startedAt, int inputEstimate, long cost, string reduction) =>

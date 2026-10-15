@@ -5032,6 +5032,7 @@ export interface components {
             canApply: boolean;
             /** Format: uuid */
             linkedConfirmationId: null | string;
+            removedItems: components["schemas"]["PlanningRemovedItem"][];
         };
         PlanningDraftRevisionRequest: {
             /** Format: int32 */
@@ -5133,6 +5134,9 @@ export interface components {
             timesOfDay: null | string[];
             /** Format: date */
             effectiveFromLocalDate: null | string;
+            sequenceKey?: null | string;
+            /** Format: int32 */
+            sequenceOrder?: null | number | string;
         };
         PlanningProposalViewDto: {
             proposal: components["schemas"]["PlanningProposal"];
@@ -5153,6 +5157,10 @@ export interface components {
             daysOfWeek: null | (number | string)[];
             /** Format: int32 */
             dayOfMonth: null | number | string;
+        };
+        PlanningRemovedItem: {
+            entityType: string;
+            title: null | string;
         };
         PlanningWarningDto: {
             warningId: string;

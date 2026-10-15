@@ -2,6 +2,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -545,6 +546,116 @@ public sealed class AiPlanningRuntimeTests
             usage = new { prompt_tokens = 120, completion_tokens = 80 }
         }), Encoding.UTF8, "application/json")
     };
+
+    /// <summary>A draft whose standalone Task has no date: well formed, but the user could not approve it.</summary>
+    private static string Unapprovable()
+    {
+        var value = PlanningOutputGateTests.Valid();
+        value["draft"]!["proposals"]![2]!["parentDraftId"] = null;
+        value["draft"]!["proposals"]![2]!["plannedDate"] = null;
+        return value.ToJsonString();
+    }
+
+    [Fact]
+    public async Task A_draft_the_user_could_not_approve_is_asked_for_again_naming_only_positions_and_rules()
+    {
+        var harness = new Harness();
+        harness.Provider.Reply(Completion(Unapprovable()));
+        harness.Provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
+
+        var result = await harness.GenerateAsync();
+
+        Assert.Equal(4, result.Draft!.Proposals.Count);
+        Assert.Empty(result.Draft.RemovedItems ?? []);
+        var (corrected, _) = Messages(harness.Provider.Calls[1]);
+        Assert.Contains("draft.proposals[2]", corrected);
+        Assert.Contains("needs a \"plannedDate\" inside the window", corrected);
+        Assert.DoesNotContain("انتخاب کتاب", corrected);
+        Assert.Equal([AiInvocationOutcomes.Rejected, AiInvocationOutcomes.Succeeded], harness.Log.Rows.Select(x => x.Outcome));
+        Assert.Equal(AiFailureClasses.Semantic, harness.Log.Rows[1].RetryReason);
+    }
+
+    [Fact]
+    public async Task Items_still_unapprovable_after_the_one_regeneration_are_left_out_and_named()
+    {
+        var harness = new Harness();
+        harness.Provider.Reply(Completion(Unapprovable()));
+        harness.Provider.Reply(Completion(Unapprovable()));
+
+        var draft = (await harness.GenerateAsync()).Draft!;
+
+        Assert.Equal(2, harness.Provider.Calls.Count);
+        Assert.DoesNotContain(draft.Proposals, x => x.DraftId == "step");
+        // The Task had no date, and its Project, left without work, could not be approved either.
+        Assert.Equal([new PlanningRemovedItem(PlanningEntityTypes.Project, "گام نخست"),
+            new PlanningRemovedItem(PlanningEntityTypes.Task, "انتخاب کتاب")], draft.RemovedItems);
+        // The note about the removed Task goes with it; nothing else is changed.
+        Assert.DoesNotContain(draft.Assumptions, x => x.DraftId == "step");
+        Assert.Equal(["goal", "practice"], draft.Proposals.Select(x => x.DraftId));
+        var used = harness.Log.Rows[1];
+        Assert.Equal(AiInvocationOutcomes.Succeeded, used.Outcome);
+        Assert.Contains(PlanningOutputGate.RemoveInvalidItems, used.RepairRulesJson);
+        Assert.Null(used.FailureClass);
+    }
+
+    [Fact]
+    public async Task An_unusable_regeneration_falls_back_to_the_first_draft_without_its_invalid_items()
+    {
+        var harness = new Harness();
+        harness.Provider.Reply(Completion(Unapprovable()));
+        var broken = PlanningOutputGateTests.Valid();
+        broken["extra"] = true;
+        harness.Provider.Reply(Completion(broken.ToJsonString()));
+
+        var draft = (await harness.GenerateAsync()).Draft!;
+
+        Assert.Equal(["goal", "practice"], draft.Proposals.Select(x => x.DraftId));
+        Assert.Equal(2, draft.RemovedItems!.Count);
+        Assert.Equal([AiInvocationOutcomes.Rejected, AiInvocationOutcomes.Rejected], harness.Log.Rows.Select(x => x.Outcome));
+    }
+
+    [Fact]
+    public async Task Without_a_retry_the_draft_is_used_at_once_without_its_invalid_items_and_nothing_left_fails()
+    {
+        var harness = new Harness(x => x.Planning.RetryEnabled = false);
+        harness.Provider.Reply(Completion(Unapprovable()));
+        var draft = (await harness.GenerateAsync()).Draft!;
+        Assert.Single(harness.Provider.Calls);
+        Assert.Equal(2, draft.Proposals.Count);
+        Assert.Equal(AiInvocationOutcomes.Succeeded, Assert.Single(harness.Log.Rows).Outcome);
+
+        // When every item would go, there is no draft.
+        var lone = PlanningOutputGateTests.Valid();
+        var task = lone["draft"]!["proposals"]![2]!.DeepClone();
+        task["parentDraftId"] = null;
+        task["plannedDate"] = null;
+        lone["draft"]!["proposals"] = new JsonArray(task);
+        lone["draft"]!["facts"] = new JsonArray();
+        lone["draft"]!["assumptions"] = new JsonArray();
+        harness.Provider.Reply(Completion(lone.ToJsonString()));
+        Assert.Equal(PlanningFailureCodes.DraftInvalid, await harness.FailureAsync());
+    }
+
+    [Fact]
+    public async Task The_model_is_given_the_persian_calendar_of_the_window_and_never_computes_it()
+    {
+        var harness = new Harness();
+        harness.Provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
+        await harness.GenerateAsync();
+
+        var user = Messages(harness.Provider.Calls[0]).User;
+        var data = JsonDocument.Parse(user[(user.IndexOf('\n') + 1)..user.LastIndexOf('\n')]).RootElement.GetProperty("calendar");
+        // 2026-10-03 is Saturday 11 Mehr 1405; Saturday is ISO 6.
+        Assert.Equal("۱۱ مهر ۱۴۰۵", data.GetProperty("today").GetProperty("persianDate").GetString());
+        Assert.Equal("شنبه", data.GetProperty("today").GetProperty("weekday").GetString());
+        Assert.Equal(6, data.GetProperty("today").GetProperty("isoWeekday").GetInt32());
+        Assert.Equal(7, data.GetProperty("window").GetArrayLength());
+        Assert.Equal("جمعه", data.GetProperty("window")[6].GetProperty("weekday").GetString());
+        Assert.Equal("2026-10-22", data.GetProperty("endOfThisPersianMonth").GetProperty("date").GetString());
+        Assert.Equal("2026-11-21", data.GetProperty("endOfNextPersianMonth").GetProperty("date").GetString());
+        Assert.Equal("2027-03-21", data.GetProperty("nextNowruz").GetProperty("date").GetString());
+        Assert.Equal("۱ فروردین ۱۴۰۶", data.GetProperty("nextNowruz").GetProperty("persianDate").GetString());
+    }
 
     private sealed class Harness
     {

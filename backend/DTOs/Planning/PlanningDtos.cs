@@ -18,7 +18,7 @@ public sealed record StartPlanningAttemptRequest(
     Guid? ProjectId,
     bool ReplaceActive,
     Guid? PreviousAttemptId = null,
-    [MaxLength(3)] IReadOnlyList<PlanningAnswer>? Answers = null,
+    [MaxLength(PlanningClarificationRules.MaxQuestions)] IReadOnlyList<PlanningAnswer>? Answers = null,
     bool DraftNow = false);
 
 /// <summary>Questions to answer, or the reason the input cannot be planned and what to change.</summary>
@@ -76,6 +76,7 @@ public sealed record PlanningFirstWeekEntryDto(string DraftId, DateOnly Date);
 /// <summary>
 /// The current revision with its review states re-derived on every read. The status is the
 /// draft's own lifecycle; a linked confirmation says nothing about whether anything was created.
+/// <c>RemovedItems</c> names what the generator proposed but could not make valid (029 §8).
 /// </summary>
 public sealed record PlanningDraftDto(
     Guid Id,
@@ -94,7 +95,8 @@ public sealed record PlanningDraftDto(
     IReadOnlyList<PlanningIssueDto> DraftIssues,
     IReadOnlyList<PlanningFirstWeekEntryDto> FirstWeek,
     bool CanApply,
-    Guid? LinkedConfirmationId);
+    Guid? LinkedConfirmationId,
+    IReadOnlyList<PlanningRemovedItem> RemovedItems);
 
 /// <summary>
 /// The full edited item lists of the revision being replaced. Identity, entity type, provenance

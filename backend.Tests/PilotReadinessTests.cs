@@ -55,7 +55,10 @@ public sealed class PilotReadinessTests(PostgresWebApplicationFactory factory)
         Assert.Equal(PrivacyNotice.Version, notice.NoticeVersion);
 
         // A fresh account plans with the model at once; there is no step to agree first.
-        provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
+        // The Task is left undated under its Project, so the draft is approvable on any day the test runs.
+        var valid = PlanningOutputGateTests.Valid();
+        valid["draft"]!["proposals"]![2]!["plannedDate"] = null;
+        provider.Reply(Completion(valid.ToJsonString()));
         var accepted = await StartAsync(client, "no-consent");
         Assert.Equal(HttpStatusCode.Accepted, accepted.StatusCode);
         var ended = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(accepted)).Id);

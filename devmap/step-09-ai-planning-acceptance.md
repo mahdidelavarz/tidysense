@@ -22,11 +22,30 @@
 8. An output is usable only if it passes, in order: transport completeness (finish reason `stop`, non-empty, at most 60,000 characters), the allowlisted wrapper removal, strict parsing, schema, policy, and the structural rules of every draft (STEP-08 statements 10–11). Any failure rejects the whole output.
 9. Allowed repairs, each recorded by rule id: `REMOVE_UTF8_BOM`, `TRIM_SURROUNDING_WHITESPACE`, `REMOVE_SINGLE_JSON_CODE_FENCE`, `NORMALIZE_KNOWN_ENUM_CASE` (exact match ignoring letter case only), `NORMALIZE_YEAR_FIRST_DATE_SEPARATOR` and `PAD_YEAR_FIRST_MONTH_OR_DAY` (four-digit year first, numeric, calendar-valid). Nothing is invented, dropped, reparented or reclassified.
 10. An unknown field, a duplicated property name, a wrong type, an unknown enum value or a date in any other form fails the schema. A review date supplied by the model is an unknown field.
-11. A recurrence type outside the supported three is kept as written and blocked in review (`UNSUPPORTED_RECURRENCE`); it is never converted.
+11. A recurrence type outside the supported three is kept as written and never converted. Since STEP-22 the Routine is asked for again and otherwise left out (statement 13c); before, it was blocked in review (`UNSUPPORTED_RECURRENCE`).
 12. The planning window, the review-date defaults and the context fingerprint are the server's; the model does not supply them.
 13. A rejected output is never used, in whole or in part. When it failed parsing, the schema, the policy or the structural rules, the same request is sent once more with a `CORRECTION` section added to the system message; a second rejection, or a rejection that cannot be corrected (an incomplete response), ends the attempt with `DRAFT_INVALID`. (Owner decision of 2026-10-09; it replaces "a rejected output is not retried".)
 13a. The correction is written by the gate: the path of the field (`draft.proposals[2].plannedDate`), the rule and the allowed values. It never repeats a field name or a value from the rejected output, so no model or user text becomes an instruction. It is at most 1,500 characters, is logged with the rejection, and is not stored. If the corrected request no longer fits `MaxInputTokens`, it is not sent.
 13b. The system message states the shape exactly (closed value lists, required fields, date and time forms, number types, id references), so that the first answer passes.
+13c. *(STEP-22, Discussion 029 §8.)* A well-formed draft that the user could not approve as handed over is a rejected output (gate `SEMANTIC`). This covers a blocking review issue of any item, or of the whole draft, judged with every item included, an empty Goal or Project among them. Its correction names each item by position (`draft.proposals[3]`) and the rule in the gate's words, and never repeats a title.
+13d. With the rejection, the gate builds the same draft without those items:
+    - each removed item takes everything under it;
+    - a fact goes with its scope;
+    - notes and warnings about removed items go too;
+    - a sequence left with one member loses its order;
+    - the removed items are listed in `removedItems` (entity type and title; a fact has no title).
+
+    Nothing is re-dated, re-typed or re-parented.
+13e. This reduced draft is used when no answer is asked for again, or when the answer asked for again is unusable, including a transient failure of that call. Its call is recorded `SUCCEEDED` with repair rule `REMOVE_INVALID_ITEMS`. `DRAFT_INVALID` remains only when nothing would be left, when the whole draft is at fault, or when no reduced draft exists. This replaces "a rejected output is never used, in whole or in part" for this one case: the gate, not the model, decides what is left.
+13f. *(STEP-22.)* Other slips the gate cures the same way: asked for again once, and otherwise handled by the gate as follows.
+    - **An invalid sequence** loses only its order, without a resend (`DROP_INVALID_SEQUENCE`).
+    - **Too many Goals, Projects, Tasks, Routines or proposals:** the later items are left out and named.
+    - **A planning detail that breaks the catalogue** (`FACT_INVALID`) is left out and named.
+    - **Notes and warnings** that break their rules or limits are dropped; they are not items.
+    - **A first week with more than 21 occurrences** loses its last Routines, then its last dated Tasks, named.
+    - **A Persian date in the text** of a draft or of questions that names a day its month does not have, or a weekday that is not that date's weekday (`PlanningTextDates`), is asked for again; otherwise the text is kept as written.
+
+    A repeated `draftId`, a wrong type or an unknown field still rejects the whole output.
 
 ### One logical operation
 
@@ -49,7 +68,7 @@
 ### Clarification
 
 26. A succeeded attempt has an outcome: `DRAFT`, `CLARIFICATION` or `INPUT_BLOCKED`. Attempt statuses are unchanged. Only `DRAFT` has a draft.
-27. A clarification has one to three questions (at most 300 characters each) and an optional message of at most 500 characters, used to state a boundary. A blocked input has a reason (`TOO_VAGUE`, `CONTRADICTORY`, `UNSUPPORTED_REQUEST`, `MISSING_CONSTRAINT`) and a message.
+27. A clarification has one to four questions (three before STEP-22), at most 300 characters each, and an optional message of at most 500 characters, used to state a boundary. A blocked input has a reason (`TOO_VAGUE`, `CONTRADICTORY`, `UNSUPPORTED_REQUEST`, `MISSING_CONSTRAINT`) and a message.
 28. Answering is a new attempt with `previousAttemptId`. It takes the intention and the planning context from the attempt that asked, whatever the request sends. Answers belong to that attempt's questions, are at most 500 characters, and at least one is required unless `draftNow` is sent.
 29. A clarification is answered once (`409 CLARIFICATION_ALREADY_ANSWERED` otherwise) and only by its owner. An attempt without questions cannot be answered (`422 CLARIFICATION_NOT_PENDING`).
 30. A flow has at most three clarification turns. On the fourth request, or with `draftNow`, the generator is told not to ask; a question returned anyway fails the attempt with `DRAFT_INVALID`.
@@ -60,13 +79,27 @@
 
 33. Every provider call, and every operation that was blocked before a call, writes one `AiInvocations` row (R4) and one structured log line. Fields are listed in `backend/logging-observability.md`. No prompt, response or user text is stored.
 
-### Questions with options (STEP-18, Discussion 028 §2)
+### Questions with options (STEP-18, Discussion 028 §2; amended by STEP-22, Discussion 029 §7)
+
+*Since STEP-22:*
+- a question has no options or exactly two;
+- the kinds are `TIMING`, `RECURRENCE`, `CONSTRAINT`, `CONTENT`, `OWNERSHIP` and `CONTRADICTION` (`ENTITY_TYPE` removed, so the gate rejects it);
+- the product-added free-text answer is «خودت بنویس», and its spellings count as an "other" option;
+- a turn has up to four questions and four answers;
+- the measurement events allow four items.
+
+Statements 27a–28c below keep their STEP-18 wording otherwise.
 
 27a. A question has `id`, `text` (1–300), `reason` (null or one line of 1–120), `kind` (`TIMING`, `RECURRENCE`, `CONSTRAINT`, `CONTENT`, `OWNERSHIP`, `ENTITY_TYPE`, `CONTRADICTION`), `options` (none, or 2–7 labels of 1–40 characters, one line each, all different once spaces, zero-width joiners and punctuation are ignored) and `multiple` (true only with options).
 27b. The gate rejects the whole output for an unknown or missing kind, a broken option count or label, a duplicate label, `multiple` without options, or an option that only means "something else" or "write your own" (`PlanningClarificationRules.IsOther`: «چیز دیگر…», «سایر», «غیره», «خودم می‌نویسم», "Other" and their spellings). «نمی‌دانم» and «هیچ‌کدام» are real answers and pass. Its correction names the rule and never repeats a label. Labels are model output: the client shows them as plain text only.
 28a. An answer is `{ questionId, options[], text }`: the zero-based positions of the chosen options, the «چیز دیگر…» text, or both. Positions must be offered by that question, each once, and at most one unless the question is `multiple`; otherwise `400`. An answer with neither is a skipped question. The server, not the client, turns positions into labels: the model receives each answer as `{ questionId, chosen[labels], text }`.
 28b. Measurement (027 §5, 028 §2.5) is recorded as two R1 events with kinds, counts and positions only, never a label or a text: `PLANNING_CLARIFICATION_ASKED` (actor `SYSTEM_DETERMINISTIC`, aggregate the asking attempt; `flowId`, `turn`, `questions[{kind, optionCount, multiple}]`) when questions are stored, and `PLANNING_CLARIFICATION_ANSWERED` (actor `USER`; `flowId`, `turn`, `draftNow`, `answers[{kind, chosen[], other}]`, one per question asked, in order) when they are answered or skipped with «بدون پاسخ بساز». `PLANNING_DRAFT_CREATED` version 2 adds `flowId` and `clarificationTurns`. `flowId` is the first attempt of the flow, so the events of one flow still join after the attempts are purged (R3).
 28c. Output schema `2026-10-14.1`, prompt `2026-10-14.1`. The prompt states the question shape, the kinds, when to offer options and that the program adds «چیز دیگر…» itself.
+28d. *(STEP-22.)* Output schema `2026-10-15.1`, prompt `2026-10-15.1`, repair policy `2026-10-15.1`.
+    - **Sequences:** Task proposals may carry `sequenceKey` and `sequenceOrder`. A sequence has two or more Tasks with one owner and distinct positive orders; otherwise it is `SEQUENCE_INVALID`. Apply creates one durable sequence per key from the approved Tasks, if two or more remain.
+    - **Calendar:** the data block holds `calendar`, computed by the renderer with `PersianCalendar`. It has today and each window day with their Persian date, Persian weekday and ISO weekday, the end of this and the next Persian month, the next Nowruz, and the ISO numbers of the Iranian week.
+    - **Prompt rules:** the dates of 029 §4 (target dates and deadlines up to 24 months ahead, planned dates and Routine starts inside the window); the structure meanings and the long-intention shape of 029 §5; the question rules of 029 §7.
+    - **New draft rules:** `DATE_TOO_FAR` and `EMPTY_PARENT`; an undated Task whose deadline has passed is `DATE_IN_PAST`; a Routine starting after the window is `DATE_OUTSIDE_WINDOW`.
 
 ## API surface
 
@@ -75,7 +108,7 @@
 - `PlanningActiveDto` adds `clarification` and `sampleGenerator`.
 - STEP-18: `PlanningQuestion` adds `reason`, `kind`, `options`, `multiple`; `answers[]` items add `options` (positions) and `text` becomes optional.
 
-Persian UI terms: the questions screen is «سه پرسش کوتاه» (by count), draft now is «بدون پاسخ بساز» (STEP-18; before, «همین حالا پیش‌نویس بساز»).
+Persian UI terms: the questions screen is «سه پرسش کوتاه» (by count, up to «چهار پرسش کوتاه»), draft now is «بدون پاسخ بساز» (STEP-18; before, «همین حالا پیش‌نویس بساز»), the own-words answer is «خودت بنویس» (STEP-22; before, «چیز دیگر…»).
 
 ## Recorded deviations and assumptions
 
