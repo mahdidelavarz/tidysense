@@ -91,7 +91,7 @@ function GoalsPhone() {
                     <span id="goals-active">در جریان</span>
                     <span className="count-pill" aria-hidden="true">{formatNumber(active.length)}</span>
                   </h2>
-                  <ul className="grid gap-3 md:grid-cols-2">
+                  <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     {active.map(goal => (
                       <li key={goal.id}>
                         <GoalCard goal={goal} today={today} progress={progress.data?.goals.find(item => item.goalId === goal.id)} />
@@ -112,7 +112,7 @@ function GoalsPhone() {
                       closed.some(goal => goal.status === 'ABANDONED') && `${formatNumber(closed.filter(goal => goal.status === 'ABANDONED').length)} رهاشده`,
                     ].filter(Boolean).join('، ')}
                   />
-                  <ul className="mt-3 grid gap-3 md:grid-cols-2" id="goals-closed" hidden={!showClosed}>
+                  <ul className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2" id="goals-closed" hidden={!showClosed}>
                     {closed.map(goal => (
                       <li key={goal.id}>
                         <GoalCard goal={goal} today={today} progress={progress.data?.goals.find(item => item.goalId === goal.id)} />

@@ -44,7 +44,7 @@ export function SystemHealthView({ health, ai, metrics }: {
 }) {
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatusTile health={health.data} />
         <SpendTile ai={ai.data} />
         <CallsTile ai={ai.data} />
@@ -53,7 +53,7 @@ export function SystemHealthView({ health, ai, metrics }: {
 
       <Loaded query={health} pendingText="در حال دریافت هشدارها…">
         {data => (
-          <div className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.25fr_1fr]">
             <Card title="هشدارهای فعال"><Alerts alerts={data.alerts} /></Card>
             <Card title="صف‌ها و نگهداری"><Queues health={data} /></Card>
           </div>
@@ -185,7 +185,7 @@ function AiRuntime({ ai }: { ai: OperationsAiDto }) {
       <p className={ai.globalKillSwitch ? 'status-badge bg-attention-tint text-attention' : 'status-badge status-positive'}>
         کلید توقف سراسری: {ai.globalKillSwitch ? 'روشن' : 'خاموش'}
       </p>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {ai.families.map(family => (
           <section key={family.family} className="card ops-family" aria-label={`خانواده‌ی ${familyName[family.family] ?? family.family}`}>
             <header className="flex flex-wrap items-center justify-between gap-2">
@@ -208,7 +208,7 @@ function AiRuntime({ ai }: { ai: OperationsAiDto }) {
           </section>
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="card ops-scroll p-0 sm:p-0">
           <table className="ops-table">
             <caption>فراخوانی‌های ارائه‌دهنده در بازه</caption>
@@ -273,7 +273,7 @@ function Evidence({ metrics }: { metrics: OperationsMetricsDto }) {
       <p className="text-xs leading-6 text-text-secondary">
         نسخه‌ی واژه‌نامه‌ی معیارها: <Code>{metrics.catalogVersion}</Code> · هر ردیف «صورت از مخرج» است؛ درصدی بدون مخرج نشان داده نمی‌شود و آستانه‌ای تعیین نشده است.
       </p>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {metrics.primary.map(metric => <MetricCard key={metric.id} metric={metric} />)}
       </div>
       <details className="card">
@@ -281,7 +281,7 @@ function Evidence({ metrics }: { metrics: OperationsMetricsDto }) {
           <Users size={18} aria-hidden="true" />
           حساب‌های داخلی (جدا از جمعیت اصلی)
         </summary>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {metrics.internal.map(metric => <MetricCard key={metric.id} metric={metric} />)}
         </div>
       </details>

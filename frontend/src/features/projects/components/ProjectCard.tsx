@@ -27,7 +27,7 @@ export function ProjectCard({ project, progress, today, completingId, onComplete
         <span className="project-tile" aria-hidden="true"><FolderKanban size={22} /></span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="truncate text-[1.0625rem] font-extrabold leading-7">
+            <h3 className="line-clamp-2 wrap-break-word text-[1.0625rem] font-extrabold leading-7">
               <Link className="stretched-link" to="/projects/$projectId" params={{ projectId: project.id }}>{project.title}</Link>
             </h3>
             {active ? <TargetNote date={project.targetDate} today={today} /> : <StatusBadge status={project.status} />}

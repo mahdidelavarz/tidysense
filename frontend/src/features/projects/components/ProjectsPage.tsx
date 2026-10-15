@@ -118,7 +118,7 @@ export function ProjectsPage() {
                     <span id={`projects-${group.id}`} className={group.id === 'none' ? '' : 'entity-ink'}>{group.title}</span>
                     <span className="count-pill" aria-hidden="true">{formatNumber(group.members.length)}</span>
                   </h2>
-                  <ul className="grid gap-3 md:grid-cols-2">{group.members.map(card)}</ul>
+                  <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">{group.members.map(card)}</ul>
                 </section>
               ))}
               {closed.length > 0 && (
@@ -130,7 +130,7 @@ export function ProjectsPage() {
                     label="پایان‌یافته"
                     detail={`${formatNumber(closed.length)} پروژه`}
                   />
-                  <ul className="mt-3 grid gap-3 md:grid-cols-2" id="projects-closed" hidden={!showClosed}>{closed.map(card)}</ul>
+                  <ul className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2" id="projects-closed" hidden={!showClosed}>{closed.map(card)}</ul>
                 </section>
               )}
             </div>
