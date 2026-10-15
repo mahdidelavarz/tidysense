@@ -132,6 +132,10 @@ Direction: the layout is RTL, so "back" is `ArrowRight`/`ChevronRight` and "forw
 | phone number (sign-in) | `Smartphone` | `smartphone` |
 | copy the dev code | `Copy` | `copy` |
 | send the code | `Send` | `plain` |
+| operations: system health / product insights tabs | `ChartLine` / `ChartColumns` | `graph-new-up` / `chart-square` |
+| operations: people, an account that reached a step | `Users` / `UserCheck` | `users-group-rounded` / `user-check-rounded` |
+| operations: satisfaction, spend, unpublished events | `MessageHeart` / `Coins` / `Outbox` | `chat-round-like` / `dollar-minimalistic` / `inbox-out` |
+| operations: an active alert | `TriangleAlert` | `danger-triangle` |
 
 ## Dependencies added for this system
 

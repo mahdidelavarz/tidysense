@@ -1,18 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import { type ReactNode, useState } from 'react'
-import { formatNumber } from '../../../shared/lib/date'
-import { PageHeader } from '../../../shared/ui/PageHeader'
+import { type KeyboardEvent, useId, useState } from 'react'
+import { type AppIcon, ChartColumns, ChartLine, Lock } from '../../../shared/ui/icons'
 import { SegmentedControl } from '../../../shared/ui/SegmentedControl'
-import { ErrorState, LoadingState, NotFoundState } from '../../../shared/ui/StateUi'
+import { NotFoundState } from '../../../shared/ui/StateUi'
 import { useCurrentUser } from '../../auth/hooks/auth-hooks'
-import { useOperationsAi, useOperationsHealth, useOperationsMetrics } from '../hooks/operations-hooks'
-import type {
-  MetricResultDto,
-  OperationsAiDto,
-  OperationsHealthDto,
-  OperationsMetricsDto,
-  OperationsRange,
-} from '../types/operations.types'
+import { useOperationsAi, useOperationsHealth, useOperationsInsights, useOperationsMetrics } from '../hooks/operations-hooks'
+import type { OperationsRange, OperationsView } from '../types/operations.types'
+import { ProductInsightsView } from './ProductInsightsView'
+import { SystemHealthView } from './SystemHealthView'
 
 const ranges: ReadonlyArray<{ value: OperationsRange; label: string }> = [
   { value: '7', label: '۷ روز' },
@@ -20,233 +15,95 @@ const ranges: ReadonlyArray<{ value: OperationsRange; label: string }> = [
   { value: '90', label: '۹۰ روز' },
 ]
 
-const dollars = new Intl.NumberFormat('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
-const dateTime = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' })
-
-/** Cost is stored in millionths of a US dollar. */
-const cost = (micros: number | string) => `${dollars.format(Number(micros) / 1_000_000)} دلار`
-const count = (value: number | string) => formatNumber(Number(value))
-const yesNo = (value: boolean) => (value ? 'بله' : 'خیر')
-/** Budget alerts carry money; every other alert carries a plain number. */
-const amount = (rule: string, value: number | string) => (rule.startsWith('AI_BUDGET') ? cost(value) : count(value))
+const views: ReadonlyArray<{ value: OperationsView; label: string; icon: AppIcon }> = [
+  { value: 'health', label: 'سلامت سیستم', icon: ChartLine },
+  { value: 'insights', label: 'سنجش محصول', icon: ChartColumns },
+]
 
 /**
- * The operator page: alerts, the AI runtime and the H1/H2 evidence, read-only. Every figure is a
- * count shown with its denominator; nothing on the page identifies a user or shows their text.
+ * The operator page, read-only, in two views: «سلامت سیستم» (alerts, the AI runtime, H1/H2
+ * evidence) and «سنجش محصول» (027 §5). Both read the same window. Nothing on it identifies a user;
+ * the only user text is the satisfaction reasons, shown without identity.
  */
 export function OperationsPage() {
   const user = useCurrentUser()
   const allowed = user.data?.isOperator === true
+  const [view, setView] = useState<OperationsView>('health')
   const [range, setRange] = useState<OperationsRange>('28')
   const days = Number(range)
-  const health = useOperationsHealth(allowed)
-  const ai = useOperationsAi(days, allowed)
+  const health = useOperationsHealth(allowed && view === 'health')
+  const ai = useOperationsAi(days, allowed && view === 'health')
+  // The funnel reads acceptance and time to draft from the H1 evidence, so both views use it.
   const metrics = useOperationsMetrics(days, allowed)
+  const insights = useOperationsInsights(days, allowed && view === 'insights')
+  const id = useId()
 
   // The page does not exist for anyone else; the server answers their requests the same way.
   if (!allowed) return <NotFoundState action={<Link className="primary-button" to="/today">رفتن به امروز</Link>} />
 
-  return (
-    <div className="page-wide">
-      <PageHeader
-        title="عملیات"
-        description="هشدارها، وضعیت هوش مصنوعی و شواهد آزمایشی. فقط خواندنی است و هیچ کاربر یا متنی را نشان نمی‌دهد."
-      />
-      <Section title="هشدارها و نگهداری" query={health} pendingText="در حال دریافت هشدارها…">
-        {data => <HealthSection health={data} />}
-      </Section>
-      <div className="mb-5 mt-10 flex items-center gap-3">
-        <SegmentedControl label="بازهٔ زمانی" value={range} options={ranges} onChange={setRange} />
-        {(ai.isFetching || metrics.isFetching) && !(ai.isPending || metrics.isPending) && (
-          <span className="text-xs text-text-secondary" role="status">در حال به‌روزرسانی…</span>
-        )}
-      </div>
-      <Section title="هوش مصنوعی" query={ai} pendingText="در حال دریافت وضعیت هوش مصنوعی…">
-        {data => <AiSection ai={data} />}
-      </Section>
-      <Section title="شواهد H1 و H2" query={metrics} pendingText="در حال دریافت شواهد…">
-        {data => <MetricsSection metrics={data} />}
-      </Section>
-    </div>
-  )
-}
+  const refreshing = view === 'health'
+    ? (ai.isFetching || metrics.isFetching) && !(ai.isPending || metrics.isPending)
+    : insights.isFetching && !insights.isPending
 
-function Section<T>({ title, query, pendingText, children }: {
-  title: string
-  query: { data: T | undefined; isPending: boolean; error: unknown; refetch: () => unknown }
-  pendingText: string
-  children: (data: T) => ReactNode
-}) {
   return (
-    <section className="lane mb-10" aria-label={title}>
-      <h2 className="lane-title mb-4">{title}</h2>
-      {query.isPending ? <LoadingState text={pendingText} />
-        : query.error || query.data === undefined
-          ? <ErrorState onRetry={() => query.refetch()} description="ارتباط را بررسی کنید و دوباره تلاش کنید." />
-          : children(query.data)}
-    </section>
-  )
-}
+    <div className="page-wide pb-16">
+      <header className="mb-5">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-text-secondary">
+          <Lock size={14} aria-hidden="true" /> فقط اپراتور · فقط خواندنی
+        </p>
+        <h1 className="page-title">عملیات</h1>
+        <p className="mt-1 text-sm leading-7 text-text-secondary">
+          {view === 'health'
+            ? 'هشدارها، وضعیت هوش مصنوعی و شواهد آزمایشی. هیچ کاربر یا متنی در این صفحه نیست؛ فقط شمارش‌ها.'
+            : 'آیا محصول به کار می‌آید؟ هر عدد با مخرجش؛ بدون آستانه و بدون رنگ خوب و بد.'}
+        </p>
+      </header>
 
-function HealthSection({ health }: { health: OperationsHealthDto }) {
-  return (
-    <div className="space-y-4">
-      {health.alerts.length === 0
-        ? <p className="card text-sm text-text-secondary">هشدار فعالی وجود ندارد.</p>
-        : (
-          <ul className="space-y-2" aria-label="هشدارهای فعال">
-            {health.alerts.map(alert => (
-              <li key={`${alert.rule}-${alert.scope}`} className="card flex flex-wrap items-center gap-3">
-                <span className={alert.severity === 'CRITICAL' ? 'status-badge bg-attention-tint text-attention' : 'status-badge status-active'}>
-                  {alert.severity === 'CRITICAL' ? 'بحرانی' : 'هشدار'}
-                </span>
-                <code dir="ltr" className="text-sm font-bold">{alert.rule}</code>
-                <code dir="ltr" className="text-sm text-text-secondary">{alert.scope}</code>
-                {Number(alert.threshold) > 0 && (
-                  <span className="text-sm text-text-secondary">
-                    {/* A negative value means there is nothing to measure yet, such as maintenance that never ran. */}
-                    {Number(alert.value) < 0
-                      ? 'هنوز مقداری ثبت نشده است'
-                      : `مقدار ${amount(alert.rule, alert.value)} از آستانهٔ ${amount(alert.rule, alert.threshold)}`}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      <dl className="card grid gap-3 text-sm sm:grid-cols-2">
-        <Term label="آخرین اجرای نگهداری">
-          {health.lastMaintenanceAt
-            ? `${dateTime.format(new Date(health.lastMaintenanceAt))} · ${health.lastMaintenanceOutcome === 'SUCCEEDED' ? 'موفق' : 'ناموفق'}`
-            : 'هنوز اجرا نشده'}
-        </Term>
-        <Term label="توضیح‌های گیرکرده">{count(health.stuckExplanations)}</Term>
-        <Term label="تلاش‌های برنامه‌ریزی گیرکرده">{count(health.stuckPlanningAttempts)}</Term>
-        <Term label="رویدادهای منتشرنشده (ناشر وجود ندارد)">{count(health.pendingOutboxMessages)}</Term>
-      </dl>
-    </div>
-  )
-}
-
-function AiSection({ ai }: { ai: OperationsAiDto }) {
-  return (
-    <div className="space-y-4">
-      <Table
-        caption={`وضعیت خانواده‌ها · کلید توقف سراسری: ${ai.globalKillSwitch ? 'روشن' : 'خاموش'}`}
-        head={['خانواده', 'ارائه‌دهنده', 'نمونه', 'کلید توقف', 'تلاش دوباره', 'مدار باز', 'سقف هزینهٔ ارائه‌دهنده', 'هزینهٔ امروز', 'بودجهٔ روزانه']}
-        rows={ai.families.map(x => [
-          <Code key="f">{x.family}</Code>, <Code key="p">{x.provider}</Code>, yesNo(x.sample),
-          x.killSwitch || x.providerDisabled ? 'روشن' : 'خاموش', yesNo(x.retryEnabled), yesNo(x.circuitOpen),
-          x.spendLatched ? 'رسیده' : 'نرسیده', cost(x.spentTodayMicros), cost(x.dailyBudgetMicros),
-        ])}
-      />
-      <Table
-        caption="فراخوانی‌های ارائه‌دهنده در بازه"
-        empty="در این بازه فراخوانی‌ای ثبت نشده است."
-        head={['خانواده', 'تعداد', 'میانهٔ زمان (میلی‌ثانیه)', 'صدک ۹۵ (میلی‌ثانیه)', 'توکن ورودی', 'توکن خروجی', 'هزینه']}
-        rows={ai.calls.map(x => [
-          <Code key="f">{x.family}</Code>, count(x.calls), count(x.latencyP50Ms), count(x.latencyP95Ms),
-          count(x.inputTokens), count(x.outputTokens), cost(x.costMicros),
-        ])}
-      />
-      <Table
-        caption="نتیجهٔ گام‌های عملیات در بازه"
-        empty="در این بازه نتیجه‌ای ثبت نشده است."
-        head={['خانواده', 'نتیجه', 'دستهٔ خطا', 'دروازهٔ ردکننده', 'تعداد']}
-        rows={ai.outcomes.map(x => [
-          <Code key="f">{x.family}</Code>, <Code key="o">{x.outcome}</Code>,
-          x.failureClass ? <Code key="c">{x.failureClass}</Code> : '—', x.gate ? <Code key="g">{x.gate}</Code> : '—',
-          count(x.count),
-        ])}
-      />
-    </div>
-  )
-}
-
-function MetricsSection({ metrics }: { metrics: OperationsMetricsDto }) {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-text-secondary">
-        نسخهٔ واژه‌نامهٔ معیارها: <Code>{metrics.catalogVersion}</Code>. هر ردیف «صورت از مخرج» است؛ درصدی بدون مخرج نشان داده نمی‌شود و آستانه‌ای در اینجا تعیین نشده است.
-      </p>
-      {metrics.primary.map(metric => <MetricTable key={metric.id} metric={metric} />)}
-      <details className="card">
-        <summary className="cursor-pointer text-sm font-bold">حساب‌های داخلی (جدا از جمعیت اصلی)</summary>
-        <div className="mt-4 space-y-4">
-          {metrics.internal.map(metric => <MetricTable key={metric.id} metric={metric} />)}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <Tabs id={id} value={view} onChange={setView} />
+        <div className="flex items-center gap-3">
+          {refreshing && <span className="text-xs text-text-secondary" role="status">در حال به‌روزرسانی…</span>}
+          <SegmentedControl label="بازه‌ی زمانی" value={range} options={ranges} onChange={setRange} />
         </div>
-      </details>
-      <Table
-        caption="معیارهایی که از دادهٔ محصول به دست نمی‌آیند"
-        head={['معیار', 'ابزار لازم']}
-        rows={metrics.external.map(x => [<Code key="i">{x.id}</Code>, <span key="t" dir="ltr" className="block text-start">{x.instrument}</span>])}
-      />
+      </div>
+
+      <div role="tabpanel" id={`${id}-${view}`} aria-labelledby={`${id}-${view}-tab`}>
+        {view === 'health'
+          ? <SystemHealthView health={health} ai={ai} metrics={metrics} />
+          : <ProductInsightsView insights={insights} metrics={metrics} />}
+      </div>
     </div>
   )
 }
 
-function MetricTable({ metric }: { metric: MetricResultDto }) {
+function Tabs({ id, value, onChange }: { id: string; value: OperationsView; onChange: (value: OperationsView) => void }) {
+  // Arrow keys move between the two views; in RTL the left arrow goes forward.
+  const move = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    const next = views[(views.findIndex(x => x.value === value) + 1) % views.length].value
+    onChange(next)
+    document.getElementById(`${id}-${next}-tab`)?.focus()
+  }
   return (
-    <Table
-      caption={<Code>{metric.id}</Code>}
-      note={<span dir="ltr" className="block text-start">{metric.numerator} / {metric.denominator}</span>}
-      empty="در این بازه رکوردی نیست."
-      head={['بخش', 'صورت', 'مخرج']}
-      rows={metric.rows.map(row => [
-        row.segment ? <Code key="s">{row.segment}</Code> : 'همه', count(row.numerator), count(row.denominator),
-      ])}
-    />
-  )
-}
-
-function Table({ caption, note, head, rows, empty }: {
-  caption: ReactNode
-  note?: ReactNode
-  head: string[]
-  rows: ReactNode[][]
-  empty?: string
-}) {
-  return (
-    <div className="card overflow-x-auto rounded-2xl p-0 sm:p-0">
-      <table className="w-full text-sm">
-        <caption className="px-4 pb-3 pt-4 text-start font-bold">
-          {caption}
-          {note && <span className="mt-1 block text-xs font-normal text-text-secondary">{note}</span>}
-        </caption>
-        <thead>
-          <tr className="border-y border-border-subtle bg-surface-sunken/60 text-text-secondary">
-            {head.map(label => <th key={label} scope="col" className="px-4 py-2.5 text-start text-xs font-bold">{label}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 && empty && (
-            <tr><td colSpan={head.length} className="px-4 py-4 text-text-secondary">{empty}</td></tr>
-          )}
-          {rows.map((row, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: rows are a fixed, ordered read of one response.
-            <tr key={index} className="border-b border-border-subtle transition-colors last:border-0 hover:bg-canvas/60">
-              {row.map((cell, cellIndex) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: cells follow the column order.
-                <td key={cellIndex} className="px-4 py-2.5">{cell}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="ops-tabs" role="tablist" aria-label="نمای عملیات">
+      {views.map(({ value: option, label, icon: Icon }) => (
+        <button
+          key={option}
+          id={`${id}-${option}-tab`}
+          className="ops-tab"
+          type="button"
+          role="tab"
+          aria-selected={option === value}
+          aria-controls={`${id}-${option}`}
+          tabIndex={option === value ? 0 : -1}
+          onClick={() => onChange(option)}
+          onKeyDown={move}
+        >
+          <Icon size={18} aria-hidden="true" />
+          {label}
+        </button>
+      ))}
     </div>
   )
-}
-
-function Term({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-text-secondary">{label}</dt>
-      <dd className="mt-1 font-bold">{children}</dd>
-    </div>
-  )
-}
-
-/** Codes and identifiers are Latin and read left to right inside the RTL page. */
-function Code({ children }: { children: ReactNode }) {
-  return <code dir="ltr">{children}</code>
 }

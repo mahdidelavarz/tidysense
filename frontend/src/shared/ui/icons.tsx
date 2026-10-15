@@ -7,6 +7,8 @@ import SolarArrowLeftLinear from '~icons/solar/arrow-left-linear'
 import SolarArrowRightLinear from '~icons/solar/arrow-right-linear'
 import SolarCalendarLinear from '~icons/solar/calendar-linear'
 import SolarCalendarMarkLinear from '~icons/solar/calendar-mark-linear'
+import SolarChartSquareLinear from '~icons/solar/chart-square-linear'
+import SolarChatRoundLikeLinear from '~icons/solar/chat-round-like-linear'
 import SolarCheckCircleLinear from '~icons/solar/check-circle-linear'
 import SolarCheckLinear from '~icons/solar/check-linear'
 import SolarChecklistMinimalisticLinear from '~icons/solar/checklist-minimalistic-linear'
@@ -17,13 +19,17 @@ import SolarCloudLinear from '~icons/solar/cloud-linear'
 import SolarCompassLinear from '~icons/solar/compass-linear'
 import SolarCopyLinear from '~icons/solar/copy-linear'
 import SolarDangerCircleLinear from '~icons/solar/danger-circle-linear'
+import SolarDangerTriangleLinear from '~icons/solar/danger-triangle-linear'
 import SolarDatabaseLinear from '~icons/solar/database-linear'
+import SolarDollarMinimalisticLinear from '~icons/solar/dollar-minimalistic-linear'
 import SolarEyeLinear from '~icons/solar/eye-linear'
 import SolarFilterLinear from '~icons/solar/filter-linear'
 import SolarFlagLinear from '~icons/solar/flag-linear'
 import SolarForbiddenCircleLinear from '~icons/solar/forbidden-circle-linear'
+import SolarGraphNewUpLinear from '~icons/solar/graph-new-up-linear'
 import SolarHistoryLinear from '~icons/solar/history-linear'
 import SolarHourglassLinear from '~icons/solar/hourglass-linear'
+import SolarInboxOutLinear from '~icons/solar/inbox-out-linear'
 import SolarLayersMinimalisticLinear from '~icons/solar/layers-minimalistic-linear'
 import SolarLeafLinear from '~icons/solar/leaf-linear'
 import SolarLinkLinear from '~icons/solar/link-linear'
@@ -37,8 +43,8 @@ import SolarMoonLinear from '~icons/solar/moon-linear'
 import SolarNotesLinear from '~icons/solar/notes-linear'
 import SolarPauseLinear from '~icons/solar/pause-linear'
 import SolarPenLinear from '~icons/solar/pen-linear'
-import SolarPlanetLinear from '~icons/solar/planet-linear'
 import SolarPlainLinear from '~icons/solar/plain-linear'
+import SolarPlanetLinear from '~icons/solar/planet-linear'
 import SolarPlayLinear from '~icons/solar/play-linear'
 import SolarPulseLinear from '~icons/solar/pulse-linear'
 import SolarRecordCircleLinear from '~icons/solar/record-circle-linear'
@@ -54,7 +60,9 @@ import SolarTranslationLinear from '~icons/solar/translation-linear'
 import SolarTrashBinMinimalisticLinear from '~icons/solar/trash-bin-minimalistic-linear'
 import SolarTuning2Linear from '~icons/solar/tuning-2-linear'
 import SolarUndoLeftLinear from '~icons/solar/undo-left-linear'
+import SolarUserCheckRoundedLinear from '~icons/solar/user-check-rounded-linear'
 import SolarUserRoundedLinear from '~icons/solar/user-rounded-linear'
+import SolarUsersGroupRoundedLinear from '~icons/solar/users-group-rounded-linear'
 import SolarWiFiOffLinear from '~icons/solar/wi-fi-off-linear'
 
 /**
@@ -115,6 +123,7 @@ export const CircleAlert = sized(SolarDangerCircleLinear)
 export const Square = sized(SolarStopLinear)
 export const Lock = sized(SolarLockKeyholeMinimalisticLinear)
 export const ShieldCheck = sized(SolarShieldCheckLinear)
+export const TriangleAlert = sized(SolarDangerTriangleLinear)
 export const Hourglass = sized(SolarHourglassLinear)
 export const WifiOff = sized(SolarWiFiOffLinear)
 
@@ -132,6 +141,13 @@ export const Eye = sized(SolarEyeLinear)
 export const ListOrdered = sized(SolarListArrowDownMinimalisticLinear)
 export const Languages = sized(SolarTranslationLinear)
 export const Database = sized(SolarDatabaseLinear)
+export const ChartColumns = sized(SolarChartSquareLinear)
+export const ChartLine = sized(SolarGraphNewUpLinear)
+export const Users = sized(SolarUsersGroupRoundedLinear)
+export const UserCheck = sized(SolarUserCheckRoundedLinear)
+export const MessageHeart = sized(SolarChatRoundLikeLinear)
+export const Coins = sized(SolarDollarMinimalisticLinear)
+export const Outbox = sized(SolarInboxOutLinear)
 export const SlidersHorizontal = sized(SolarTuning2Linear)
 export const UserRound = sized(SolarUserRoundedLinear)
 export const Smartphone = sized(SolarSmartphoneLinear)

@@ -91,10 +91,52 @@ Frozen with the instrument on 2026-10-14. They are recorded or derivable now, so
 | Field | Where it comes from |
 |---|---|
 | Items removed before accepting, by entity type | `PLANNING_DRAFT_APPLIED` version 2 payload: `excludedGoalCount`, `excludedProjectCount`, `excludedTaskCount`, `excludedRoutineCount` (proposals left out, including those left out with their parent). Version 1 events (before 2026-10-14) do not have them and are reported as unknown, never as zero. |
-| Origin of a Task or Routine | provenance: a `TASK_CREATED` or `ROUTINE_CREATED` event in the same `TransactionId` as a `PLANNING_DRAFT_APPLIED` came from that draft, and the draft's `PLANNING_DRAFT_CREATED` event names its `generator`. Anything else is manual (a capture resolution is its own origin). No flag is stored on the work record. All of these are R1 events. |
+| Origin of a Task or Routine | command provenance: the apply command of a planning draft is the only writer of `Source = AI_ASSISTED` on `Tasks` and `Routines` (and of `source` in their `TASK_CREATED` / `ROUTINE_CREATED` event, in the same transaction as `PLANNING_DRAFT_APPLIED`); everything else is `MANUAL` or `SYSTEM_MIGRATED`. The draft's `PLANNING_DRAFT_CREATED` event names its `generator`; the sample generator runs only when a deployment's planning provider is `mock`, so in the pilot every AI-created item comes from the configured model. *Corrected 2026-10-14 (STEP-20): an earlier wording said no flag is stored on the work record; `Source` has been stored since STEP-04.* |
 | Reconcile decisions applied on tap, and reverted ones (027 §5 "decision mix, reverted decisions") | `TASK_COMPLETED` and `TASK_CARRIED` events with a `ReconcileSessionId` and no `ConfirmationId` are one-tap decisions of that session; `TASK_COMPLETION_UNDONE` and `TASK_CARRY_UNDONE` are their reversals, each pointing at the reversed event through `CausationId`. R1 events, from STEP-19 (2026-10-14). |
 | Internal account | `Operations:OperatorPhones` and `Operations:InternalPhones`, as for every metric above. Seeded, demo and QA accounts must be listed before collection. |
 | Clarification question kind and answer type | `PLANNING_CLARIFICATION_ASKED` (kinds, option counts, `multiple`) and `PLANNING_CLARIFICATION_ANSWERED` (per question asked: `kind`, `chosen` positions, `other`; nothing chosen and `other` false is `UNANSWERED`; `draftNow`), joined by `flowId` to `PLANNING_DRAFT_CREATED` version 2 and from there to the draft's disposition. Asked and never answered is an ASKED without an ANSWERED. R1 events, from STEP-18 (2026-10-14); flows before it have no kinds. No label or answer text is recorded. |
+
+## Product insights (Discussion 027 §5, STEP-20)
+
+**Catalog version:** `2026-10-14.1`, apart from the pilot catalog. The definitions are code: [`ProductInsightCatalog.cs`](../../backend/Services/Operations/ProductInsightCatalog.cs), run by the same `MetricQuery` runner, with the same `(segment, numerator, denominator)` rows, `[from, to)` window and versioning rule as the pilot metrics. `GET /api/v1/operations/insights?days=N` (operator only, `404` otherwise) returns the figures for the **primary population only**, the number of internal accounts left out (`internalAccountCount`, those registered by the end of the window) and the reason texts. They are read beside H1/H2, not instead of them: the view also reads `H1.ACCEPTANCE`, `H1.DRAFT_DISPOSITION`, `H1.TIME_TO_DRAFT_SECONDS` and `H1.USEFULNESS_RESPONSE` from `/metrics`.
+
+The 027 §10 rules, as the view applies them:
+
+- **Account level first.** Every per-attempt or per-response figure has an `_ACCOUNTS` partner (or is already per account); the view shows the account figure as the main number and the other one faint beside it.
+- **"x of y".** No percentage is shown anywhere on the operator page; a mean is shown with its count («۳٫۹ — ۲۸۸ تصمیم در ۷۴ جلسه»).
+- **Small sample.** A denominator under 10 gets «نمونه‌ی کم». It is a size label: nothing is hidden or coloured by it.
+- **No good or bad colour.** Bars have one colour per meaning (accent, the AI's moon, an entity colour), never a pass/fail colour; the satisfaction scale is drawn in one colour.
+- **No per-user view.** No figure is segmented by account; the only rows that are not counts are the reasons below.
+
+| Figure | Unit | Numerator / denominator | Segments |
+|---|---|---|---|
+| `P.ACCOUNTS` | account | registered in the window / registered by its end | — |
+| `P.ACTIVATION` | account | reached a first plan applied by a succeeded command / registered by the end | — |
+| `P.WEEKLY_ACTIVE` | account | did work, reconciled or planned in the window's last 7 days / registered by the end | — |
+| `P.COHORT_RETENTION` | account | of the cohort, active in week N after registering / cohort size | `<week start>:<0–4>`, UTC weeks from Saturday, weeks that have begun |
+| `P.FUNNEL_FLOWS` / `P.FUNNEL_ACCOUNTS` | flow / account | reached the stage / started | `STARTED`, `DRAFT`, `DECIDED`, `ACCEPTED` (apply submitted), `APPLIED` (succeeded), `ALIVE_7D` |
+| `P.REMOVED_BEFORE_ACCEPTING` / `_ACCOUNTS` | proposal / account | left out before applying / proposals of the type (accounts with an applied draft) | `GOAL`, `PROJECT`, `TASK`, `ROUTINE`; version-1 applies are left out |
+| `P.CLARIFICATION` | question | by what happened to it | `<kind>:ASKED/ANSWERED/OTHER/SKIPPED` |
+| `P.CLARIFICATION_ACCOUNTS` | account | answered at least one question of the kind / asked one | `<kind>` |
+| `P.ACCEPTANCE_BY_ANSWERS` / `_ACCOUNTS` | draft / account | applied / created | `WITH_ANSWERS`, `WITHOUT_ANSWERS` |
+| `P.TASKS_DONE_7D` | Task | completed within 7 days / created at least 7 days ago | `AI`, `MANUAL` |
+| `P.TASKS_DONE_7D_ACCOUNTS` | account | AI Tasks done at a higher rate than manual ones / accounts with both | — |
+| `P.ROUTINE_SLOTS_DONE` | occurrence | done / resolved (done or missed) | `AI`, `MANUAL` |
+| `P.ROUTINE_SLOTS_DONE_ACCOUNTS` | account | AI occurrences done at a higher rate / accounts with both | — |
+| `P.TASKS_CARRIED_OVER_TWICE` / `_ACCOUNTS` | Task / account | carried more than twice while due, undone Carries left out / created | `AI`, `MANUAL` |
+| `P.RECONCILE_SESSIONS` | session | opened / distinct accounts (not a share) | — |
+| `P.RECONCILE_DECISIONS_PER_SESSION` | session | decisions / sessions (a mean) | — |
+| `P.RECONCILE_DECISION_MIX` / `_ACCOUNTS` | decision / account | of the kind / all | `DONE`, `TODAY` (one tap), `MOVED`, `KEEP`, `DROP` |
+| `P.RECONCILE_REVERTED` / `_ACCOUNTS` | decision / account | taken back with «بازگردان» / all | — |
+| `P.SATISFACTION_PROMPTS` | prompt | ended so / shown on the surface | `<surface>:ANSWERED/CLOSED/SHOWN` |
+| `P.SATISFACTION_RATING` | answer | with the rating / answers on the surface | `<surface>:<1–5>` |
+| `P.SATISFACTION_MEAN` | answer | sum of ratings / answers (a mean) | `<surface>` |
+| `P.SATISFIED_ACCOUNTS` | account | answers average 4 or more / accounts that answered | — |
+| `P.LOW_RATING_REASONS` | answer | ratings 1–2 with a reason / ratings 1–2 | — |
+
+**Reasons.** The 50 most recent reasons written with a rating of 1 or 2 in the window, primary population only: surface, rating, the local day it was shown and the text. No account, phone, draft or session is attached, and they are never joined to another figure.
+
+**Not computable from records:** the clarification table is by question `kind`; the question text is not recorded (028 §2.5), so a row cannot name the question as `CodeInsights` does.
 
 ## Required metrics the product does not compute
 
@@ -117,5 +159,7 @@ The moderated sessions are described in [`pilot-research-protocol.md`](pilot-res
 | operator page `/operations` | all computed metrics, for the last 7, 28 or 90 days |
 | Pilot Research owner (analysis package) | `GET /api/v1/operations/metrics?days=N`, archived with its `catalogVersion` |
 | `backend.Tests/OperationsMetricsTests.cs` | exact reproduction of every numerator and denominator from a fixed fixture |
+| operator page, «سنجش محصول» | `GET /api/v1/operations/insights?days=N` and four H1 metrics |
+| `backend.Tests/ProductInsightsTests.cs` | exact reproduction of every product figure, with an internal account and small denominators in the fixture |
 
 Operational AI figures (calls, latency, tokens, cost, failure classes, gates) are not pilot metrics; they come from `AiInvocations` through `GET /api/v1/operations/ai` and are described in [`../backend/logging-observability.md`](../backend/logging-observability.md).

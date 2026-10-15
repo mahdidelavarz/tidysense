@@ -982,6 +982,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/operations/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    days?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OperationsInsightsDto"];
+                        "application/json": components["schemas"]["OperationsInsightsDto"];
+                        "text/json": components["schemas"]["OperationsInsightsDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/operations/ai": {
         parameters: {
             query?: never;
@@ -4772,6 +4822,14 @@ export interface components {
             activeProjectCount: number | string;
             work: components["schemas"]["WorkProgressDto"];
         };
+        LowRatingReasonDto: {
+            surface: string;
+            /** Format: int32 */
+            rating: number | string;
+            /** Format: date */
+            shownOn: string;
+            text: string;
+        };
         MetricResultDto: {
             id: string;
             /** Format: int32 */
@@ -4834,6 +4892,17 @@ export interface components {
             stuckPlanningAttempts: number | string;
             /** Format: int32 */
             pendingOutboxMessages: number | string;
+        };
+        OperationsInsightsDto: {
+            catalogVersion: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            /** Format: int32 */
+            internalAccountCount: number | string;
+            figures: components["schemas"]["MetricResultDto"][];
+            reasons: components["schemas"]["LowRatingReasonDto"][];
         };
         OperationsMetricsDto: {
             catalogVersion: string;
