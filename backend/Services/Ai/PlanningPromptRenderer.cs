@@ -16,7 +16,7 @@ public sealed record PlanningPrompt(string System, string User, string ContextRe
 /// </summary>
 public static class PlanningPromptRenderer
 {
-    public const string PromptVersion = "2026-10-15.1";
+    public const string PromptVersion = "2026-10-15.3";
     public const string DataOpen = "<planning_request_data>";
     public const string DataClose = "</planning_request_data>";
 
@@ -228,7 +228,9 @@ public static class PlanningPromptRenderer
         - Never ask which kind of item to create (Goal, Project, Task or Routine): you decide the structure.
         - Never ask a public or calendar fact: the date of a national exam, a holiday such as «عید» (it means Nowruz unless the user says otherwise), the end of a month, how long something usually takes. Use the calendar in the input and general knowledge, and state it in "assumptions".
         - Never ask anything the intention or earlier answers already say, sensitive personal data, a life history, a diagnosis, motivation scoring, or confirmation of an obvious low-risk assumption.
-        - Up to 4 questions in one turn, each answerable on its own and about the same plan. Ask everything you need in the first turn. A later turn only when an answer opened a new question that changes the draft; never repeat a question from clarificationTurns. A skipped question is not asked again: use a visible assumption.
+        - Up to 4 questions in one turn, each answerable on its own and about the same plan. Ask everything you need in the first turn. A later turn only when an answer opened a new question that changes the draft.
+        - Never ask again what clarificationTurns already asked, in any wording. When an answer is skipped, vague or answers something else, do not insist: make a reasonable assumption, say it in "assumptions", and draft.
+        - When the intention holds several independent outcomes, plan only the one the user puts first or says matters most (otherwise the first one named) as the single GOAL, and name the others in "assumptions" as for a later planning; never propose a second GOAL and never ask the same thing about each outcome.
         - When clarificationAllowed is false you must not ask: produce a DRAFT with visible assumptions, a smaller DRAFT, or INPUT_BLOCKED naming the one blocking ambiguity.
 
         QUESTIONS
@@ -240,7 +242,8 @@ public static class PlanningPromptRenderer
         - In clarificationTurns each answer gives the labels the user chose in "chosen" and what they wrote themselves in "text"; either may be empty.
 
         DATES
-        - windowStart to windowEnd is the detailed week. "calendar" gives each of its days with its Persian date, Persian weekday and ISO weekday number, plus today, the end of this and the next Persian month, and the next Nowruz. Never compute a Persian date or weekday yourself: copy it from "calendar". In Persian text write a date that is not in "calendar" by month and year only.
+        - windowStart to windowEnd is the detailed week. "calendar" gives each of its days with its Persian date, Persian weekday and ISO weekday number, plus today, the end of this and the next Persian month, and the next Nowruz. Never compute a Persian date, a weekday or the Gregorian date of a Persian date yourself: copy "date", "persianDate" and "weekday" together from the same entry of "calendar". «عید» and «نوروز» are calendar.nextNowruz.
+        - In Persian text (summary, assumptions, questions, options) write a day only as an exact "persianDate" from "calendar", with its own "weekday" if you name one. A date that is not in "calendar" is written by Persian month and year only, never with a weekday or a Gregorian date.
         - Every TASK with a "plannedDate" has one between windowStart and windowEnd. A TASK without a parent and not under the context always has a "plannedDate". Choose a sensible day even when unsure, and say so in "assumptions"; the user moves it easily.
         - A ROUTINE always has "recurrence" and, when a time is known or sensible, "timesOfDay". "effectiveFromLocalDate" is null (today) or a day of the window. A Routine keeps recurring after the window.
         - A GOAL or PROJECT gets a "targetDate" whenever the intention, an answer or a public fact implies one ("in a year", an exam, Nowruz, "the end of this month", "in four months"), at most 24 months after today. When it is an estimate, add an ASSUMED_DATES warning on that item and say in "assumptions" that it is an estimate.
@@ -257,7 +260,7 @@ public static class PlanningPromptRenderer
           - PROJECT: a concrete result or event with an end and several steps of its own (moving house, delivering a site, a thesis chapter, a trip, a renovation).
           - Everything else is standalone TASKs and ROUTINEs. One action is one TASK; a habit is one ROUTINE. A short plan of a few days (a party, a report, an exam week) is dated TASKs, or one PROJECT when it has many steps.
         - Never an empty GOAL or PROJECT: each has at least one TASK or ROUTINE under it, directly or through its Projects.
-        - A long intention (months) gets: the GOAL with its "targetDate"; 2 to 4 phase PROJECTs in order, each with a "targetDate"; the core ROUTINE(s) with days and a time; and 3 to 7 concrete TASKs for this week, the first real steps. Later steps of the current phase may be undated TASKs under its PROJECT.
+        - A long intention (months) gets: the GOAL with its "targetDate"; 2 to 4 phase PROJECTs in order, each with a "targetDate"; the core ROUTINE(s) with days and a time; and 3 to 7 concrete TASKs for this week, the first real steps, in the first phase. Every later phase PROJECT holds 1 to 3 undated TASKs, its own first real steps, so that no phase is empty.
         - Titles are concrete actions a person can do in one sitting, starting with what to do and naming what («حل ۴۰ تست شیمی فصل ۱», «نوشتن فهرست مدارک بیمه»), never vague («مطالعه», «کار روی پروژه»). No filler work to occupy the week.
         - Prefer reasonable assumptions over "unresolvedQuestions". Keep at most 2 unresolvedQuestions, only for what the user alone can decide.
         - A ROUTINE needs "recurrence"; if the wanted rhythm is not one of the three types, do not convert it: ask, or note it. daysOfWeek uses ISO numbers, Monday = 1 (see calendar.isoWeekdays). dayOfMonth is a day of the Persian calendar month.

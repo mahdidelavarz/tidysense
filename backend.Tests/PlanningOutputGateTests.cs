@@ -162,6 +162,44 @@ public sealed class PlanningOutputGateTests
             Evaluate(With(x => Proposal(x, 3)["recurrence"]!["type"] = "every other day")).Gate);
     }
 
+    [Fact]
+    public void An_invalid_sequence_loses_only_its_order_and_the_draft_stands()
+    {
+        // A sequence of one Task is no sequence: its order is dropped and recorded, nothing else changes (029 §9).
+        var result = Evaluate(With(x =>
+        {
+            Proposal(x, 2)["sequenceKey"] = "s1";
+            Proposal(x, 2)["sequenceOrder"] = 1;
+        }));
+        Assert.True(result.Passed);
+        Assert.Null(result.Draft!.Proposals[2].SequenceKey);
+        Assert.Contains(PlanningOutputGate.DropInvalidSequence, result.RepairRules);
+        Assert.Empty(result.Draft.RemovedItems ?? []);
+    }
+
+    [Fact]
+    public void Too_many_goals_are_asked_for_again_and_otherwise_the_later_one_is_left_out_with_its_work()
+    {
+        var result = Evaluate(With(x =>
+        {
+            var proposals = x["draft"]!["proposals"]!.AsArray();
+            var goal = JsonNode.Parse(Proposal(x, 0).ToJsonString())!;
+            goal["draftId"] = "goal-2";
+            goal["title"] = "تغییر شغل";
+            proposals.Add(goal);
+            var work = JsonNode.Parse(Proposal(x, 2).ToJsonString())!;
+            work["draftId"] = "step-2";
+            work["parentDraftId"] = "goal-2";
+            proposals.Add(work);
+        }));
+        Assert.False(result.Passed);
+        Assert.Contains("TOO_MANY_GOALS", result.Correction);
+        var fallback = result.Fallback!.Draft!;
+        Assert.Equal(["goal", "project", "step", "practice"], fallback.Proposals.Select(x => x.DraftId));
+        Assert.Equal(["تغییر شغل", "انتخاب کتاب"], fallback.RemovedItems!.Select(x => x.Title));
+        Assert.Contains(PlanningOutputGate.RemoveInvalidItems, result.Fallback.RepairRules);
+    }
+
     [Theory]
     [InlineData("2026-10-5", "2026-10-05", PlanningOutputGate.PadDate)]
     [InlineData("2026/10/05", "2026-10-05", PlanningOutputGate.NormalizeDateSeparator)]

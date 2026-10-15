@@ -249,19 +249,7 @@ public static partial class PlanningDraftRules
                 errors.Add("CONTEXT_PARENT_INVALID");
         }
 
-        // A sequence (025): Tasks only, a key and an order together, distinct positive orders, at least
-        // two members, all with the same owner.
-        if (proposals.Any(x => (x.SequenceKey is null) != (x.SequenceOrder is null) ||
-                (x.SequenceKey is not null && (x.EntityType != PlanningEntityTypes.Task ||
-                    !DraftIdPattern().IsMatch(x.SequenceKey) || x.SequenceOrder < 1))))
-            errors.Add("SEQUENCE_INVALID");
-        foreach (var chain in proposals.Where(x => x.SequenceKey is not null).GroupBy(x => x.SequenceKey!, StringComparer.Ordinal))
-        {
-            var members = chain.ToArray();
-            if (members.Length < 2 || members.Select(x => x.SequenceOrder).Distinct().Count() != members.Length ||
-                members.Select(x => (x.ParentDraftId, x.UnderContext)).Distinct().Count() != 1)
-                errors.Add("SEQUENCE_INVALID");
-        }
+        if (InvalidSequences(proposals).Count > 0) errors.Add("SEQUENCE_INVALID");
 
         foreach (var fact in content.Facts)
         {
@@ -483,6 +471,61 @@ public static partial class PlanningDraftRules
         foreach (var warning in warnings) canonical.Append($"|{warning.WarningHash}");
         return new PlanningPreview(items, facts, warnings, content.Facts.Count > 0 && facts.Length == 0,
             evaluation.CanApply, Hash(canonical.ToString()));
+    }
+
+    /// <summary>
+    /// The sequences (025) that are not two or more Tasks with one owner and distinct positive
+    /// orders, by key; a key without an order, or an order without a key, counts under its key or "".
+    /// </summary>
+    private static IReadOnlySet<string> InvalidSequences(IReadOnlyList<PlanningProposal> proposals)
+    {
+        var invalid = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in proposals.Where(x => x.SequenceKey is not null || x.SequenceOrder is not null))
+            if (item.SequenceKey is null || item.SequenceOrder is null || item.SequenceOrder < 1 ||
+                item.EntityType != PlanningEntityTypes.Task || !DraftIdPattern().IsMatch(item.SequenceKey))
+                invalid.Add(item.SequenceKey ?? string.Empty);
+        foreach (var chain in proposals.Where(x => x.SequenceKey is not null).GroupBy(x => x.SequenceKey!, StringComparer.Ordinal))
+        {
+            var members = chain.ToArray();
+            if (members.Length < 2 || members.Select(x => x.SequenceOrder).Distinct().Count() != members.Length ||
+                members.Select(x => (x.ParentDraftId, x.UnderContext)).Distinct().Count() != 1)
+                invalid.Add(chain.Key);
+        }
+        return invalid;
+    }
+
+    /// <summary>
+    /// A generated draft without the orders of its invalid sequences: their Tasks stay, independent,
+    /// as if the user had pressed «بدون ترتیب». Null when every sequence is valid.
+    /// </summary>
+    public static PlanningDraftContent? WithoutInvalidSequences(PlanningDraftContent content)
+    {
+        var invalid = InvalidSequences(content.Proposals);
+        if (invalid.Count == 0) return null;
+        return content with
+        {
+            Proposals = content.Proposals.Select(x => invalid.Contains(x.SequenceKey ?? string.Empty) &&
+                (x.SequenceKey is not null || x.SequenceOrder is not null)
+                    ? x with { SequenceKey = null, SequenceOrder = null } : x).ToArray()
+        };
+    }
+
+    /// <summary>
+    /// The draft ids that put a generated draft over the count limits: the proposals of a type past
+    /// its limit, then any proposal past the overall limit, each time the later ones (029 §8).
+    /// </summary>
+    public static IReadOnlyList<string> OverLimits(PlanningDraftContent content)
+    {
+        var over = new List<string>();
+        foreach (var (type, limit) in new[]
+                 {
+                     (PlanningEntityTypes.Goal, PlanningLimits.Goals), (PlanningEntityTypes.Project, PlanningLimits.Projects),
+                     (PlanningEntityTypes.Task, PlanningLimits.Tasks), (PlanningEntityTypes.Routine, PlanningLimits.Routines)
+                 })
+            over.AddRange(content.Proposals.Where(x => x.EntityType == type).Skip(limit).Select(x => x.DraftId));
+        over.AddRange(content.Proposals.Where(x => !over.Contains(x.DraftId)).Skip(PlanningLimits.Proposals)
+            .Select(x => x.DraftId));
+        return over;
     }
 
     /// <summary>

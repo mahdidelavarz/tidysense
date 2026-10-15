@@ -54,6 +54,13 @@ public static partial class PlanningOutputGate
     public const string NormalizeDateSeparator = "NORMALIZE_YEAR_FIRST_DATE_SEPARATOR";
     public const string PadDate = "PAD_YEAR_FIRST_MONTH_OR_DAY";
     public const string RemoveInvalidItems = "REMOVE_INVALID_ITEMS";
+    public const string DropInvalidSequence = "DROP_INVALID_SEQUENCE";
+
+    // Count limits a draft can be brought within by leaving its later items out.
+    private static readonly HashSet<string> CountErrors = new(StringComparer.Ordinal)
+    {
+        "TOO_MANY_PROPOSALS", "TOO_MANY_GOALS", "TOO_MANY_PROJECTS", "TOO_MANY_TASKS", "TOO_MANY_ROUTINES"
+    };
 
     private static readonly string[] Kinds =
         [PlanningOutcomes.Draft, PlanningOutcomes.Clarification, PlanningOutcomes.InputBlocked];
@@ -138,24 +145,35 @@ public static partial class PlanningOutputGate
             try
             {
                 var draft = PlanningDraftRules.Repair(parsed, context.Today);
+                // An invalid sequence loses only its order; its Tasks stay (029 §9).
+                if (PlanningDraftRules.WithoutInvalidSequences(draft) is { } unchained)
+                {
+                    draft = unchained;
+                    rules.Add(DropInvalidSequence);
+                }
                 var errors = PlanningDraftRules.StructuralErrors(draft, context.Scope?.Type);
                 if (errors.Count > 0)
+                {
+                    // Too many items is asked for again, and otherwise the later ones are left out (029 §8).
+                    var trimmed = errors.All(CountErrors.Contains)
+                        ? PlanningDraftRules.Without(draft, PlanningDraftRules.OverLimits(draft)) : null;
                     throw new GateFailure(GateSemantic, AiFailureClasses.Semantic,
-                        "the draft breaks these rules: " + string.Join("; ", errors.Select(Explain)));
+                        "the draft breaks these rules: " + string.Join("; ", errors.Select(Explain)))
+                    {
+                        Fallback = trimmed is not null && PlanningDraftRules.StructuralErrors(trimmed, context.Scope?.Type).Count == 0
+                            ? Approvable(kind, trimmed, context, rules, out _) : null
+                    };
+                }
                 // The draft as handed over must be approvable: an item the user could not approve is
                 // asked for again, and otherwise left out with a note (029 §8).
-                var defects = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(draft,
-                    new PlanningRuleContext(context.Today, context.Scope?.Type, context.Facts)));
-                if (defects.Count == 0) return new PlanningGateResult(kind, draft, null, null, null, rules);
-                var without = PlanningDraftRules.Without(draft, defects.Where(x => x.DraftId is not null)
-                    .Select(x => x.DraftId!));
+                var result = Approvable(kind, draft, context, rules, out var defects);
+                if (defects.Count == 0) return result!;
                 throw new GateFailure(GateSemantic, AiFailureClasses.Semantic,
                     "these items could not be approved as proposed: " + string.Join("; ", defects
                         .Select(x => (Where: Where(draft, x.DraftId), x.Code))
                         .Distinct().Select(x => $"{x.Where}: {ExplainIssue(x.Code)}")))
                 {
-                    Fallback = without is null || defects.Any(x => x.DraftId is null)
-                        ? null : new PlanningGateResult(kind, without, null, null, null, [..rules, RemoveInvalidItems])
+                    Fallback = result
                 };
             }
             catch (Exception exception) when (exception is NullReferenceException or ArgumentException
@@ -173,6 +191,24 @@ public static partial class PlanningOutputGate
                 Fallback = failure.Fallback
             };
         }
+    }
+
+    /// <summary>
+    /// The draft itself when the user could approve every item as handed over; otherwise the draft
+    /// without the items that block (marked by the repair rule), or null when nothing usable is left
+    /// or the whole draft is at fault. The blocking issues found are returned either way.
+    /// </summary>
+    private static PlanningGateResult? Approvable(string kind, PlanningDraftContent draft, PlanningContext context,
+        List<string> rules, out IReadOnlyList<(string? DraftId, string Code)> defects)
+    {
+        defects = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(draft,
+            new PlanningRuleContext(context.Today, context.Scope?.Type, context.Facts)));
+        var reduced = draft.RemovedItems is { Count: > 0 };
+        if (defects.Count == 0)
+            return new PlanningGateResult(kind, draft, null, null, null, reduced ? [..rules, RemoveInvalidItems] : rules);
+        if (defects.Any(x => x.DraftId is null)) return null;
+        var without = PlanningDraftRules.Without(draft, defects.Select(x => x.DraftId!));
+        return without is null ? null : new PlanningGateResult(kind, without, null, null, null, [..rules, RemoveInvalidItems]);
     }
 
     /// <summary>Where an item sits in the output, by position only, so the correction never repeats its content.</summary>
