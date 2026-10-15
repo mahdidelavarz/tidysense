@@ -1,5 +1,7 @@
 # Discussion 028 — Clarification Quick Replies, First-Run Guides and Desktop in the Pilot
 
+> **Amendment (2026-10-15, decided by the owner, [[01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences]] §7, §11.2):** §2 — a question has zero or exactly two model-proposed options; the product-added free-text answer is labelled «خودت بنویس» (it replaces «چیز دیگر…») and is the third answer; a question without options opens its free-text field by default; one turn shows up to four questions; `ENTITY_TYPE` is removed from the kinds. Measurement codes are unchanged (`OTHER` is the «خودت بنویس» answer).
+
 ## Status
 
 **CLOSED — written from the owner's approved canvas designs and decided by the owner on 2026-10-13 (§6).**

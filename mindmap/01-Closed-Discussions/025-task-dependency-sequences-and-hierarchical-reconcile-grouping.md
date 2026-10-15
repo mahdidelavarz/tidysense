@@ -19,6 +19,8 @@ IMPLEMENTATION = NOT_AUTHORIZED_FROM_THIS_FILE_ALONE
 
 This discussion is now authoritative product direction, but Mind Map/spec/implementation reconciliation remains a separate step.
 
+> **Amendment (2026-10-15, decided by the owner, [[01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences]] §9, §11.3):** §18 — AI planning proposes a sequence when a step needs the result of another, not only on explicit words; list order and dates are still not dependency. The review shows the chain with one control to remove the order. Manually, any active Task without a sequence can be set to follow a same-scope Task («بعد از…»), the unresolved part of a sequence can be moved up or down with the §16 preview, and a Task can be removed from its order under §4.
+
 Primary related discussions:
 
 - [[01-Closed-Discussions/012-core-product-model]]

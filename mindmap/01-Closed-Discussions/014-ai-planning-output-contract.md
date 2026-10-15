@@ -10,6 +10,14 @@ Required companion amendment:
 
 This document owns the base `PlanningDraft` hierarchy, limits, review semantics, approval boundary, and seven-day detailed execution horizon. Discussion 014A adds the accepted temporal-checkpoint fields, defaults, provenance, and validation rules. They form one decision family and must be read together. Where temporal wording differs, Discussion 014A is authoritative.
 
+> **Amendment (2026-10-15, decided by the owner, [[01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences]]):**
+> - **§4.3:** a Goal is a recognisable outcome over more than about a month; a Project is a concrete result or event with an end and several steps; everything else is a standalone Task or Routine. No proposed Goal or Project is empty. No Task is re-parented, and no Project created, to make a draft valid. A Goal with a horizon of months gets two to four phase Projects with target dates, its core Routine, and three to seven real Tasks for this week (029 §5).
+> - **§4.4:** Goal and Project `targetDate` and Task `deadline` may lie beyond the window, up to 24 months ahead. Task `plannedDate` and a Routine's start stay inside the seven-day window; a Routine keeps recurring after it. The review step says why the week is detailed and that the next one is built from how this week went (029 §2).
+> - **Dates:** `plannedDate`, Routine days and times are always set; a `targetDate` from a public or stated fact is set as an estimate marked «تخمینی»; a `deadline` only when the user said it or a fixed real-world date implies it (029 §4). The product supplies Persian dates and weekdays (029 §6).
+> - **§4.5:** weekly continuation is built: offered near the end of a window, generated on the user's tap from execution evidence, reviewed and confirmed like any draft (029 §3).
+> - **§5:** Task proposals carry sequence membership and order (029 §9.1).
+> - **§9 and §11:** after validation, one regeneration with the list of issues; items still invalid are removed and named in one visible note; `GENERATION_FAILED` only when nothing valid is left. The user never sees a structural error the model produced (029 §8).
+
 Mahdi approved the final product decisions. Claude's final review found no blocking or important issue. Its final minor documentation finding was resolved by adding `BLOCKED_BY_ANCESTOR` to the canonical review-state enum.
 
 Related accepted discussions:

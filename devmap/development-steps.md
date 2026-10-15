@@ -331,7 +331,7 @@ Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alon
 
 **Required Mind Map context:** [milestone gates](../mindmap/05-Implementation/milestone-exit-gate-plan.md), [pilot checklist](../mindmap/05-Implementation/pilot-readiness-checklist.md), [release checklist](../mindmap/05-Implementation/release-readiness-checklist.md), [contract freeze register](../mindmap/05-Implementation/contract-freeze-register.md), [risk register](../mindmap/05-Implementation/risk-contingency-register.md), [scope-cut register](../mindmap/05-Implementation/scope-cut-register.md).
 
-**Dependencies:** STEP-11, STEP-13 to STEP-21 (added 2026-10-13: the pilot runs on the redesigned product, desktop included), and every applicable earlier step `DONE`.
+**Dependencies:** STEP-11, STEP-13 to STEP-21 (added 2026-10-13: the pilot runs on the redesigned product, desktop included), STEP-22 to STEP-24 (added 2026-10-15: the pilot uses the corrected planning, Discussion 029), and every applicable earlier step `DONE`.
 
 **Implementation checklist:** Review every hard gate and evidence link; resolve or explicitly block open decisions; lock operational configuration and ownership; execute final security/privacy/safety/release reviews; record signed go/no-go result.
 
@@ -749,7 +749,9 @@ Verified 2026-10-13 on Linux:
 
 **Completion criteria:** One flow on every entry; options are gated like every other model output; the measured time supports the guide's promise or the promise is changed.
 
-**Status:** `IN_PROGRESS` — built and verified with the sample generator. Still needed: the real-provider smoke run and the time-to-draft measurement with that provider, the third completion criterion. No provider key is available in the build environment.
+**Status:** `IN_PROGRESS` — built and verified with the sample generator.
+- **Real-provider run:** done on 2026-10-15. Ten intentions went through the endpoints, with a mean system time to draft of 8.6 s and thinking off. The results led to Discussion 029 (§1.1).
+- **Still open:** the time to draft including a person answering, the third completion criterion. It is measured under STEP-22, whose bar includes it. This step closes when STEP-22 verifies it.
 
 **Evidence:**
 
@@ -1096,3 +1098,193 @@ Verified 2026-10-13 on Linux:
 - A screen-reader pass of the desktop boards, in particular the Routines grid and the Goals timeline.
 - A keyboard pass of the timeline and the road by hand.
 
+
+---
+
+## Planning quality and continuation (STEP-22 to STEP-24)
+
+Added on 2026-10-15 from [Discussion 029](../mindmap/01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences.md), closed by the owner the same day.
+
+- The owner tested AI planning and found it not yet useful.
+- A measured run with the pilot provider confirmed it: 6/10 drafts approvable and about 2/10 useful (029 §1.1).
+- These steps precede STEP-12, because the pilot gate audits the planning the pilot will use.
+
+Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
+
+---
+
+## STEP-22 — Planning Quality
+
+**Goal:** Make the first draft structurally flawless and useful, with fewer and better questions.
+
+**Scope:**
+- **Prompt rewrite** (029 §2, §4, §5, §7, §9.1):
+  - the date rules;
+  - the structure criteria and the long-Goal shape;
+  - assumptions instead of unresolved questions;
+  - the question rules;
+  - sequences where a step needs another's result.
+- **Output contract and gate** (029 §7, §9.1):
+  - zero or exactly two options per question, up to four questions, one turn;
+  - `ENTITY_TYPE` removed;
+  - sequence membership and order on Task proposals;
+  - new schema and prompt versions.
+- **Draft rules** (029 §2, §5, §6, §8):
+  - Goal/Project `targetDate` and Task `deadline` allowed up to 24 months ahead;
+  - an issue for an empty Goal or Project;
+  - a fact without a usable scope is not proposed;
+  - a HARD weekday conflict is detected even when the fact is new in the same draft.
+- **Calendar context** (029 §6): for every window day, the Persian date, weekday name and ISO number.
+- **Repair** (029 §8): one regeneration with the list of issues, then removal of items still invalid, with a visible note. `GENERATION_FAILED` only when nothing valid is left.
+- **Frontend:**
+  - «خودت بنویس» as the third answer;
+  - free text open by default on a question without options;
+  - up to four questions on the questions step;
+  - in review:
+    - the one-week line;
+    - «تخمینی» on estimated target dates;
+    - the removed-items note;
+    - the sequence chain with a remove control.
+- **Evaluation set** (029 §10): at least 30 Persian intentions with written user answers, a runner against the real endpoints, and automatic scoring of the bar.
+- **Model configuration:** chosen against the bar.
+
+**Out of scope:**
+- manual sequence editing (STEP-23);
+- weekly continuation (STEP-24);
+- a Task date range (rejected, 029 §12);
+- storing planning text or answers for the evaluation.
+
+**Required DevMap context:**
+- AI Planning route in [context routing](context/context-routing.md);
+- [STEP-08](step-08-planning-acceptance.md) and [STEP-09](step-09-ai-planning-acceptance.md) acceptance contracts;
+- [API contract](shared/api-contracts.md).
+
+**Required Mind Map context:**
+- [Discussion 029](../mindmap/01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences.md);
+- [output contract](../mindmap/01-Closed-Discussions/014-ai-planning-output-contract.md) with its 029 note;
+- [Discussion 028 §2](../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md);
+- [sequences §18](../mindmap/01-Closed-Discussions/025-task-dependency-sequences-and-hierarchical-reconcile-grouping.md);
+- [planning facts](../mindmap/01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context.md).
+
+**Design boards:** `CodePlanningQuestions`, `CodePlanningDraft`. New elements follow their existing styles.
+
+**Dependencies:** STEP-18. Its real-provider run is done; its time-to-draft criterion is measured here.
+
+**Implementation checklist:**
+1. Write the evaluation set and runner first, and record the baseline.
+2. Contract and gate.
+3. Calendar context.
+4. Prompt.
+5. Draft rules.
+6. Regeneration and removal.
+7. Frontend.
+8. Re-run the set after each change that affects output.
+9. Choose the model configuration last.
+
+**Verification:**
+- `./dev.ps1 check`;
+- gate fixtures for the new question limits and sequence fields, valid and hostile;
+- rule tests for every new issue and for removal;
+- `./auth-e2e.ps1`;
+- the evaluation set with the real provider meets 029 §10.
+
+**Completion criteria:**
+- The bar of 029 §10 holds on the kept set with the pilot configuration.
+- No draft hands the user a structural error from the model.
+- The time to draft supports guide 1, or its copy is changed (028 §4.3).
+
+**Status:** `NOT_STARTED`
+
+**Evidence:**
+- Baseline, 2026-10-15: ten intentions in three configurations, recorded in 029 §1.1.
+- The run used a temporary script outside the repository. The kept set and runner are part of this step.
+
+---
+
+## STEP-23 — Manual Sequences
+
+**Goal:** Let the user build and fix a sequence from existing Tasks.
+
+**Scope** (029 §9.2):
+- «بعد از…» on any active Task without a sequence: it picks a same-scope Task to follow and starts a sequence when that Task has none;
+- moving a Task up or down within the unresolved part of a sequence, with the 025 §16 preview;
+- removing a Task from its order, under 025 §4;
+- the create form uses «بعد از…» in place of «شروع دنبالهٔ جدید».
+
+**Out of scope:**
+- cross-scope or branching dependencies (025 §3);
+- AI sequences (STEP-22).
+
+**Required DevMap context:** [API contract](shared/api-contracts.md), the Tasks route in [context routing](context/context-routing.md).
+
+**Required Mind Map context:**
+- [Discussion 025](../mindmap/01-Closed-Discussions/025-task-dependency-sequences-and-hierarchical-reconcile-grouping.md) §2–§4, §16, with its 029 note;
+- [Discussion 029 §9](../mindmap/01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences.md).
+
+**Design boards:** `CodeTaskDetail`, `CodeNewTask`. New controls follow their styles.
+
+**Dependencies:** STEP-16.
+
+**Implementation checklist:**
+- Reuse existing sequence commands where they exist, and add only the missing ones.
+- Keep the preview and current-version checks.
+- Add the Task detail and create-form controls.
+- Update the docs.
+
+**Verification:** `./dev.ps1 check`; command tests for link, move and remove, including stale versions and scope mismatch; `./auth-e2e.ps1` with a sequence built from two existing Tasks.
+
+**Completion criteria:** A user can link two existing Tasks, reorder the unresolved part and remove a Task from its order, all on the phone and on desktop.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.
+
+---
+
+## STEP-24 — Weekly Continuation
+
+**Goal:** Offer the next detailed week of a planned Goal or Project, built from how the last one went.
+
+**Scope** (029 §3, 014 §4.5):
+- the offer near the end of a planned window, for that Goal or Project;
+- generation on the user's tap «برنامهٔ هفتهٔ بعد», never by itself;
+- a context with the execution evidence of the last window:
+  - completed, carried, dropped and left Tasks;
+  - Routine occurrences kept or missed;
+  - accepted facts and sequences;
+- the same review and confirmation;
+- recording the continuation decision;
+- integration with Reconcile, without a mandatory weekly interruption.
+
+**Out of scope:**
+- automatic generation;
+- notifications;
+- changing approved Goals or Projects.
+
+**Required DevMap context:** AI Planning and Reconcile routes in [context routing](context/context-routing.md); [API contract](shared/api-contracts.md).
+
+**Required Mind Map context:**
+- [Discussion 029 §2–§3](../mindmap/01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences.md);
+- [014 §4.5](../mindmap/01-Closed-Discussions/014-ai-planning-output-contract.md);
+- [planning facts and rolling context](../mindmap/01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context.md);
+- Reconcile discussions 016–017.
+
+**Design boards:** none yet. The offer follows the existing Today and Reconcile card styles.
+
+**Dependencies:** STEP-22 and STEP-19.
+
+**Implementation checklist:**
+- Decide where and when the offer shows.
+- Build the evidence context from the existing previous-window data.
+- Start a contextual attempt.
+- Reuse the review and confirmation.
+- Record the decision.
+- Add the evaluation cases for week two.
+
+**Verification:** `./dev.ps1 check`; service tests for the offer conditions and the evidence context; `./auth-e2e.ps1` from an approved first week to an approved second; the evaluation cases for week two.
+
+**Completion criteria:** After an approved first week, the user can get, review and approve a second week built from the evidence, with one tap to start it.
+
+**Status:** `NOT_STARTED`
+
+**Evidence:** None.

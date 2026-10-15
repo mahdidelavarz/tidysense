@@ -2,18 +2,18 @@
 
 ## Status
 
-**PROPOSED — direction accepted by the owner on 2026-10-15 (§2–§4); the points in §11 wait for the owner.**
+**CLOSED — direction accepted by the owner on 2026-10-15 (§2–§4); §11 decided by the owner the same day.**
 
 ```txt
-STATUS = PROPOSED
-DECIDED_BY = OWNER (direction §2–§4, 2026-10-15)
-MIND_MAP = NOT_APPLIED
-OPEN_QUESTIONS = 5 (§11)
-DEVMAP_GATES = OPEN (a new planning-quality step; a separate weekly-continuation step)
+STATUS = CLOSED
+DECIDED_BY = OWNER (2026-10-15)
+MIND_MAP = APPLIED_2026-10-15
+OPEN_QUESTIONS = 0 (§11 resolved 2026-10-15)
+DEVMAP_GATES = RESOLVED (STEP-22 planning quality, STEP-23 manual sequences, STEP-24 weekly continuation)
 IMPLEMENTATION = NOT_AUTHORIZED_FROM_THIS_FILE_ALONE
 ```
 
-This discussion is product direction. Once closed, it amends:
+This discussion is authoritative product direction. It amends:
 
 - [[01-Closed-Discussions/013-ai-planning-entry-and-conversation-flow]] — the number of clarification turns (§7);
 - [[01-Closed-Discussions/014-ai-planning-output-contract]]:
@@ -23,7 +23,7 @@ This discussion is product direction. Once closed, it amends:
   - §9 validation and repair (§8);
   - §11 partial output (§8);
 - [[01-Closed-Discussions/025-task-dependency-sequences-and-hierarchical-reconcile-grouping]] — §18 the AI planning boundary for sequences (§9);
-- [[01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop]] — §2 the number of questions and options (§7).
+- [[01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop]] — §2 the number of questions and options, and the product-added free-text answer (§7).
 
 The evidence is a measured run on 2026-10-15 (§1.1).
 
@@ -107,7 +107,7 @@ Causes found:
 - A draft may give **Goals and Projects a `targetDate`, and Tasks a `deadline`, beyond the seven-day window**, up to 24 months ahead. Example: Konkur gets a Goal dated about a year away.
 - **Task `plannedDate` and the start of a Routine stay inside the seven-day window.** The detailed execution horizon of 014 §4.4 is unchanged.
 - **Undated Tasks stay what they are now:** allowed only under a Goal or Project (026). They hold real later steps of that parent, not leftovers.
-- A Routine keeps recurring after the first week. Whether the first week ends it is open point §11.1.
+- A Routine starts inside the first week and keeps recurring after it (§11.1). Continuation (§3) may adjust or pause it.
 - **The draft says why.** The review step shows, above the items, one line such as:
   > «این هفته را دقیق چیدیم. هفتهٔ بعد را با توجه به اینکه این هفته چطور پیش رفت می‌سازیم.»
 
@@ -136,7 +136,7 @@ Causes found:
   - accepted planning details and sequences.
 - The proposal is a normal PlanningDraft: it has the same review and the same confirmation, and approving it is the "continue" decision of 014 §4.5.
 - It is offered, never forced. It integrates with Reconcile and is not a weekly interruption (014 §4.5).
-- Whether generation starts on a tap or by itself is open point §11.4.
+- Generation starts when the user taps «برنامهٔ هفتهٔ بعد», never by itself (§11.4).
 - It is a **separate DevMap step, built after the planning-quality step**, so the first draft is right before it is repeated weekly.
 
 ---
@@ -189,7 +189,7 @@ The prompt rule "never invent a deadline, a recurrence schedule, … or the user
 
 ## 7. Decision F — Fewer, better questions
 
-The proposed limits are open point §11.2.
+Limits decided by the owner on 2026-10-15 (§11.2).
 
 - **Ask only about the user:**
   - their availability;
@@ -201,11 +201,13 @@ The proposed limits are open point §11.2.
   - a public fact (state it as an assumption);
   - anything already said.
 - **`OWNERSHIP`** is asked only to choose between the user's existing Goals or Projects.
-- **Proposed limits:**
-  - one clarification turn, instead of three (013);
-  - up to two questions, instead of three (028 §2.3);
-  - two to four options, instead of seven (028 §2.1).
-  - «چیز دیگر…» and «بدون پاسخ بساز» stay.
+- **Limits:**
+  - **one clarification turn**, instead of three (013);
+  - **up to four questions** in that turn, instead of three (028 §2.3);
+  - **three answers per question at most:** zero or exactly two model-proposed options, single or multiple choice, and a third the product always adds, «خودت بنویس», which opens free text. It replaces «چیز دیگر…» (028 §2.2), and the model still never returns its own "other" option;
+  - **a question without options opens its free-text field by default**, so the user can type at once;
+  - «بدون پاسخ بساز» stays. Every question remains optional.
+- A question whose likely answers are many (such as which weekdays) has no options and is answered in the open free-text field.
 - **Prefer drafting.** When the intention is plannable with visible assumptions, draft without asking. The user corrects the draft, which is faster than answering.
 
 ---
@@ -234,7 +236,7 @@ The proposed limits are open point §11.2.
 
 - The planning output gains sequence membership and order (025 §18 already requires the draft to expose them).
 - The model proposes a sequence when **a step needs the result of another**, for example: collect data → analyse → write the chapter.
-  - This widens 025 §18, which allowed one only on explicit words. The threshold is open point §11.3.
+  - This widens 025 §18, which allowed one only on explicit words (§11.3).
   - Mere list order or dates are still not dependency (025 §2).
 - Same-scope, linear and hard, as in 025.
 - In review, a sequence shows as a numbered chain «۱ ← ۲ ← ۳». It has one control to remove the order, which leaves independent Tasks.
@@ -269,21 +271,13 @@ The planning-quality step is accepted only when a fixed evaluation set passes wi
 
 ---
 
-## 11. Open points for the owner (with recommendations)
+## 11. Resolved points (owner, 2026-10-15)
 
-1. **Do Routines continue after the first week?**
-   - **Recommended: yes.** A Routine starts in the first week and keeps going.
-   - Continuation (§3) may adjust or pause it.
-   - Ending it after a week would force the user to recreate every Routine weekly.
-2. **Question limits (§7):** 1 turn × up to 2 questions × 2–4 options, versus keeping 3 turns × 3 questions × 2–7 options.
-   - **Recommended: the smaller limits.**
-3. **Threshold for AI sequences (§9.1):** "a step needs another's result", versus explicit words only (025 §18 today).
-   - **Recommended: the wider threshold**, because the user removes a chain with one control.
-4. **Continuation start (§3):** generate when the user taps «برنامهٔ هفتهٔ بعد», versus generating by itself before the window ends.
-   - **Recommended: on tap.** It means no cost for abandoned plans, and the user asks for it.
-5. **Waiting time.** If the bar of §10 is reached only with thinking on, a draft takes 20–80 seconds instead of under 10.
-   - **Recommended: accept it, with an honest waiting screen.**
-   - Decide only after re-measuring with §2–§9 in place, because the fast mode may then be enough.
+1. **Routines continue after the first week.** **Accepted.** A Routine starts in the first week and keeps going; continuation (§3) may adjust or pause it. Ending it after a week would force the user to recreate every Routine weekly.
+2. **Question limits (§7).** The owner decided: **one turn, up to four questions, and three answers per question** — two model options plus «خودت بنویس». A question without options opens its free-text field by default. This replaces the recommendation of two questions with two to four options.
+3. **Threshold for AI sequences (§9.1).** **Accepted:** "a step needs another's result", not only explicit words. The user removes a chain with one control.
+4. **Continuation start (§3).** **Accepted:** generated when the user taps «برنامهٔ هفتهٔ بعد». No cost for abandoned plans.
+5. **Waiting time.** **Accepted:** 20–80 seconds is acceptable with an honest waiting screen, if the bar of §10 needs it. The model configuration is chosen only after re-measuring with §2–§9 in place, because the fast mode may then be enough.
 
 ---
 
@@ -304,12 +298,12 @@ The planning-quality step is accepted only when a fixed evaluation set passes wi
   - notes on §4.3, §4.4 (dates beyond the window), §4.5 (continuation), §9 and §11 (removal of invalid items);
   - §5 gains sequence membership on Task proposals.
 - **025:** note on §18 (threshold) and the manual sequence actions.
-- **028:** note on §2.1 and §2.3 limits.
+- **028:** note on §2.1–§2.3: two model options, «خودت بنویس», up to four questions, free text open when there are no options.
 - **`04-Specs/ai-native-mvp-baseline.md`, the decision inventory and `00-START-HERE.md`.**
 - **DevMap:**
-  - a planning-quality step (prompt, output schema with sequences, calendar context, regeneration and removal, question limits, evaluation set as acceptance);
-  - a manual-sequence UI change;
-  - a separate weekly-continuation step.
+  - STEP-22, planning quality: prompt, output schema with sequences, calendar context, regeneration and removal, question limits, the review line and chain, and the evaluation set as acceptance;
+  - STEP-23, manual sequences: «بعد از…», move and remove;
+  - STEP-24, weekly continuation.
 
 ---
 
@@ -341,7 +335,9 @@ The planning-quality step is accepted only when a fixed evaluation set passes wi
 - **سؤال‌ها:**
   - فقط دربارهٔ خود کاربر پرسیده می‌شود.
   - نوع ساختار، واقعیت عمومی و چیزی که کاربر قبلاً گفته پرسیده نمی‌شود.
-  - حد پیشنهادی: یک مرحله، دو سؤال، ۲ تا ۴ گزینه.
+  - یک مرحله، حداکثر چهار سؤال.
+  - هر سؤال حداکثر سه پاسخ دارد: دو گزینهٔ مدل و «خودت بنویس» که محصول اضافه می‌کند.
+  - اگر مدل گزینه نداد، کادر نوشتن از اول باز است.
 - **بدون خطای ساختاری:**
   - اگر موردی خطا داشت، یک بار دوباره تولید می‌شود.
   - اگر باز هم خطا داشت، آن مورد با یک یادداشت آشکار حذف می‌شود.
@@ -351,9 +347,9 @@ The planning-quality step is accepted only when a fixed evaluation set passes wi
   - کاربر می‌تواند روی هر کار «بعد از…» را انتخاب کند و ترتیب را جابه‌جا یا حذف کند.
 - **معیار پذیرش:** حداقل ۳۰ هدف آزمایشی، با حدنصاب‌های بخش ۱۰.
 
-**پنج پرسش باز با پیشنهاد من (بخش ۱۱):**
-1. روتین بعد از هفتهٔ اول ادامه پیدا کند (بله).
-2. سؤال‌ها: یک مرحله و دو سؤال (بله).
-3. آستانهٔ توالی برای مدل: نیاز واقعی به نتیجهٔ قدم قبل (بله).
-4. ادامهٔ هفتگی: با لمس کاربر ساخته شود (بله).
-5. زمان انتظار ۲۰ تا ۸۰ ثانیه: پذیرفتنی است، ولی تصمیم بعد از سنجش دوباره گرفته شود.
+**تصمیم‌های مالک دربارهٔ پنج پرسش باز (۲۰۲۶-۱۰-۱۵):**
+1. روتین بعد از هفتهٔ اول ادامه پیدا می‌کند.
+2. سؤال‌ها: یک مرحله، حداکثر چهار سؤال، هر کدام دو گزینه به‌علاوهٔ «خودت بنویس». بدون گزینه، کادر نوشتن باز است.
+3. مدل هر وقت قدمی به نتیجهٔ قدم قبل نیاز دارد توالی پیشنهاد می‌دهد.
+4. برنامهٔ هفتهٔ بعد با لمس کاربر ساخته می‌شود.
+5. انتظار ۲۰ تا ۸۰ ثانیه پذیرفتنی است، ولی تنظیم مدل بعد از سنجش دوباره انتخاب می‌شود.

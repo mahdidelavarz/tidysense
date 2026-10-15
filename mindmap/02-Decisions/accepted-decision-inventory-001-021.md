@@ -1,4 +1,4 @@
-# Accepted Decision Inventory — Discussions 001–028
+# Accepted Decision Inventory — Discussions 001–029
 
 Status: **Canonical consolidated projection** (2026-09-19). The filename is retained so existing links do not break. Later accepted discussions override earlier contradictory decisions.
 
@@ -9,7 +9,7 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 | Narrow legacy compatibility (mobile OTP, auth/API basics, palette) | [[../01-Closed-Discussions/001-008-legacy-surviving-decisions]] as amended by the technical DevMap |
 | AI-native direction and scope | Discussions 010–011 |
 | core/temporal model | Discussions 012–012A, amended by 023–026 |
-| Planning flow/output | Discussions 013–014A, amended by 023, 026 and 028 |
+| Planning flow/output | Discussions 013–014A, amended by 023, 026, 028 and 029 |
 | Task/Routine/Today | Discussions 015–015B, amended by 024–026 |
 | Reconcile | Discussions 016–017A, amended by 025–026 |
 | authority, privacy, hostile input and failure | Discussions 018–018A; dedicated crisis UX removed by 2026-09-19 consolidation; one-tap Reconcile item actions and AI disclosure amended by 027 |
@@ -19,10 +19,11 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 | implementation sequence | Discussion 022, amended by 023–026 and current repository evidence |
 | persistent PlanningFacts | Discussion 023 |
 | multi-time Routine scheduling | Discussion 024 |
-| Task sequences and hierarchical Reconcile | Discussion 025, as amended by 026 |
+| Task sequences and hierarchical Reconcile | Discussion 025, as amended by 026 and 029 |
 | Backlog removal, parent-owned undated Tasks and CaptureItem | Discussion 026 |
 | AI disclosure, response feedback, product insights and one-tap Reconcile item actions | Discussion 027 |
-| clarification quick replies, the four-step planning flow, first-run guides and desktop in the pilot | Discussion 028 |
+| clarification quick replies, the four-step planning flow, first-run guides and desktop in the pilot | Discussion 028, as amended by 029 |
+| planning quality: rolling horizon, dates, structure, questions, calendar, no structural errors, sequences, weekly continuation | Discussion 029 |
 
 ## Consolidated accepted state
 
@@ -88,6 +89,19 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 - Every planning entry shows the same four steps: نوشتن، پرسش‌ها، مرور، تأیید. A turn without questions shows «پرسش‌ها» as passed.
 - On phones, at first open and before login, a welcome screen and three guide pages are shown once per device; never to an existing session or on desktop; nothing about them is recorded on the server. A guide's promise must hold in the measured product, otherwise its copy changes.
 - The pilot runs on phone and desktop. Desktop has its own layouts and may show more, derived from data the phone already has, but adds no behaviour.
+- *Amended by D029:* zero or exactly two model options; the product-added answer is «خودت بنویس»; free text opens by default when there are no options; up to four questions in the single turn; `ENTITY_TYPE` removed.
+
+### Planning quality — D029
+
+- **Rolling horizon.** Goal/Project `targetDate` and Task `deadline` may lie up to 24 months ahead; Task `plannedDate` and a Routine's start stay inside the seven-day window; Routines keep recurring after it. The review says why the week is detailed and that the next is built from this week's evidence.
+- **Weekly continuation.** Near a window's end the product offers the next window for that Goal or Project; it is generated on the user's tap from execution evidence and reviewed and confirmed like any draft.
+- **Dates.** `plannedDate`, Routine days and times always set; a `targetDate` from a public or stated fact set as an estimate marked «تخمینی»; a `deadline` only when stated or implied by a fixed real-world date. No invented measurable Goal outcome.
+- **Structure.** Goals and Projects only when real (029 §5); none empty; no re-parenting or wrapper Projects to pass validation; the system, not the user, decides structure; a long Goal gets phase Projects, its core Routine and real first-week Tasks.
+- **Calendar.** The product gives the model Persian dates, weekday names and ISO numbers for each window day, and renders every Persian date it shows.
+- **Questions.** One turn, up to four questions, each with zero or two model options plus «خودت بنویس»; only about the user; never the entity type, a public fact or what was said; draft without asking when visible assumptions suffice.
+- **No structural errors from the model.** One regeneration with the issues; items still invalid are removed with a visible note; `GENERATION_FAILED` only when nothing valid is left; meaning is never changed silently.
+- **Sequences.** The model proposes a chain when a step needs another's result; review shows it with a remove control. Manually: «بعد از…» on any active Task, move within the unresolved part, remove from order.
+- **Quality bar.** A kept evaluation set of at least 30 Persian intentions: ≥ 95% approvable without a blocking issue, no entity-type questions, at most 1 in 10 asking a public fact, no empty parents, correct Persian dates, median time to draft under 2 minutes.
 
 ### Safety consolidation
 
