@@ -61,8 +61,12 @@ public static partial class PlanningOutputGate
     private static readonly HashSet<string> RemovableErrors = new(StringComparer.Ordinal)
     {
         "TOO_MANY_PROPOSALS", "TOO_MANY_GOALS", "TOO_MANY_PROJECTS", "TOO_MANY_TASKS", "TOO_MANY_ROUTINES",
-        "FACT_INVALID"
+        "FACT_INVALID", "NOTE_INVALID", "WARNING_INVALID", "TOO_MANY_ASSUMPTIONS", "TOO_MANY_WARNINGS",
+        "TOO_MANY_QUESTIONS"
     };
+
+    private const string TextDateCorrection =
+        "a Persian date written in the text names a day its month does not have, or a weekday that is not that date's weekday: write a day only as an exact \"persianDate\" from \"calendar\", with its own \"weekday\"";
 
     private static readonly string[] Kinds =
         [PlanningOutcomes.Draft, PlanningOutcomes.Clarification, PlanningOutcomes.InputBlocked];
@@ -137,7 +141,11 @@ public static partial class PlanningOutputGate
                 if (kind == PlanningOutcomes.Clarification && !allowClarification)
                     throw new GateFailure(GatePolicy, AiFailureClasses.Policy,
                         "clarificationAllowed is false, so kind CLARIFICATION is not allowed: return a DRAFT with visible assumptions or INPUT_BLOCKED");
-                return new PlanningGateResult(kind, null, clarification, null, null, rules);
+                var asked = new PlanningGateResult(kind, null, clarification, null, null, rules);
+                // A wrong Persian date is asked for again once; otherwise the questions are kept as written.
+                if (PlanningTextDates.HasError(PlanningTextDates.Of(clarification), context.Today))
+                    throw new GateFailure(GateSemantic, AiFailureClasses.Semantic, TextDateCorrection) { Fallback = asked };
+                return asked;
             }
 
             if (draftNode is null || questions.Length > 0 || blockReason is not null)
@@ -159,7 +167,7 @@ public static partial class PlanningOutputGate
                     // Too many items, or a detail that cannot be stored, is asked for again, and otherwise
                     // the later items and the broken details are left out (029 §8).
                     var trimmed = errors.All(RemovableErrors.Contains)
-                        ? PlanningDraftRules.Without(draft,
+                        ? PlanningDraftRules.Without(PlanningDraftRules.WithoutInvalidNotes(draft),
                             [..PlanningDraftRules.OverLimits(draft), ..PlanningDraftRules.InvalidFacts(draft)])
                         : null;
                     throw new GateFailure(GateSemantic, AiFailureClasses.Semantic,
@@ -172,7 +180,13 @@ public static partial class PlanningOutputGate
                 // The draft as handed over must be approvable: an item the user could not approve is
                 // asked for again, and otherwise left out with a note (029 §8).
                 var result = Approvable(kind, draft, context, rules, out var defects);
-                if (defects.Count == 0) return result!;
+                if (defects.Count == 0)
+                {
+                    // A wrong Persian date is asked for again once; otherwise the draft is kept as written.
+                    if (PlanningTextDates.HasError(PlanningTextDates.Of(draft), context.Today))
+                        throw new GateFailure(GateSemantic, AiFailureClasses.Semantic, TextDateCorrection) { Fallback = result };
+                    return result!;
+                }
                 throw new GateFailure(GateSemantic, AiFailureClasses.Semantic,
                     "these items could not be approved as proposed: " + string.Join("; ", defects
                         .Select(x => (Where: Where(draft, x.DraftId), x.Code))
@@ -206,13 +220,22 @@ public static partial class PlanningOutputGate
     private static PlanningGateResult? Approvable(string kind, PlanningDraftContent draft, PlanningContext context,
         List<string> rules, out IReadOnlyList<(string? DraftId, string Code)> defects)
     {
-        defects = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(draft,
-            new PlanningRuleContext(context.Today, context.Scope?.Type, context.Facts)));
+        var ruleContext = new PlanningRuleContext(context.Today, context.Scope?.Type, context.Facts);
+        defects = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(draft, ruleContext));
         var reduced = draft.RemovedItems is { Count: > 0 };
         if (defects.Count == 0)
             return new PlanningGateResult(kind, draft, null, null, null, reduced ? [..rules, RemoveInvalidItems] : rules);
-        if (defects.Any(x => x.DraftId is null)) return null;
-        var without = PlanningDraftRules.Without(draft, defects.Select(x => x.DraftId!));
+        // An overloaded first week is the only fault of the whole draft that leaving items out can cure.
+        var candidate = draft;
+        if (defects.Any(x => x.DraftId is null))
+        {
+            if (defects.Any(x => x.DraftId is null && x.Code != PlanningIssueCodes.FirstWeekOverloaded) ||
+                PlanningDraftRules.WithinFirstWeek(draft, ruleContext) is not { } fitted) return null;
+            candidate = fitted;
+        }
+        var remaining = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(candidate, ruleContext));
+        if (remaining.Any(x => x.DraftId is null)) return null;
+        var without = remaining.Count == 0 ? candidate : PlanningDraftRules.Without(candidate, remaining.Select(x => x.DraftId!));
         return without is null ? null : new PlanningGateResult(kind, without, null, null, null, [..rules, RemoveInvalidItems]);
     }
 

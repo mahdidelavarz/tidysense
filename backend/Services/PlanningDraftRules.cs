@@ -528,6 +528,44 @@ public static partial class PlanningDraftRules
         return over;
     }
 
+    /// <summary>
+    /// A generated draft without the notes and warnings that break their rules or limits. They are
+    /// not items: the work stays as proposed.
+    /// </summary>
+    public static PlanningDraftContent WithoutInvalidNotes(PlanningDraftContent content)
+    {
+        var known = content.Proposals.Select(x => x.DraftId).Concat(content.Facts.Select(x => x.DraftId))
+            .ToHashSet(StringComparer.Ordinal);
+        bool Valid(PlanningNote note) => note.Text is { Length: > 0 and <= PlanningLimits.NoteLength } &&
+            (note.DraftId is null || known.Contains(note.DraftId));
+        return content with
+        {
+            Assumptions = content.Assumptions.Where(Valid).Take(PlanningLimits.Assumptions).ToArray(),
+            UnresolvedQuestions = content.UnresolvedQuestions.Where(Valid).Take(PlanningLimits.UnresolvedQuestions).ToArray(),
+            Warnings = content.Warnings.Where(x => PlanningWarningCodes.All.Contains(x.Code) &&
+                    PlanningSeverities.IsKnown(x.Severity) && (x.DraftId is null || known.Contains(x.DraftId)))
+                .Take(PlanningLimits.Warnings).ToArray()
+        };
+    }
+
+    /// <summary>
+    /// A generated draft whose first week holds too many occurrences, brought within the limit by
+    /// leaving out its last Routines, then its last dated Tasks, and naming them. Null when that
+    /// leaves nothing.
+    /// </summary>
+    public static PlanningDraftContent? WithinFirstWeek(PlanningDraftContent content, PlanningRuleContext context)
+    {
+        var current = content;
+        while (Evaluate(current, context).FirstWeek.Count > PlanningLimits.FirstWeekEntries)
+        {
+            var last = current.Proposals.LastOrDefault(x => x.EntityType == PlanningEntityTypes.Routine) ??
+                current.Proposals.LastOrDefault(x => x.EntityType == PlanningEntityTypes.Task && x.PlannedDate is not null);
+            if (last is null || Without(current, [last.DraftId]) is not { } smaller) return null;
+            current = smaller;
+        }
+        return current;
+    }
+
     /// <summary>The planning details whose type, strength or value break the catalogue (FACT_INVALID).</summary>
     public static IReadOnlyList<string> InvalidFacts(PlanningDraftContent content) => content.Facts
         .Where(fact => !PlanningFactCatalog.IsKnown(fact.FactType) ||

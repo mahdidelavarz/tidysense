@@ -191,6 +191,64 @@ public sealed class PlanningOutputGateTests
     }
 
     [Fact]
+    public void Written_persian_dates_must_be_real_days_with_their_own_weekday()
+    {
+        // Today is Saturday 11 Mehr 1405 (2026-10-03).
+        bool Wrong(string text) => PlanningTextDates.HasError([text], Today);
+        Assert.False(Wrong("شروع از شنبه ۱۱ مهر"));
+        Assert.False(Wrong("تا ۳۱ شهریور ۱۴۰۶ و نوروز ۱ فروردین"));
+        Assert.False(Wrong("پنج‌شنبه ۲۳ مهر و سه‌شنبه 14 مهر"));
+        Assert.True(Wrong("جمعه ۲۳ مهر"));
+        Assert.True(Wrong("تا ۳۱ مهر"));
+        Assert.True(Wrong("شنبه ۲۴ مهر"));
+        // Words that only start like a month are not dates.
+        Assert.False(Wrong("۲ دیگر و ۳ مهرماه"));
+    }
+
+    [Fact]
+    public void A_wrong_written_date_is_asked_for_again_and_otherwise_the_draft_is_kept_as_written()
+    {
+        var result = Evaluate(With(x => x["draft"]!["summary"] = "شروع از جمعه ۱۱ مهر"));
+        Assert.False(result.Passed);
+        Assert.Contains("exact \"persianDate\" from \"calendar\"", result.Correction);
+        Assert.Equal("شروع از جمعه ۱۱ مهر", result.Fallback!.Draft!.Summary);
+        Assert.Equal(4, result.Fallback.Draft.Proposals.Count);
+
+        var asking = Evaluate(Asking(Question(x => x["text"] = "از جمعه ۱۱ مهر شروع کنیم؟")).ToJsonString());
+        Assert.False(asking.Passed);
+        Assert.Single(asking.Fallback!.Clarification!.Questions);
+    }
+
+    [Fact]
+    public void Broken_notes_are_dropped_and_an_overloaded_week_loses_its_last_routines_when_not_corrected()
+    {
+        var noted = Evaluate(With(x => x["draft"]!["assumptions"]![0]!["text"] = new string('ف', 301)));
+        Assert.False(noted.Passed);
+        Assert.Empty(noted.Fallback!.Draft!.Assumptions);
+        Assert.Equal(4, noted.Fallback.Draft.Proposals.Count);
+
+        // Four daily Routines fill 28 days of the first week, more than 21.
+        var busy = Evaluate(With(x =>
+        {
+            // Without the HARD «Friday» detail, so the daily Routines conflict with nothing.
+            x["draft"]!["facts"] = new JsonArray();
+            var proposals = x["draft"]!["proposals"]!.AsArray();
+            Proposal(x, 3)["recurrence"] = new JsonObject { ["type"] = "DAILY" };
+            foreach (var id in new[] { "r2", "r3", "r4" })
+            {
+                var routine = JsonNode.Parse(Proposal(x, 3).ToJsonString())!;
+                routine["draftId"] = id;
+                routine["title"] = $"روتین {id}";
+                proposals.Add(routine);
+            }
+        }));
+        Assert.False(busy.Passed);
+        var fitted = busy.Fallback!.Draft!;
+        Assert.Equal(["روتین r4", "روتین r3"], fitted.RemovedItems!.Select(x => x.Title));
+        Assert.Equal(["goal", "project", "step", "practice", "r2"], fitted.Proposals.Select(x => x.DraftId));
+    }
+
+    [Fact]
     public void Too_many_goals_are_asked_for_again_and_otherwise_the_later_one_is_left_out_with_its_work()
     {
         var result = Evaluate(With(x =>
