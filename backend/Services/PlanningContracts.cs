@@ -62,7 +62,9 @@ public sealed record PlanningProposal(
     DateOnly? Deadline,
     PlanningRecurrence? Recurrence,
     IReadOnlyList<TimeOnly>? TimesOfDay,
-    DateOnly? EffectiveFromLocalDate);
+    DateOnly? EffectiveFromLocalDate,
+    string? SequenceKey = null,
+    int? SequenceOrder = null);
 
 /// <summary>Only the field that belongs to the fact type is set. Weekdays are ISO numbers (Monday = 1).</summary>
 public sealed record PlanningFactValue(
@@ -95,11 +97,24 @@ public sealed record PlanningDraftContent(
     IReadOnlyList<PlanningFactProposal> Facts,
     IReadOnlyList<PlanningNote> Assumptions,
     IReadOnlyList<PlanningWarning> Warnings,
-    IReadOnlyList<PlanningNote> UnresolvedQuestions);
+    IReadOnlyList<PlanningNote> UnresolvedQuestions,
+    IReadOnlyList<PlanningRemovedItem>? RemovedItems = null);
+
+/// <summary>
+/// An item the generator proposed that could not be made valid and was left out (029 §8). It is
+/// named to the user in one note; nothing about it is created.
+/// </summary>
+public sealed record PlanningRemovedItem(string EntityType, string? Title);
+
+public static class PlanningRemovedItemTypes
+{
+    /// <summary>A removed planning detail, named without its value.</summary>
+    public const string Fact = "FACT";
+}
 
 public static class PlanningJson
 {
-    public const string SchemaVersion = "2026-10-14.1";
+    public const string SchemaVersion = "2026-10-15.1";
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     public static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Options);
@@ -202,19 +217,19 @@ public static class PlanningQuestionKinds
     public const string Constraint = "CONSTRAINT";
     public const string Content = "CONTENT";
     public const string Ownership = "OWNERSHIP";
-    public const string EntityType = "ENTITY_TYPE";
     public const string Contradiction = "CONTRADICTION";
 
-    public static readonly string[] All = [Timing, Recurrence, Constraint, Content, Ownership, EntityType, Contradiction];
+    // ENTITY_TYPE was removed by 029 §7: the system, not the user, decides structure.
+    public static readonly string[] All = [Timing, Recurrence, Constraint, Content, Ownership, Contradiction];
 
     public static bool IsKnown(string? value) => value is not null && All.Contains(value, StringComparer.Ordinal);
 }
 
 /// <summary>
-/// One clarification question (028 §2.1): its text, an optional one-line reason saying what the answer
-/// changes, its kind, and zero or two to seven short options, one or several of which may be chosen.
-/// The product adds «چیز دیگر…» itself, so the options never hold an "other". Every label is model
-/// output and is shown as plain text only.
+/// One clarification question (028 §2.1 as amended by 029 §7): its text, an optional one-line reason
+/// saying what the answer changes, its kind, and zero or exactly two short options, one or both of
+/// which may be chosen. The product adds «خودت بنویس» itself as the third answer, so the options
+/// never hold an "other". Every label is model output and is shown as plain text only.
 /// </summary>
 public sealed record PlanningQuestion(string Id, string Text)
 {
@@ -225,7 +240,7 @@ public sealed record PlanningQuestion(string Id, string Text)
 }
 
 /// <summary>
-/// The answer to one question: the zero-based positions of the chosen options, the «چیز دیگر…» text,
+/// The answer to one question: the zero-based positions of the chosen options, the «خودت بنویس» text,
 /// or both. The server, not the client, turns positions into labels for the model.
 /// </summary>
 public sealed record PlanningAnswer(string QuestionId, string? Text = null)
@@ -248,7 +263,7 @@ public sealed record PlanningClarification(
 public static partial class PlanningClarificationRules
 {
     public const int MaxTurns = 3;
-    public const int MaxQuestions = 3;
+    public const int MaxQuestions = 4;
     public const int QuestionLength = 300;
     public const int MessageLength = 500;
     public const int AnswerLength = 500;
@@ -258,20 +273,21 @@ public static partial class PlanningClarificationRules
 
     public const int ReasonLength = 120;
     public const int MinOptions = 2;
-    public const int MaxOptions = 7;
+    public const int MaxOptions = 2;
     public const int OptionLength = 40;
 
     // A free-text "other" in the forms a model is likely to write it. The product adds its own
-    // «چیز دیگر…», so a second one would duplicate it and break the OTHER measurement (028 §2.2).
+    // «خودت بنویس», so a second one would duplicate it and break the OTHER measurement (028 §2.2).
     private static readonly HashSet<string> OtherLabels = new(StringComparer.Ordinal)
     {
         "other", "others", "otheroption", "somethingelse", "else",
         "سایر", "سایرموارد", "دیگر", "دیگری", "مورددیگر", "موارددیگر", "گزینهدیگر", "گزینهدیگری",
         "چیزدیگر", "چیزدیگری", "غیره", "غیرازاین", "غیرازاینها", "پاسخدیگر", "جوابدیگر",
-        "خودممینویسم", "خودمبنویسم", "نوشتنپاسخ", "پاسخخودم"
+        "خودممینویسم", "خودمبنویسم", "نوشتنپاسخ", "پاسخخودم", "خودتبنویس", "خودتبنویسید",
+        "خودتاننوشته", "بنویسید", "بنویس"
     };
 
-    /// <summary>A clarification asks one to three distinct questions; a blocked input names a known reason and says why.</summary>
+    /// <summary>A clarification asks one to four distinct questions; a blocked input names a known reason and says why.</summary>
     public static bool IsValid(string outcome, PlanningClarification? value) => Error(outcome, value) is null;
 
     /// <summary>The first rule a clarification or blocked input breaks, or null when it is valid.</summary>
@@ -315,7 +331,8 @@ public static partial class PlanningClarificationRules
     public static bool IsOther(string label)
     {
         var key = Comparable(label);
-        return OtherLabels.Contains(key) || key.StartsWith("چیزدیگر", StringComparison.Ordinal);
+        return OtherLabels.Contains(key) || key.StartsWith("چیزدیگر", StringComparison.Ordinal) ||
+            key.StartsWith("خودتبنویس", StringComparison.Ordinal);
     }
 
     /// <summary>

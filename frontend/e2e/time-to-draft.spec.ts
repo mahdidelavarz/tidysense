@@ -52,12 +52,10 @@ test('time from the first word to a reviewable draft', async ({ page }) => {
       // A person reads each question, then takes its first option or writes three words.
       for (const card of await page.locator('.question-card').all()) {
         await page.waitForTimeout(thinkingMs)
-        const options = card.getByRole('button').filter({ hasNotText: 'چیز دیگر…' })
+        // A question without options has its field open already (029 §7).
+        const options = card.getByRole('button').filter({ hasNotText: 'خودت بنویس' })
         if (await options.count() > 0) await options.first().click()
-        else {
-          await card.getByRole('button', { name: 'چیز دیگر…' }).click()
-          await card.getByRole('textbox').pressSequentially('هنوز مطمئن نیستم', { delay: typingDelayMs })
-        }
+        else await card.getByRole('textbox').pressSequentially('هنوز مطمئن نیستم', { delay: typingDelayMs })
       }
       await page.getByRole('button', { name: 'پیش‌نویس را بساز' }).click()
       await expect(questions).toBeHidden({ timeout: 150_000 })

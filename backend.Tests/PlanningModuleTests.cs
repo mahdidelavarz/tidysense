@@ -374,6 +374,13 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         var undated = Assert.Single(tasks, x => x.GoalId == goal.Id);
         Assert.Null(undated.PlannedDate);
         Assert.Equal(planned.PlannedDate, tasks.Single(x => x.Title == planned.Title).PlannedDate);
+        // The proposed sequence of the first two steps is one durable sequence, in its order (029 §9).
+        var next = draft.Proposals.Single(x => x.Proposal.DraftId == "step-2").Proposal;
+        var chained = new[] { planned.Title, next.Title }.Select(t => tasks.Single(x => x.Title == t)).ToArray();
+        Assert.NotNull(chained[0].SequenceId);
+        Assert.Equal(chained[0].SequenceId, chained[1].SequenceId);
+        Assert.Equal([1, 2], chained.Select(x => x.SequenceOrder));
+        Assert.Equal(2, tasks.Count(x => x.SequenceId is not null));
 
         var facts = (await client.GetFromJsonAsync<List<PlanningFactDto>>($"/api/v1/planning/facts?goalId={goal.Id}"))!;
         var fact = Assert.Single(facts);
@@ -651,10 +658,10 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         Assert.Equal("SUCCEEDED", asked.Status);
         Assert.Equal("CLARIFICATION", asked.Outcome);
         Assert.Null(asked.DraftId);
-        Assert.Equal(new[] { "q1", "q2", "q3" }, asked.Clarification!.Questions.Select(x => x.Id));
-        // Each question says what it is about and offers its options; «چیز دیگر…» is the client's, never an option.
-        Assert.Equal(new[] { "RECURRENCE", "TIMING", "CONTENT" }, asked.Clarification.Questions.Select(x => x.Kind));
-        Assert.Equal(7, asked.Clarification.Questions[0].Options.Count);
+        Assert.Equal(new[] { "q1", "q2", "q3", "q4" }, asked.Clarification!.Questions.Select(x => x.Id));
+        // Each question says what it is about and offers its options; «خودت بنویس» is the client's, never an option.
+        Assert.Equal(new[] { "CONTENT", "TIMING", "RECURRENCE", "CONSTRAINT" }, asked.Clarification.Questions.Select(x => x.Kind));
+        Assert.Equal(2, asked.Clarification.Questions[0].Options.Count);
         Assert.True(asked.Clarification.Questions[0].Multiple);
         Assert.False(asked.Clarification.Questions[1].Multiple);
         Assert.Empty(asked.Clarification.Questions[2].Options);
@@ -680,7 +687,7 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         // An option the question does not offer, a repeated one, or two for a one-choice question.
         foreach (var (id, answer) in new (string, object)[]
                  {
-                     ("clarify-range", new { questionId = "q2", options = new[] { 3 } }),
+                     ("clarify-range", new { questionId = "q2", options = new[] { 2 } }),
                      ("clarify-negative", new { questionId = "q1", options = new[] { -1 } }),
                      ("clarify-repeat", new { questionId = "q1", options = new[] { 1, 1 } }),
                      ("clarify-single", new { questionId = "q2", options = new[] { 0, 1 } }),
@@ -694,11 +701,13 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
             answers = new[] { new { questionId = "q1", text = "سه روز" } }
         })).StatusCode);
 
-        // Several days chosen and a word of one's own on the first question, one option on the second, the third skipped.
+        // Both options and a word of one's own on the first question, one option on the second, the third
+        // skipped, and the fourth in words: four answers in one turn.
         var answered = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(await StartAsync(client,
             Answer("clarify-2", [
-                new { questionId = "q1", options = new[] { 0, 2 }, text = "  سه روز در هفته  " },
-                new { questionId = "q2", options = new[] { 2 }, text = (string?)null }
+                new { questionId = "q1", options = new[] { 0, 1 }, text = "  سه روز در هفته  " },
+                new { questionId = "q2", options = new[] { 1 }, text = (string?)null },
+                new { questionId = "q4", options = Array.Empty<int>(), text = "یک ساعت" }
             ]), PlanningFixtures.Clarify))).Id);
         Assert.Equal("SUCCEEDED", answered.Status);
         Assert.Equal("DRAFT", answered.Outcome);
@@ -722,8 +731,8 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         Assert.Equal(1, stored.ClarificationTurn);
         var storedAnswers = PlanningJson.Deserialize<PlanningAnswer[]>(stored.AnswersJson!);
         Assert.Equal("سه روز در هفته", storedAnswers[0].Text);
-        Assert.Equal([0, 2], storedAnswers[0].Options);
-        Assert.Equal([2], storedAnswers[1].Options);
+        Assert.Equal([0, 1], storedAnswers[0].Options);
+        Assert.Equal([1], storedAnswers[1].Options);
         Assert.Null(storedAnswers[1].Text);
         Assert.Equal(0, await db.Goals.CountAsync(x => x.UserId == owner.UserId));
 
@@ -738,7 +747,7 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
             .Select(type => events.Single(x => x.EventType == type))];
         Assert.All(events, x =>
         {
-            Assert.DoesNotContain("شنبه", x.PayloadJson);
+            Assert.DoesNotContain("مکالمه", x.PayloadJson);
             Assert.DoesNotContain("سه روز", x.PayloadJson);
             using var payload = JsonDocument.Parse(x.PayloadJson);
             Assert.Equal(asked.Id, payload.RootElement.GetProperty("flowId").GetGuid());
@@ -748,12 +757,12 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         Assert.Equal(2, events[2].EventVersion);
         using var askedPayload = JsonDocument.Parse(events[0].PayloadJson);
         Assert.Equal(1, askedPayload.RootElement.GetProperty("turn").GetInt32());
-        Assert.Equal(["RECURRENCE:7:True", "TIMING:3:False", "CONTENT:0:False"],
+        Assert.Equal(["CONTENT:2:True", "TIMING:2:False", "RECURRENCE:0:False", "CONSTRAINT:0:False"],
             askedPayload.RootElement.GetProperty("questions").EnumerateArray().Select(x =>
                 $"{x.GetProperty("kind").GetString()}:{x.GetProperty("optionCount").GetInt32()}:{x.GetProperty("multiple").GetBoolean()}"));
         using var answeredPayload = JsonDocument.Parse(events[1].PayloadJson);
         Assert.False(answeredPayload.RootElement.GetProperty("draftNow").GetBoolean());
-        Assert.Equal(["RECURRENCE:0,2:True", "TIMING:2:False", "CONTENT::False"],
+        Assert.Equal(["CONTENT:0,1:True", "TIMING:1:False", "RECURRENCE::False", "CONSTRAINT::True"],
             answeredPayload.RootElement.GetProperty("answers").EnumerateArray().Select(x =>
                 $"{x.GetProperty("kind").GetString()}:{string.Join(',', x.GetProperty("chosen").EnumerateArray().Select(i => i.GetInt32()))}:{x.GetProperty("other").GetBoolean()}"));
         using var draftPayload = JsonDocument.Parse(events[2].PayloadJson);

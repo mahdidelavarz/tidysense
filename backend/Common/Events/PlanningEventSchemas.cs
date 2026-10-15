@@ -99,9 +99,10 @@ public static class PlanningEventSchemas
     private static EventPayloadFieldPolicy Turn() => new("turn", true, value =>
         value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var turn) && turn is >= 1 and <= 3);
 
-    /// <summary>One to three objects, one per question, each passing the item rule.</summary>
+    /// <summary>One object per question, up to the questions one turn may ask (029 §7), each passing the item rule.</summary>
     private static bool Items(JsonElement value, Func<JsonElement, bool> item) =>
-        value.ValueKind == JsonValueKind.Array && value.GetArrayLength() is >= 1 and <= 3 &&
+        value.ValueKind == JsonValueKind.Array &&
+        value.GetArrayLength() >= 1 && value.GetArrayLength() <= Services.PlanningClarificationRules.MaxQuestions &&
         value.EnumerateArray().All(x => x.ValueKind == JsonValueKind.Object && item(x));
 
     private static bool Only(JsonElement item, params string[] names) =>

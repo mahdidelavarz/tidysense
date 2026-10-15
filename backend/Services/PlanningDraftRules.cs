@@ -18,6 +18,9 @@ public static class PlanningLimits
     public const int Warnings = 10;
     public const int UnresolvedQuestions = 5;
     public const int HorizonDays = 7;
+    // Goal and Project target dates and Task deadlines may lie beyond the window, this far ahead (029 §2).
+    public const int MaxMonthsAhead = 24;
+    public const int SequenceKeyLength = 40;
     public const int NoteLength = 300;
     public const int SummaryLength = 1000;
 }
@@ -40,6 +43,8 @@ public static class PlanningIssueCodes
     public const string FactAlreadyActive = "FACT_ALREADY_ACTIVE";
     public const string FactDatePassed = "FACT_DATE_PASSED";
     public const string FirstWeekOverloaded = "FIRST_WEEK_OVERLOADED";
+    public const string DateTooFar = "DATE_TOO_FAR";
+    public const string EmptyParent = "EMPTY_PARENT";
 }
 
 /// <summary>The closed catalogue of warnings a generator may attach. The client owns their wording.</summary>
@@ -164,7 +169,9 @@ public static partial class PlanningDraftRules
             Deadline = isTask ? value.Deadline : null,
             Recurrence = isRoutine ? value.Recurrence : null,
             TimesOfDay = isRoutine ? value.TimesOfDay ?? [] : null,
-            EffectiveFromLocalDate = isRoutine ? value.EffectiveFromLocalDate : null
+            EffectiveFromLocalDate = isRoutine ? value.EffectiveFromLocalDate : null,
+            SequenceKey = isTask ? Optional(value.SequenceKey) : null,
+            SequenceOrder = isTask ? value.SequenceOrder : null
         };
     }
 
@@ -240,6 +247,20 @@ public static partial class PlanningDraftRules
             if (item.UnderContext && (contextType is null || item.EntityType == PlanningEntityTypes.Goal ||
                     (item.EntityType == PlanningEntityTypes.Project && contextType == PlanningContextTypes.Project)))
                 errors.Add("CONTEXT_PARENT_INVALID");
+        }
+
+        // A sequence (025): Tasks only, a key and an order together, distinct positive orders, at least
+        // two members, all with the same owner.
+        if (proposals.Any(x => (x.SequenceKey is null) != (x.SequenceOrder is null) ||
+                (x.SequenceKey is not null && (x.EntityType != PlanningEntityTypes.Task ||
+                    !DraftIdPattern().IsMatch(x.SequenceKey) || x.SequenceOrder < 1))))
+            errors.Add("SEQUENCE_INVALID");
+        foreach (var chain in proposals.Where(x => x.SequenceKey is not null).GroupBy(x => x.SequenceKey!, StringComparer.Ordinal))
+        {
+            var members = chain.ToArray();
+            if (members.Length < 2 || members.Select(x => x.SequenceOrder).Distinct().Count() != members.Length ||
+                members.Select(x => (x.ParentDraftId, x.UnderContext)).Distinct().Count() != 1)
+                errors.Add("SEQUENCE_INVALID");
         }
 
         foreach (var fact in content.Facts)
@@ -324,6 +345,11 @@ public static partial class PlanningDraftRules
                 !own.Any(IsBlocking)) Hard(scopeKey).Add(fact.FactType, fact.Value);
         }
 
+        var farthest = context.Today.AddMonths(PlanningLimits.MaxMonthsAhead);
+        // Whether a Task or Routine sits anywhere under the item, as proposed (an exclusion does not empty it).
+        bool HasWork(string draftId) => content.Proposals.Any(x => x.ParentDraftId == draftId &&
+            (x.EntityType is PlanningEntityTypes.Task or PlanningEntityTypes.Routine || HasWork(x.DraftId)));
+
         foreach (var item in content.Proposals)
         {
             var own = issues[item.DraftId];
@@ -342,6 +368,9 @@ public static partial class PlanningDraftRules
                     }
                     else if (item.ParentDraftId is null && !item.UnderContext)
                         own.Add(Rule(PlanningIssueCodes.StandaloneTaskNeedsDate));
+                    if (item.Deadline < context.Today && item.PlannedDate is null)
+                        own.Add(Rule(PlanningIssueCodes.DateInPast));
+                    if (item.Deadline > farthest) own.Add(Rule(PlanningIssueCodes.DateTooFar));
                     break;
                 case PlanningEntityTypes.Routine:
                     var recurrence = ValidRecurrence(item);
@@ -350,9 +379,15 @@ public static partial class PlanningDraftRules
                         own.Add(Rule(PlanningIssueCodes.HardConstraintConflict));
                     if (!ValidTimes(item)) own.Add(Rule(PlanningIssueCodes.InvalidTimes));
                     if (item.EffectiveFromLocalDate < context.Today) own.Add(Rule(PlanningIssueCodes.StartInPast));
+                    // A Routine starts inside the detailed week and keeps recurring after it (029 §2).
+                    else if (item.EffectiveFromLocalDate > content.WindowEnd)
+                        own.Add(Rule(PlanningIssueCodes.DateOutsideWindow));
                     break;
                 default:
                     if (item.TargetDate < context.Today) own.Add(Rule(PlanningIssueCodes.TargetInPast));
+                    else if (item.TargetDate > farthest) own.Add(Rule(PlanningIssueCodes.DateTooFar));
+                    // A Goal or Project is proposed for the work under it, never empty (029 §5).
+                    if (!HasWork(item.DraftId)) own.Add(Rule(PlanningIssueCodes.EmptyParent));
                     if (item.ReviewDate < context.Today) own.Add(Rule(PlanningIssueCodes.ReviewInPast));
                     // Planning inside a Goal or Project never introduces a second, unrelated Goal.
                     if (item.EntityType == PlanningEntityTypes.Goal && context.ContextType is not null ||
@@ -443,11 +478,64 @@ public static partial class PlanningDraftRules
                 Hash($"{PlanningConfirmationWarningCodes.DescendantsExcludedWithParent}|{draftId}|{revision}|{string.Join(',', carried)}")));
         var canonical = new StringBuilder($"{draftId}|{revision}|{contextStamp}|{evaluation.CanApply}");
         foreach (var item in items)
-            canonical.Append($"|{item.DraftId}:{item.EntityType}:{item.ParentDraftId}:{item.UnderContext}");
+            canonical.Append($"|{item.DraftId}:{item.EntityType}:{item.ParentDraftId}:{item.UnderContext}:{item.SequenceKey}:{item.SequenceOrder}");
         foreach (var fact in facts) canonical.Append($"|{fact.DraftId}:{fact.ScopeDraftId}");
         foreach (var warning in warnings) canonical.Append($"|{warning.WarningHash}");
         return new PlanningPreview(items, facts, warnings, content.Facts.Count > 0 && facts.Length == 0,
             evaluation.CanApply, Hash(canonical.ToString()));
+    }
+
+    /// <summary>
+    /// What makes a generated draft unapprovable as proposed: every blocking issue of an item or of
+    /// the whole draft (a null id). A generator's draft is judged as handed over, all items included.
+    /// </summary>
+    public static IReadOnlyList<(string? DraftId, string Code)> Defects(PlanningEvaluation evaluation) =>
+        evaluation.Proposals.Concat(evaluation.Facts)
+            .SelectMany(x => x.Value.Issues.Where(IsBlocking).Select(issue => ((string?)x.Key, issue.Code)))
+            .Concat(evaluation.DraftIssues.Where(IsBlocking).Select(issue => ((string?)null, issue.Code)))
+            .ToArray();
+
+    /// <summary>
+    /// The draft without the named items (029 §8): each goes with everything under it, a fact goes
+    /// with its scope, notes and warnings about removed items go too, and a sequence left with one
+    /// member is no sequence. Nothing is re-dated, re-typed or re-parented. The removed items are
+    /// listed for the user. Null when nothing would be left.
+    /// </summary>
+    public static PlanningDraftContent? Without(PlanningDraftContent content, IEnumerable<string> draftIds)
+    {
+        var removed = draftIds.ToHashSet(StringComparer.Ordinal);
+        for (var grew = true; grew;)
+        {
+            grew = false;
+            foreach (var item in content.Proposals)
+                if (!removed.Contains(item.DraftId) && item.ParentDraftId is { } parent && removed.Contains(parent))
+                    grew = removed.Add(item.DraftId);
+        }
+        foreach (var fact in content.Facts)
+            if (fact.ScopeDraftId is { } scope && removed.Contains(scope)) removed.Add(fact.DraftId);
+
+        var proposals = content.Proposals.Where(x => !removed.Contains(x.DraftId)).ToArray();
+        var facts = content.Facts.Where(x => !removed.Contains(x.DraftId)).ToArray();
+        if (proposals.Length == 0 && facts.Length == 0) return null;
+        var chains = proposals.Where(x => x.SequenceKey is not null)
+            .GroupBy(x => x.SequenceKey!, StringComparer.Ordinal).ToDictionary(x => x.Key, x => x.Count());
+        return content with
+        {
+            Proposals = proposals.Select(x => x.SequenceKey is { } key && chains[key] < 2
+                ? x with { SequenceKey = null, SequenceOrder = null } : x).ToArray(),
+            Facts = facts,
+            Assumptions = content.Assumptions.Where(x => x.DraftId is null || !removed.Contains(x.DraftId)).ToArray(),
+            Warnings = content.Warnings.Where(x => x.DraftId is null || !removed.Contains(x.DraftId)).ToArray(),
+            UnresolvedQuestions = content.UnresolvedQuestions
+                .Where(x => x.DraftId is null || !removed.Contains(x.DraftId)).ToArray(),
+            RemovedItems = [
+                ..content.RemovedItems ?? [],
+                ..content.Proposals.Where(x => removed.Contains(x.DraftId))
+                    .Select(x => new PlanningRemovedItem(x.EntityType, x.Title)),
+                ..content.Facts.Where(x => removed.Contains(x.DraftId))
+                    .Select(_ => new PlanningRemovedItem(PlanningRemovedItemTypes.Fact, null))
+            ]
+        };
     }
 
     public static RoutineRecurrence? ValidRecurrence(PlanningProposal item)

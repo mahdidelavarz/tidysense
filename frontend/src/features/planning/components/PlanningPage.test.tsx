@@ -92,7 +92,8 @@ const draft = (overrides: Partial<PlanningDraftDto> = {}): PlanningDraftDto => (
     category: 'AVAILABILITY', state: 'INCLUDED', excludedByAncestor: false, issues: [],
   }],
   assumptions: [{ draftId: 'step-1', text: 'تاریخ‌ها پیشنهادی‌اند.' }], unresolvedQuestions: [], draftIssues: [],
-  firstWeek: [{ draftId: 'step-1', date: '2026-10-03' }], canApply: true, linkedConfirmationId: null, ...overrides,
+  firstWeek: [{ draftId: 'step-1', date: '2026-10-03' }], canApply: true, linkedConfirmationId: null, removedItems: [],
+  ...overrides,
 })
 
 const confirmation = (overrides: Partial<PlanningConfirmationDto> = {}): PlanningConfirmationDto => ({
@@ -345,6 +346,31 @@ describe('PlanningPage', () => {
     expect(vi.mocked(revisePlanningDraft).mock.calls[1][1]).toBe(2)
   })
 
+  it('says why the week is detailed, marks estimates, names what was left out and removes a sequence as one', async () => {
+    const dated = { ...goal, targetDate: '2027-03-21' }
+    const second = proposal('step-2', 'TASK', 'انجام اولین قدم', { parentDraftId: 'goal', plannedDate: '2026-10-04', sequenceKey: 's1', sequenceOrder: 2 })
+    const first = { ...step, sequenceKey: 's1', sequenceOrder: 1 }
+    await openDraft(draft({
+      proposals: [view(dated, { issues: [{ code: 'ASSUMED_DATES', severity: 'INFO', origin: 'GENERATOR' }] }), view(first), view(second)],
+      removedItems: [{ entityType: 'TASK', title: 'هماهنگی انتقال گاز' }, { entityType: 'FACT', title: null }],
+    }))
+
+    expect(screen.getByText(/هفته‌ی بعد را با توجه به اینکه این هفته چطور پیش رفت می‌سازیم/)).toBeInTheDocument()
+    expect(screen.getByText(/\(تخمینی\)/)).toBeInTheDocument()
+    expect(screen.getByRole('note')).toHaveTextContent('نتوانستیم درست بچینیم و کنار گذاشتیم: «هماهنگی انتقال گاز»، یک جزئیات برنامه')
+    expect(screen.getByText(/قدم ۲ از ۲، بعد از «روشن‌کردن اولین قدم»/)).toBeInTheDocument()
+
+    vi.mocked(revisePlanningDraft).mockResolvedValueOnce(draft({ revision: 2 }))
+    fireEvent.click(screen.getByRole('button', { name: 'برداشتن ترتیب: روشن‌کردن اولین قدم، انجام اولین قدم' }))
+    await waitFor(() => expect(revisePlanningDraft).toHaveBeenCalledTimes(1))
+    // Every Task of the chain loses its order together; nothing else changes.
+    const sent = vi.mocked(revisePlanningDraft).mock.calls[0][2].proposals
+    expect(sent.map(item => [item.draftId, item.sequenceKey ?? null, item.sequenceOrder ?? null])).toEqual([
+      ['goal', null, null], ['step-1', null, null], ['step-2', null, null],
+    ])
+    expect(sent.map(item => item.plannedDate)).toEqual([null, '2026-10-03', '2026-10-04'])
+  })
+
   it('edits a proposal through the sheet without creating anything', async () => {
     await openDraft(draft())
     vi.mocked(revisePlanningDraft).mockResolvedValue(draft({ revision: 2 }))
@@ -435,8 +461,9 @@ describe('PlanningPage', () => {
       draftId: null, outcome: 'CLARIFICATION',
       clarification: {
         questions: [
-          { id: 'q1', text: 'کدام روزها وقت دارید؟', reason: 'تا روتین‌ها همان روزها بنشینند.', kind: 'RECURRENCE', options: ['شنبه', 'یکشنبه', 'دوشنبه'], multiple: true },
+          { id: 'q1', text: 'روی کدام بخش کار کنیم؟', reason: 'تا تمرین‌ها همان‌جا بنشینند.', kind: 'CONTENT', options: ['مکالمه', 'نوشتن'], multiple: true },
           { id: 'q2', text: 'تاریخ مشخصی در نظر دارید؟', reason: null, kind: 'TIMING', options: ['تا یک ماه', 'تا سه ماه'], multiple: false },
+          { id: 'q3', text: 'کدام روزها وقت دارید؟', reason: null, kind: 'RECURRENCE', options: [], multiple: false },
         ],
         blockReason: null, message: null, turn: 1,
       },
@@ -450,26 +477,32 @@ describe('PlanningPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ساخت پیش‌نویس' }))
 
     // Questions are not a draft: nothing reviewable is shown and nothing can be approved.
-    expect(await screen.findByRole('heading', { name: 'دو پرسش کوتاه' }, { timeout: 3000 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'سه پرسش کوتاه' }, { timeout: 3000 })).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'مراحل برنامه‌ریزی' })).getByRole('listitem', { current: 'step' })).toHaveTextContent('پرسش‌ها')
     expect(useUiStore.getState().focused).toBe(true)
-    expect(screen.getByText('تا روتین‌ها همان روزها بنشینند.')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('۰ از ۲ پاسخ')
+    expect(screen.getByText('تا تمرین‌ها همان‌جا بنشینند.')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('۰ از ۳ پاسخ')
     expect(screen.queryByRole('heading', { name: 'ساختار پیشنهادی' })).not.toBeInTheDocument()
     expect(getPlanningDraft).not.toHaveBeenCalled()
 
-    // Several days on the first question, and a word of one's own beside them.
-    const days = within(screen.getByRole('group', { name: 'کدام روزها وقت دارید؟' }))
-    fireEvent.click(days.getByRole('button', { name: 'شنبه' }))
-    fireEvent.click(days.getByRole('button', { name: 'دوشنبه' }))
-    fireEvent.click(days.getByRole('button', { name: 'چیز دیگر…' }))
-    fireEvent.change(screen.getByLabelText('پاسخ خودتان: کدام روزها وقت دارید؟'), { target: { value: '  عصرها  ' } })
+    // Both options on the first question, and a word of one's own beside them with «خودت بنویس».
+    const parts = within(screen.getByRole('group', { name: 'روی کدام بخش کار کنیم؟' }))
+    expect(parts.getAllByRole('button')).toHaveLength(3)
+    fireEvent.click(parts.getByRole('button', { name: 'مکالمه' }))
+    fireEvent.click(parts.getByRole('button', { name: 'نوشتن' }))
+    fireEvent.click(parts.getByRole('button', { name: 'خودت بنویس' }))
+    fireEvent.change(screen.getByLabelText('پاسخ خودتان: روی کدام بخش کار کنیم؟'), { target: { value: '  عصرها  ' } })
+    // A question without options opens its field at once, without taking the focus (029 §7).
+    const own = screen.getByLabelText('پاسخ خودتان: کدام روزها وقت دارید؟')
+    expect(own).not.toHaveFocus()
+    expect(screen.queryByRole('group', { name: 'کدام روزها وقت دارید؟' })).not.toBeInTheDocument()
+    fireEvent.change(own, { target: { value: ' شنبه و دوشنبه ' } })
     // One choice only on the second: choosing again replaces it.
     const when = within(screen.getByRole('group', { name: 'تاریخ مشخصی در نظر دارید؟' }))
     fireEvent.click(when.getByRole('button', { name: 'تا یک ماه' }))
     fireEvent.click(when.getByRole('button', { name: 'تا سه ماه' }))
     expect(when.getByRole('button', { name: 'تا یک ماه' })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('status')).toHaveTextContent('۲ از ۲ پاسخ')
+    expect(screen.getByRole('status')).toHaveTextContent('۳ از ۳ پاسخ')
 
     vi.mocked(startPlanningAttempt).mockResolvedValueOnce(attempt('QUEUED', { id: nextAttemptId }))
     fireEvent.click(screen.getByRole('button', { name: 'پیش‌نویس را بساز' }))
@@ -478,7 +511,11 @@ describe('PlanningPage', () => {
     // Options go by position (the server turns them into labels), under a new attempt identity that points at the questions.
     expect(second[1]).toEqual({
       intention, goalId: undefined, projectId: undefined, replaceActive: false, previousAttemptId: attemptId,
-      answers: [{ questionId: 'q1', options: [0, 2], text: 'عصرها' }, { questionId: 'q2', options: [1], text: null }],
+      answers: [
+        { questionId: 'q1', options: [0, 1], text: 'عصرها' },
+        { questionId: 'q2', options: [1], text: null },
+        { questionId: 'q3', options: [], text: 'شنبه و دوشنبه' },
+      ],
       draftNow: false,
     })
     expect(second[0]).not.toBe(first[0])

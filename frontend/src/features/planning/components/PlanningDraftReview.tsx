@@ -75,8 +75,14 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
   const blocked = draft.proposals.filter(item => item.state === 'BLOCKED').length + draft.facts.filter(item => item.state === 'BLOCKED').length
   const included = (type: string) => draft.proposals.filter(item => item.proposal.entityType === type && item.state !== 'EXCLUDED' && !item.excludedByAncestor).length
 
+  // A sequence loses its order as one: its Tasks stay, independent of each other (029 §9).
+  const unchain = (key: string) => onEdit({
+    proposals: proposals.map(item => item.sequenceKey === key ? { ...item, sequenceKey: null, sequenceOrder: null } : item),
+    facts,
+  })
   const row = (item: PlanningProposalViewDto) => (
     <ItemRow key={item.proposal.draftId} item={item} today={today} notes={notes(item.proposal.draftId)} busy={busy}
+      chain={chainOf(item.proposal, proposals)} onUnchain={unchain}
       onToggle={() => toggle(item.proposal)} onEdit={() => setEditing(item.proposal)} />
   )
   const project = (item: PlanningProposalViewDto) => (
@@ -91,7 +97,7 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
     const direct = under.filter(child => child.proposal.entityType !== 'PROJECT')
     return (
       <ParentNode key={item.proposal.draftId} item={item} notes={notes(item.proposal.draftId)} busy={busy}
-        meta={goalMeta(item.proposal, draft)}
+        meta={goalMeta(item, draft)}
         collapsed={collapsed.has(item.proposal.draftId)} onCollapse={() => flip(item.proposal.draftId)}
         onToggle={() => toggle(item.proposal)} onEdit={() => setEditing(item.proposal)}>
         {under.filter(child => child.proposal.entityType === 'PROJECT').map(project)}
@@ -116,9 +122,10 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
         <h1 className="mt-3 text-lg font-extrabold leading-9 wrap-break-word" id="planning-summary">{draft.summary}</h1>
         <p className="draft-quote whitespace-pre-wrap wrap-break-word">«{intention}»</p>
         <p className="mt-3 text-xs leading-6 text-text-secondary">
-          برنامه‌ی دقیق فقط برای هفت روز است: از {formatLocalDate(draft.windowStart)} تا {formatLocalDate(draft.windowEnd)}.
+          این هفته را دقیق چیدیم، از {formatLocalDate(draft.windowStart)} تا {formatLocalDate(draft.windowEnd)}. هفته‌ی بعد را با توجه به اینکه این هفته چطور پیش رفت می‌سازیم.
           {draft.context && <> موارد تازه زیر «{draft.context.title}» ساخته می‌شوند.</>}
         </p>
+        <RemovedNote draft={draft} />
         <IssueLines issues={draft.draftIssues} />
         {notes(null).map(text => <p key={text} className="mt-2 text-sm text-text-secondary">فرض: {text}</p>)}
         {draft.unresolvedQuestions.length > 0 && (
@@ -255,8 +262,12 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
 
 const entityNames: Record<EntityKind, string> = { goal: 'هدف', project: 'پروژه', task: 'کار', routine: 'روتین' }
 
-/** «تا ۳۰ اسفند، ۲ پروژه، ۴ کار، ۱ روتین»: the Goal's date and what sits under it, at any depth. */
-function goalMeta(goal: PlanningProposal, draft: PlanningDraftDto): string {
+/** A date the generator marked as its own estimate (029 §4). */
+const estimated = (item: PlanningProposalViewDto) => item.issues.some(issue => issue.code === 'ASSUMED_DATES')
+
+/** «تا ۳۰ اسفند (تخمینی)، ۲ پروژه، ۴ کار، ۱ روتین»: the Goal's date and what sits under it, at any depth. */
+function goalMeta(item: PlanningProposalViewDto, draft: PlanningDraftDto): string {
+  const goal = item.proposal
   const under = new Set([goal.draftId])
   for (let grew = true; grew;) {
     grew = false
@@ -269,7 +280,7 @@ function goalMeta(goal: PlanningProposal, draft: PlanningDraftDto): string {
   }
   const count = (type: string) => draft.proposals.filter(item => item.proposal.entityType === type && under.has(item.proposal.draftId)).length
   return [
-    goal.targetDate ? `تا ${formatDayMonth(goal.targetDate)}` : null,
+    goal.targetDate ? `تا ${formatDayMonth(goal.targetDate)}${estimated(item) ? ' (تخمینی)' : ''}` : null,
     count('PROJECT') > 0 ? `${formatNumber(count('PROJECT'))} پروژه` : null,
     count('TASK') > 0 ? `${formatNumber(count('TASK'))} کار` : null,
     count('ROUTINE') > 0 ? `${formatNumber(count('ROUTINE'))} روتین` : null,
@@ -304,7 +315,7 @@ function ParentNode({ item, meta, notes, busy, collapsed, onCollapse, onToggle, 
             : (
               <span className="flex items-center gap-2 text-[0.6875rem] font-extrabold">
                 <span className="entity-ink inline-flex items-center gap-1"><FolderKanban size={13} aria-hidden="true" />پروژه</span>
-                {proposal.targetDate && <span className="text-text-secondary">تا {formatDayMonth(proposal.targetDate)}</span>}
+                {proposal.targetDate && <span className="text-text-secondary">تا {formatDayMonth(proposal.targetDate)}{estimated(item) && ' (تخمینی)'}</span>}
               </span>
             )}
           <h3 className={`plan-title wrap-break-word ${goal ? 'font-display text-[1.0625rem] font-bold leading-7' : 'font-extrabold leading-7'}`}>{proposal.title}</h3>
@@ -332,11 +343,13 @@ function ParentNode({ item, meta, notes, busy, collapsed, onCollapse, onToggle, 
 }
 
 /** One proposed Task or Routine: its switch, what it is, when, and its edit. */
-function ItemRow({ item, today, notes, busy, onToggle, onEdit }: {
+function ItemRow({ item, today, notes, busy, chain, onUnchain, onToggle, onEdit }: {
   item: PlanningProposalViewDto
   today: string
   notes: string[]
   busy: boolean
+  chain: PlanningProposal[]
+  onUnchain: (key: string) => void
   onToggle: () => void
   onEdit: () => void
 }) {
@@ -358,8 +371,62 @@ function ItemRow({ item, today, notes, busy, onToggle, onEdit }: {
         </span>
         <EditButton title={proposal.title} busy={busy} onEdit={onEdit} />
       </div>
+      {chain.length > 1 && <ChainLine proposal={proposal} chain={chain} busy={busy} onUnchain={onUnchain} />}
       <ItemNotes item={item} notes={notes} onEdit={onEdit} />
     </div>
+  )
+}
+
+/** The Tasks of a proposed sequence, in their order, or none. */
+function chainOf(proposal: PlanningProposal, proposals: PlanningProposal[]): PlanningProposal[] {
+  if (!proposal.sequenceKey) return []
+  return proposals.filter(item => item.sequenceKey === proposal.sequenceKey)
+    .sort((a, b) => Number(a.sequenceOrder) - Number(b.sequenceOrder))
+}
+
+/**
+ * «قدم ۲ از ۳، بعد از «…»»: where a Task sits in its proposed sequence, which keeps it
+ * waiting until the one before is done. The first step carries the one control that
+ * removes the order (029 §9).
+ */
+function ChainLine({ proposal, chain, busy, onUnchain }: {
+  proposal: PlanningProposal
+  chain: PlanningProposal[]
+  busy: boolean
+  onUnchain: (key: string) => void
+}) {
+  const position = chain.findIndex(item => item.draftId === proposal.draftId)
+  const before = chain[position - 1]
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 pb-2 text-xs leading-6 text-text-secondary">
+      <span>
+        قدم {formatNumber(position + 1)} از {formatNumber(chain.length)}
+        {before ? `، بعد از «${before.title}»` : '؛ بعدی‌ها تا انجام این صبر می‌کنند'}
+      </span>
+      {position === 0 && (
+        <button
+          className="min-h-9 px-1 font-extrabold text-text-secondary underline-offset-4 hover:text-text-primary hover:underline"
+          type="button"
+          disabled={busy}
+          aria-label={`برداشتن ترتیب: ${chain.map(item => item.title).join('، ')}`}
+          onClick={() => onUnchain(proposal.sequenceKey ?? '')}
+        >
+          بدون ترتیب
+        </button>
+      )}
+    </p>
+  )
+}
+
+/** What the generator proposed but could not make valid, named once (029 §8). */
+function RemovedNote({ draft }: { draft: PlanningDraftDto }) {
+  const removed = draft.removedItems ?? []
+  if (removed.length === 0) return null
+  const names = removed.map(item => item.title ? `«${item.title}»` : 'یک جزئیات برنامه')
+  return (
+    <p className="notice mt-3 text-sm leading-7" role="note">
+      این {removed.length === 1 ? 'مورد' : 'موارد'} را نتوانستیم درست بچینیم و کنار گذاشتیم: {names.join('، ')}. اگر لازم است، بعد از تأیید خودتان اضافه کنید.
+    </p>
   )
 }
 

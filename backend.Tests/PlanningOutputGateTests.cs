@@ -145,12 +145,19 @@ public sealed class PlanningOutputGateTests
     }
 
     [Fact]
-    public void An_unsupported_recurrence_is_kept_as_written_for_review_and_never_converted()
+    public void An_unsupported_recurrence_is_never_converted_and_the_routine_is_asked_for_again_or_left_out()
     {
+        // Kept as written, so it is never converted; the user could not approve it, so it is asked for
+        // again, and the fallback draft leaves the Routine out with a note (029 §8).
         var result = Evaluate(With(x => Proposal(x, 3)["recurrence"] = new JsonObject { ["type"] = "WEEKLY" }));
-        Assert.True(result.Passed);
-        Assert.Equal("WEEKLY", result.Draft!.Proposals[3].Recurrence!.Type);
-        Assert.Null(PlanningDraftRules.ValidRecurrence(result.Draft.Proposals[3]));
+        Assert.False(result.Passed);
+        Assert.Equal(PlanningOutputGate.GateSemantic, result.Gate);
+        Assert.Contains("draft.proposals[3]", result.Correction);
+        Assert.Contains("\"recurrence\" is not one of the three supported forms", result.Correction);
+        var fallback = result.Fallback!.Draft!;
+        Assert.DoesNotContain(fallback.Proposals, x => x.DraftId == "practice");
+        Assert.Equal([new PlanningRemovedItem(PlanningEntityTypes.Routine, "تمرین")], fallback.RemovedItems);
+        Assert.Contains(PlanningOutputGate.RemoveInvalidItems, result.Fallback.RepairRules);
         Assert.Equal(PlanningOutputGate.GateSchema,
             Evaluate(With(x => Proposal(x, 3)["recurrence"]!["type"] = "every other day")).Gate);
     }
@@ -229,7 +236,8 @@ public sealed class PlanningOutputGateTests
 
         // No questions, too many questions, a repeated id, or questions together with a draft.
         Assert.False(Evaluate(Clarification().ToJsonString()).Passed);
-        Assert.False(Evaluate(Clarification("q1", "q2", "q3", "q4").ToJsonString()).Passed);
+        Assert.True(Evaluate(Clarification("q1", "q2", "q3", "q4").ToJsonString()).Passed);
+        Assert.False(Evaluate(Clarification("q1", "q2", "q3", "q4", "q5").ToJsonString()).Passed);
         Assert.False(Evaluate(Clarification("q1", "q1").ToJsonString()).Passed);
         var both = Valid();
         both["kind"] = "CLARIFICATION";
@@ -248,7 +256,7 @@ public sealed class PlanningOutputGateTests
         var question = result.Clarification!.Questions.Single();
         Assert.Equal("تا روتین‌ها همان روزها بنشینند.", question.Reason);
         Assert.Equal(PlanningQuestionKinds.Recurrence, question.Kind);
-        Assert.Equal(["شنبه", "دوشنبه", "نمی‌دانم"], question.Options);
+        Assert.Equal(["شنبه", "دوشنبه"], question.Options);
         Assert.True(question.Multiple);
 
         // Free text only: no options, no reason, "multiple" left out.
@@ -264,7 +272,9 @@ public sealed class PlanningOutputGateTests
     [InlineData("kind-missing")]
     [InlineData("kind-unknown")]
     [InlineData("one-option")]
-    [InlineData("eight-options")]
+    [InlineData("three-options")]
+    [InlineData("kind-entity-type")]
+    [InlineData("write-it-yourself")]
     [InlineData("long-label")]
     [InlineData("empty-label")]
     [InlineData("duplicate-label")]
@@ -289,7 +299,10 @@ public sealed class PlanningOutputGateTests
             "kind-missing" => Question(x => x.Remove("kind")),
             "kind-unknown" => Question(x => x["kind"] = "MOTIVATION"),
             "one-option" => Options("بله"),
-            "eight-options" => Options("۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸"),
+            "three-options" => Options("۱", "۲", "۳"),
+            // The system decides structure; the user is never asked it (029 §7).
+            "kind-entity-type" => Question(x => x["kind"] = "ENTITY_TYPE"),
+            "write-it-yourself" => Options("بله", "خودت بنویس"),
             "long-label" => Options("بله", new string('ب', 41)),
             "empty-label" => Options("بله", "  "),
             "duplicate-label" => Options("بله", "بله"),
@@ -322,10 +335,12 @@ public sealed class PlanningOutputGateTests
     public void Labels_are_kept_as_plain_text_and_the_word_other_inside_a_real_option_is_allowed()
     {
         // Markup and links in a label are only text: the gate passes them and the screen shows them as written.
-        var result = Evaluate(Asking(Question(x => x["options"] = new JsonArray("<b>بله</b>", "[نه](https://example.com)", "سایر روزهای هفته"))).ToJsonString());
+        var result = Evaluate(Asking(Question(x => x["options"] = new JsonArray("<b>بله</b>", "[نه](https://example.com)"))).ToJsonString());
         Assert.True(result.Passed);
         Assert.Equal("<b>بله</b>", result.Clarification!.Questions.Single().Options[0]);
-        Assert.Equal("سایر روزهای هفته", result.Clarification.Questions.Single().Options[2]);
+        var other = Evaluate(Asking(Question(x => x["options"] = new JsonArray("شنبه", "سایر روزهای هفته"))).ToJsonString());
+        Assert.Equal("سایر روزهای هفته", other.Clarification!.Questions.Single().Options[1]);
+        Assert.True(PlanningClarificationRules.IsOther("خودت بنویس…"));
         Assert.True(PlanningClarificationRules.IsOther("چیزِ دیگری؟"));
         Assert.False(PlanningClarificationRules.IsOther("هیچ‌کدام"));
         Assert.False(PlanningClarificationRules.IsOther("نمی‌دانم"));
@@ -336,7 +351,7 @@ public sealed class PlanningOutputGateTests
         var question = new JsonObject
         {
             ["id"] = "q1", ["text"] = "کدام روزها وقت دارید؟", ["reason"] = "تا روتین‌ها همان روزها بنشینند.",
-            ["kind"] = "RECURRENCE", ["options"] = new JsonArray("شنبه", "دوشنبه", "نمی‌دانم"), ["multiple"] = true
+            ["kind"] = "RECURRENCE", ["options"] = new JsonArray("شنبه", "دوشنبه"), ["multiple"] = true
         };
         change?.Invoke(question);
         return question;

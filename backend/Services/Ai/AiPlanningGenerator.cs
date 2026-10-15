@@ -6,7 +6,8 @@ namespace TidySense.Services.Ai;
 /// The model-backed planning generator. The model receives one rendered request and no tool; its
 /// text is usable only after the output gate. The call discipline (two calls at most, the checks
 /// before each, the record of each) is <see cref="AiOperationRunner"/>'s. An answer the gate
-/// rejects is asked for once more with the gate's correction. A failure ends the attempt with a
+/// rejects is asked for once more with the gate's correction; a draft whose only fault is items
+/// the user could not approve is otherwise used without them. A failure ends the attempt with a
 /// bounded code and changes nothing else.
 /// </summary>
 public sealed class AiPlanningGenerator(
@@ -41,7 +42,13 @@ public sealed class AiPlanningGenerator(
                     var evaluated = PlanningOutputGate.Evaluate(result.Text, result.FinishReason, request.Context,
                         request.AllowClarification);
                     return new AiGateVerdict<PlanningGateResult>(evaluated.Passed ? evaluated : null, evaluated.Gate,
-                        evaluated.FailureClass, evaluated.RepairRules) { Correction = evaluated.Correction };
+                        evaluated.FailureClass, evaluated.RepairRules)
+                    {
+                        Correction = evaluated.Correction,
+                        // The draft without the items the user could not approve (029 §8).
+                        Fallback = evaluated.Fallback,
+                        FallbackRepairRules = evaluated.Fallback?.RepairRules ?? []
+                    };
                 }, cancellationToken,
                 // The resend is the same request with the correction added to the instructions, if it still fits.
                 (first, correction) => first with { System = PlanningPromptRenderer.Corrected(first.System, correction) }
