@@ -233,10 +233,18 @@ public static partial class PlanningOutputGate
                 PlanningDraftRules.WithinFirstWeek(draft, ruleContext) is not { } fitted) return null;
             candidate = fitted;
         }
-        var remaining = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(candidate, ruleContext));
-        if (remaining.Any(x => x.DraftId is null)) return null;
-        var without = remaining.Count == 0 ? candidate : PlanningDraftRules.Without(candidate, remaining.Select(x => x.DraftId!));
-        return without is null ? null : new PlanningGateResult(kind, without, null, null, null, [..rules, RemoveInvalidItems]);
+        // Leaving an item out can make another unapprovable (a Project left without work), so the
+        // draft is judged again until nothing blocks; every round only removes.
+        for (var round = 0; round <= draft.Proposals.Count + draft.Facts.Count; round++)
+        {
+            var remaining = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(candidate, ruleContext));
+            if (remaining.Count == 0)
+                return new PlanningGateResult(kind, candidate, null, null, null, [..rules, RemoveInvalidItems]);
+            if (remaining.Any(x => x.DraftId is null) ||
+                PlanningDraftRules.Without(candidate, remaining.Select(x => x.DraftId!)) is not { } smaller) return null;
+            candidate = smaller;
+        }
+        return null;
     }
 
     /// <summary>Where an item sits in the output, by position only, so the correction never repeats its content.</summary>

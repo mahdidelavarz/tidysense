@@ -249,6 +249,17 @@ public sealed class PlanningOutputGateTests
     }
 
     [Fact]
+    public void Leaving_an_item_out_is_judged_again_so_a_parent_left_without_work_goes_too()
+    {
+        // The Project's only Task is dated past the window; without it the Project would be empty (029 §5).
+        var result = Evaluate(With(x => Proposal(x, 2)["plannedDate"] = "2026-10-20"));
+        var fallback = result.Fallback!.Draft!;
+        Assert.Equal(["goal", "practice"], fallback.Proposals.Select(x => x.DraftId));
+        Assert.Equal([PlanningEntityTypes.Task, PlanningEntityTypes.Project], fallback.RemovedItems!.Select(x => x.EntityType));
+        Assert.True(PlanningDraftRules.Evaluate(fallback, new PlanningRuleContext(Today, null, [])).CanApply);
+    }
+
+    [Fact]
     public void Too_many_goals_are_asked_for_again_and_otherwise_the_later_one_is_left_out_with_its_work()
     {
         var result = Evaluate(With(x =>
