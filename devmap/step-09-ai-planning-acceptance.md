@@ -37,6 +37,15 @@
 
     Nothing is re-dated, re-typed or re-parented.
 13e. This reduced draft is used when no answer is asked for again, or when the answer asked for again is unusable, including a transient failure of that call. Its call is recorded `SUCCEEDED` with repair rule `REMOVE_INVALID_ITEMS`. `DRAFT_INVALID` remains only when nothing would be left, when the whole draft is at fault, or when no reduced draft exists. This replaces "a rejected output is never used, in whole or in part" for this one case: the gate, not the model, decides what is left.
+13f. *(STEP-22.)* Other slips the gate cures the same way: asked for again once, and otherwise handled by the gate as follows.
+    - **An invalid sequence** loses only its order, without a resend (`DROP_INVALID_SEQUENCE`).
+    - **Too many Goals, Projects, Tasks, Routines or proposals:** the later items are left out and named.
+    - **A planning detail that breaks the catalogue** (`FACT_INVALID`) is left out and named.
+    - **Notes and warnings** that break their rules or limits are dropped; they are not items.
+    - **A first week with more than 21 occurrences** loses its last Routines, then its last dated Tasks, named.
+    - **A Persian date in the text** of a draft or of questions that names a day its month does not have, or a weekday that is not that date's weekday (`PlanningTextDates`), is asked for again; otherwise the text is kept as written.
+
+    A repeated `draftId`, a wrong type or an unknown field still rejects the whole output.
 
 ### One logical operation
 
