@@ -528,6 +528,13 @@ public static partial class PlanningDraftRules
         return over;
     }
 
+    /// <summary>The planning details whose type, strength or value break the catalogue (FACT_INVALID).</summary>
+    public static IReadOnlyList<string> InvalidFacts(PlanningDraftContent content) => content.Facts
+        .Where(fact => !PlanningFactCatalog.IsKnown(fact.FactType) ||
+            !PlanningFactCatalog.IsStrengthAllowed(fact.FactType, fact.Strength) ||
+            PlanningFactCatalog.Normalize(fact.FactType, fact.Value) is null)
+        .Select(fact => fact.DraftId).ToArray();
+
     /// <summary>
     /// What makes a generated draft unapprovable as proposed: every blocking issue of an item or of
     /// the whole draft (a null id). A generator's draft is judged as handed over, all items included.

@@ -178,6 +178,19 @@ public sealed class PlanningOutputGateTests
     }
 
     [Fact]
+    public void A_planning_detail_that_cannot_be_stored_is_asked_for_again_and_otherwise_left_out()
+    {
+        // A weekday detail with text instead of weekdays breaks the catalogue (FACT_INVALID).
+        var result = Evaluate(With(x => x["draft"]!["facts"]![0]!["value"] = new JsonObject { ["text"] = "جمعه‌ها" }));
+        Assert.False(result.Passed);
+        Assert.Contains("PLANNING DETAILS rules", result.Correction);
+        var fallback = result.Fallback!.Draft!;
+        Assert.Empty(fallback.Facts);
+        Assert.Equal(4, fallback.Proposals.Count);
+        Assert.Equal([new PlanningRemovedItem(PlanningRemovedItemTypes.Fact, null)], fallback.RemovedItems);
+    }
+
+    [Fact]
     public void Too_many_goals_are_asked_for_again_and_otherwise_the_later_one_is_left_out_with_its_work()
     {
         var result = Evaluate(With(x =>

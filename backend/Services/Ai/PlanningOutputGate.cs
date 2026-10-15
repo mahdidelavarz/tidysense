@@ -56,10 +56,12 @@ public static partial class PlanningOutputGate
     public const string RemoveInvalidItems = "REMOVE_INVALID_ITEMS";
     public const string DropInvalidSequence = "DROP_INVALID_SEQUENCE";
 
-    // Count limits a draft can be brought within by leaving its later items out.
-    private static readonly HashSet<string> CountErrors = new(StringComparer.Ordinal)
+    // Structural faults a draft can be cured of by leaving items out: its later items past a count
+    // limit, and planning details that break the catalogue.
+    private static readonly HashSet<string> RemovableErrors = new(StringComparer.Ordinal)
     {
-        "TOO_MANY_PROPOSALS", "TOO_MANY_GOALS", "TOO_MANY_PROJECTS", "TOO_MANY_TASKS", "TOO_MANY_ROUTINES"
+        "TOO_MANY_PROPOSALS", "TOO_MANY_GOALS", "TOO_MANY_PROJECTS", "TOO_MANY_TASKS", "TOO_MANY_ROUTINES",
+        "FACT_INVALID"
     };
 
     private static readonly string[] Kinds =
@@ -154,9 +156,12 @@ public static partial class PlanningOutputGate
                 var errors = PlanningDraftRules.StructuralErrors(draft, context.Scope?.Type);
                 if (errors.Count > 0)
                 {
-                    // Too many items is asked for again, and otherwise the later ones are left out (029 §8).
-                    var trimmed = errors.All(CountErrors.Contains)
-                        ? PlanningDraftRules.Without(draft, PlanningDraftRules.OverLimits(draft)) : null;
+                    // Too many items, or a detail that cannot be stored, is asked for again, and otherwise
+                    // the later items and the broken details are left out (029 §8).
+                    var trimmed = errors.All(RemovableErrors.Contains)
+                        ? PlanningDraftRules.Without(draft,
+                            [..PlanningDraftRules.OverLimits(draft), ..PlanningDraftRules.InvalidFacts(draft)])
+                        : null;
                     throw new GateFailure(GateSemantic, AiFailureClasses.Semantic,
                         "the draft breaks these rules: " + string.Join("; ", errors.Select(Explain)))
                     {
