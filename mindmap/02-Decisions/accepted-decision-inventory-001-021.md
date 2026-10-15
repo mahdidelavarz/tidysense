@@ -89,7 +89,7 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 - Every planning entry shows the same four steps: نوشتن، پرسش‌ها، مرور، تأیید. A turn without questions shows «پرسش‌ها» as passed.
 - On phones, at first open and before login, a welcome screen and three guide pages are shown once per device; never to an existing session or on desktop; nothing about them is recorded on the server. A guide's promise must hold in the measured product, otherwise its copy changes.
 - The pilot runs on phone and desktop. Desktop has its own layouts and may show more, derived from data the phone already has, but adds no behaviour.
-- *Amended by D029:* zero or exactly two model options; the product-added answer is «خودت بنویس»; free text opens by default when there are no options; up to four questions in the single turn; `ENTITY_TYPE` removed.
+- *Amended by D029:* zero or exactly two model options; the product-added answer is «خودت بنویس»; free text opens by default when there are no options; up to four questions per turn, still up to three turns; `ENTITY_TYPE` removed.
 
 ### Planning quality — D029
 
@@ -98,7 +98,7 @@ Status: **Canonical consolidated projection** (2026-09-19). The filename is reta
 - **Dates.** `plannedDate`, Routine days and times always set; a `targetDate` from a public or stated fact set as an estimate marked «تخمینی»; a `deadline` only when stated or implied by a fixed real-world date. No invented measurable Goal outcome.
 - **Structure.** Goals and Projects only when real (029 §5); none empty; no re-parenting or wrapper Projects to pass validation; the system, not the user, decides structure; a long Goal gets phase Projects, its core Routine and real first-week Tasks.
 - **Calendar.** The product gives the model Persian dates, weekday names and ISO numbers for each window day, and renders every Persian date it shows.
-- **Questions.** One turn, up to four questions, each with zero or two model options plus «خودت بنویس»; only about the user; never the entity type, a public fact or what was said; draft without asking when visible assumptions suffice.
+- **Questions.** Up to three turns of up to four questions, a later turn only when an answer opened a new question; each with zero or two model options plus «خودت بنویس»; only about the user; never the entity type, a public fact or what was said; draft without asking when visible assumptions suffice.
 - **No structural errors from the model.** One regeneration with the issues; items still invalid are removed with a visible note; `GENERATION_FAILED` only when nothing valid is left; meaning is never changed silently.
 - **Sequences.** The model proposes a chain when a step needs another's result; review shows it with a remove control. Manually: «بعد از…» on any active Task, move within the unresolved part, remove from order.
 - **Quality bar.** A kept evaluation set of at least 30 Persian intentions: ≥ 95% approvable without a blocking issue, no entity-type questions, at most 1 in 10 asking a public fact, no empty parents, correct Persian dates, median time to draft under 2 minutes.

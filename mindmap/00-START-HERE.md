@@ -29,7 +29,7 @@ Plan → Execute → Adapt
 - There is no AI consent step; the privacy notice discloses that planning text goes to an unnamed AI model, is not stored and leaves the country.
 - A sampled 1–5 satisfaction prompt follows AI responses, with an optional reason for low ratings; the operator sees reasons without identity in a product-insights view.
 - In Reconcile, single-item Complete and Carry-to-today apply on tap with undo; other date changes, Drop and bulk actions still need preview and confirmation.
-- Clarification is one turn of up to four optional questions, each with zero or two model-proposed options plus a product-added «خودت بنویس» (free text opens by default without options); only the question kind and answer type are measured.
+- Clarification is up to three turns of up to four optional questions, each with zero or two model-proposed options plus a product-added «خودت بنویس» (free text opens by default without options); only the question kind and answer type are measured.
 - Planning has the same four steps everywhere; phones show a welcome and three guide pages once before login; desktop is in the pilot with its own layouts and no extra behaviour.
 - Planning uses a rolling horizon: long target dates and deadlines are allowed, detailed Tasks and Routine starts stay in the week, and the next week is offered from execution evidence. Structure is created only when real, dates follow D029 §4, the product supplies the Persian calendar, the user never sees a structural error from the model, and the model may propose sequences where one step needs another's result.
 

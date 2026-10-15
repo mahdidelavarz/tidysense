@@ -202,8 +202,9 @@ Limits decided by the owner on 2026-10-15 (§11.2).
   - anything already said.
 - **`OWNERSHIP`** is asked only to choose between the user's existing Goals or Projects.
 - **Limits:**
-  - **one clarification turn**, instead of three (013);
-  - **up to four questions** in that turn, instead of three (028 §2.3);
+  - **up to three clarification turns**, as in 013;
+  - **up to four questions** in each turn, instead of three (028 §2.3);
+  - **a later turn only when an earlier answer opened a new question** that changes the draft; never to ask what could have been asked in the first turn;
   - **three answers per question at most:** zero or exactly two model-proposed options, single or multiple choice, and a third the product always adds, «خودت بنویس», which opens free text. It replaces «چیز دیگر…» (028 §2.2), and the model still never returns its own "other" option;
   - **a question without options opens its free-text field by default**, so the user can type at once;
   - «بدون پاسخ بساز» stays. Every question remains optional.
@@ -266,6 +267,7 @@ The planning-quality step is accepted only when a fixed evaluation set passes wi
   - no draft has an empty Goal or Project;
   - every Persian date and weekday shown is correct;
   - the median time to draft, including one question turn, stays under the 2 minutes promised by guide 1 (028 §4.3).
+- The run also reports the number of turns and questions per draft, so a drift towards more asking is visible.
 - The set is kept and re-run on every prompt or model change.
 - Model choice and budget (thinking, output tokens) are technical, decided in DevMap against this bar.
 
@@ -274,7 +276,7 @@ The planning-quality step is accepted only when a fixed evaluation set passes wi
 ## 11. Resolved points (owner, 2026-10-15)
 
 1. **Routines continue after the first week.** **Accepted.** A Routine starts in the first week and keeps going; continuation (§3) may adjust or pause it. Ending it after a week would force the user to recreate every Routine weekly.
-2. **Question limits (§7).** The owner decided: **one turn, up to four questions, and three answers per question** — two model options plus «خودت بنویس». A question without options opens its free-text field by default. This replaces the recommendation of two questions with two to four options.
+2. **Question limits (§7).** The owner decided: **up to three turns, each with up to four questions, and three answers per question** — two model options plus «خودت بنویس». A question without options opens its free-text field by default. This replaces the recommendation of one turn with two questions and two to four options. Owner amendment the same day: three turns stay possible, not one.
 3. **Threshold for AI sequences (§9.1).** **Accepted:** "a step needs another's result", not only explicit words. The user removes a chain with one control.
 4. **Continuation start (§3).** **Accepted:** generated when the user taps «برنامهٔ هفتهٔ بعد». No cost for abandoned plans.
 5. **Waiting time.** **Accepted:** 20–80 seconds is acceptable with an honest waiting screen, if the bar of §10 needs it. The model configuration is chosen only after re-measuring with §2–§9 in place, because the fast mode may then be enough.
@@ -335,7 +337,7 @@ The planning-quality step is accepted only when a fixed evaluation set passes wi
 - **سؤال‌ها:**
   - فقط دربارهٔ خود کاربر پرسیده می‌شود.
   - نوع ساختار، واقعیت عمومی و چیزی که کاربر قبلاً گفته پرسیده نمی‌شود.
-  - یک مرحله، حداکثر چهار سؤال.
+  - حداکثر سه مرحله، هر مرحله حداکثر چهار سؤال. مرحلهٔ بعدی فقط وقتی پرسیده می‌شود که جواب قبلی سؤال تازه‌ای باز کرده باشد.
   - هر سؤال حداکثر سه پاسخ دارد: دو گزینهٔ مدل و «خودت بنویس» که محصول اضافه می‌کند.
   - اگر مدل گزینه نداد، کادر نوشتن از اول باز است.
 - **بدون خطای ساختاری:**
@@ -349,7 +351,7 @@ The planning-quality step is accepted only when a fixed evaluation set passes wi
 
 **تصمیم‌های مالک دربارهٔ پنج پرسش باز (۲۰۲۶-۱۰-۱۵):**
 1. روتین بعد از هفتهٔ اول ادامه پیدا می‌کند.
-2. سؤال‌ها: یک مرحله، حداکثر چهار سؤال، هر کدام دو گزینه به‌علاوهٔ «خودت بنویس». بدون گزینه، کادر نوشتن باز است.
+2. سؤال‌ها: حداکثر سه مرحله، هر کدام حداکثر چهار سؤال، هر کدام دو گزینه به‌علاوهٔ «خودت بنویس». بدون گزینه، کادر نوشتن باز است.
 3. مدل هر وقت قدمی به نتیجهٔ قدم قبل نیاز دارد توالی پیشنهاد می‌دهد.
 4. برنامهٔ هفتهٔ بعد با لمس کاربر ساخته می‌شود.
 5. انتظار ۲۰ تا ۸۰ ثانیه پذیرفتنی است، ولی تنظیم مدل بعد از سنجش دوباره انتخاب می‌شود.

@@ -1125,7 +1125,7 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
   - the question rules;
   - sequences where a step needs another's result.
 - **Output contract and gate** (029 §7, §9.1):
-  - zero or exactly two options per question, up to four questions, one turn;
+  - zero or exactly two options per question, up to four questions per turn, up to three turns, a later turn only when an answer opened a new question;
   - `ENTITY_TYPE` removed;
   - sequence membership and order on Task proposals;
   - new schema and prompt versions.
