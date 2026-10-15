@@ -23,7 +23,7 @@ export function GoalCard({ goal, progress, today }: {
       <div className="flex items-start gap-3">
         <span className="goal-tile" aria-hidden="true"><Target size={22} /></span>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[1.0625rem] font-extrabold leading-7">
+          <h3 className="line-clamp-2 wrap-break-word text-[1.0625rem] font-extrabold leading-7">
             <Link className="stretched-link" to="/goals/$goalId" params={{ goalId: goal.id }}>{goal.title}</Link>
           </h3>
           <p className="line-clamp-2 text-[0.8125rem] leading-6 text-text-secondary">{goal.desiredOutcome}</p>

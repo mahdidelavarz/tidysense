@@ -32,7 +32,7 @@ export function TabBar() {
         </div>
       </nav>
       <button className="create-fab" type="button" onClick={() => openCreate('menu')} aria-label="افزودن">
-        <Plus size={26} aria-hidden="true" />
+        <Plus size={22} aria-hidden="true" />
       </button>
     </>
   )

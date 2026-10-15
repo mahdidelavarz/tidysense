@@ -104,7 +104,7 @@ export function GoalsDesk() {
             <div className="desk-goals">
               <div className="min-w-0 space-y-5">
                 {activeGoals.length > 0 && (
-                  <ul className="grid gap-4 xl:grid-cols-3" aria-label="هدف‌های در جریان">
+                  <ul className="grid grid-cols-1 gap-4 xl:grid-cols-3" aria-label="هدف‌های در جریان">
                     {activeGoals.map(goal => <GoalTile key={goal.id} goal={goal} work={goalWork(goal.id)} projects={activeProjects} />)}
                   </ul>
                 )}
@@ -112,7 +112,7 @@ export function GoalsDesk() {
                   <Timeline today={today} goals={activeGoals} projects={activeProjects} goalWork={goalWork} projectWork={projectWork} />
                 ) : (
                   <section className="space-y-5" aria-label="کارت‌های هدف">
-                    <ul className="grid gap-3 md:grid-cols-2">
+                    <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       {activeGoals.map(goal => (
                         <li key={goal.id}><GoalCard goal={goal} today={today} progress={goalWork(goal.id)} /></li>
                       ))}
@@ -121,7 +121,7 @@ export function GoalsDesk() {
                       <div>
                         <FoldedGroup open={showClosed} onToggle={() => setShowClosed(value => !value)} id="desk-goals-closed"
                           label="پایان‌یافته" detail={closedDetail(closedGoals)} />
-                        <ul className="mt-3 grid gap-3 md:grid-cols-2" id="desk-goals-closed" hidden={!showClosed}>
+                        <ul className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2" id="desk-goals-closed" hidden={!showClosed}>
                           {closedGoals.map(goal => (
                             <li key={goal.id}><GoalCard goal={goal} today={today} progress={goalWork(goal.id)} /></li>
                           ))}

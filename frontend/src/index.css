@@ -211,7 +211,8 @@ select:not(:disabled),
   /* ---------- Application frame ---------- */
   .app-frame {
     min-height: 100dvh;
-    padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1.5rem);
+    /* Room for the dock and the create button above it, so the last item can scroll clear of both. */
+    padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 5.5rem);
   }
 
   /* A focused flow has no tab bar beneath it; its own footer sits at the bottom edge. */
@@ -268,7 +269,7 @@ select:not(:disabled),
 
   /* Phones: creating is one floating button above the dock, at the thumb's edge. */
   .create-fab {
-    @apply fixed z-10 flex size-14 items-center justify-center rounded-[1.25rem] bg-accent text-on-accent transition duration-200 hover:bg-accent-strong active:scale-95;
+    @apply fixed z-10 flex size-12 items-center justify-center rounded-[1.0625rem] bg-accent text-on-accent transition duration-200 hover:bg-accent-strong active:scale-95;
     inset-inline-start: 1rem;
     bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
     box-shadow: 0 16px 30px -12px rgb(0 0 0 / 0.45);
@@ -1344,33 +1345,27 @@ select:not(:disabled),
 
   /* ---------- Today ---------- */
   /*
-   * The hero: a photograph, 300px tall at the top of the page. Scrolling down
-   * it sticks with only its lower 150px showing and slides the title into
-   * that band; scrolling up shows all of it again. Sticking with a negative
-   * top keeps the page from jumping, because the header's height never
-   * changes. Text on it is white over a dark veil, in both themes.
+   * The hero: a photograph, 300px tall at the top of the page. It folds with
+   * the scroll: over the first 150px the page scrolls, the header sticks a
+   * little higher each pixel and the title slides down with it, until only
+   * the lower 150px band shows; scrolling back up unfolds it the same way.
+   * Sticking with a negative top keeps the page from jumping, because the
+   * header's height never changes. Text on it is white over a dark veil.
    */
   .hero {
     @apply sticky z-20 -mx-4 overflow-hidden text-white sm:-mx-6 lg:mx-0 lg:rounded-[1.75rem];
     --hero-band: 9.375rem;
-    top: 0;
     height: calc(18.75rem + env(safe-area-inset-top));
     margin-top: -1rem;
     background: linear-gradient(160deg, #3e5f6b 0%, #6f93a0 45%, #b9cfd4 100%);
-    transition: top 320ms var(--ease-standard);
-  }
-
-  .hero[data-collapsed="true"] {
-    top: calc(var(--hero-band) - 18.75rem - env(safe-area-inset-top));
+    /* --hero-p (0 open, 1 folded) follows the scroll position; see PhotoHero. */
+    top: calc(var(--hero-p, 0) * (var(--hero-band) - 18.75rem - env(safe-area-inset-top)));
   }
 
   @media (min-width: 64rem) {
     .hero {
       margin-top: 0;
-    }
-
-    .hero[data-collapsed="false"] {
-      top: 0.75rem;
+      top: calc((1 - var(--hero-p, 0)) * 0.75rem + var(--hero-p, 0) * (var(--hero-band) - 18.75rem));
     }
   }
 
@@ -1395,20 +1390,13 @@ select:not(:disabled),
   .hero-inner {
     @apply relative flex items-center justify-between gap-3 px-4 pt-5 sm:px-6;
     padding-top: calc(1.25rem + env(safe-area-inset-top));
-    transition: transform 320ms var(--ease-standard);
-  }
-
-  .hero[data-collapsed="true"] .hero-inner {
-    transform: translateY(calc(18.75rem - var(--hero-band)));
+    transform: translateY(calc(var(--hero-p, 0) * (18.75rem - var(--hero-band))));
   }
 
   .hero-title {
-    @apply origin-right font-display text-[2.25rem] font-bold leading-[1.3] transition-transform duration-300 ease-standard;
+    @apply origin-right font-display text-[2.25rem] font-bold leading-[1.3];
     text-shadow: 0 2px 14px rgb(0 0 0 / 0.25);
-  }
-
-  .hero[data-collapsed="true"] .hero-title {
-    transform: scale(0.8);
+    transform: scale(calc(1 - 0.2 * var(--hero-p, 0)));
   }
 
   .hero-date {
@@ -1433,11 +1421,12 @@ select:not(:disabled),
 
   /* A row under the title on the photograph, such as the Goals/Projects switch. */
   .hero-below {
-    @apply relative mt-3 px-4 transition duration-300 ease-standard sm:px-6;
+    @apply relative mt-3 px-4 sm:px-6;
+    opacity: calc(1 - 2 * var(--hero-p, 0));
   }
 
   .hero[data-collapsed="true"] .hero-below {
-    @apply pointer-events-none opacity-0;
+    @apply pointer-events-none;
   }
 
   /* The Goals/Projects switch: two tabs on frosted glass; the current one is solid. */
@@ -1491,7 +1480,7 @@ select:not(:disabled),
 
   /* A count of one kind of item, in that kind's tint. */
   .count-chip {
-    @apply flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-2;
+    @apply flex min-h-9 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-xl px-1.5 text-[0.6875rem] min-[22.5rem]:gap-1.5 min-[22.5rem]:px-2 min-[22.5rem]:text-xs;
     color: color-mix(in srgb, var(--entity-color) 80%, var(--color-text-primary));
     background: color-mix(in srgb, var(--entity-color) 12%, var(--color-surface));
   }
@@ -1527,11 +1516,13 @@ select:not(:disabled),
 
   /* What sits at the foot of the photograph (the Reconcile offer); it steps aside while collapsed. */
   .hero-foot {
-    @apply absolute inset-x-4 bottom-3.5 transition duration-300 ease-standard sm:inset-x-6;
+    @apply absolute inset-x-4 bottom-3.5 sm:inset-x-6;
+    opacity: calc(1 - 2 * var(--hero-p, 0));
+    translate: 0 calc(var(--hero-p, 0) * 0.75rem);
   }
 
   .hero[data-collapsed="true"] .hero-foot {
-    @apply pointer-events-none translate-y-3 opacity-0;
+    @apply pointer-events-none;
   }
 
   /* A frosted card on the photograph. */
@@ -1552,12 +1543,12 @@ select:not(:disabled),
   }
 
   .glass-button {
-    @apply flex size-11 shrink-0 items-center justify-center rounded-[0.875rem] bg-white/22 text-white transition duration-200 hover:bg-white/32 active:scale-95;
+    @apply flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/22 text-white transition duration-200 hover:bg-white/32 active:scale-95;
   }
 
-  /* Closing the card: a small round mark on its corner with a full-size target. */
+  /* Closing the card: a small round mark inside it, after the card's own button, with a larger target. */
   .glass-close {
-    @apply absolute -top-2.5 -left-2.5 flex size-7 items-center justify-center rounded-full border border-white/40 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45;
+    @apply relative flex size-7 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black/25 text-white transition hover:bg-black/40;
   }
 
   .glass-close::before {

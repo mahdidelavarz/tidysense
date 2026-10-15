@@ -149,3 +149,36 @@ test('login screen', async ({ page }) => {
   await settle(page)
   await page.screenshot({ path: 'test-results/ui-phone-login.png' })
 })
+
+test('on a phone the Today photograph folds with the scroll, and long Goal and Project titles fit a 360px screen', async ({ page }) => {
+  await seed(page)
+  const long = 'یادگیری زبان آلمانی تا سطح B2 برای مهاجرت کاری و گرفتن مدرک گوته در پایان سال آینده'
+  const goal = await page.request.post('/api/v1/goals', {
+    data: { title: long, desiredOutcome: 'بتوانم بدون مشکل در جلسه‌های کاری صحبت کنم و ایمیل‌های رسمی بنویسم.', targetDate: null, reviewDate: null },
+    headers: { Origin: origin, 'Idempotency-Key': randomUUID() },
+  })
+  expect(goal.ok()).toBeTruthy()
+  const project = await page.request.post('/api/v1/projects', {
+    data: { title: `آمادگی کامل برای ${long}`, completionMeaning: null, goalId: (await goal.json()).id, targetDate: null, reviewDate: null },
+    headers: { Origin: origin, 'Idempotency-Key': randomUUID() },
+  })
+  expect(project.ok()).toBeTruthy()
+
+  // The photograph follows the finger: halfway through its fold it is halfway between 300px and the 150px band.
+  await page.setViewportSize(phone)
+  await page.goto('/today')
+  const visible = () => page.locator('.hero').evaluate(element => Math.round(element.getBoundingClientRect().bottom))
+  await expect.poll(visible).toBe(300)
+  for (const [scroll, height] of [[75, 225], [150, 150], [400, 150], [40, 260], [0, 300]]) {
+    await page.evaluate(y => window.scrollTo(0, y), scroll)
+    await expect.poll(visible).toBe(height)
+  }
+
+  await page.setViewportSize({ width: 360, height: 780 })
+  for (const route of ['/goals', '/projects']) {
+    await page.goto(route)
+    await expect(page.getByRole('link', { name: new RegExp(long.slice(0, 20)) }).first()).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    expect(await page.locator('.goal-card').evaluateAll(cards => cards.every(card => card.getBoundingClientRect().right <= window.innerWidth))).toBe(true)
+  }
+})

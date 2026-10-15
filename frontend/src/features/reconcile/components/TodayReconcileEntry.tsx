@@ -22,8 +22,8 @@ export function TodayReconcileEntry() {
 
   return (
     <section className="glass-card" aria-label="پیشنهاد بازبینی">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[0.8125rem] bg-white/92 text-[#1c2e34]" aria-hidden="true">
-        <History size={22} />
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/92 text-[#1c2e34]" aria-hidden="true">
+        <History size={20} />
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[0.8125rem] font-extrabold leading-[1.375rem]">
@@ -47,7 +47,7 @@ export function TodayReconcileEntry() {
         </div>
       </div>
       <Link className="glass-button" to="/reconcile" aria-label="شروع بازبینی">
-        <ArrowLeft size={20} aria-hidden="true" />
+        <ArrowLeft size={18} aria-hidden="true" />
       </Link>
       <button
         className="glass-close"

@@ -60,16 +60,16 @@ function Insights({ data, h1 }: { data: OperationsInsightsDto; h1: readonly Metr
 
       <People f={f} />
       <Funnel f={f} h1={h1} />
-      <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.2fr]">
         <Removed f={f} />
         <Questions f={f} />
       </div>
-      <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_1fr]">
         <Execution f={f} />
         <Reconcile f={f} />
       </div>
       <Retention f={f} />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Satisfaction f={f} />
         <Reasons f={f} reasons={data.reasons} />
       </div>
@@ -84,7 +84,7 @@ function People({ f }: { f: Figures }) {
   const execution = rowOf(f, 'P.TASKS_DONE_7D', 'AI')
   const executionAccounts = rowOf(f, 'P.TASKS_DONE_7D_ACCOUNTS')
   return (
-    <section aria-label="خلاصه" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <section aria-label="خلاصه" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <Tile icon={Users} label="کاربران" hint={`${count(accounts.numerator)} ثبت‌نام در این بازه`}>
         {count(accounts.denominator)}
       </Tile>
@@ -416,7 +416,7 @@ function Satisfaction({ f }: { f: Figures }) {
           })}
         </ul>
       </div>
-      <ul className="mt-4 grid gap-2 sm:grid-cols-2" aria-label="به تفکیک بخش">
+      <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="به تفکیک بخش">
         {surfaces.map(surface => {
           const value = rowOf(f, 'P.SATISFACTION_MEAN', surface)
           return (
