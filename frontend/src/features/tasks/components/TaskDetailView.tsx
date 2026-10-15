@@ -29,7 +29,8 @@ import { TaskForm } from './TaskForm'
  * and one to move it, its facts, its place in a sequence and its notes.
  * Editing is the pencil at the top; dropping (or restoring) is at the foot.
  */
-export function TaskDetailView({ taskId }: { taskId: string }) {
+export function TaskDetailView({ taskId, panel = false }: { taskId: string; panel?: boolean }) {
+  const root = panel ? 'desk-detail-body' : 'page'
   const task = useTask(taskId)
   const goals = useGoalOptions()
   const projects = useProjectOptions()
@@ -46,12 +47,12 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
   const [confirmDrop, setConfirmDrop] = useState(false)
 
   if (task.isPending) {
-    return <div className="page"><BackLink to="/tasks" /><LoadingState text="در حال دریافت کار…" /></div>
+    return <div className={root}><BackLink to="/tasks" /><LoadingState text="در حال دریافت کار…" /></div>
   }
   if (task.isError) {
     const notFound = toApiError(task.error).status === 404
     return (
-      <div className="page">
+      <div className={root}>
         <BackLink to="/tasks" />
         <ErrorState
           title={notFound ? 'کار پیدا نشد.' : 'دریافت کار ممکن نشد.'}
@@ -67,7 +68,7 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
   const active = data.status === 'ACTIVE'
   const carried = Number(data.carryCount)
   return (
-    <div className="page">
+    <div className={root}>
       <BackLink
         to="/tasks"
         actions={active && (

@@ -29,6 +29,10 @@ import { PlanningDraftReview } from './PlanningDraftReview'
 import { PlanningIntentForm } from './PlanningIntentForm'
 import { RememberedFactsCard } from './PlanningFactsSection'
 import { PlanningStartError } from './PlanningStartError'
+import { PlanningDesk, PlanningRoad, WhyWeAsk, WritingHints, WrittenText } from './PlanningDesk'
+import { useIsDesktop } from '../../../shared/lib/use-desktop'
+import { useToday } from '../../today/hooks/today-hooks'
+import { toIsoDate } from '../../../shared/lib/date'
 
 const pageTitle = 'برنامه‌ریزی'
 /** Every planning entry walks the same four steps (028 §3); a step the model skipped still shows as passed. */
@@ -52,6 +56,8 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
   const setFocused = useUiStore(state => state.setFocused)
   // What the plan is about: the Goal or Project it was opened from, or the one chosen while writing.
   const [scope, setScope] = useState<PlanningScopeInput>(goalId ? { goalId } : projectId ? { projectId } : {})
+  const desktop = useIsDesktop()
+  const today = useToday().data?.localDate ?? toIsoDate(new Date())
 
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [draftId, setDraftId] = useState<string | null>(null)
@@ -144,12 +150,21 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
     return () => setFocused(false)
   }, [focused, setFocused])
 
+  // On desktop the same step sits between what was written and the road (CodeDesktopPlanning*).
+  const road = <PlanningRoad draft={draft.data?.status === 'REVIEWABLE' ? draft.data : undefined} today={today} />
+  const feedback = endedDraftId && <AiFeedbackCard key={endedDraftId} surface="PLANNING_DRAFT" subjectId={endedDraftId} />
+
   /** The first step: the page's own header, then the step it is on. */
-  const frame = (content: ReactNode, step = 0) => (
+  const frame = (content: ReactNode, step = 0) => desktop ? (
+    <PlanningDesk steps={steps} step={step} road={road} context={<WritingHints />}>
+      {feedback}
+      {content}
+    </PlanningDesk>
+  ) : (
     <div className="page">
       <PageHeader title={pageTitle} description="از یک جمله تا یک برنامه‌ی روشن" />
       <div className="mb-4"><Stepper steps={steps} current={step} label="مراحل برنامه‌ریزی" /></div>
-      {endedDraftId && <AiFeedbackCard key={endedDraftId} surface="PLANNING_DRAFT" subjectId={endedDraftId} />}
+      {feedback}
       {content}
     </div>
   )
@@ -158,7 +173,31 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
    * A later step: the way back to the writing and the step it is on, no page
    * header. `end` is the step's own exit (close, or the manual path).
    */
-  const flow = (content: ReactNode, step: number, onBack: () => void, end: ReactNode) => (
+  const flow = (content: ReactNode, step: number, onBack: () => void, end: ReactNode) => desktop ? (
+    <PlanningDesk
+      steps={steps}
+      step={step}
+      road={road}
+      actions={(
+        <>
+          <button className="flow-back" type="button" onClick={onBack}>
+            <ArrowRight size={20} aria-hidden="true" />
+            ویرایش نوشته
+          </button>
+          {end}
+        </>
+      )}
+      context={(
+        <>
+          <WrittenText text={attempt.data?.intention ?? intention} onEdit={onBack} />
+          {step === 1 && <WhyWeAsk />}
+        </>
+      )}
+    >
+      {feedback}
+      {content}
+    </PlanningDesk>
+  ) : (
     <div className="page">
       <div className="flow-bar">
         <button className="flow-back" type="button" onClick={onBack}>
@@ -169,7 +208,7 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
       </div>
       <div className="mb-4"><Stepper steps={steps} current={step} label="مراحل برنامه‌ریزی" /></div>
       {/* A draft just replaced by this flow may be asked about here, beside the new one being made. */}
-      {endedDraftId && <AiFeedbackCard key={endedDraftId} surface="PLANNING_DRAFT" subjectId={endedDraftId} />}
+      {feedback}
       {content}
     </div>
   )

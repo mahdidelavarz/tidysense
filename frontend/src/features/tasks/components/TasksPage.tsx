@@ -10,6 +10,8 @@ import { LoadMoreButton, ResourceState } from '../../../shared/ui/StateUi'
 import { useToday } from '../../today/hooks/today-hooks'
 import { useCompleteTask, useTaskParentTitle, useTasks } from '../hooks/task-hooks'
 import { TaskCard, type TaskGroup, taskGroup } from './TaskCard'
+import { TasksDesk } from './TasksDesk'
+import { useIsDesktop } from '../../../shared/lib/use-desktop'
 
 /** The time buckets of the list, in the order they are shown. Wording stays neutral: an earlier date is a fact, not a failure. */
 const groups: ReadonlyArray<{ id: TaskGroup; label: string }> = [
@@ -28,6 +30,10 @@ const groups: ReadonlyArray<{ id: TaskGroup; label: string }> = [
  * desktop, the page's own button).
  */
 export function TasksPage() {
+  return useIsDesktop() ? <TasksDesk /> : <TasksPhone />
+}
+
+function TasksPhone() {
   const [filter, setFilter] = useState<StatusFilter>('ACTIVE')
   const [filtering, setFiltering] = useState(false)
   const tasks = useTasks(filter === 'all' ? undefined : filter)

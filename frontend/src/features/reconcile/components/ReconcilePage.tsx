@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CircleCheck } from '../../../shared/ui/icons'
+import { CircleCheck, History } from '../../../shared/ui/icons'
 import { useState } from 'react'
 import { formatNumber } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
@@ -17,6 +17,8 @@ import { AiExplanationCard } from './AiExplanationCard'
 import { ExecutionLane, type Suggestion } from './ExecutionLane'
 import { ReviewApplyDialog } from './ReviewApplyDialog'
 import { ReviewLane } from './ReviewLane'
+import { EarlierDays, TodayAfter } from './ReconcileDesk'
+import { useIsDesktop } from '../../../shared/lib/use-desktop'
 
 /** Reconcile page: opens today's session and shows its three lanes. It never stands between the user and Today. */
 export function ReconcilePage() {
@@ -65,6 +67,7 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
   const total = Math.max(Number(session.openedDecisionCount), remaining)
   const suggestions = suggestedControls(session)
   const busyId = quick.apply.isPending ? quick.apply.variables?.taskId : quick.undo.isPending ? quick.undo.variables : undefined
+  const desktop = useIsDesktop()
 
   if (session.status !== 'OPEN') {
     return (
@@ -88,19 +91,8 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
     )
   }
 
-  return (
-    <div className="page">
-      <PageHeader title="بازبینی" description={severity.title} />
-
-      {nothingLeft && decided.length === 0 ? (
-        <EmptyState
-          icon={CircleCheck}
-          title="چیزی برای بازبینی نمانده است."
-          description="وقتی کاری از تاریخش بگذرد، زمان مرور یک تعهد برسد یا یادداشتی ذخیره کنید، اینجا دیده می‌شود."
-          action={<Link className="primary-button" to="/today">رفتن به امروز</Link>}
-        />
-      ) : (
-        <div className="space-y-7">
+  const summary = (
+  <>
           <section className="card p-4 sm:p-5" aria-labelledby="reconcile-summary">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-[0.9375rem] font-extrabold" id="reconcile-summary">
@@ -118,8 +110,14 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
             </p>
           </section>
 
+  </>
+  )
+  const explanation = (
           <AiExplanationCard session={session} onAction={action.request} onDatedAction={setDated} />
 
+  )
+  const lanes = (
+    <>
           <QuickError error={quick.apply.error ?? quick.undo.error} />
 
           {(session.executionGroups.length > 0 || decided.length > 0) && (
@@ -161,6 +159,9 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
           )}
           {session.captures.length > 0 && <CaptureLane captures={session.captures} total={captureTotal} />}
 
+    </>
+  )
+  const finishSection = (
           <section className="flex flex-col items-center gap-2 pt-2" aria-label="پایان بازبینی">
             <FormError error={finish.error} />
             <button
@@ -178,9 +179,9 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
             </button>
             <p className="text-center text-xs leading-6 text-text-secondary">موارد باقی‌مانده حذف نمی‌شوند و بعداً دوباره در دسترس‌اند. پس از پایان، «بازگردان» دیگر در دسترس نیست.</p>
           </section>
-        </div>
-      )}
-
+  )
+  const sheets = (
+    <>
       {dated && (
         <TaskCarrySheet
           title={actionTitles[dated.actionType]}
@@ -198,6 +199,67 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
         />
       )}
       <ReviewApplyDialog flow={action} />
+    </>
+  )
+  const empty = nothingLeft && decided.length === 0 ? (
+        <EmptyState
+          icon={CircleCheck}
+          title="چیزی برای بازبینی نمانده است."
+          description="وقتی کاری از تاریخش بگذرد، زمان مرور یک تعهد برسد یا یادداشتی ذخیره کنید، اینجا دیده می‌شود."
+          action={<Link className="primary-button" to="/today">رفتن به امروز</Link>}
+        />
+  ) : null
+
+  // On desktop (CodeDesktopReconcile) the same lanes sit between the days they come from and today after the review.
+  if (desktop) {
+    return (
+      <div className="page-desk">
+        <header className="desk-header items-center">
+          <div className="flex items-center gap-3">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-moon text-on-accent" aria-hidden="true"><History size={24} /></span>
+            <div>
+              <h1 className="page-title leading-tight">بازبینی روزهای قبل</h1>
+              <p className="text-xs text-text-secondary">{severity.title}</p>
+            </div>
+          </div>
+          <div className="flex min-w-72 items-center gap-3 text-xs font-bold text-text-secondary">
+            <span className="answer-progress block flex-1" aria-hidden="true">
+              <span style={{ width: `${total === 0 ? 100 : ((total - remaining) / total) * 100}%` }} />
+            </span>
+            {formatNumber(total - remaining)} از {formatNumber(total)} تصمیم
+          </div>
+        </header>
+        {empty ?? (
+          <div className="desk-reconcile">
+            <aside className="space-y-5" aria-label="کنار بازبینی">
+              <EarlierDays session={session} />
+              {explanation}
+            </aside>
+            <div className="min-w-0 space-y-7">
+              {summary}
+              {lanes}
+              {finishSection}
+            </div>
+            <TodayAfter quickActions={session.quickActions} />
+          </div>
+        )}
+        {sheets}
+      </div>
+    )
+  }
+
+  return (
+    <div className="page">
+      <PageHeader title="بازبینی" description={severity.title} />
+      {empty ?? (
+        <div className="space-y-7">
+          {summary}
+          {explanation}
+          {lanes}
+          {finishSection}
+        </div>
+      )}
+      {sheets}
     </div>
   )
 }
