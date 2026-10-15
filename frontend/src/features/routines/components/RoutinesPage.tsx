@@ -8,7 +8,9 @@ import { useTaskParentTitle } from '../../tasks/hooks/task-hooks'
 import { useToday } from '../../today/hooks/today-hooks'
 import { useRoutineWeek, useRoutines } from '../hooks/routine-hooks'
 import type { RoutineDto } from '../types/routine.types'
+import { useIsDesktop } from '../../../shared/lib/use-desktop'
 import { RoutineCard } from './RoutineCard'
+import { RoutinesDesk } from './RoutinesDesk'
 
 /**
  * Routines list page: the active Routines split by whether they have slots
@@ -16,6 +18,10 @@ import { RoutineCard } from './RoutineCard'
  * foot. Creating is the create button's (and, on desktop, the page's own).
  */
 export function RoutinesPage() {
+  return useIsDesktop() ? <RoutinesDesk /> : <RoutinesPhone />
+}
+
+function RoutinesPhone() {
   const routines = useRoutines()
   const week = useRoutineWeek()
   const todayView = useToday()

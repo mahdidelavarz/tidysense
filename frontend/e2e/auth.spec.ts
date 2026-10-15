@@ -102,10 +102,9 @@ test('manual task moves through Today to completion', async ({ page }) => {
   await expect(page.getByRole('listitem').filter({ hasText: title }).getByRole('img', { name: 'انجام شد' })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-after.png', fullPage: true })
 
-  // The list defaults to active Tasks; a completed one is under "all".
-  await page.getByRole('link', { name: 'کارها', exact: true }).click()
-  await page.getByRole('button', { name: 'فیلتر' }).click()
-  await page.getByRole('button', { name: 'همه', exact: true }).click()
+  // The list shows open Tasks first; on desktop a completed one is in the «پایان‌یافته» view and opens beside it.
+  await page.getByRole('navigation', { name: 'ناوبری اصلی' }).getByRole('link', { name: 'کارها' }).click()
+  await page.getByRole('navigation', { name: 'نماهای کارها' }).getByRole('button', { name: /پایان‌یافته/ }).click()
   await page.getByRole('heading', { name: title }).click()
-  await expect(page.getByText('تکمیل‌شده')).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'جزئیات کار' }).getByText('تکمیل‌شده')).toBeVisible()
 })

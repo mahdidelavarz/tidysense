@@ -1020,6 +1020,79 @@ Verified 2026-10-13 on Linux:
 
 **Completion criteria:** Every desktop board is implemented, with no desktop-only behaviour.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE`. Its dependency STEP-18 is still `IN_PROGRESS`, for its real-provider run only; this step needed none of it.
 
-**Evidence:** None.
+**Evidence:**
+
+- Frontend:
+  - [`useIsDesktop`](../frontend/src/shared/lib/use-desktop.ts): one layout per page, chosen at the rail's 64rem.
+  - `.page-desk` and the desktop components in `index.css`.
+  - Desktop layouts for each place:
+    - [Today](../frontend/src/features/today/components/TodayDesk.tsx);
+    - [Tasks](../frontend/src/features/tasks/components/TasksDesk.tsx), with the Task beside the list on `/tasks/$taskId`;
+    - [Routines](../frontend/src/features/routines/components/RoutinesDesk.tsx), with the Routine beside the week on `/routines/$routineId`;
+    - [Goals and Projects](../frontend/src/features/goals/components/GoalsDesk.tsx);
+    - [Planning](../frontend/src/features/planning/components/PlanningDesk.tsx), the frame and «مسیر تا هدف», wrapped around the phone's steps;
+    - [Reconcile](../frontend/src/features/reconcile/components/ReconcileDesk.tsx), with the side panels around the phone's lanes.
+  - `CodeInsights` was built in STEP-20.
+  - The phone layouts are unchanged.
+- Tests:
+  - Unit tests, each run in the desktop layout through `onDesktop()`:
+    - every Today tile, deadline and tomorrow figure matches what the phone's data gives, and the quick add calls the phone's create with the day in view;
+    - the Tasks views are counted from a list read to its end, and completion is the phone's;
+    - the Routines week grid shows past days as counts and completes today's slot in place;
+    - Goals «نیاز به توجه» states only facts, with no forecast, and each timeline bar runs from the Project's creation to its target date;
+    - the road shows only the draft's own dated items, in order;
+    - the Reconcile side panels show the earlier days and mark Tasks brought to today as «تازه»;
+    - the breakpoint hook follows the window.
+  - Browser ([desktop](../frontend/e2e/desktop.spec.ts)), at 1440 px:
+    - every board, with its actions;
+    - a keyboard pass on Today: Tab to the quick add, type, Enter, then complete from the ring with Enter;
+    - no sideways scroll;
+    - screenshots of Today and Reconcile in both themes.
+  - The other scenarios run at 1280 px, which is desktop. `auth.spec` now finds a closed Task through the «پایان‌یافته» view.
+- Docs:
+  - `layout-and-navigation.md` *Desktop layouts*: what each page shows and where each figure comes from;
+  - `testing-performance.md` *Two layouts*;
+  - `active-conventions.md`.
+
+**Verified 2026-10-15 on Linux:**
+
+- 114 frontend tests passed; typecheck, lint and build were clean.
+- 267 backend tests passed; 2 skipped (the real-provider runs).
+- All 21 browser scenarios passed in Chromium against a fresh isolated database; the opt-in time-to-draft scenario was skipped.
+- Screenshots of all eight desktop boards at 1440 px, light and dark, were compared with the boards.
+
+**Decisions and deviations (028 §5: desktop adds no behaviour and no new figure):**
+
+- **Left out because they would add behaviour the phone does not have:**
+  - search (Today, Tasks) and the Tasks sort;
+  - week navigation in Routines;
+  - the single-key shortcuts (`/`, `N`, D/T/L/X/Z, Ctrl+Enter);
+  - Reconcile's staging of decisions for one «بررسی و اعمال» and «بقیه را به امروز بیاور»;
+  - Reconcile's correction of Routine slots;
+  - «چیزی را عوض کنم؟ دوباره بساز» on the draft (rewriting stays «ویرایش نوشته»).
+  
+  WCAG 2.1.4 would also need a way to turn single-key shortcuts off.
+- **Left out because the data does not exist or would be a guess:**
+  - «این هفته انجام دادی ۲۲، ۴ بیشتر از هفته‌ی قبل» and the seven-day chart of done Tasks, replaced by «هدف‌های فعال» and this week's Routine slots. The Task options hold 100 rows and would undercount.
+  - «بیشتر جا می‌ماند», which needs more than the week the list reads; replaced by today's slots.
+  - Per-slot outcomes of past days: the week gives counts, so a past day shows «x از y».
+  - The Task's «برآورد» and its date history; there is no estimate field, and carries are not listed.
+  - «پیش‌نویس‌های اخیر» (no endpoint) and «پاسخ‌هایت» (answers are not returned).
+  - «در نوشته‌ات پیدا شد» and the road and «روز تا…» before a draft exists; both would read meaning from the text. The road stays empty until there is a draft.
+  - Goals «با این سرعت تا ۱۵ آبان می‌رسد», a forecast. The fact («N روز مانده، M کار باز») stays.
+- **Mind Map over the board:** the satisfaction cards on the reviewable draft and on the Reconcile summary are not shown (027 §8, as in STEPs 18 and 19).
+- **Kept from the phone although the board omits them:**
+  - the day wheel on Today, so a later day can still be looked at;
+  - Review & Apply per decision, and the review and capture lanes in Reconcile;
+  - «هدف جدید» and the Goals/Projects switch, in place of the board's «هدف یا پروژه».
+- **Wording kept from the phone:** «از روزهای قبل», not «عقب‌افتاده» (STEP-16).
+- **Lists on desktop are read to their end** (Tasks, Routines), so view counts are whole. At pilot size this is a few pages of 20.
+
+**Still owed:**
+
+- `./dev.ps1 check` and `./auth-e2e.ps1` on Windows with SDK 10.0.401.
+- A screen-reader pass of the desktop boards, in particular the Routines grid and the Goals timeline.
+- A keyboard pass of the timeline and the road by hand.
+

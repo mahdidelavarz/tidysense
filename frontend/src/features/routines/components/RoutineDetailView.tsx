@@ -29,7 +29,8 @@ import { RoutineOccurrenceHistory } from './RoutineOccurrenceHistory'
  * last four weeks, its facts and its history. Editing is the pencil at the
  * top; stopping (or resuming as a continuation) is at the foot.
  */
-export function RoutineDetailView({ routineId }: { routineId: string }) {
+export function RoutineDetailView({ routineId, panel = false }: { routineId: string; panel?: boolean }) {
+  const root = panel ? 'desk-detail-body' : 'page'
   const routine = useRoutine(routineId)
   const goals = useGoalOptions()
   const projects = useProjectOptions()
@@ -45,12 +46,12 @@ export function RoutineDetailView({ routineId }: { routineId: string }) {
   const [confirmStop, setConfirmStop] = useState(false)
 
   if (routine.isPending) {
-    return <div className="page"><BackLink to="/routines" /><LoadingState text="در حال دریافت روتین…" /></div>
+    return <div className={root}><BackLink to="/routines" /><LoadingState text="در حال دریافت روتین…" /></div>
   }
   if (routine.isError) {
     const notFound = toApiError(routine.error).status === 404
     return (
-      <div className="page">
+      <div className={root}>
         <BackLink to="/routines" />
         <ErrorState
           title={notFound ? 'روتین پیدا نشد.' : 'دریافت روتین ممکن نشد.'}
@@ -67,7 +68,7 @@ export function RoutineDetailView({ routineId }: { routineId: string }) {
   const slots = (todayView.data?.routineOccurrences ?? []).filter(occurrence => occurrence.routineId === data.id)
   const weeks = month.data?.routines[0]
   return (
-    <div className="page">
+    <div className={root}>
       <BackLink
         to="/routines"
         actions={active && (

@@ -12,7 +12,9 @@ import { StructureSwitch } from '../../structure/components/StructureSwitch'
 import { useProgress } from '../../structure/hooks/progress-hooks'
 import { useToday } from '../../today/hooks/today-hooks'
 import { useGoalOptions } from '../hooks/goal-hooks'
+import { useIsDesktop } from '../../../shared/lib/use-desktop'
 import { GoalCard } from './GoalCard'
+import { GoalsDesk } from './GoalsDesk'
 
 /**
  * Goals: the Goals view of the one Goals-and-Projects place. Goals in
@@ -21,6 +23,10 @@ import { GoalCard } from './GoalCard'
  * at the foot.
  */
 export function GoalsPage() {
+  return useIsDesktop() ? <GoalsDesk /> : <GoalsPhone />
+}
+
+function GoalsPhone() {
   const goals = useGoalOptions()
   const projects = useProjectOptions()
   const progress = useProgress()
