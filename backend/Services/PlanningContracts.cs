@@ -64,7 +64,9 @@ public sealed record PlanningProposal(
     IReadOnlyList<TimeOnly>? TimesOfDay,
     DateOnly? EffectiveFromLocalDate,
     string? SequenceKey = null,
-    int? SequenceOrder = null);
+    int? SequenceOrder = null,
+    // An existing active Project of the Goal context the Task or Routine belongs to (with UnderContext).
+    Guid? ContextProjectId = null);
 
 /// <summary>Only the field that belongs to the fact type is set. Weekdays are ISO numbers (Monday = 1).</summary>
 public sealed record PlanningFactValue(
@@ -114,7 +116,7 @@ public static class PlanningRemovedItemTypes
 
 public static class PlanningJson
 {
-    public const string SchemaVersion = "2026-10-15.1";
+    public const string SchemaVersion = "2026-10-16.1";
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     public static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Options);

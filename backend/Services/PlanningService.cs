@@ -405,7 +405,7 @@ public sealed partial class PlanningService(
             return old with
             {
                 Title = edit.Title, Description = edit.Description, ParentDraftId = edit.ParentDraftId,
-                UnderContext = edit.UnderContext, Included = edit.Included,
+                UnderContext = edit.UnderContext, ContextProjectId = edit.ContextProjectId, Included = edit.Included,
                 DesiredOutcome = edit.DesiredOutcome, CompletionMeaning = edit.CompletionMeaning,
                 TargetDate = edit.TargetDate,
                 ReviewDate = redefault ? null : edit.ReviewDate,
@@ -474,7 +474,7 @@ public sealed partial class PlanningService(
             PlanningDraftRevision = draft.CurrentRevision, ActionType = ApplyActionType,
             PreviewJson = JsonSerializer.Serialize(new StoredPreview(
                 built.Preview.Items.Select(x => new PlanningPreviewItemDto(x.DraftId, x.EntityType, x.Title,
-                    x.ParentDraftId, x.UnderContext)).ToArray(),
+                    x.ParentDraftId, x.UnderContext, x.ContextProjectId)).ToArray(),
                 built.Preview.Facts.Select(x => new PlanningPreviewFactDto(x.DraftId, x.FactType, x.Strength)).ToArray(),
                 built.Preview.Warnings.Select(x => new PlanningWarningDto(x.WarningId, x.Code,
                     x.AffectedDraftIds, x.WarningHash)).ToArray(),
@@ -546,6 +546,12 @@ public sealed partial class PlanningService(
             if (built.Preview.Warnings.Any(x => !acknowledged.Contains((x.WarningId, x.WarningHash))))
                 throw new CommandRejectedException("WARNING_NOT_ACKNOWLEDGED");
 
+            // Work placed under an existing Project needs it still active in this Goal; it is never moved elsewhere.
+            var linked = built.Preview.Items.Where(x => x.ContextProjectId is not null)
+                .Select(x => x.ContextProjectId!.Value).Distinct().ToArray();
+            if (linked.Length > 0 && await context.Projects.CountAsync(x => linked.Contains(x.Id) && x.UserId == owner &&
+                    x.GoalId == built.Scope!.Id && x.Status == ParentStatuses.Active, ct) != linked.Length)
+                throw new CommandRejectedException("CONTEXT_PROJECT_UNAVAILABLE");
             var (cascades, created) = Apply(context, owner, draft.AttemptId, built, today, timezone, now);
             // The approved week of its Goal or Project, and, for a continuation, the decision on the week before (029 §3).
             if (PlanningContinuationRules.WindowScope(built.Scope, created) is { } windowScope)
@@ -608,6 +614,7 @@ public sealed partial class PlanningService(
             if (item.ParentDraftId is { } parent)
                 return types[parent] == PlanningEntityTypes.Goal ? (ids[parent], null) : (null, ids[parent]);
             if (!item.UnderContext || scope is null) return (null, null);
+            if (item.ContextProjectId is { } existing) return (null, existing);
             return scope.Type == PlanningContextTypes.Goal ? (scope.Id, null) : (null, scope.Id);
         }
 
@@ -855,7 +862,13 @@ public sealed partial class PlanningService(
             content.Assumptions, content.UnresolvedQuestions, Issues(evaluation.DraftIssues),
             evaluation.FirstWeek.Select(x => new PlanningFirstWeekEntryDto(x.DraftId, x.Date)).ToArray(),
             status == PlanningDraftStatuses.Reviewable && evaluation.CanApply, draft.LinkedConfirmationId, content.RemovedItems ?? [],
-            continuedWeek + 1);
+            continuedWeek + 1,
+            built.Scope is { Type: PlanningContextTypes.Goal } goalScope
+                ? await db.Projects.AsNoTracking()
+                    .Where(x => x.UserId == currentUser.UserId && x.GoalId == goalScope.Id && x.Status == ParentStatuses.Active)
+                    .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
+                    .Select(x => new PlanningContextProjectDto(x.Id, x.Title)).ToListAsync(cancellationToken)
+                : []);
 
         static PlanningIssueDto[] Issues(IReadOnlyList<PlanningIssue> issues) =>
             issues.Select(x => new PlanningIssueDto(x.Code, x.Severity, x.Origin)).ToArray();

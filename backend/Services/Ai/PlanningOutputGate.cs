@@ -37,7 +37,7 @@ public sealed record PlanningGateResult(
 /// </summary>
 public static partial class PlanningOutputGate
 {
-    public const string RepairPolicyVersion = "2026-10-15.1";
+    public const string RepairPolicyVersion = "2026-10-16.1";
     public const int MaxOutputChars = 60_000;
     public const int MaxCorrectionChars = 1_500;
 
@@ -55,6 +55,7 @@ public static partial class PlanningOutputGate
     public const string PadDate = "PAD_YEAR_FIRST_MONTH_OR_DAY";
     public const string RemoveInvalidItems = "REMOVE_INVALID_ITEMS";
     public const string DropInvalidSequence = "DROP_INVALID_SEQUENCE";
+    public const string DropDuplicateTask = "DROP_DUPLICATE_TASK";
 
     // Structural faults a draft can be cured of by leaving items out: its later items past a count
     // limit, and planning details that break the catalogue.
@@ -155,6 +156,12 @@ public static partial class PlanningOutputGate
             try
             {
                 var draft = PlanningDraftRules.Repair(parsed, context.Today);
+                // A Task the scope already has open is not proposed again; it is named as left out (029 §8).
+                if (PlanningDraftRules.WithoutDuplicates(draft, context.UnfinishedTasks.Select(x => x.Title)) is { } unique)
+                {
+                    draft = unique;
+                    rules.Add(DropDuplicateTask);
+                }
                 // An invalid sequence loses only its order; its Tasks stay (029 §9).
                 if (PlanningDraftRules.WithoutInvalidSequences(draft) is { } unchained)
                 {
@@ -312,6 +319,7 @@ public static partial class PlanningOutputGate
         "ROUTINE_RECURRENCE_REQUIRED" => "a ROUTINE needs \"recurrence\"",
         "PARENT_INVALID" => "a \"parentDraftId\" must be the draftId of another proposal in this output of an allowed parent type (GOAL for a PROJECT; GOAL or PROJECT for a TASK or ROUTINE), and never together with \"underContext\": true",
         "CONTEXT_PARENT_INVALID" => "\"underContext\": true is allowed only when planningContext is not null, never on a GOAL, and never on a PROJECT inside a PROJECT context",
+        "CONTEXT_PROJECT_INVALID" => "\"contextProjectRef\" is allowed only on a TASK or ROUTINE inside a GOAL context, never together with \"parentDraftId\"",
         "FACT_INVALID" => "a fact's \"factType\", \"strength\" and \"value\" do not match the PLANNING DETAILS rules",
         "FACT_SCOPE_INVALID" => "a fact's \"scopeDraftId\" must be null or the draftId of a proposal in this output",
         "NOTE_INVALID" => "each item of \"assumptions\" and \"unresolvedQuestions\" needs a \"text\" of 1 to 300 characters and a \"draftId\" that is null or the draftId of a proposal or fact in this output",
@@ -329,8 +337,14 @@ public static partial class PlanningOutputGate
             var item = reader.Object(node);
             // A review date is product policy; a model that supplies one fails here as an unknown field.
             reader.Only(item, "draftId", "entityType", "title", "description", "parentDraftId", "underContext",
-                "source", "confidence", "desiredOutcome", "completionMeaning", "targetDate", "plannedDate",
-                "deadline", "recurrence", "timesOfDay", "effectiveFromLocalDate", "sequenceKey", "sequenceOrder");
+                "contextProjectRef", "source", "confidence", "desiredOutcome", "completionMeaning", "targetDate",
+                "plannedDate", "deadline", "recurrence", "timesOfDay", "effectiveFromLocalDate", "sequenceKey",
+                "sequenceOrder");
+            // An existing Project of the context, named by its ref; the proposal then sits under the context.
+            Guid? contextProject = null;
+            if (reader.Text(item, "contextProjectRef") is { } projectRef)
+                contextProject = context.Projects.FirstOrDefault(x => x.Ref == projectRef)?.Id
+                    ?? throw Schema($"{path}.contextProjectRef: must be the \"ref\" of one of activeProjects");
             PlanningRecurrence? recurrence = null;
             if (reader.Node(item, "recurrence") is { } recurrenceNode)
             {
@@ -348,7 +362,7 @@ public static partial class PlanningOutputGate
                 reader.Required(item, "title"),
                 reader.Text(item, "description"),
                 reader.Text(item, "parentDraftId"),
-                reader.Flag(item, "underContext"),
+                reader.Flag(item, "underContext") || contextProject is not null,
                 reader.RequiredEnum(item, "source", Sources),
                 reader.RequiredEnum(item, "confidence", Confidences),
                 true,
@@ -363,7 +377,8 @@ public static partial class PlanningOutputGate
                 reader.Node(item, "timesOfDay") is null ? null : reader.Times(item, "timesOfDay"),
                 reader.Date(item, "effectiveFromLocalDate"),
                 reader.Text(item, "sequenceKey"),
-                reader.Integer(item, "sequenceOrder"));
+                reader.Integer(item, "sequenceOrder"),
+                contextProject);
         }).ToArray();
         var facts = List("facts").Select((node, index) =>
         {

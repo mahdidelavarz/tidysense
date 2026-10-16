@@ -1914,6 +1914,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/planning/continuations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningContinuationDto"][];
+                        "application/json": components["schemas"]["PlanningContinuationDto"][];
+                        "text/json": components["schemas"]["PlanningContinuationDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/continuations/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeclinePlanningContinuationRequest"];
+                    "text/json": components["schemas"]["DeclinePlanningContinuationRequest"];
+                    "application/*+json": components["schemas"]["DeclinePlanningContinuationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanningContinuationDecisionDto"];
+                        "application/json": components["schemas"]["PlanningContinuationDecisionDto"];
+                        "text/json": components["schemas"]["PlanningContinuationDecisionDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiProblemDto"];
+                        "application/json": components["schemas"]["ApiProblemDto"];
+                        "text/json": components["schemas"]["ApiProblemDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/planning/facts": {
         parameters: {
             query?: never;
@@ -5169,6 +5286,10 @@ export interface components {
             items: components["schemas"]["TaskDto"][];
             page: components["schemas"]["PageInfoDto"];
         };
+        DeclinePlanningContinuationRequest: {
+            /** Format: int64 */
+            expectedVersion: number | string;
+        };
         DiscardCaptureRequest: {
             /** Format: int64 */
             expectedVersion: number | string;
@@ -5375,6 +5496,8 @@ export interface components {
             completedAt: null | string;
             outcome?: null | string;
             clarification?: null | components["schemas"]["PlanningClarificationDto"];
+            /** Format: uuid */
+            continuationOfWindowId?: null | string;
         };
         PlanningClarificationDto: {
             questions: components["schemas"]["PlanningQuestion"][];
@@ -5400,11 +5523,58 @@ export interface components {
             expiresAt: string;
             result: null | components["schemas"]["PlanningApplyResultDto"];
         };
+        PlanningContextProjectDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+        };
         PlanningContextRefDto: {
             type: string;
             /** Format: uuid */
             id: string;
             title: string;
+        };
+        PlanningContinuationDecisionDto: {
+            /** Format: uuid */
+            windowId: string;
+            decision: string;
+            /** Format: int64 */
+            version: number | string;
+        };
+        PlanningContinuationDto: {
+            /** Format: uuid */
+            windowId: string;
+            /** Format: int32 */
+            week: number | string;
+            scopeType: string;
+            /** Format: uuid */
+            scopeId: string;
+            title: string;
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            /** Format: date */
+            nextStartDate: string;
+            /** Format: date */
+            nextEndDate: string;
+            evidence: components["schemas"]["PlanningContinuationEvidenceDto"];
+            /** Format: int64 */
+            version: number | string;
+        };
+        PlanningContinuationEvidenceDto: {
+            /** Format: int32 */
+            completedTasks: number | string;
+            /** Format: int32 */
+            carriedTasks: number | string;
+            /** Format: int32 */
+            droppedTasks: number | string;
+            /** Format: int32 */
+            leftTasks: number | string;
+            /** Format: int32 */
+            routineDone: number | string;
+            /** Format: int32 */
+            routineMissed: number | string;
         };
         PlanningDraftDto: {
             /** Format: uuid */
@@ -5432,6 +5602,9 @@ export interface components {
             /** Format: uuid */
             linkedConfirmationId: null | string;
             removedItems: components["schemas"]["PlanningRemovedItem"][];
+            /** Format: int32 */
+            continuationWeek?: null | number | string;
+            contextProjects?: null | components["schemas"]["PlanningContextProjectDto"][];
         };
         PlanningDraftRevisionRequest: {
             /** Format: int32 */
@@ -5507,6 +5680,8 @@ export interface components {
             title: string;
             parentDraftId: null | string;
             underContext: boolean;
+            /** Format: uuid */
+            contextProjectId?: null | string;
         };
         PlanningProposal: {
             draftId: string;
@@ -5536,6 +5711,8 @@ export interface components {
             sequenceKey?: null | string;
             /** Format: int32 */
             sequenceOrder?: null | number | string;
+            /** Format: uuid */
+            contextProjectId?: null | string;
         };
         PlanningProposalViewDto: {
             proposal: components["schemas"]["PlanningProposal"];
@@ -5978,6 +6155,8 @@ export interface components {
             answers?: null | components["schemas"]["PlanningAnswer"][];
             /** @default false */
             draftNow: boolean;
+            /** Format: uuid */
+            continuationOfWindowId?: null | string;
         };
         StopRoutineRequest: {
             /** Format: int64 */

@@ -514,6 +514,62 @@ public sealed class PlanningOutputGateTests
         })).Gate);
     }
 
+    [Fact]
+    public void Next_week_work_is_placed_under_an_existing_project_by_its_ref_and_open_tasks_are_not_proposed_again()
+    {
+        var goal = Guid.NewGuid();
+        var phase = Guid.NewGuid();
+        var context = Context(new PlanningScope(PlanningContextTypes.Goal, goal, "هدف", 1, PlanningContextTypes.Goal, goal)) with
+        {
+            Projects = [new PlanningContextProject(phase, "فاز اول", null, "P1")],
+            UnfinishedTasks = [new PlanningContextTask(Guid.NewGuid(), "حل ۴۰ تست شیمی", phase, Today, null, [])]
+        };
+        JsonObject Task(string id, string title, string? projectRef) => new()
+        {
+            ["draftId"] = id, ["entityType"] = "TASK", ["title"] = title, ["description"] = null,
+            ["parentDraftId"] = null, ["underContext"] = projectRef is null, ["contextProjectRef"] = projectRef,
+            ["source"] = "INFERRED", ["confidence"] = "HIGH", ["desiredOutcome"] = null, ["completionMeaning"] = null,
+            ["targetDate"] = null, ["plannedDate"] = Today.ToString("yyyy-MM-dd"), ["deadline"] = null,
+            ["recurrence"] = null, ["timesOfDay"] = null, ["effectiveFromLocalDate"] = null,
+            ["sequenceKey"] = null, ["sequenceOrder"] = null
+        };
+        string Output(params JsonObject[] proposals) => new JsonObject
+        {
+            ["kind"] = "DRAFT", ["message"] = null, ["blockReason"] = null, ["questions"] = new JsonArray(),
+            ["draft"] = new JsonObject
+            {
+                ["summary"] = "هفتهٔ دوم", ["proposals"] = new JsonArray(proposals.Cast<JsonNode>().ToArray()),
+                ["facts"] = new JsonArray(), ["assumptions"] = new JsonArray(), ["warnings"] = new JsonArray(),
+                ["unresolvedQuestions"] = new JsonArray()
+            }
+        }.ToJsonString();
+
+        // A ref names the Project; the Task then sits under the context, in that Project.
+        var placed = PlanningOutputGate.Evaluate(Output(Task("t1", "حل ۴۰ تست شیمی فصل ۲", "P1"), Task("t2", "مرور اشتباه‌ها", null)),
+            "stop", context, true);
+        Assert.True(placed.Passed, placed.Correction);
+        var underPhase = placed.Draft!.Proposals.Single(x => x.DraftId == "t1");
+        Assert.Equal((phase, true, (string?)null), (underPhase.ContextProjectId, underPhase.UnderContext, underPhase.ParentDraftId));
+        Assert.Null(placed.Draft.Proposals.Single(x => x.DraftId == "t2").ContextProjectId);
+
+        // A Task the Goal already has open is left out and named, whatever its spacing.
+        var repeated = PlanningOutputGate.Evaluate(Output(Task("t1", "حل  ۴۰ تست‌ شیمی", "P1"), Task("t2", "مرور اشتباه‌ها", null)),
+            "stop", context, true);
+        Assert.True(repeated.Passed, repeated.Correction);
+        Assert.Equal(["t2"], repeated.Draft!.Proposals.Select(x => x.DraftId));
+        Assert.Equal(PlanningEntityTypes.Task, Assert.Single(repeated.Draft.RemovedItems!).EntityType);
+        Assert.Contains(PlanningOutputGate.DropDuplicateTask, repeated.RepairRules);
+
+        // A ref that is not one of the scope's Projects, or one outside a Goal, is sent back.
+        Assert.False(PlanningOutputGate.Evaluate(Output(Task("t1", "کار تازه", "P9")), "stop", context, true).Passed);
+        var project = Guid.NewGuid();
+        var projectContext = Context(new PlanningScope(PlanningContextTypes.Project, project, "پروژه", 1,
+            PlanningContextTypes.Project, project)) with { Projects = [new PlanningContextProject(phase, "فاز", null, "P1")] };
+        var wrongScope = PlanningOutputGate.Evaluate(Output(Task("t1", "کار تازه", "P1")), "stop", projectContext, true);
+        Assert.False(wrongScope.Passed);
+        Assert.Contains("contextProjectRef", wrongScope.Correction);
+    }
+
     private static PlanningGateResult Evaluate(string text) => PlanningOutputGate.Evaluate(text, "stop", Context(), true);
 
     private static string With(Action<JsonObject> change)

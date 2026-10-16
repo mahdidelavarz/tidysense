@@ -9351,6 +9351,22 @@
           }
         }
       },
+      "PlanningContextProjectDto": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "PlanningContextRefDto": {
         "required": [
           "type",
@@ -9651,6 +9667,15 @@
               "string"
             ],
             "format": "int32"
+          },
+          "contextProjects": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PlanningContextProjectDto"
+            }
           }
         }
       },
@@ -9957,6 +9982,13 @@
           },
           "underContext": {
             "type": "boolean"
+          },
+          "contextProjectId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -10104,6 +10136,13 @@
               "string"
             ],
             "format": "int32"
+          },
+          "contextProjectId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

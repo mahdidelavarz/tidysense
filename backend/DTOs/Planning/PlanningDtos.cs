@@ -102,7 +102,11 @@ public sealed record PlanningDraftDto(
     Guid? LinkedConfirmationId,
     IReadOnlyList<PlanningRemovedItem> RemovedItems,
     // For a continuation, the number of the week this draft plans (2 after the first week, …).
-    int? ContinuationWeek = null);
+    int? ContinuationWeek = null,
+    // The scope's active Projects a proposal may sit under (its ContextProjectId).
+    IReadOnlyList<PlanningContextProjectDto>? ContextProjects = null);
+
+public sealed record PlanningContextProjectDto(Guid Id, string Title);
 
 /// <summary>
 /// The full edited item lists of the revision being replaced. Identity, entity type, provenance
@@ -120,7 +124,8 @@ public sealed record PlanningPreviewItemDto(
     string EntityType,
     string Title,
     string? ParentDraftId,
-    bool UnderContext);
+    bool UnderContext,
+    Guid? ContextProjectId = null);
 
 public sealed record PlanningPreviewFactDto(string DraftId, string FactType, string Strength);
 

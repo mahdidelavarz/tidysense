@@ -247,6 +247,11 @@ public static partial class PlanningDraftRules
             if (item.UnderContext && (contextType is null || item.EntityType == PlanningEntityTypes.Goal ||
                     (item.EntityType == PlanningEntityTypes.Project && contextType == PlanningContextTypes.Project)))
                 errors.Add("CONTEXT_PARENT_INVALID");
+            // Under an existing Project of the Goal context: a Task or Routine, and nothing else as its owner.
+            if (item.ContextProjectId is not null && (!item.UnderContext || item.ParentDraftId is not null ||
+                    contextType != PlanningContextTypes.Goal ||
+                    item.EntityType is not (PlanningEntityTypes.Task or PlanningEntityTypes.Routine)))
+                errors.Add("CONTEXT_PROJECT_INVALID");
         }
 
         if (InvalidSequences(proposals).Count > 0) errors.Add("SEQUENCE_INVALID");
@@ -466,7 +471,7 @@ public static partial class PlanningDraftRules
                 Hash($"{PlanningConfirmationWarningCodes.DescendantsExcludedWithParent}|{draftId}|{revision}|{string.Join(',', carried)}")));
         var canonical = new StringBuilder($"{draftId}|{revision}|{contextStamp}|{evaluation.CanApply}");
         foreach (var item in items)
-            canonical.Append($"|{item.DraftId}:{item.EntityType}:{item.ParentDraftId}:{item.UnderContext}:{item.SequenceKey}:{item.SequenceOrder}");
+            canonical.Append($"|{item.DraftId}:{item.EntityType}:{item.ParentDraftId}:{item.UnderContext}:{item.ContextProjectId}:{item.SequenceKey}:{item.SequenceOrder}");
         foreach (var fact in facts) canonical.Append($"|{fact.DraftId}:{fact.ScopeDraftId}");
         foreach (var warning in warnings) canonical.Append($"|{warning.WarningHash}");
         return new PlanningPreview(items, facts, warnings, content.Facts.Count > 0 && facts.Length == 0,
@@ -488,7 +493,7 @@ public static partial class PlanningDraftRules
         {
             var members = chain.ToArray();
             if (members.Length < 2 || members.Select(x => x.SequenceOrder).Distinct().Count() != members.Length ||
-                members.Select(x => (x.ParentDraftId, x.UnderContext)).Distinct().Count() != 1)
+                members.Select(x => (x.ParentDraftId, x.UnderContext, x.ContextProjectId)).Distinct().Count() != 1)
                 invalid.Add(chain.Key);
         }
         return invalid;
@@ -589,6 +594,22 @@ public static partial class PlanningDraftRules
     /// member is no sequence. Nothing is re-dated, re-typed or re-parented. The removed items are
     /// listed for the user. Null when nothing would be left.
     /// </summary>
+    /// <summary>
+    /// The draft without Tasks the scope already has open under the same title, or null when it has none.
+    /// Titles compare without case, spacing or the half-space, so «خرید  کتاب» is «خرید‌کتاب».
+    /// </summary>
+    public static PlanningDraftContent? WithoutDuplicates(PlanningDraftContent content, IEnumerable<string> openTitles)
+    {
+        var open = openTitles.Select(TitleKey).ToHashSet(StringComparer.Ordinal);
+        var duplicates = content.Proposals
+            .Where(x => x.EntityType == PlanningEntityTypes.Task && open.Contains(TitleKey(x.Title)))
+            .Select(x => x.DraftId).ToArray();
+        return duplicates.Length == 0 ? null : Without(content, duplicates) ?? content with { Proposals = [] };
+    }
+
+    private static string TitleKey(string title) => string.Concat(title.Where(x => !char.IsWhiteSpace(x) && x != '\u200c'))
+        .ToLowerInvariant();
+
     public static PlanningDraftContent? Without(PlanningDraftContent content, IEnumerable<string> draftIds)
     {
         var removed = draftIds.ToHashSet(StringComparer.Ordinal);

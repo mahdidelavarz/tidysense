@@ -118,6 +118,7 @@ public sealed class DeterministicPlanningGenerator : IPlanningGenerator
     /// </summary>
     private static PlanningDraftContent Default(string intention, PlanningContext context)
     {
+        if (context.Continuation is { } continuation) return NextWeek(context, continuation);
         var title = Short(intention);
         var scope = context.Scope?.Type;
         var first = NextFree(context, context.WindowStart);
@@ -168,6 +169,24 @@ public sealed class DeterministicPlanningGenerator : IPlanningGenerator
             proposals, facts.ToArray(),
             [new PlanningNote("step-1", "تاریخ‌ها پیشنهادی‌اند و می‌توانید آن‌ها را تغییر دهید.")],
             [new PlanningWarning(null, PlanningSeverities.Info, PlanningWarningCodes.AssumedDates)]);
+    }
+
+    /// <summary>
+    /// The week after an approved one (029 §3), as the prompt asks of the model: the next steps under
+    /// the Goal's first active Project (or the context itself), no new Project, no second Routine.
+    /// </summary>
+    private static PlanningDraftContent NextWeek(PlanningContext context, PlanningContinuationContext continuation)
+    {
+        var project = context.Scope?.Type == PlanningContextTypes.Goal ? context.Projects.FirstOrDefault() : null;
+        var first = NextFree(context, context.WindowStart);
+        var second = first is { } a ? NextFree(context, a.AddDays(2)) : null;
+        PlanningProposal Next(string id, string title, DateOnly? date) =>
+            Step(id, title, date, underContext: true) with { ContextProjectId = project?.Id };
+        var done = context.PreviousWindow?.CompletedTaskCount ?? 0;
+        return Content(context,
+            $"نمونهٔ هفتهٔ {continuation.Week}: هفتهٔ پیش {done} کار انجام شد؛ این هفته قدم‌های بعدی، سبک‌تر.",
+            [Next("next-1", "ادامهٔ قدم‌های هفتهٔ پیش", first), Next("next-2", $"مرور پیشرفت هفتهٔ {continuation.Week}", second)],
+            [], [new PlanningNote(null, "کارهای باز هفتهٔ پیش سر جایشان می‌مانند.")], []);
     }
 
     private static PlanningDraftContent NarrowTask(string intention, PlanningContext context) =>

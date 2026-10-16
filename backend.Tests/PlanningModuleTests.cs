@@ -397,7 +397,10 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
             var events = await db.DomainEvents.AsNoTracking()
                 .Where(x => x.ConfirmationId == confirmation.Id).ToListAsync();
             var appliedEvent = Assert.Single(events, x => x.EventType == "PLANNING_DRAFT_APPLIED");
-            Assert.Equal(9, events.Count);
+            // The entities, the detail and the approved week (029 §3), all in one transaction.
+            Assert.Equal(10, events.Count);
+            var week = JsonDocument.Parse(Assert.Single(events, x => x.EventType == "PLANNING_WINDOW_OPENED").PayloadJson).RootElement;
+            Assert.Equal(("GOAL", 1), (week.GetProperty("scope").GetString(), week.GetProperty("week").GetInt32()));
             Assert.All(events, x =>
             {
                 Assert.Equal("USER", x.Actor);
@@ -1075,8 +1078,15 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
             Assert.Equal(1, JsonDocument.Parse(manifest).RootElement.GetProperty("categories").GetProperty("CONTINUATION").GetInt32());
         }
 
+        // The next steps go under week one's phase Project, which the draft names; no new Project or Goal.
+        Assert.All(weekTwo.Proposals, x => Assert.Equal(PlanningEntityTypes.Task, x.Proposal.EntityType));
+        Assert.All(weekTwo.Proposals, x => Assert.Equal(Assert.Single(applied.ProjectIds), x.Proposal.ContextProjectId));
+        Assert.Equal(applied.ProjectIds, weekTwo.ContextProjects!.Select(x => x.Id));
+
         // Approving it is the decision about week one, and week two begins.
-        await Apply(weekTwo, "continue-apply-two");
+        var appliedTwo = await Apply(weekTwo, "continue-apply-two");
+        foreach (var id in appliedTwo.TaskIds)
+            Assert.Equal(applied.ProjectIds[0], (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{id}"))!.ProjectId);
         var chain = await Windows();
         Assert.Equal(2, chain.Length);
         Assert.Equal(PlanningWindowDecisions.ContinueAsIs, chain[0].Decision);

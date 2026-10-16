@@ -16,7 +16,7 @@ public sealed record PlanningPrompt(string System, string User, string ContextRe
 /// </summary>
 public static class PlanningPromptRenderer
 {
-    public const string PromptVersion = "2026-10-15.3";
+    public const string PromptVersion = "2026-10-16.1";
     public const string DataOpen = "<planning_request_data>";
     public const string DataClose = "</planning_request_data>";
 
@@ -92,19 +92,35 @@ public static class PlanningPromptRenderer
             windowStart = context.WindowStart,
             windowEnd = context.WindowEnd,
             planningContext = context.Scope is null ? null : new { type = context.Scope.Type, title = context.Scope.Title },
+            continuation = context.Continuation is null ? null : new
+            {
+                week = context.Continuation.Week,
+                previousStart = context.Continuation.PreviousStart,
+                previousEnd = context.Continuation.PreviousEnd
+            },
             confirmedPlanningDetails = context.Facts,
-            activeProjects = context.Projects.Select(x => new { title = x.Title, targetDate = x.TargetDate }).ToArray(),
-            activeRoutines = context.Routines.Select(x => new { title = x.Title, recurrence = x.Recurrence }).ToArray(),
+            activeProjects = context.Projects.Select(x => new { @ref = x.Ref, title = x.Title, targetDate = x.TargetDate }).ToArray(),
+            activeRoutines = context.Routines.Select(x => new
+            {
+                title = x.Title, recurrence = x.Recurrence,
+                doneLastWindow = previous is null ? (int?)null : x.DoneCount,
+                missedLastWindow = previous is null ? (int?)null : x.MissedCount
+            }).ToArray(),
             unfinishedTasks = context.UnfinishedTasks.Select(x => new
             {
-                title = x.Title, plannedDate = x.PlannedDate, deadline = x.Deadline, reasonCodes = x.ReasonCodes
+                title = x.Title,
+                projectRef = context.Projects.FirstOrDefault(p => p.Id == x.ProjectId)?.Ref,
+                plannedDate = x.PlannedDate, deadline = x.Deadline, reasonCodes = x.ReasonCodes,
+                waitsFor = x.WaitsFor is { Count: > 0 } waits ? waits : null
             }).ToArray(),
-            previousSevenDays = previous is null ? null : new
+            previousWindow = previous is null ? null : new
             {
                 startDate = previous.StartDate,
                 endDate = previous.EndDate,
                 completedTaskTitles = reduction == ReductionTitles ? null : previous.CompletedTaskTitles,
                 completedTaskCount = previous.CompletedTaskCount,
+                leftTaskTitles = reduction == ReductionTitles ? null : previous.LeftTaskTitles,
+                leftTaskCount = previous.LeftTaskCount,
                 carriedTaskCount = previous.CarriedTaskCount,
                 droppedTaskCount = previous.DroppedTaskCount,
                 routineDoneCount = previous.RoutineDoneCount,
@@ -184,7 +200,7 @@ public static class PlanningPromptRenderer
             "proposals": [ {
               "draftId": string, "entityType": "GOAL" | "PROJECT" | "TASK" | "ROUTINE",
               "title": string, "description": string or null,
-              "parentDraftId": string or null, "underContext": boolean,
+              "parentDraftId": string or null, "underContext": boolean, "contextProjectRef": string or null,
               "source": "EXPLICIT" | "INFERRED", "confidence": "HIGH" | "MEDIUM" | "LOW",
               "desiredOutcome": string or null, "completionMeaning": string or null, "targetDate": date or null,
               "plannedDate": date or null, "deadline": date or null,
@@ -215,7 +231,7 @@ public static class PlanningPromptRenderer
         - A warning has exactly the three fields "draftId", "severity" and "code": never a "text", "message" or "description".
         - "options" holds JSON strings and "multiple" is true or false.
         - "questions", "proposals", "facts", "assumptions", "warnings" and "unresolvedQuestions" are JSON arrays, empty when there is nothing to put in them.
-        - "draftId" inside assumptions, warnings and unresolvedQuestions is null or the draftId of a proposal or fact in this same output. "parentDraftId" and "scopeDraftId" are null or the draftId of a proposal in this same output.
+        - "draftId" inside assumptions, warnings and unresolvedQuestions is null or the draftId of a proposal or fact in this same output. "parentDraftId" and "scopeDraftId" are null or the draftId of a proposal in this same output. "contextProjectRef" is null or the "ref" of one of activeProjects.
 
         KIND
         - DRAFT: "draft" is an object; "questions" is empty; "blockReason" is null.
@@ -255,6 +271,7 @@ public static class PlanningPromptRenderer
         - At most 1 GOAL, 5 PROJECTs, 15 TASKs, 5 ROUTINEs, 20 proposals, 10 facts, 10 assumptions, 10 warnings, 5 unresolvedQuestions. Summary 1 to 1000 characters, title 1 to 200, "description", "desiredOutcome" and "completionMeaning" at most 2000 each, each "text" in assumptions and unresolvedQuestions 1 to 300.
         - Parents: a PROJECT may have a GOAL parent; a TASK or ROUTINE may have a GOAL or PROJECT parent. A proposal has "parentDraftId", or "underContext": true, or neither; never both. A GOAL has no parent.
         - "underContext": true attaches the proposal to planningContext and is allowed only when planningContext is not null. Inside a GOAL context propose no new GOAL. Inside a PROJECT context propose only TASKs and ROUTINEs under the context.
+        - Inside a GOAL context, a TASK or ROUTINE that belongs to one of activeProjects names it with "contextProjectRef" (its "ref", such as "P1") and has "underContext": true and "parentDraftId": null.
         - Choose the structure yourself, by these meanings:
           - GOAL: an outcome the user wants that takes more than about a month and can be recognised when reached. Its "desiredOutcome" says it in the user's own terms («نمرهٔ ۷ آیلتس», «۸ کیلو کمتر»). Never invent a measurable outcome the user did not imply.
           - PROJECT: a concrete result or event with an end and several steps of its own (moving house, delivering a site, a thesis chapter, a trip, a renovation).
@@ -271,10 +288,20 @@ public static class PlanningPromptRenderer
         - When a TASK cannot start before another TASK's result exists (collect data → analyse it → write the chapter; buy boxes → pack), give those TASKs the same "sequenceKey" (a short id such as "s1") and "sequenceOrder" 1, 2, 3 in the order they must be done. Mere list order, priority or dates are not a sequence.
         - A sequence has at least 2 TASKs, all with the same "parentDraftId" (or all standalone, or all under the context). Dated members are dated in their order. Every other proposal has "sequenceKey" and "sequenceOrder" null.
 
+        CONTINUATION
+        When "continuation" is not null, this is week number continuation.week of a plan the user approved for planningContext; previousWindow is how the week from continuation.previousStart to continuation.previousEnd went. Plan only the next detailed week, windowStart to windowEnd:
+        - Propose no GOAL, no PROJECT that is already in activeProjects and no ROUTINE already in activeRoutines: they go on by themselves. A new PROJECT only for a phase that has really begun and is not in activeProjects.
+        - A new TASK goes under the active Project it belongs to ("contextProjectRef"), or under the context directly when it belongs to none.
+        - Build on what happened. Completed work is done: never propose it again. unfinishedTasks still exist: never repeat one as a new TASK; plan the steps after them. leftTaskTitles were planned last week and not done: plan this week lighter by about that many Tasks.
+        - Many carried Tasks or missed Routine slots mean last week was too full: propose fewer Tasks. A Routine with many missed slots may be named in "assumptions" with a suggestion to change its days; never propose a second one.
+        - A Task that "waitsFor" unfinished steps is not repeated, and new steps after it are dated after them.
+        - Usually draft at once; ask only when the evidence leaves a choice only the user can make.
+        - "summary" says in one or two sentences what last week achieved and what this week focuses on.
+
         PLANNING DETAILS ("facts")
         Propose a fact only for something the user stated that later planning needs and that has no field of its own. UNAVAILABLE_WEEKDAY uses "weekdays" (one or more different ISO numbers 1-7), UNAVAILABLE_DATE uses "localDate", UNAVAILABLE_DATE_RANGE uses "startLocalDate" with an "endLocalDate" that is not earlier; these three are HARD or SOFT, never INFORMATIONAL. The other types use "text" (1 to 120 characters) and are SOFT or INFORMATIONAL, never HARD. Every fact has its own "draftId" and a "value" object. "scopeDraftId" is the draftId of a proposed GOAL or of a proposed PROJECT without a parent; it is null only when planningContext is not null. When there is no planningContext and no such GOAL or PROJECT, propose no fact and put it in "assumptions" instead. Do not repeat anything in confirmedPlanningDetails. Respect every HARD detail: never plan a Task on a date, or a Routine on a weekday, that it rules out.
 
         BOUNDARIES
-        You organise what the user chooses to do. You do not diagnose, prescribe, recommend treatment or medication, or give legal or financial strategy; you do not infer motivation, capacity, emotional state or a clinical condition from history, and you do not present guesses about causes as facts. For such a request state the boundary in "message" and offer to organise the user's own actions, appointments or questions. Use previousSevenDays and reasonCodes only to keep the plan realistic.
+        You organise what the user chooses to do. You do not diagnose, prescribe, recommend treatment or medication, or give legal or financial strategy; you do not infer motivation, capacity, emotional state or a clinical condition from history, and you do not present guesses about causes as facts. For such a request state the boundary in "message" and offer to organise the user's own actions, appointments or questions. Use previousWindow and reasonCodes only to keep the plan realistic.
         """;
 }
