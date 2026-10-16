@@ -74,6 +74,7 @@ const rows = run.results.map(record => {
     emptyParents: emptyParents.map(x => x.title),
     dateErrors: texts.flatMap(dateErrors),
     removed: draft?.removedItems?.length ?? 0,
+    facts: draft?.facts?.length ?? 0,
     goals: count('GOAL'), projects: count('PROJECT'), tasks: count('TASK'), routines: count('ROUTINE'),
     datedTasks: proposals.filter(x => x.entityType === 'TASK' && x.plannedDate).length,
     sequences: new Set(proposals.map(x => x.sequenceKey).filter(Boolean)).size
@@ -98,7 +99,9 @@ console.log(`Run: ${file}${run.label ? ` (${run.label})` : ''}, ${n} cases`)
 for (const [name, value, of, pass] of bar) console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}: ${value}${of ? ` of ${of}` : ''}`)
 console.log(`Report: median system time ${median(rows.map(x => x.seconds))} s; turns ${rows.reduce((s, x) => s + x.turns, 0)} ` +
   `(${share(x => x.turns > 1)} cases with more than one); questions ${rows.reduce((s, x) => s + x.questions, 0)}; ` +
-  `removed items ${rows.reduce((s, x) => s + x.removed, 0)}; failed ${share(x => !x.drafted)}`)
+  `removed items ${rows.reduce((s, x) => s + x.removed, 0)}; failed ${share(x => !x.drafted)}; ` +
+  `planning details proposed ${rows.reduce((s, x) => s + x.facts, 0)} (in ${share(x => x.facts > 0)} drafts; ` +
+  `${rows.filter(x => x.questions > 0).filter(x => x.facts > 0).length} of ${share(x => x.questions > 0)} drafts that asked)`)
 console.log('')
 console.log('case               sec  turns q  outcome          apply items(G/P/T/R) dated seq  problems')
 for (const x of rows) {
@@ -134,7 +137,9 @@ const weekTwo = run.results.filter(record => record.week2).map(record => {
   const same = (items, titles) => items.filter(x => titles.map(titleKey).includes(titleKey(x.title))).map(x => x.title)
   const childOf = id => proposals.filter(x => x.parentDraftId === id)
   const hasWork = id => childOf(id).some(x => ['TASK', 'ROUTINE'].includes(x.entityType) || hasWork(x.draftId))
-  const tasks = of('TASK')
+  // An existing Task the draft only dates is not new work: it is counted apart and never a repeat.
+  const dated = of('TASK').filter(x => x.existingTaskId)
+  const tasks = of('TASK').filter(x => !x.existingTaskId)
   const inWindow = date => !week.offer || (date >= week.offer.nextStartDate && date <= week.offer.nextEndDate)
   const questions = week.turns.flatMap(turn => turn.questions)
   return {
@@ -154,12 +159,15 @@ const weekTwo = run.results.filter(record => record.week2).map(record => {
     tasks: tasks.length,
     routines: of('ROUTINE').length,
     underExisting: tasks.filter(x => x.contextProjectId).length,
+    dated: dated.length,
     repeatedTasks: same(tasks, existing.openTasks),
     repeatedProjects: same(of('PROJECT'), existing.projects),
     repeatedRoutines: same(of('ROUTINE'), existing.routines),
-    nearRepeats: [...nearOf(tasks, [...existing.openTasks, ...(week.done ?? [])]),
+    // Of open work: a defect (it exists and could have been dated). Of done work: often the next practice of the same kind.
+    nearRepeats: [...nearOf(tasks, existing.openTasks),
       ...nearOf(of('ROUTINE'), existing.routines), ...nearOf(of('PROJECT'), existing.projects)],
-    outsideWindow: tasks.filter(x => x.plannedDate && !inWindow(x.plannedDate)).map(x => `${x.title} ${x.plannedDate}`),
+    nearDone: nearOf(tasks, week.done ?? []),
+    outsideWindow: [...tasks, ...dated].filter(x => x.plannedDate && !inWindow(x.plannedDate)).map(x => `${x.title} ${x.plannedDate}`),
     emptyParents: of('PROJECT').filter(x => !hasWork(x.draftId)).map(x => x.title),
     removed: draft?.removedItems?.length ?? 0,
     dateErrors: [draft?.summary, ...proposals.map(x => x.title), ...questions.flatMap(q => [q.text, ...(q.options ?? [])])]
@@ -184,18 +192,19 @@ if (weekTwo.length) {
   ]
   console.log('\nWeek two (STEP-24)')
   for (const [name, value, of, pass] of bar2) console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}: ${value}${of !== null ? ` of ${of}` : ''}`)
-  console.log(`Report: near repeats of existing or done work (reworded, heuristic) ${sum('nearRepeats')} in ` +
-    `${weekTwo.filter(x => x.nearRepeats.length).length} cases`)
-  console.log(`Report: Tasks under an existing Project ${sum('underExisting')} of ${sum('tasks')}; new Projects ${sum('newProjects')}; ` +
+  console.log(`Report: near repeats of open or existing work (reworded, heuristic) ${sum('nearRepeats')} in ` +
+    `${weekTwo.filter(x => x.nearRepeats.length).length} cases; near repeats of done work ${sum('nearDone')}`)
+  console.log(`Report: existing Tasks dated into the week ${sum('dated')} (in ${weekTwo.filter(x => x.dated > 0).length} cases)`)
+  console.log(`Report: new Tasks under an existing Project ${sum('underExisting')} of ${sum('tasks')}; new Projects ${sum('newProjects')}; ` +
     `questions ${sum('questions')} in ${weekTwo.filter(x => x.turns > 0).length} cases; removed items ${sum('removed')}`)
   console.log('')
-  console.log('case               sec  done/drop/left turns q apply week T(existing)/P/R  problems')
+  console.log('case               sec  done/drop/left turns q apply week T(existing)/P/R +dated  problems')
   for (const x of weekTwo) {
     const problems = [x.skipped, ...x.repeatedTasks.map(t => `REPEAT:${t}`), ...x.repeatedProjects.map(t => `REPEAT_P:${t}`),
       ...x.repeatedRoutines.map(t => `REPEAT_R:${t}`), ...x.nearRepeats.map(t => `NEAR:${t}`), ...x.outsideWindow.map(t => `OUTSIDE:${t}`),
       ...x.emptyParents.map(t => `EMPTY:${t}`), ...x.dateErrors.map(d => `DATE:${d}`), x.goals ? 'GOAL' : null].filter(Boolean)
     console.log(`${x.id.padEnd(18)} ${String(x.seconds).padStart(5)}  ${x.lived.padEnd(14)} ${String(x.turns).padStart(3)} ${String(x.questions).padStart(2)} ` +
-      `${x.approvable ? 'yes' : 'no '}   ${x.rightWeek ? 'ok ' : '-- '}  ${`${x.tasks}(${x.underExisting})/${x.newProjects}/${x.routines}`.padEnd(14)}  ${problems.join(', ')}`)
+      `${x.approvable ? 'yes' : 'no '}   ${x.rightWeek ? 'ok ' : '-- '}  ${`${x.tasks}(${x.underExisting})/${x.newProjects}/${x.routines} +${x.dated}`.padEnd(20)}  ${problems.join(', ')}`)
   }
 }
 
@@ -256,7 +265,8 @@ function printWeekTwo(lines, week) {
   }
   if (!week.draft) { lines.push(week.skipped ?? week.error ?? week.final?.failureCode ?? 'no draft'); return }
   const projects = Object.fromEntries((week.draft.contextProjects ?? []).map(x => [x.id, x.title]))
-  printDraft(lines, { ...week.draft, proposals: week.draft.proposals.map(view => view.proposal.contextProjectId
+  printDraft(lines, { ...week.draft, proposals: week.draft.proposals.map(view => view.proposal.existingTaskId
+    ? { ...view, proposal: { ...view.proposal, title: `${view.proposal.title} (کار موجود، فقط روز)` } } : view).map(view => view.proposal.contextProjectId
     ? { ...view, proposal: { ...view.proposal, title: `${view.proposal.title} ↳ «${projects[view.proposal.contextProjectId] ?? '?'}»` } }
     : view) })
 }

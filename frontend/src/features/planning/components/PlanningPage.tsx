@@ -450,6 +450,7 @@ function PlanningResult({ result, draftId, onAgain }: {
         title="برنامه ساخته شد."
         description={[
           counts.length > 0 ? `${counts.join('، ')} ساخته شد.` : '',
+          (result.datedTaskIds ?? []).length > 0 ? `${formatNumber((result.datedTaskIds ?? []).length)} کار موجود در این هفته روز گرفت.` : '',
           Number(result.factCount) > 0 ? `${formatNumber(Number(result.factCount))} مورد برای برنامه‌ریزی‌های بعدی نگه داشته شد.` : '',
         ].filter(Boolean).join(' ')}
         action={(

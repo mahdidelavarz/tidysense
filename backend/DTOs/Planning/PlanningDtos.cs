@@ -127,7 +127,9 @@ public sealed record PlanningPreviewItemDto(
     string Title,
     string? ParentDraftId,
     bool UnderContext,
-    Guid? ContextProjectId = null);
+    Guid? ContextProjectId = null,
+    // An existing Task this approval only gives a date (029 §3 follow-up).
+    Guid? ExistingTaskId = null);
 
 public sealed record PlanningPreviewFactDto(string DraftId, string FactType, string Strength);
 
@@ -145,7 +147,9 @@ public sealed record PlanningApplyResultDto(
     IReadOnlyList<Guid> ProjectIds,
     IReadOnlyList<Guid> TaskIds,
     IReadOnlyList<Guid> RoutineIds,
-    int FactCount);
+    int FactCount,
+    // Existing Tasks the approval dated; they are not in TaskIds.
+    IReadOnlyList<Guid>? DatedTaskIds = null);
 
 /// <summary>
 /// Exactly what one confirmation will create. The result is present only once the command has

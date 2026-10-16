@@ -366,6 +366,17 @@ public sealed class PlanningOutputGateTests
         var asked = Valid();
         asked["questions"] = new JsonArray(new JsonObject { ["id"] = "q1", ["text"] = "؟", ["kind"] = "CONTENT" });
         Assert.False(Evaluate(asked.ToJsonString()).Passed);
+
+        // The next week (029 §3) asks at most one question, and never about availability.
+        var next = Context() with { Continuation = new PlanningContinuationContext(Guid.NewGuid(), 2, Today.AddDays(-7), Today) };
+        Assert.Equal(PlanningOutputGate.GatePolicy,
+            PlanningOutputGate.Evaluate(Clarification("q1", "q2").ToJsonString(), "stop", next, true).Gate);
+        var availability = PlanningOutputGate.Evaluate(asking.ToJsonString(), "stop", next, true);
+        Assert.Equal(PlanningOutputGate.GatePolicy, availability.Gate);
+        Assert.Contains("continuation", availability.Correction);
+        var choice = Clarification("q1");
+        choice["questions"]![0]!["kind"] = "CONTENT";
+        Assert.True(PlanningOutputGate.Evaluate(choice.ToJsonString(), "stop", next, true).Passed);
     }
 
     [Fact]
@@ -568,6 +579,111 @@ public sealed class PlanningOutputGateTests
         var wrongScope = PlanningOutputGate.Evaluate(Output(Task("t1", "کار تازه", "P1")), "stop", projectContext, true);
         Assert.False(wrongScope.Passed);
         Assert.Contains("contextProjectRef", wrongScope.Correction);
+    }
+
+    [Fact]
+    public void An_open_task_is_dated_by_its_ref_keeping_its_own_title_place_and_deadline()
+    {
+        // 029 §3 follow-up: the next week puts an existing step into the week instead of proposing it again.
+        var goal = Guid.NewGuid();
+        var phase = Guid.NewGuid();
+        var existing = Guid.NewGuid();
+        var deadline = Today.AddDays(20);
+        var context = Context(new PlanningScope(PlanningContextTypes.Goal, goal, "هدف", 1, PlanningContextTypes.Goal, goal,
+            "نمرهٔ ۷ آیلتس", Today.AddMonths(6))) with
+        {
+            Projects = [new PlanningContextProject(phase, "فاز اول", null, "P1")],
+            UnfinishedTasks = [new PlanningContextTask(existing, "حل یک آزمون آزمایشی", phase, null, deadline, [], null, "T1")]
+        };
+        JsonObject Dated(string id, string? taskRef, string date, string? parent = null) => new()
+        {
+            ["draftId"] = id, ["entityType"] = "TASK", ["title"] = "انجام آزمون آزمایشی", ["existingTaskRef"] = taskRef,
+            ["parentDraftId"] = parent, ["underContext"] = true, ["source"] = "INFERRED", ["confidence"] = "HIGH",
+            ["plannedDate"] = date
+        };
+        string Output(params JsonObject[] proposals) => new JsonObject
+        {
+            ["kind"] = "DRAFT", ["message"] = null, ["blockReason"] = null, ["questions"] = new JsonArray(),
+            ["draft"] = new JsonObject
+            {
+                ["summary"] = "هفتهٔ دوم", ["proposals"] = new JsonArray(proposals.Cast<JsonNode>().ToArray()),
+                ["facts"] = new JsonArray(), ["assumptions"] = new JsonArray(), ["warnings"] = new JsonArray(),
+                ["unresolvedQuestions"] = new JsonArray()
+            }
+        }.ToJsonString();
+        var day = Today.AddDays(2).ToString("yyyy-MM-dd");
+
+        // Only the date is read: the title, the Project and the deadline are the Task's own, and the
+        // duplicate gate does not drop it for having an open Task's title.
+        var dated = PlanningOutputGate.Evaluate(Output(Dated("d1", "T1", day)), "stop", context, true);
+        Assert.True(dated.Passed, dated.Correction);
+        var proposal = Assert.Single(dated.Draft!.Proposals);
+        Assert.Equal((existing, "حل یک آزمون آزمایشی", phase, deadline, true, Today.AddDays(2)),
+            (proposal.ExistingTaskId!.Value, proposal.Title, proposal.ContextProjectId!.Value, proposal.Deadline!.Value,
+                proposal.UnderContext, proposal.PlannedDate!.Value));
+        Assert.DoesNotContain(PlanningOutputGate.DropDuplicateTask, dated.RepairRules);
+
+        // An unknown ref, one Task dated twice, a parent, or a date outside the week is sent back.
+        Assert.False(PlanningOutputGate.Evaluate(Output(Dated("d1", "T9", day)), "stop", context, true).Passed);
+        var twice = PlanningOutputGate.Evaluate(Output(Dated("d1", "T1", day), Dated("d2", "T1", day)), "stop", context, true);
+        Assert.False(twice.Passed);
+        Assert.Contains("existingTaskRef", twice.Correction);
+        // A parent, a sequence or another Project is not read: the Task keeps its own place and only gains its day.
+        JsonObject Placed(string field, string value)
+        {
+            var item = Dated("d1", "T1", day);
+            item[field] = value;
+            return item;
+        }
+        var other = context with { Projects = [..context.Projects, new PlanningContextProject(Guid.NewGuid(), "فاز دوم", null, "P2")] };
+        Assert.DoesNotContain(PlanningOutputGate.KeepExistingTaskPlace,
+            PlanningOutputGate.Evaluate(Output(Placed("contextProjectRef", "P1")), "stop", other, true).RepairRules);
+        foreach (var (field, value) in new[] { ("contextProjectRef", "P2"), ("sequenceKey", "s1"), ("parentDraftId", "x") })
+        {
+            var kept = PlanningOutputGate.Evaluate(Output(Placed(field, value)), "stop", other, true);
+            Assert.True(kept.Passed, kept.Correction);
+            var only = Assert.Single(kept.Draft!.Proposals);
+            Assert.Equal((phase, (string?)null, (string?)null), (only.ContextProjectId!.Value, only.ParentDraftId, only.SequenceKey));
+            Assert.Contains(PlanningOutputGate.KeepExistingTaskPlace, kept.RepairRules);
+        }
+        var late = PlanningOutputGate.Evaluate(Output(Dated("d1", "T1", Today.AddDays(9).ToString("yyyy-MM-dd"))),
+            "stop", context, true);
+        Assert.False(late.Passed);
+        Assert.Contains("plannedDate", late.Correction);
+
+        // A Routine the Goal already has is not proposed again under the same name; it goes on by itself.
+        var withRoutine = context with
+        {
+            Routines = [new PlanningContextRoutine(Guid.NewGuid(), "تمرین روزانهٔ پایتون", phase, new PlanningRecurrence("DAILY", null, null))]
+        };
+        var routine = new JsonObject
+        {
+            ["draftId"] = "r1", ["entityType"] = "ROUTINE", ["title"] = "تمرین  روزانهٔ‌پایتون", ["underContext"] = true,
+            ["source"] = "INFERRED", ["confidence"] = "HIGH", ["recurrence"] = new JsonObject { ["type"] = "DAILY" }
+        };
+        var again = PlanningOutputGate.Evaluate(Output(Dated("d1", "T1", day), routine), "stop", withRoutine, true);
+        Assert.True(again.Passed, again.Correction);
+        Assert.Equal(["d1"], again.Draft!.Proposals.Select(x => x.DraftId));
+        Assert.Contains(PlanningOutputGate.DropDuplicateRoutine, again.RepairRules);
+
+        // The next week of a Goal with its phases laid out adds no new phase: asked again, else left out and named.
+        var nextWeek = context with { Continuation = new PlanningContinuationContext(Guid.NewGuid(), 2, Today.AddDays(-7), Today) };
+        var phaseNode = new JsonObject
+        {
+            ["draftId"] = "p9", ["entityType"] = "PROJECT", ["title"] = "فاز تثبیت", ["underContext"] = true,
+            ["source"] = "INFERRED", ["confidence"] = "HIGH", ["targetDate"] = Today.AddMonths(2).ToString("yyyy-MM-dd")
+        };
+        var newPhase = PlanningOutputGate.Evaluate(Output(Dated("d1", "T1", day), phaseNode), "stop", nextWeek, true);
+        Assert.False(newPhase.Passed);
+        Assert.Contains("propose no new PROJECT", newPhase.Correction);
+        Assert.Equal(["d1"], newPhase.Fallback!.Draft!.Proposals.Select(x => x.DraftId));
+        Assert.Equal("فاز تثبیت", Assert.Single(newPhase.Fallback.Draft.RemovedItems!).Title);
+
+        // The Goal's own outcome and date reach the model with the scope.
+        var prompt = PlanningPromptRenderer.Render(new PlanningGenerationRequest(Guid.NewGuid(), "برنامهٔ هفتهٔ بعد",
+            context, null), int.MaxValue)!;
+        Assert.Contains("\"meaning\":\"نمرهٔ ۷ آیلتس\"", prompt.User);
+        Assert.Contains("\"ref\":\"T1\"", prompt.User);
     }
 
     private static PlanningGateResult Evaluate(string text) => PlanningOutputGate.Evaluate(text, "stop", Context(), true);

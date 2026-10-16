@@ -21,7 +21,7 @@ import type {
   PlanningProposalViewDto,
 } from '../types/planning.types'
 import { weekName } from './ContinuationOffer'
-import { ProposalEditSheet } from './ProposalEditSheet'
+import { ExistingTaskDateSheet, ProposalEditSheet } from './ProposalEditSheet'
 
 const weekdayLetter = new Intl.DateTimeFormat('fa-IR', { weekday: 'narrow' })
 const weekdayName = new Intl.DateTimeFormat('fa-IR', { weekday: 'long' })
@@ -74,7 +74,10 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
   })
 
   const blocked = draft.proposals.filter(item => item.state === 'BLOCKED').length + draft.facts.filter(item => item.state === 'BLOCKED').length
-  const included = (type: string) => draft.proposals.filter(item => item.proposal.entityType === type && item.state !== 'EXCLUDED' && !item.excludedByAncestor).length
+  // The tiles count what is made; an existing Task the plan only dates is said apart.
+  const included = (type: string) => draft.proposals.filter(item => item.proposal.entityType === type && !item.proposal.existingTaskId &&
+    item.state !== 'EXCLUDED' && !item.excludedByAncestor).length
+  const dated = draft.proposals.filter(item => item.proposal.existingTaskId && item.state !== 'EXCLUDED').length
 
   // A sequence loses its order as one: its Tasks stay, independent of each other (029 §9).
   const unchain = (key: string) => onEdit({
@@ -129,7 +132,9 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
         <p className="draft-quote whitespace-pre-wrap wrap-break-word">«{intention}»</p>
         <p className="mt-3 text-xs leading-6 text-text-secondary">
           {draft.continuationWeek
-            ? <>{weekName(Number(draft.continuationWeek))} را دقیق چیدیم، از {formatLocalDate(draft.windowStart)} تا {formatLocalDate(draft.windowEnd)}، با توجه به اینکه هفته‌ی پیش چطور پیش رفت. کارهای باز هفته‌ی پیش سر جایشان می‌مانند.</>
+            ? <>{weekName(Number(draft.continuationWeek))} را دقیق چیدیم، از {formatLocalDate(draft.windowStart)} تا {formatLocalDate(draft.windowEnd)}، با توجه به اینکه هفته‌ی پیش چطور پیش رفت. {dated > 0
+                ? `${formatNumber(dated)} کار موجود در این هفته روز می‌گیرد؛ بقیه‌ی کارهای باز سر جایشان می‌مانند.`
+                : 'کارهای باز هفته‌ی پیش سر جایشان می‌مانند.'}</>
             : <>این هفته را دقیق چیدیم، از {formatLocalDate(draft.windowStart)} تا {formatLocalDate(draft.windowEnd)}. هفته‌ی بعد را با توجه به اینکه این هفته چطور پیش رفت می‌سازیم.</>}
           {draft.context && <> موارد تازه زیر «{draft.context.title}» ساخته می‌شوند.</>}
         </p>
@@ -268,7 +273,16 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
         </div>
       </div>
 
-      {editing && (
+      {editing?.existingTaskId && (
+        <ExistingTaskDateSheet
+          proposal={editing}
+          pending={busy}
+          error={error}
+          onClose={() => setEditing(null)}
+          onSubmit={changed => editProposal(changed, () => setEditing(null))}
+        />
+      )}
+      {editing && !editing.existingTaskId && (
         <ProposalEditSheet
           proposal={editing}
           draft={draft}
@@ -389,6 +403,7 @@ function ItemRow({ item, today, notes, busy, chain, onUnchain, onToggle, onEdit 
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary">
             <EntityLabel entity={entity} />
             {when}
+            {proposal.existingTaskId && <span className="font-extrabold">کار موجود؛ فقط روزش گذاشته می‌شود</span>}
           </span>
         </span>
         <EditButton title={proposal.title} busy={busy} onEdit={onEdit} />

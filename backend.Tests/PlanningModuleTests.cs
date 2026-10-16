@@ -1080,13 +1080,35 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
 
         // The next steps go under week one's phase Project, which the draft names; no new Project or Goal.
         Assert.All(weekTwo.Proposals, x => Assert.Equal(PlanningEntityTypes.Task, x.Proposal.EntityType));
-        Assert.All(weekTwo.Proposals, x => Assert.Equal(Assert.Single(applied.ProjectIds), x.Proposal.ContextProjectId));
+        var newSteps = weekTwo.Proposals.Where(x => x.Proposal.ExistingTaskId is null).ToArray();
+        Assert.All(newSteps, x => Assert.Equal(Assert.Single(applied.ProjectIds), x.Proposal.ContextProjectId));
         Assert.Equal(applied.ProjectIds, weekTwo.ContextProjects!.Select(x => x.Id));
+        // A step that already exists without a date is dated this week, not proposed again.
+        var resources = tasks.Single(x => x.PlannedDate is null && x.Id != dropped.Id);
+        var dating = Assert.Single(weekTwo.Proposals, x => x.Proposal.ExistingTaskId is not null).Proposal;
+        Assert.Equal((resources.Id, resources.Title, (Guid?)null), (dating.ExistingTaskId!.Value, dating.Title, dating.ContextProjectId));
+        Assert.InRange(dating.PlannedDate!.Value, weekTwo.WindowStart, weekTwo.WindowEnd);
+
+        // A change to that Task after the preview makes the approval stale; nothing is created or dated.
+        var stale = await PreviewAsync(client, weekTwo);
+        await using (var scope = factory.Services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Tasks.Where(x => x.Id == resources.Id)
+                .ExecuteUpdateAsync(x => x.SetProperty(t => t.Version, t => t.Version + 1));
+        var refused = await SendAsync(client, HttpMethod.Post, $"/api/v1/planning/confirmations/{stale.Id}/submit",
+            new { }, "continue-apply-stale");
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Null((await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{resources.Id}"))!.PlannedDate);
 
         // Approving it is the decision about week one, and week two begins.
         var appliedTwo = await Apply(weekTwo, "continue-apply-two");
+        Assert.Equal(newSteps.Length, appliedTwo.TaskIds.Count);
         foreach (var id in appliedTwo.TaskIds)
             Assert.Equal(applied.ProjectIds[0], (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{id}"))!.ProjectId);
+        // The existing step keeps its title and place and only gains its day.
+        Assert.Equal([resources.Id], appliedTwo.DatedTaskIds!);
+        var datedTask = (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{resources.Id}"))!;
+        Assert.Equal((resources.Title, resources.GoalId, resources.ProjectId, dating.PlannedDate),
+            (datedTask.Title, datedTask.GoalId, datedTask.ProjectId, datedTask.PlannedDate));
         var chain = await Windows();
         Assert.Equal(2, chain.Length);
         Assert.Equal(PlanningWindowDecisions.ContinueAsIs, chain[0].Decision);

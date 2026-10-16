@@ -46,6 +46,12 @@
     - **A Persian date in the text** of a draft or of questions that names a day its month does not have, or a weekday that is not that date's weekday (`PlanningTextDates`), is asked for again; otherwise the text is kept as written.
 
     A repeated `draftId`, a wrong type or an unknown field still rejects the whole output.
+13g. *(STEP-24 and its follow-up, 029 §3 notes.)* These rules apply to a draft planned inside a Goal or Project, mostly to the next week.
+    - **A Task that repeats an open Task** of the scope (same title, ignoring spaces and ZWNJ) is left out without a resend (`DROP_DUPLICATE_TASK`). **A Routine that repeats an active Routine** is treated the same way (`DROP_DUPLICATE_ROUTINE`).
+    - **An existing Task given a day** (`existingTaskRef`) is read for its date only. A parent, a sequence or another Project on it is not read, and the Task keeps its own place (`KEEP_EXISTING_TASK_PLACE`). An unknown ref, or the same Task twice, rejects the output.
+    - **A next week that asks more than one question, or asks about availability** (CONSTRAINT, RECURRENCE), is a policy rejection asked for again, so the model drafts instead.
+    - **A next week that proposes a new Project** while the Goal has active Projects is asked for again. Otherwise the new Project is left out and named, with its Tasks.
+    - **The calendar** also gives the seven days after the window (`afterWindow`). A day the user names just beyond the window then has its real Persian date; before this, «جمعه» on a Friday was written «جمعه ۳۰ مهر» (a Thursday).
 
 ### One logical operation
 

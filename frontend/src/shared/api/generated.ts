@@ -5476,6 +5476,7 @@ export interface components {
             routineIds: string[];
             /** Format: int32 */
             factCount: number | string;
+            datedTaskIds?: null | string[];
         };
         PlanningAttemptDto: {
             /** Format: uuid */
@@ -5684,6 +5685,8 @@ export interface components {
             underContext: boolean;
             /** Format: uuid */
             contextProjectId?: null | string;
+            /** Format: uuid */
+            existingTaskId?: null | string;
         };
         PlanningProposal: {
             draftId: string;
@@ -5715,6 +5718,8 @@ export interface components {
             sequenceOrder?: null | number | string;
             /** Format: uuid */
             contextProjectId?: null | string;
+            /** Format: uuid */
+            existingTaskId?: null | string;
         };
         PlanningProposalViewDto: {
             proposal: components["schemas"]["PlanningProposal"];

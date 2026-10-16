@@ -322,6 +322,10 @@ public sealed class AiPlanningRuntimeTests
         var prompt = PlanningPromptRenderer.Render(new PlanningGenerationRequest(Guid.NewGuid(), Intention, context, null), int.MaxValue)!;
         Assert.Contains("\"timesOfDay\":[\"21:30\"]", prompt.User);
         Assert.Contains("Never ask about availability", prompt.System);
+        // A weekday just beyond the window has its real date: the seven days after it are in the calendar.
+        var after = context.WindowEnd.AddDays(PlanningLimits.HorizonDays).ToString("yyyy-MM-dd");
+        Assert.Contains("\"afterWindow\":[", prompt.User);
+        Assert.Contains($"\"date\":\"{after}\"", prompt.User);
     }
 
     [Fact]

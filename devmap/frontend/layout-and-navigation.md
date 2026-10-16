@@ -51,6 +51,8 @@ Reconcile has no place of its own. It is offered from Today when something waits
 
 The card is never a separate step or a notification. It says which week ends and when («هفتهٔ اول «…» فردا تمام می‌شود»), then how it went in counts only («۴ کار انجام شد، ۲ کار مانده، روتین‌ها ۵ از ۶ نوبت»), then the next week's days. «برنامهٔ هفتهٔ بعد» links to `/planning?continue=<windowId>`, which starts the attempt once. «فعلاً نه» ends the offer. The review says «هفتهٔ دوم را دقیق چیدیم…» and groups new work under the existing Projects it joins («زیر «…»», «پروژه‌ای که از قبل هست»).
 
+An existing Task the draft only dates is marked «کار موجود؛ فقط روزش گذاشته می‌شود». It is left out of the count tiles, and its edit sheet («روز کار موجود») changes only the day. The confirmation lists it apart, under «کارهای موجود که در این هفته روز می‌گیرند» with its day, and the button names both actions («تأیید: ساخت N مورد و روز M کار»).
+
 `.page` is the narrow container (768px max) for reading and single-column lists; `.page-wide` (1024px max) is for two-column card grids.
 
 ## Desktop layouts

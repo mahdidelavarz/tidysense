@@ -81,6 +81,11 @@ public static class PlanningEventSchemas
             Count("goalCount"), Count("projectCount"), Count("taskCount"), Count("routineCount"),
             Count("factCount"), Count("excludedGoalCount"), Count("excludedProjectCount"),
             Count("excludedTaskCount"), Count("excludedRoutineCount"));
+        // Version 3 (029 §3 follow-up) adds the existing Tasks the approval only dated; taskCount stays new Tasks.
+        yield return new EventPayloadSchema(PlanningEventTypes.DraftApplied, 3,
+            Count("goalCount"), Count("projectCount"), Count("taskCount"), Count("routineCount"),
+            Count("factCount"), Count("excludedGoalCount"), Count("excludedProjectCount"),
+            Count("excludedTaskCount"), Count("excludedRoutineCount"), Count("datedTaskCount"));
         yield return new EventPayloadSchema(PlanningEventTypes.FactCreated, 1,
             new EventPayloadFieldPolicy("factType", true, value => Allowed(value, FactTypes)),
             new EventPayloadFieldPolicy("strength", true, value => Allowed(value, Strengths)),

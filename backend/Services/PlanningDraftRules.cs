@@ -45,6 +45,9 @@ public static class PlanningIssueCodes
     public const string FirstWeekOverloaded = "FIRST_WEEK_OVERLOADED";
     public const string DateTooFar = "DATE_TOO_FAR";
     public const string EmptyParent = "EMPTY_PARENT";
+    // An existing Task proposed for the week needs its new date, and must still be open in the scope.
+    public const string ExistingTaskNeedsDate = "EXISTING_TASK_NEEDS_DATE";
+    public const string ExistingTaskUnavailable = "EXISTING_TASK_UNAVAILABLE";
 }
 
 /// <summary>The closed catalogue of warnings a generator may attach. The client owns their wording.</summary>
@@ -75,12 +78,14 @@ public sealed record PlanningFirstWeekEntry(string DraftId, DateOnly Date);
 
 /// <summary>
 /// What a draft is validated against: the current local date, the kind of entity the planning
-/// started from, and the planning details already confirmed for that scope.
+/// started from, the planning details already confirmed for that scope, and its Tasks still open
+/// (null when no proposal names an existing Task).
 /// </summary>
 public sealed record PlanningRuleContext(
     DateOnly Today,
     string? ContextType,
-    IReadOnlyList<PlanningFactData> ActiveContextFacts);
+    IReadOnlyList<PlanningFactData> ActiveContextFacts,
+    IReadOnlySet<Guid>? OpenTaskIds = null);
 
 public sealed record PlanningEvaluation(
     IReadOnlyDictionary<string, PlanningItemState> Proposals,
@@ -252,7 +257,13 @@ public static partial class PlanningDraftRules
                     contextType != PlanningContextTypes.Goal ||
                     item.EntityType is not (PlanningEntityTypes.Task or PlanningEntityTypes.Routine)))
                 errors.Add("CONTEXT_PROJECT_INVALID");
+            // An existing Task keeps its own place: it is dated under the context, never parented or chained here.
+            if (item.ExistingTaskId is not null && (item.EntityType != PlanningEntityTypes.Task || !item.UnderContext ||
+                    item.ParentDraftId is not null || item.SequenceKey is not null || contextType is null))
+                errors.Add("EXISTING_TASK_INVALID");
         }
+        var existing = proposals.Where(x => x.ExistingTaskId is not null).Select(x => x.ExistingTaskId).ToArray();
+        if (existing.Distinct().Count() != existing.Length) errors.Add("EXISTING_TASK_DUPLICATE");
 
         if (InvalidSequences(proposals).Count > 0) errors.Add("SEQUENCE_INVALID");
 
@@ -359,8 +370,13 @@ public static partial class PlanningDraftRules
                         if (constraints?.Blocks(planned) == true)
                             own.Add(Rule(PlanningIssueCodes.HardConstraintConflict));
                     }
+                    else if (item.ExistingTaskId is not null)
+                        own.Add(Rule(PlanningIssueCodes.ExistingTaskNeedsDate));
                     else if (item.ParentDraftId is null && !item.UnderContext)
                         own.Add(Rule(PlanningIssueCodes.StandaloneTaskNeedsDate));
+                    // Completed, dropped or moved out of the scope since the draft was made.
+                    if (item.ExistingTaskId is { } taskId && context.OpenTaskIds is { } open && !open.Contains(taskId))
+                        own.Add(Rule(PlanningIssueCodes.ExistingTaskUnavailable));
                     if (item.Deadline < context.Today && item.PlannedDate is null)
                         own.Add(Rule(PlanningIssueCodes.DateInPast));
                     if (item.Deadline > farthest) own.Add(Rule(PlanningIssueCodes.DateTooFar));
@@ -471,7 +487,7 @@ public static partial class PlanningDraftRules
                 Hash($"{PlanningConfirmationWarningCodes.DescendantsExcludedWithParent}|{draftId}|{revision}|{string.Join(',', carried)}")));
         var canonical = new StringBuilder($"{draftId}|{revision}|{contextStamp}|{evaluation.CanApply}");
         foreach (var item in items)
-            canonical.Append($"|{item.DraftId}:{item.EntityType}:{item.ParentDraftId}:{item.UnderContext}:{item.ContextProjectId}:{item.SequenceKey}:{item.SequenceOrder}");
+            canonical.Append($"|{item.DraftId}:{item.EntityType}:{item.ParentDraftId}:{item.UnderContext}:{item.ContextProjectId}:{item.SequenceKey}:{item.SequenceOrder}:{item.ExistingTaskId}");
         foreach (var fact in facts) canonical.Append($"|{fact.DraftId}:{fact.ScopeDraftId}");
         foreach (var warning in warnings) canonical.Append($"|{warning.WarningHash}");
         return new PlanningPreview(items, facts, warnings, content.Facts.Count > 0 && facts.Length == 0,
@@ -602,7 +618,17 @@ public static partial class PlanningDraftRules
     {
         var open = openTitles.Select(TitleKey).ToHashSet(StringComparer.Ordinal);
         var duplicates = content.Proposals
-            .Where(x => x.EntityType == PlanningEntityTypes.Task && open.Contains(TitleKey(x.Title)))
+            .Where(x => x.EntityType == PlanningEntityTypes.Task && x.ExistingTaskId is null && open.Contains(TitleKey(x.Title)))
+            .Select(x => x.DraftId).ToArray();
+        return duplicates.Length == 0 ? null : Without(content, duplicates) ?? content with { Proposals = [] };
+    }
+
+    /// <summary>A Routine the scope already has active is not proposed again: it goes on by itself (029 §3).</summary>
+    public static PlanningDraftContent? WithoutDuplicateRoutines(PlanningDraftContent content, IEnumerable<string> activeTitles)
+    {
+        var active = activeTitles.Select(TitleKey).ToHashSet(StringComparer.Ordinal);
+        var duplicates = content.Proposals
+            .Where(x => x.EntityType == PlanningEntityTypes.Routine && active.Contains(TitleKey(x.Title)))
             .Select(x => x.DraftId).ToArray();
         return duplicates.Length == 0 ? null : Without(content, duplicates) ?? content with { Proposals = [] };
     }

@@ -9145,6 +9145,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "datedTaskIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -9996,6 +10006,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "existingTaskId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -10145,6 +10162,13 @@
             "format": "int32"
           },
           "contextProjectId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "existingTaskId": {
             "type": [
               "null",
               "string"

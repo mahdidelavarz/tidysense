@@ -186,10 +186,24 @@ public sealed class DeterministicPlanningGenerator : IPlanningGenerator
         // Persian digits, as everything the user reads.
         static string Digits(int value) => string.Concat(value.ToString(System.Globalization.CultureInfo.InvariantCulture)
             .Select(x => (char)('۰' + (x - '0'))));
+        var proposals = new List<PlanningProposal>
+        {
+            Next("next-1", "ادامهٔ قدم‌های هفتهٔ پیش", first),
+            Next("next-2", $"مرور پیشرفت هفتهٔ {Digits(continuation.Week)}", second)
+        };
+        // A step that already exists without a date is given one this week instead of being proposed again.
+        if (context.UnfinishedTasks.FirstOrDefault(x => x.PlannedDate is null && x.WaitsFor is not { Count: > 0 }) is { } waiting &&
+            NextFree(context, context.WindowStart.AddDays(1)) is { } day)
+            proposals.Add(Step("dated", waiting.Title, day, underContext: true) with
+            {
+                ContextProjectId = context.Projects.Any(x => x.Id == waiting.ProjectId) ? waiting.ProjectId : null,
+                Deadline = waiting.Deadline, ExistingTaskId = waiting.Id
+            });
         return Content(context,
             $"نمونهٔ هفتهٔ {Digits(continuation.Week)}: هفتهٔ پیش {Digits(done)} کار انجام شد؛ این هفته قدم‌های بعدی، سبک‌تر.",
-            [Next("next-1", "ادامهٔ قدم‌های هفتهٔ پیش", first), Next("next-2", $"مرور پیشرفت هفتهٔ {Digits(continuation.Week)}", second)],
-            [], [new PlanningNote(null, "کارهای باز هفتهٔ پیش سر جایشان می‌مانند.")], []);
+            proposals, [], [new PlanningNote(null, proposals.Any(x => x.ExistingTaskId is not null)
+                ? "یک کار موجود این هفته روز می‌گیرد؛ بقیهٔ کارهای باز هفتهٔ پیش سر جایشان می‌مانند."
+                : "کارهای باز هفتهٔ پیش سر جایشان می‌مانند.")], []);
     }
 
     private static PlanningDraftContent NarrowTask(string intention, PlanningContext context) =>

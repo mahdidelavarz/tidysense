@@ -151,6 +151,14 @@ Causes found:
 > - **Questions in a continuation.** It does not ask about availability again. It keeps last week's rhythm, from its Routines' days and times and its Tasks' days, and states that as an assumption. It asks at most one question, and only for a choice the evidence leaves open.
 > - **Existing work.** It is never proposed again, in any wording. A left Task stays with the user and is moved in Reconcile.
 
+> **Amendment (2026-10-16, decided by the owner, after the week-two evaluation).** Three changes make the next week more accurate without keeping the conversation:
+>
+> 1. **Existing work is dated.** The next week may put an existing open step into its days (014 note). In the evaluation, week two kept proposing existing steps again in other words, because a draft could only create. Those repeats were then dropped, which left thin weeks.
+> 2. **The Goal's point reaches every week.** The Goal's own desired outcome and target date, or a Project's completion meaning and target date, are part of the planning context. They are what the user approved, so every week is planned as a step towards it.
+> 3. **What the user said is remembered as planning details.** Their starting point, focus, tools and ruled-out ways are offered as planning details in the review («برای دفعه‌های بعد یادم بماند؟»). Kept ones reach later weeks (023).
+>
+> The raw intention and answers are **not** kept or sent later (023 §bounded history). They can go stale, the user cannot see or correct them, and they are not what the evaluation showed missing.
+
 ---
 
 ## 4. Decision C — Which dates the model must set and which it may not invent

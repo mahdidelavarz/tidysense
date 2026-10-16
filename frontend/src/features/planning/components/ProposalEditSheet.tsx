@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { DateField } from '../../../shared/ui/DateField'
@@ -13,6 +14,45 @@ const sheetTitles: Record<string, string> = {
   GOAL: 'ویرایش هدف پیشنهادی', PROJECT: 'ویرایش پروژه پیشنهادی', TASK: 'ویرایش کار پیشنهادی', ROUTINE: 'ویرایش روتین پیشنهادی',
 }
 const supported = ['DAILY', 'SPECIFIC_WEEKDAYS', 'MONTHLY_ON_DAY']
+
+/**
+ * An existing Task the plan puts into the week: only its day is chosen here. Its
+ * title, place, deadline and order stay its own; they are edited on the Task itself.
+ */
+export function ExistingTaskDateSheet({ proposal, pending, error, onSubmit, onClose }: {
+  proposal: PlanningProposal
+  pending: boolean
+  error: unknown
+  onSubmit: (changed: PlanningProposal) => void
+  onClose: () => void
+}) {
+  const [plannedDate, setPlannedDate] = useState(proposal.plannedDate ?? '')
+  return (
+    <Sheet
+      title="روز کار موجود"
+      description={`«${proposal.title}» از قبل هست. این برنامه فقط روزش را در این هفته می‌گذارد؛ تا تأیید نهایی چیزی عوض نمی‌شود.`}
+      onClose={onClose}
+      locked={pending}
+    >
+      <form
+        className="form-stack"
+        noValidate
+        aria-busy={pending}
+        onSubmit={event => {
+          event.preventDefault()
+          onSubmit({ ...proposal, plannedDate: emptyToNull(plannedDate) })
+        }}
+      >
+        <DateField label="روز انجام" hint="باید در هفت روز پیش رو باشد." value={plannedDate} onChange={setPlannedDate} />
+        <FormError error={error} />
+        <div className="sheet-actions">
+          <button className="secondary-button" type="button" disabled={pending} onClick={onClose}>انصراف</button>
+          <button className="primary-button" type="submit" disabled={pending}>{pending ? 'در حال ذخیره…' : 'ذخیره در پیش‌نویس'}</button>
+        </div>
+      </form>
+    </Sheet>
+  )
+}
 
 /**
  * Edits one proposal before approval. Saving stores a new draft revision on

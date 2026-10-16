@@ -63,7 +63,8 @@ node run.mjs --base https://127.0.0.1:7077 --out results/<name>.json --week2 \
 
 It also reports:
 
-- near repeats: reworded titles that share most words with an open, done or existing item. It is a heuristic, so a person judges them;
+- existing Tasks dated into the week (`existingTaskRef`);
+- near repeats: reworded titles that share most words with an open or existing item. Repeats of done work are counted apart, because the next practice of the same kind is often right. It is a heuristic, so a person judges them;
 - how many week-two Tasks sit under an existing Project;
 - the questions asked;
 - the items the gate left out (open Tasks proposed again are among them).
@@ -117,3 +118,14 @@ Usefulness is not scored automatically. Read the digest.
 | `week2-a` | Week two, prompt `2026-10-16.1`, on 8 long-horizon cases. All 8 approvable. 11 questions in 3 cases, some asking again for availability already answered in week one. 21 reworded repeats of existing or done work in 6 cases. |
 | `week2-b` | Week two, prompt `2026-10-16.2`: no availability questions, at most one question, no reworded repeats, Routine times in the context. All 8 approvable and 0 questions. 33 of 33 Tasks under an existing Project. Reworded repeats were still 19 in 5 cases, so the prompt rule did not fix them (see STEP-24 in `devmap/development-steps.md`). |
 | `step24-all` | The 32 first-week cases on prompt `2026-10-16.2`: 32/32 approvable. Every 029 §10 measure passes. |
+
+## Recorded runs (STEP-24 follow-up, 2026-10-16)
+
+Prompt `2026-10-16.6`, repair policy `2026-10-16.7`, context `2026-10-16.3`.
+
+| File | What it measured |
+|---|---|
+| `week2-c`, `week2-d` | Week two after the follow-up (existing Tasks dated, the Goal's meaning, details captured, next-week gate rules). 8/8 approvable each. 36 and 35 existing Tasks dated, 0 items dropped, 0 new Projects, 1 and 0 questions. Near repeats of open work: 3 and 5, against 19 and 15 before. |
+| `followup-all-a`, `followup-all-b` | The 32 first-week cases: 31/32 and 32/32 approvable. Every 029 §10 measure passes, with 0 date errors. Planning details in 7 and 8 drafts. |
+
+On the way, a full run of an earlier build had 3–4 date errors. They were traced to a calendar without the days after the window, which was fixed. On 10 date-sensitive cases × 3, the previous prompt then had 5 errors and the fixed one 0. Those intermediate runs are not kept.

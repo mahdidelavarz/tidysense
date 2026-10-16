@@ -16,7 +16,7 @@ public sealed record PlanningPrompt(string System, string User, string ContextRe
 /// </summary>
 public static class PlanningPromptRenderer
 {
-    public const string PromptVersion = "2026-10-16.2";
+    public const string PromptVersion = "2026-10-16.6";
     public const string DataOpen = "<planning_request_data>";
     public const string DataClose = "</planning_request_data>";
 
@@ -91,7 +91,11 @@ public static class PlanningPromptRenderer
             calendar = Calendar(context),
             windowStart = context.WindowStart,
             windowEnd = context.WindowEnd,
-            planningContext = context.Scope is null ? null : new { type = context.Scope.Type, title = context.Scope.Title },
+            planningContext = context.Scope is null ? null : new
+            {
+                type = context.Scope.Type, title = context.Scope.Title,
+                meaning = context.Scope.Meaning, targetDate = context.Scope.TargetDate
+            },
             continuation = context.Continuation is null ? null : new
             {
                 week = context.Continuation.Week,
@@ -109,7 +113,7 @@ public static class PlanningPromptRenderer
             }).ToArray(),
             unfinishedTasks = context.UnfinishedTasks.Select(x => new
             {
-                title = x.Title,
+                @ref = x.Ref, title = x.Title,
                 projectRef = context.Projects.FirstOrDefault(p => p.Id == x.ProjectId)?.Ref,
                 plannedDate = x.PlannedDate, deadline = x.Deadline, reasonCodes = x.ReasonCodes,
                 waitsFor = x.WaitsFor is { Count: > 0 } waits ? waits : null
@@ -152,10 +156,16 @@ public static class PlanningPromptRenderer
         var nowruz = Persian.ToDateTime(year + 1, 1, 1, 0, 0, 0, 0);
         var days = new List<object>();
         for (var date = context.WindowStart; date <= context.WindowEnd; date = date.AddDays(1)) days.Add(Day(date));
+        // The week after the window, so a day the user names just beyond it («جمعه» when today is Friday) has its
+        // real Persian date and weekday instead of one the model computes (029 §6). Never for a plannedDate.
+        var after = new List<object>();
+        for (var date = context.WindowEnd.AddDays(1); date <= context.WindowEnd.AddDays(PlanningLimits.HorizonDays); date = date.AddDays(1))
+            after.Add(Day(date));
         return new
         {
             today = Day(context.Today),
             window = days,
+            afterWindow = after,
             endOfThisPersianMonth = Day(DateOnly.FromDateTime(monthEnd)),
             endOfNextPersianMonth = Day(DateOnly.FromDateTime(nextMonthEnd)),
             nextNowruz = Day(DateOnly.FromDateTime(nowruz)),
@@ -201,7 +211,7 @@ public static class PlanningPromptRenderer
             "proposals": [ {
               "draftId": string, "entityType": "GOAL" | "PROJECT" | "TASK" | "ROUTINE",
               "title": string, "description": string or null,
-              "parentDraftId": string or null, "underContext": boolean, "contextProjectRef": string or null,
+              "parentDraftId": string or null, "underContext": boolean, "contextProjectRef": string or null, "existingTaskRef": string or null,
               "source": "EXPLICIT" | "INFERRED", "confidence": "HIGH" | "MEDIUM" | "LOW",
               "desiredOutcome": string or null, "completionMeaning": string or null, "targetDate": date or null,
               "plannedDate": date or null, "deadline": date or null,
@@ -232,7 +242,7 @@ public static class PlanningPromptRenderer
         - A warning has exactly the three fields "draftId", "severity" and "code": never a "text", "message" or "description".
         - "options" holds JSON strings and "multiple" is true or false.
         - "questions", "proposals", "facts", "assumptions", "warnings" and "unresolvedQuestions" are JSON arrays, empty when there is nothing to put in them.
-        - "draftId" inside assumptions, warnings and unresolvedQuestions is null or the draftId of a proposal or fact in this same output. "parentDraftId" and "scopeDraftId" are null or the draftId of a proposal in this same output. "contextProjectRef" is null or the "ref" of one of activeProjects.
+        - "draftId" inside assumptions, warnings and unresolvedQuestions is null or the draftId of a proposal or fact in this same output. "parentDraftId" and "scopeDraftId" are null or the draftId of a proposal in this same output. "contextProjectRef" is null or the "ref" of one of activeProjects. "existingTaskRef" is null or the "ref" of one of unfinishedTasks.
 
         KIND
         - DRAFT: "draft" is an object; "questions" is empty; "blockReason" is null.
@@ -259,7 +269,7 @@ public static class PlanningPromptRenderer
         - In clarificationTurns each answer gives the labels the user chose in "chosen" and what they wrote themselves in "text"; either may be empty.
 
         DATES
-        - windowStart to windowEnd is the detailed week. "calendar" gives each of its days with its Persian date, Persian weekday and ISO weekday number, plus today, the end of this and the next Persian month, and the next Nowruz. Never compute a Persian date, a weekday or the Gregorian date of a Persian date yourself: copy "date", "persianDate" and "weekday" together from the same entry of "calendar". «عید» and «نوروز» are calendar.nextNowruz.
+        - windowStart to windowEnd is the detailed week. "calendar" gives each of its days with its Persian date, Persian weekday and ISO weekday number, plus today, the seven days after the window ("afterWindow", for a deadline, a target date or text only, never a "plannedDate"), the end of this and the next Persian month, and the next Nowruz. A weekday the user names that is not today means its next occurrence after today, which may be in "afterWindow". Never compute a Persian date, a weekday or the Gregorian date of a Persian date yourself: copy "date", "persianDate" and "weekday" together from the same entry of "calendar". «عید» and «نوروز» are calendar.nextNowruz.
         - In Persian text (summary, assumptions, questions, options) write a day only as an exact "persianDate" from "calendar", with its own "weekday" if you name one. A date that is not in "calendar" is written by Persian month and year only, never with a weekday or a Gregorian date.
         - Every TASK with a "plannedDate" has one between windowStart and windowEnd. A TASK without a parent and not under the context always has a "plannedDate". Choose a sensible day even when unsure, and say so in "assumptions"; the user moves it easily.
         - A ROUTINE always has "recurrence" and, when a time is known or sensible, "timesOfDay". "effectiveFromLocalDate" is null (today) or a day of the window. A Routine keeps recurring after the window.
@@ -273,6 +283,8 @@ public static class PlanningPromptRenderer
         - Parents: a PROJECT may have a GOAL parent; a TASK or ROUTINE may have a GOAL or PROJECT parent. A proposal has "parentDraftId", or "underContext": true, or neither; never both. A GOAL has no parent.
         - "underContext": true attaches the proposal to planningContext and is allowed only when planningContext is not null. Inside a GOAL context propose no new GOAL. Inside a PROJECT context propose only TASKs and ROUTINEs under the context.
         - Inside a GOAL context, a TASK or ROUTINE that belongs to one of activeProjects names it with "contextProjectRef" (its "ref", such as "P1") and has "underContext": true and "parentDraftId": null.
+        - unfinishedTasks already exist. To put one of them into the detailed week, propose a TASK with its "existingTaskRef" (its "ref", such as "T1"), "underContext": true and a "plannedDate" between windowStart and windowEnd; "contextProjectRef" is its own "projectRef" or null; "parentDraftId", "deadline" and "sequenceKey" are null. Only its date changes: its title, place and order stay as they are, so copy its title. Each existing Task at most once. Never propose an unfinished Task again as a new TASK, in any wording.
+        - When planningContext has a "meaning" and a "targetDate", the plan serves that outcome by that date: choose this week's work as a real step towards it.
         - Choose the structure yourself, by these meanings:
           - GOAL: an outcome the user wants that takes more than about a month and can be recognised when reached. Its "desiredOutcome" says it in the user's own terms («نمرهٔ ۷ آیلتس», «۸ کیلو کمتر»). Never invent a measurable outcome the user did not imply.
           - PROJECT: a concrete result or event with an end and several steps of its own (moving house, delivering a site, a thesis chapter, a trip, a renovation).
@@ -291,16 +303,16 @@ public static class PlanningPromptRenderer
 
         CONTINUATION
         When "continuation" is not null, this is week number continuation.week of a plan the user approved for planningContext; previousWindow is how the week from continuation.previousStart to continuation.previousEnd went. Plan only the next detailed week, windowStart to windowEnd:
-        - Propose no GOAL, no PROJECT that is already in activeProjects and no ROUTINE already in activeRoutines: they go on by themselves. A new PROJECT only for a phase that has really begun and is not in activeProjects.
+        - Propose no GOAL, no PROJECT while activeProjects is not empty, and no ROUTINE already in activeRoutines: they go on by themselves. Every new TASK of a phase goes under its active Project. A new PROJECT only when activeProjects is empty.
         - A new TASK goes under the active Project it belongs to ("contextProjectRef"), or under the context directly when it belongs to none.
-        - Build on what happened. Completed work is done: never propose it again. unfinishedTasks still exist and stay with the user (a left one is moved in Reconcile): never repeat one as a new TASK, in any wording, nor as a "make up for last week" TASK; plan the steps after them. leftTaskTitles were planned last week and not done: plan this week lighter by about that many Tasks.
+        - Build on what happened. Completed work is done: never propose it again. unfinishedTasks still exist and stay with the user (a left one is moved in Reconcile): never repeat one as a new TASK, in any wording, nor as a "make up for last week" TASK. When one of them belongs in this week, give it a date with "existingTaskRef"; then plan the new steps after them. leftTaskTitles were planned last week and not done: plan this week lighter by about that many Tasks.
         - Many carried Tasks or missed Routine slots mean last week was too full: propose fewer Tasks. A Routine with many missed slots may be named in "assumptions" with a suggestion to change its days; never propose a second one.
         - A Task that "waitsFor" unfinished steps is not repeated, and new steps after it are dated after them.
         - Draft at once. Never ask about availability (days, hours, times): keep last week's rhythm, the days and times of activeRoutines and of last week's Tasks, and say so in "assumptions". Ask at most one question, and only when the evidence leaves a choice only the user can make.
         - "summary" says in one or two sentences what last week achieved and what this week focuses on.
 
         PLANNING DETAILS ("facts")
-        Propose a fact only for something the user stated that later planning needs and that has no field of its own. UNAVAILABLE_WEEKDAY uses "weekdays" (one or more different ISO numbers 1-7), UNAVAILABLE_DATE uses "localDate", UNAVAILABLE_DATE_RANGE uses "startLocalDate" with an "endLocalDate" that is not earlier; these three are HARD or SOFT, never INFORMATIONAL. The other types use "text" (1 to 120 characters) and are SOFT or INFORMATIONAL, never HARD. Every fact has its own "draftId" and a "value" object. "scopeDraftId" is the draftId of a proposed GOAL or of a proposed PROJECT without a parent; it is null only when planningContext is not null. When there is no planningContext and no such GOAL or PROJECT, propose no fact and put it in "assumptions" instead. Do not repeat anything in confirmedPlanningDetails. Respect every HARD detail: never plan a Task on a date, or a Routine on a weekday, that it rules out.
+        Planning details are how later weeks remember what the user said, so capture what they stated: for each thing the user stated in the intention or in clarificationTurns that later planning needs and that has no field of its own, propose one fact: their starting point or current level (CURRENT_LEVEL), what they want to focus on or what is weakest (LEARNING_FOCUS), a device or tool they have or lack (AVAILABLE_DEVICE), a way they ruled out (EXCLUDED_PATH), days or dates they cannot (UNAVAILABLE_*). Write the "text" in the user's own terms, short. Never a fact for something you assumed, for anything sensitive, or for availability hours (a Routine's days and times hold those). UNAVAILABLE_WEEKDAY uses "weekdays" (one or more different ISO numbers 1-7), UNAVAILABLE_DATE uses "localDate", UNAVAILABLE_DATE_RANGE uses "startLocalDate" with an "endLocalDate" that is not earlier; these three are HARD or SOFT, never INFORMATIONAL. The other types use "text" (1 to 120 characters) and are SOFT or INFORMATIONAL, never HARD. Every fact has its own "draftId" and a "value" object. "scopeDraftId" is the draftId of a proposed GOAL or of a proposed PROJECT without a parent; it is null only when planningContext is not null. When there is no planningContext and no such GOAL or PROJECT, propose no fact and put it in "assumptions" instead. Do not repeat anything in confirmedPlanningDetails. Respect every HARD detail: never plan a Task on a date, or a Routine on a weekday, that it rules out.
 
         BOUNDARIES
         You organise what the user chooses to do. You do not diagnose, prescribe, recommend treatment or medication, or give legal or financial strategy; you do not infer motivation, capacity, emotional state or a clinical condition from history, and you do not present guesses about causes as facts. For such a request state the boundary in "message" and offer to organise the user's own actions, appointments or questions. Use previousWindow and reasonCodes only to keep the plan realistic.

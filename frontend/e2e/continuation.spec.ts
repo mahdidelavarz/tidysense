@@ -17,7 +17,7 @@ async function post(page: Page, path: string, data: unknown = {}) {
 async function approve(page: Page) {
   await page.getByRole('button', { name: 'مرور نهایی و تأیید' }).click()
   const review = page.getByRole('dialog', { name: 'مرور نهایی و تأیید' })
-  await review.getByRole('button', { name: /^تأیید و ساخت/ }).click()
+  await review.getByRole('button', { name: /^تأیید[: ]/ }).click()
   await expect(page.getByText('برنامه ساخته شد.')).toBeVisible()
 }
 
@@ -73,13 +73,23 @@ test('the next week of an approved plan is offered near its end and planned with
   await expect(page.getByText(/هفتهٔ دوم را دقیق چیدیم/)).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('زیر «گام نخست»')).toBeVisible()
   await expect(page.getByText('پروژه‌ای که از قبل هست')).toBeVisible()
-  await page.screenshot({ path: 'test-results/step-24-week-two-review.png', fullPage: true })
+  // The step week one left undated is put into this week instead of being proposed again.
+  await expect(page.getByText(/۱ کار موجود در این هفته روز می‌گیرد/)).toBeVisible()
+  await expect(page.getByText('کار موجود؛ فقط روزش گذاشته می‌شود')).toBeVisible()
+  // The viewport only, at the existing step: a full-page capture puts the sticky footer over it.
+  await page.getByText('کار موجود؛ فقط روزش گذاشته می‌شود').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: 'test-results/step-24-week-two-review.png' })
   await approve(page)
 
   // Approved: the offer is gone and the new steps live in the phase Project; no second Goal or Project.
   expect((await get<Offer[]>(page, 'planning/continuations')).some(x => x.scopeId === goal.id)).toBe(false)
   const after = (await get<Listed<Task>>(page, 'tasks?limit=100')).items.filter(x => x.title === 'ادامهٔ قدم‌های هفتهٔ پیش')
   expect(after.some(x => x.projectId === phase.id)).toBe(true)
+  // The existing step kept its title and place and gained its day; no second copy of it was made.
+  const resources = (await get<Listed<Task & { goalId: string | null; plannedDate: string | null }>>(page, 'tasks?limit=100'))
+    .items.filter(x => x.title === 'فهرست‌کردن منابع لازم' && x.goalId === goal.id)
+  expect(resources).toHaveLength(1)
+  expect(resources[0].plannedDate).not.toBeNull()
   expect((await get<Listed<{ goalId: string | null }>>(page, 'projects?limit=100')).items.filter(x => x.goalId === goal.id)).toHaveLength(1)
 
   // Week two near its end is offered on the Goal's own page, where «فعلاً نه» ends the offer.

@@ -145,7 +145,7 @@ public sealed class AiResponseFeedbackTests(PostgresWebApplicationFactory factor
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var applied = await db.DomainEvents.AsNoTracking().SingleAsync(x =>
             x.AggregateId == draft.Id && x.EventType == PlanningEventTypes.DraftApplied);
-        Assert.Equal(2, applied.EventVersion);
+        Assert.Equal(3, applied.EventVersion);
         using (var payload = JsonDocument.Parse(applied.PayloadJson))
         {
             Assert.Equal(1, payload.RootElement.GetProperty("excludedTaskCount").GetInt32());
@@ -153,6 +153,7 @@ public sealed class AiResponseFeedbackTests(PostgresWebApplicationFactory factor
             Assert.Equal(0, payload.RootElement.GetProperty("excludedProjectCount").GetInt32());
             Assert.Equal(0, payload.RootElement.GetProperty("excludedRoutineCount").GetInt32());
             Assert.Equal(result.TaskIds.Count, payload.RootElement.GetProperty("taskCount").GetInt32());
+            Assert.Equal(0, payload.RootElement.GetProperty("datedTaskCount").GetInt32());
         }
 
         // Origin is provenance, not a stored flag: every created Task and Routine shares the apply's

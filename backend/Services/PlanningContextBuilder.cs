@@ -16,7 +16,7 @@ namespace TidySense.Services;
 /// </summary>
 public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateService dates)
 {
-    public const string Version = "2026-10-16.2";
+    public const string Version = "2026-10-16.3";
     public const int MaxUnfinishedTasks = 30;
     public const int MaxRoutines = 20;
     public const int MaxProjects = 20;
@@ -114,9 +114,9 @@ public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateServi
                     new PlanningRecurrence(recurrence.Type, recurrence.DaysOfWeek, recurrence.DayOfMonth),
                     Slots(x.Id, OccurrenceStatuses.Done), Slots(x.Id, OccurrenceStatuses.Missed), x.TimesOfDay);
             }).ToArray(),
-            unfinished.Select(x => new PlanningContextTask(x.Id, x.Title, x.ProjectId, x.PlannedDate,
+            unfinished.Select((x, index) => new PlanningContextTask(x.Id, x.Title, x.ProjectId, x.PlannedDate,
                 x.Deadline, ReasonCodes(x, signals.GetValueOrDefault(x.Id, TaskSignals.None), today),
-                WaitsFor(x))).ToArray(),
+                WaitsFor(x), $"T{index + 1}")).ToArray(),
             new PlanningPreviousWindow(previousStart, previousEnd,
                 completed.Take(MaxCompletedTitles).ToArray(), completed.Count, carried, dropped,
                 Slots(null, OccurrenceStatuses.Done), Slots(null, OccurrenceStatuses.Missed),
@@ -142,7 +142,7 @@ public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateServi
             if (requireActive && goal.Status != ParentStatuses.Active)
                 throw new DomainRuleException("PARENT_NOT_ACTIVE", "The Goal is not active.");
             return new PlanningScope(PlanningContextTypes.Goal, goal.Id, goal.Title, goal.Version,
-                PlanningContextTypes.Goal, goal.Id);
+                PlanningContextTypes.Goal, goal.Id, NullIfBlank(goal.DesiredOutcome), goal.TargetDate);
         }
         if (projectId is not { } requestedProject) return null;
         var project = await context.Projects.AsNoTracking().SingleOrDefaultAsync(
@@ -152,10 +152,12 @@ public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateServi
             throw new DomainRuleException("PARENT_NOT_ACTIVE", "The Project is not active.");
         return project.GoalId is { } parentGoal
             ? new PlanningScope(PlanningContextTypes.Project, project.Id, project.Title, project.Version,
-                PlanningContextTypes.Goal, parentGoal)
+                PlanningContextTypes.Goal, parentGoal, NullIfBlank(project.CompletionMeaning), project.TargetDate)
             : new PlanningScope(PlanningContextTypes.Project, project.Id, project.Title, project.Version,
-                PlanningContextTypes.Project, project.Id);
+                PlanningContextTypes.Project, project.Id, NullIfBlank(project.CompletionMeaning), project.TargetDate);
     }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
     /// <summary>Confirmed details of the scope that still apply. They are never truncated: HARD details are a correctness floor.</summary>
     internal static async Task<IReadOnlyList<PlanningFactData>> ActiveFactsAsync(AppDbContext context,
