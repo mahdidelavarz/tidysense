@@ -10,25 +10,29 @@ namespace TidySense.Services;
 
 /// <summary>
 /// Rebuilds the bounded input of one planning generation from current product state: the scope,
-/// its confirmed planning details, its active work, the previous seven local days and the local
-/// date. Nothing outside the scope, nothing older, and no conversation is ever supplied.
+/// its confirmed planning details, its active work, the previous window and the local date (023 §15).
+/// A continuation (029 §3) plans the week after a planned one, from that week's own evidence.
+/// Nothing outside the scope, nothing older, and no conversation is ever supplied.
 /// </summary>
 public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateService dates)
 {
-    public const string Version = "2026-10-03.1";
+    public const string Version = "2026-10-16.1";
     public const int MaxUnfinishedTasks = 30;
     public const int MaxRoutines = 20;
     public const int MaxProjects = 20;
     public const int MaxCompletedTitles = 15;
+    public const int MaxLeftTitles = 15;
 
     public async Task<PlanningContext> BuildAsync(Guid owner, Guid? goalId, Guid? projectId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, PlanningWindow? continuing = null)
     {
         var today = dates.Today;
-        var windowEnd = today.AddDays(PlanningLimits.HorizonDays - 1);
+        var (windowStart, windowEnd) = continuing is null
+            ? (today, today.AddDays(PlanningLimits.HorizonDays - 1))
+            : PlanningContinuationRules.NextWindow(continuing, today);
         var scope = await ScopeAsync(db, owner, goalId, projectId, true, cancellationToken);
         if (scope is null)
-            return Seal(new PlanningContext(Version, today, dates.TimeZoneId, today, windowEnd, null,
+            return Seal(new PlanningContext(Version, today, dates.TimeZoneId, windowStart, windowEnd, null,
                 [], [], [], [], null));
 
         var facts = await ActiveFactsAsync(db, owner, scope, today, cancellationToken);
@@ -55,9 +59,19 @@ public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateServi
             .ThenBy(x => x.Id).Take(MaxUnfinishedTasks).ToListAsync(cancellationToken);
         var signals = await TaskHistory.LoadAsync(db, owner, unfinished.Select(x => x.Id).ToArray(),
             cancellationToken);
+        // The earlier open steps each unfinished Task still waits for (025): a sequence the next week must respect.
+        var sequenceIds = unfinished.Where(x => x.SequenceId != null).Select(x => x.SequenceId!.Value).Distinct().ToArray();
+        var sequenceSteps = await db.Tasks.AsNoTracking()
+            .Where(x => x.UserId == owner && x.SequenceId != null && sequenceIds.Contains(x.SequenceId.Value) &&
+                x.Status != TaskStatuses.Completed)
+            .Select(x => new { x.SequenceId, x.SequenceOrder, x.Title }).ToListAsync(cancellationToken);
+        string[] WaitsFor(TaskItem task) => task.SequenceId is null ? [] : sequenceSteps
+            .Where(x => x.SequenceId == task.SequenceId && x.SequenceOrder < task.SequenceOrder)
+            .OrderBy(x => x.SequenceOrder).Select(x => x.Title).ToArray();
 
-        var previousStart = today.AddDays(-PlanningLimits.HorizonDays);
-        var previousEnd = today.AddDays(-1);
+        var (previousStart, previousEnd) = continuing is null
+            ? (today.AddDays(-PlanningLimits.HorizonDays), today.AddDays(-1))
+            : PlanningContinuationRules.EvidenceWindow(continuing, today);
         var completed = await tasks.Where(x => x.Status == TaskStatuses.Completed &&
                 x.CompletedForLocalDate >= previousStart && x.CompletedForLocalDate <= previousEnd)
             .OrderBy(x => x.CompletedForLocalDate).ThenBy(x => x.Id).Select(x => x.Title)
@@ -81,23 +95,34 @@ public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateServi
         var occurrences = await db.RoutineOccurrences.AsNoTracking()
             .Where(x => routineIds.Contains(x.RoutineId) && x.ScheduledLocalDate >= previousStart &&
                 x.ScheduledLocalDate <= previousEnd && x.Status != OccurrenceStatuses.Pending)
-            .GroupBy(x => x.Status).Select(x => new { Status = x.Key, Count = x.Count() })
+            .GroupBy(x => new { x.RoutineId, x.Status }).Select(x => new { x.Key.RoutineId, x.Key.Status, Count = x.Count() })
             .ToListAsync(cancellationToken);
+        int Slots(Guid? routine, string status) => occurrences
+            .Where(x => (routine == null || x.RoutineId == routine) && x.Status == status).Sum(x => x.Count);
+        // Planned inside the window and still open: what the next week has to absorb or let go.
+        var left = await tasks.Where(x => x.Status == TaskStatuses.Active && x.PlannedDate >= previousStart &&
+                x.PlannedDate <= previousEnd)
+            .OrderBy(x => x.PlannedDate).ThenBy(x => x.Id).Select(x => x.Title).ToListAsync(cancellationToken);
+        var refs = projects.Select((x, index) => (x.Id, Ref: $"P{index + 1}")).ToDictionary(x => x.Id, x => x.Ref);
 
-        return Seal(new PlanningContext(Version, today, dates.TimeZoneId, today, windowEnd, scope, facts,
-            projects.Select(x => new PlanningContextProject(x.Id, x.Title, x.TargetDate)).ToArray(),
+        return Seal(new PlanningContext(Version, today, dates.TimeZoneId, windowStart, windowEnd, scope, facts,
+            projects.Select(x => new PlanningContextProject(x.Id, x.Title, x.TargetDate, refs[x.Id])).ToArray(),
             routines.Select(x =>
             {
                 var recurrence = RoutineSchedule.Parse(x.RecurrenceDefinition);
                 return new PlanningContextRoutine(x.Id, x.Title, x.ProjectId,
-                    new PlanningRecurrence(recurrence.Type, recurrence.DaysOfWeek, recurrence.DayOfMonth));
+                    new PlanningRecurrence(recurrence.Type, recurrence.DaysOfWeek, recurrence.DayOfMonth),
+                    Slots(x.Id, OccurrenceStatuses.Done), Slots(x.Id, OccurrenceStatuses.Missed));
             }).ToArray(),
             unfinished.Select(x => new PlanningContextTask(x.Id, x.Title, x.ProjectId, x.PlannedDate,
-                x.Deadline, ReasonCodes(x, signals.GetValueOrDefault(x.Id, TaskSignals.None), today))).ToArray(),
+                x.Deadline, ReasonCodes(x, signals.GetValueOrDefault(x.Id, TaskSignals.None), today),
+                WaitsFor(x))).ToArray(),
             new PlanningPreviousWindow(previousStart, previousEnd,
                 completed.Take(MaxCompletedTitles).ToArray(), completed.Count, carried, dropped,
-                occurrences.SingleOrDefault(x => x.Status == OccurrenceStatuses.Done)?.Count ?? 0,
-                occurrences.SingleOrDefault(x => x.Status == OccurrenceStatuses.Missed)?.Count ?? 0)));
+                Slots(null, OccurrenceStatuses.Done), Slots(null, OccurrenceStatuses.Missed),
+                left.Take(MaxLeftTitles).ToArray(), left.Count),
+            continuing is null ? null
+                : new PlanningContinuationContext(continuing.Id, continuing.Week + 1, previousStart, previousEnd)));
 
         bool InWindow(DateOnly date) => date >= previousStart && date <= previousEnd;
     }
@@ -178,7 +203,8 @@ public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateServi
             ["ACTIVE_PROJECTS"] = context.Projects.Count,
             ["ACTIVE_ROUTINES"] = context.Routines.Count,
             ["UNFINISHED_TASKS"] = context.UnfinishedTasks.Count,
-            ["PREVIOUS_WINDOW"] = context.PreviousWindow is null ? 0 : 1
+            ["PREVIOUS_WINDOW"] = context.PreviousWindow is null ? 0 : 1,
+            ["CONTINUATION"] = context.Continuation is null ? 0 : 1
         }
     });
 }

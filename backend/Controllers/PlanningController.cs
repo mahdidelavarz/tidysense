@@ -10,7 +10,7 @@ namespace TidySense.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/planning")]
-public sealed class PlanningController(PlanningService planning) : ControllerBase
+public sealed class PlanningController(PlanningService planning, PlanningContinuationService continuations) : ControllerBase
 {
     // Selects a mock fixture in development and tests. It is ignored everywhere else.
     private const string FixtureHeader = "X-Planning-Fixture";
@@ -102,6 +102,23 @@ public sealed class PlanningController(PlanningService planning) : ControllerBas
         [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
         CancellationToken cancellationToken) =>
         Ok(await planning.SubmitAsync(id, request, idempotencyKey, cancellationToken));
+
+    /// <summary>Planned weeks whose next week can be planned now (029 §3). Nothing is generated.</summary>
+    [HttpGet("continuations")]
+    [ProducesResponseType<IReadOnlyList<PlanningContinuationDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PlanningContinuationDto>>> Continuations(CancellationToken cancellationToken) =>
+        Ok(await continuations.ListAsync(cancellationToken));
+
+    /// <summary>«فعلاً نه»: no next week for this planned one now.</summary>
+    [HttpPost("continuations/{id:guid}/decline")]
+    [ProducesResponseType<PlanningContinuationDecisionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<PlanningContinuationDecisionDto>> DeclineContinuation(Guid id,
+        DeclinePlanningContinuationRequest request, [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        Ok(await continuations.DeclineAsync(id, request, idempotencyKey, cancellationToken));
 
     [HttpGet("facts")]
     [ProducesResponseType<IReadOnlyList<PlanningFactDto>>(StatusCodes.Status200OK)]

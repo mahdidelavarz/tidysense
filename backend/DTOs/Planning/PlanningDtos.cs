@@ -19,7 +19,9 @@ public sealed record StartPlanningAttemptRequest(
     bool ReplaceActive,
     Guid? PreviousAttemptId = null,
     [MaxLength(PlanningClarificationRules.MaxQuestions)] IReadOnlyList<PlanningAnswer>? Answers = null,
-    bool DraftNow = false);
+    bool DraftNow = false,
+    // «برنامهٔ هفتهٔ بعد»: plan the week after this planned one, in its Goal or Project (029 §3).
+    Guid? ContinuationOfWindowId = null);
 
 /// <summary>Questions to answer, or the reason the input cannot be planned and what to change.</summary>
 public sealed record PlanningClarificationDto(
@@ -44,7 +46,9 @@ public sealed record PlanningAttemptDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
     string? Outcome = null,
-    PlanningClarificationDto? Clarification = null);
+    PlanningClarificationDto? Clarification = null,
+    // The planned week this attempt continues (029 §3).
+    Guid? ContinuationOfWindowId = null);
 
 /// <summary>
 /// The unfinished planning flow, if any: a running attempt, an unapproved draft, or questions
@@ -96,7 +100,9 @@ public sealed record PlanningDraftDto(
     IReadOnlyList<PlanningFirstWeekEntryDto> FirstWeek,
     bool CanApply,
     Guid? LinkedConfirmationId,
-    IReadOnlyList<PlanningRemovedItem> RemovedItems);
+    IReadOnlyList<PlanningRemovedItem> RemovedItems,
+    // For a continuation, the number of the week this draft plans (2 after the first week, …).
+    int? ContinuationWeek = null);
 
 /// <summary>
 /// The full edited item lists of the revision being replaced. Identity, entity type, provenance
@@ -169,3 +175,30 @@ public sealed record PlanningFactDto(
     DateTimeOffset LastConfirmedAt);
 
 public sealed record RemovePlanningFactRequest([Range(1, long.MaxValue)] long ExpectedVersion);
+
+/// <summary>How a planned week went, in counts (029 §3). Titles stay in the generation context.</summary>
+public sealed record PlanningContinuationEvidenceDto(
+    int CompletedTasks,
+    int CarriedTasks,
+    int DroppedTasks,
+    int LeftTasks,
+    int RoutineDone,
+    int RoutineMissed);
+
+/// <summary>A planned week whose next week can be planned now: «برنامهٔ هفتهٔ بعد» (029 §3).</summary>
+public sealed record PlanningContinuationDto(
+    Guid WindowId,
+    int Week,
+    string ScopeType,
+    Guid ScopeId,
+    string Title,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    DateOnly NextStartDate,
+    DateOnly NextEndDate,
+    PlanningContinuationEvidenceDto Evidence,
+    long Version);
+
+public sealed record DeclinePlanningContinuationRequest([Range(1, long.MaxValue)] long ExpectedVersion);
+
+public sealed record PlanningContinuationDecisionDto(Guid WindowId, string Decision, long Version);

@@ -922,6 +922,9 @@ namespace TidySense.Migrations
                     b.Property<Guid?>("ContextProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ContinuationOfWindowId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1222,6 +1225,90 @@ namespace TidySense.Migrations
                             t.HasCheckConstraint("CK_PlanningFacts_ValueObject", "jsonb_typeof(\"ValueJson\") = 'object'");
 
                             t.HasCheckConstraint("CK_PlanningFacts_Version", "\"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningWindow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Decision")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("GoalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PreviousWindowId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RetentionClass")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<Guid>("SourceDraftId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Week")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PreviousWindowId")
+                        .IsUnique()
+                        .HasFilter("\"PreviousWindowId\" IS NOT NULL");
+
+                    b.HasIndex("GoalId", "UserId");
+
+                    b.HasIndex("ProjectId", "UserId");
+
+                    b.HasIndex("UserId", "GoalId");
+
+                    b.HasIndex("UserId", "ProjectId");
+
+                    b.HasIndex("UserId", "Decision", "EndDate");
+
+                    b.ToTable("PlanningWindows", t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningWindows_Dates", "\"EndDate\" >= \"StartDate\" AND \"EndDate\" - \"StartDate\" <= 6");
+
+                            t.HasCheckConstraint("CK_PlanningWindows_Decided", "(\"Decision\" IS NULL) = (\"DecidedAt\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningWindows_Decision", "\"Decision\" IS NULL OR \"Decision\" IN ('CONTINUE_AS_IS', 'ADJUST', 'PAUSE_OR_STOP', 'REPLANNED')");
+
+                            t.HasCheckConstraint("CK_PlanningWindows_OneScope", "(\"GoalId\" IS NOT NULL) <> (\"ProjectId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PlanningWindows_Version", "\"Version\" > 0");
+
+                            t.HasCheckConstraint("CK_PlanningWindows_Week", "\"Week\" >= 1");
                         });
                 });
 
@@ -2251,6 +2338,32 @@ namespace TidySense.Migrations
 
             modelBuilder.Entity("TidySense.Models.PlanningFact", b =>
                 {
+                    b.HasOne("TidySense.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TidySense.Models.Goal", null)
+                        .WithMany()
+                        .HasForeignKey("GoalId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TidySense.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("TidySense.Models.PlanningWindow", b =>
+                {
+                    b.HasOne("TidySense.Models.PlanningWindow", null)
+                        .WithMany()
+                        .HasForeignKey("PreviousWindowId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("TidySense.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")

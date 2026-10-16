@@ -32,6 +32,7 @@ public sealed class AppDbContext(
     public DbSet<PlanningDraft> PlanningDrafts => Set<PlanningDraft>();
     public DbSet<PlanningDraftRevision> PlanningDraftRevisions => Set<PlanningDraftRevision>();
     public DbSet<PlanningFact> PlanningFacts => Set<PlanningFact>();
+    public DbSet<PlanningWindow> PlanningWindows => Set<PlanningWindow>();
     public DbSet<AiInvocation> AiInvocations => Set<AiInvocation>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<CommandResult> CommandResults => Set<CommandResult>();
@@ -600,6 +601,39 @@ public sealed class AppDbContext(
                 t.HasCheckConstraint("CK_PlanningDraftRevisions_Revision", "\"Revision\" > 0");
                 t.HasCheckConstraint("CK_PlanningDraftRevisions_Origin", "\"Origin\" IN ('GENERATED', 'USER_EDIT')");
                 t.HasCheckConstraint("CK_PlanningDraftRevisions_ContentObject", "jsonb_typeof(\"ContentJson\") = 'object'");
+            });
+        });
+
+        modelBuilder.Entity<PlanningWindow>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Decision).HasMaxLength(16);
+            entity.Property(x => x.RetentionClass).HasMaxLength(2).IsRequired();
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.UserId, x.Decision, x.EndDate });
+            entity.HasIndex(x => new { x.UserId, x.GoalId });
+            entity.HasIndex(x => new { x.UserId, x.ProjectId });
+            // A week is continued at most once.
+            entity.HasIndex(x => x.PreviousWindowId).IsUnique().HasFilter("\"PreviousWindowId\" IS NOT NULL");
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Goal>().WithMany()
+                .HasForeignKey(x => new { x.GoalId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Project>().WithMany()
+                .HasForeignKey(x => new { x.ProjectId, x.UserId })
+                .HasPrincipalKey(x => new { x.Id, x.UserId })
+                .OnDelete(DeleteBehavior.Restrict);
+            // Checked at the end of a statement, so a person's whole chain of weeks can be erased at once.
+            entity.HasOne<PlanningWindow>().WithMany().HasForeignKey(x => x.PreviousWindowId).OnDelete(DeleteBehavior.NoAction);
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_PlanningWindows_OneScope", "(\"GoalId\" IS NOT NULL) <> (\"ProjectId\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_PlanningWindows_Dates", "\"EndDate\" >= \"StartDate\" AND \"EndDate\" - \"StartDate\" <= 6");
+                t.HasCheckConstraint("CK_PlanningWindows_Week", "\"Week\" >= 1");
+                t.HasCheckConstraint("CK_PlanningWindows_Decision", "\"Decision\" IS NULL OR \"Decision\" IN ('CONTINUE_AS_IS', 'ADJUST', 'PAUSE_OR_STOP', 'REPLANNED')");
+                t.HasCheckConstraint("CK_PlanningWindows_Decided", "(\"Decision\" IS NULL) = (\"DecidedAt\" IS NULL)");
+                t.HasCheckConstraint("CK_PlanningWindows_Version", "\"Version\" > 0");
             });
         });
 
