@@ -12,6 +12,7 @@ using TidySense.Data;
 using TidySense.Infrastructure.Health;
 using TidySense.Infrastructure.Ai;
 using TidySense.Infrastructure.Sms;
+using TidySense.Models;
 using TidySense.Services;
 using TidySense.Services.Ai;
 using TidySense.Services.Operations;
@@ -305,17 +306,30 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
         return Results.Ok(AuthService.ToDto(user, operators));
     }).ExcludeFromDescription();
     // Moves the caller's open planned weeks into the past, so a test reaches the end of a week without waiting it out.
+    // The open dated Tasks of each week's Goal or Project move with it, so what was planned and not done is "left"
+    // as it would be after a real week. Routine slots do not move. Only one Goal's or Project's weeks when one is
+    // given, so a shared test account's other plans are untouched.
     app.MapPost("/api/v1/dev/planning-windows/rewind", async (HttpContext context, AppDbContext db,
-        ICurrentUser currentUser, int days) =>
+        ICurrentUser currentUser, int days, Guid? goalId, Guid? projectId) =>
     {
         if (!IPAddress.IsLoopback(context.Connection.RemoteIpAddress ?? IPAddress.None) &&
             !app.Environment.IsEnvironment("Testing")) return Results.NotFound();
         if (days is < 1 or > 30) return Results.BadRequest();
-        var windows = await db.PlanningWindows.Where(x => x.UserId == currentUser.UserId && x.Decision == null).ToListAsync();
+        var windows = await db.PlanningWindows.Where(x => x.UserId == currentUser.UserId && x.Decision == null &&
+            (goalId == null || x.GoalId == goalId) && (projectId == null || x.ProjectId == projectId)).ToListAsync();
         foreach (var window in windows)
         {
             window.StartDate = window.StartDate.AddDays(-days);
             window.EndDate = window.EndDate.AddDays(-days);
+            var tasks = await db.Tasks.Where(x => x.UserId == currentUser.UserId && x.Status == TaskStatuses.Active &&
+                (window.GoalId != null
+                    ? x.GoalId == window.GoalId || db.Projects.Any(p => p.Id == x.ProjectId && p.GoalId == window.GoalId)
+                    : x.ProjectId == window.ProjectId)).ToListAsync();
+            foreach (var task in tasks)
+            {
+                task.PlannedDate = task.PlannedDate?.AddDays(-days);
+                task.Deadline = task.Deadline?.AddDays(-days);
+            }
         }
         await db.SaveChangesAsync();
         return Results.Ok(new { rewound = windows.Count });

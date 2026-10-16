@@ -16,7 +16,7 @@ namespace TidySense.Services;
 /// </summary>
 public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateService dates)
 {
-    public const string Version = "2026-10-16.1";
+    public const string Version = "2026-10-16.2";
     public const int MaxUnfinishedTasks = 30;
     public const int MaxRoutines = 20;
     public const int MaxProjects = 20;
@@ -112,7 +112,7 @@ public sealed class PlanningContextBuilder(AppDbContext db, ApplicationDateServi
                 var recurrence = RoutineSchedule.Parse(x.RecurrenceDefinition);
                 return new PlanningContextRoutine(x.Id, x.Title, x.ProjectId,
                     new PlanningRecurrence(recurrence.Type, recurrence.DaysOfWeek, recurrence.DayOfMonth),
-                    Slots(x.Id, OccurrenceStatuses.Done), Slots(x.Id, OccurrenceStatuses.Missed));
+                    Slots(x.Id, OccurrenceStatuses.Done), Slots(x.Id, OccurrenceStatuses.Missed), x.TimesOfDay);
             }).ToArray(),
             unfinished.Select(x => new PlanningContextTask(x.Id, x.Title, x.ProjectId, x.PlannedDate,
                 x.Deadline, ReasonCodes(x, signals.GetValueOrDefault(x.Id, TaskSignals.None), today),

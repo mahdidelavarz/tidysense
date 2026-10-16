@@ -183,9 +183,12 @@ public sealed class DeterministicPlanningGenerator : IPlanningGenerator
         PlanningProposal Next(string id, string title, DateOnly? date) =>
             Step(id, title, date, underContext: true) with { ContextProjectId = project?.Id };
         var done = context.PreviousWindow?.CompletedTaskCount ?? 0;
+        // Persian digits, as everything the user reads.
+        static string Digits(int value) => string.Concat(value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            .Select(x => (char)('۰' + (x - '0'))));
         return Content(context,
-            $"نمونهٔ هفتهٔ {continuation.Week}: هفتهٔ پیش {done} کار انجام شد؛ این هفته قدم‌های بعدی، سبک‌تر.",
-            [Next("next-1", "ادامهٔ قدم‌های هفتهٔ پیش", first), Next("next-2", $"مرور پیشرفت هفتهٔ {continuation.Week}", second)],
+            $"نمونهٔ هفتهٔ {Digits(continuation.Week)}: هفتهٔ پیش {Digits(done)} کار انجام شد؛ این هفته قدم‌های بعدی، سبک‌تر.",
+            [Next("next-1", "ادامهٔ قدم‌های هفتهٔ پیش", first), Next("next-2", $"مرور پیشرفت هفتهٔ {Digits(continuation.Week)}", second)],
             [], [new PlanningNote(null, "کارهای باز هفتهٔ پیش سر جایشان می‌مانند.")], []);
     }
 

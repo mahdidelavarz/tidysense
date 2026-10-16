@@ -16,7 +16,7 @@ public sealed record PlanningPrompt(string System, string User, string ContextRe
 /// </summary>
 public static class PlanningPromptRenderer
 {
-    public const string PromptVersion = "2026-10-16.1";
+    public const string PromptVersion = "2026-10-16.2";
     public const string DataOpen = "<planning_request_data>";
     public const string DataClose = "</planning_request_data>";
 
@@ -103,6 +103,7 @@ public static class PlanningPromptRenderer
             activeRoutines = context.Routines.Select(x => new
             {
                 title = x.Title, recurrence = x.Recurrence,
+                timesOfDay = x.TimesOfDay is { Count: > 0 } times ? times.Select(t => t.ToString("HH:mm")).ToArray() : null,
                 doneLastWindow = previous is null ? (int?)null : x.DoneCount,
                 missedLastWindow = previous is null ? (int?)null : x.MissedCount
             }).ToArray(),
@@ -292,10 +293,10 @@ public static class PlanningPromptRenderer
         When "continuation" is not null, this is week number continuation.week of a plan the user approved for planningContext; previousWindow is how the week from continuation.previousStart to continuation.previousEnd went. Plan only the next detailed week, windowStart to windowEnd:
         - Propose no GOAL, no PROJECT that is already in activeProjects and no ROUTINE already in activeRoutines: they go on by themselves. A new PROJECT only for a phase that has really begun and is not in activeProjects.
         - A new TASK goes under the active Project it belongs to ("contextProjectRef"), or under the context directly when it belongs to none.
-        - Build on what happened. Completed work is done: never propose it again. unfinishedTasks still exist: never repeat one as a new TASK; plan the steps after them. leftTaskTitles were planned last week and not done: plan this week lighter by about that many Tasks.
+        - Build on what happened. Completed work is done: never propose it again. unfinishedTasks still exist and stay with the user (a left one is moved in Reconcile): never repeat one as a new TASK, in any wording, nor as a "make up for last week" TASK; plan the steps after them. leftTaskTitles were planned last week and not done: plan this week lighter by about that many Tasks.
         - Many carried Tasks or missed Routine slots mean last week was too full: propose fewer Tasks. A Routine with many missed slots may be named in "assumptions" with a suggestion to change its days; never propose a second one.
         - A Task that "waitsFor" unfinished steps is not repeated, and new steps after it are dated after them.
-        - Usually draft at once; ask only when the evidence leaves a choice only the user can make.
+        - Draft at once. Never ask about availability (days, hours, times): keep last week's rhythm, the days and times of activeRoutines and of last week's Tasks, and say so in "assumptions". Ask at most one question, and only when the evidence leaves a choice only the user can make.
         - "summary" says in one or two sentences what last week achieved and what this week focuses on.
 
         PLANNING DETAILS ("facts")

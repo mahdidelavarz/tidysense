@@ -148,7 +148,7 @@ public sealed record PlanningContextProject(Guid Id, string Title, DateOnly? Tar
 
 /// <summary>An active Routine of the scope, with its slots kept and missed in the previous window.</summary>
 public sealed record PlanningContextRoutine(Guid Id, string Title, Guid? ProjectId, PlanningRecurrence Recurrence,
-    int DoneCount = 0, int MissedCount = 0);
+    int DoneCount = 0, int MissedCount = 0, IReadOnlyList<TimeOnly>? TimesOfDay = null);
 
 /// <summary>An unfinished Task of the scope; <c>WaitsFor</c> names the earlier steps of its sequence still open.</summary>
 public sealed record PlanningContextTask(

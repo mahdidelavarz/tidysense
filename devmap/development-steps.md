@@ -1256,7 +1256,7 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
   - The test persona's crude answers make it worse than a person would.
 - **The model prefers drafting to asking.** Moving assumed the end of Aban instead of asking the move date, which only the user knows.
 - **Later phases are thin:** one or two generic undated steps.
-- **The text of the one-week line promises STEP-24's continuation**, which is not built yet. STEP-12 depends on STEP-24, so the pilot will not run without it.
+- **The text of the one-week line promises STEP-24's continuation**, which was not built when this was written. It was built on 2026-10-16 (STEP-24).
 
 ---
 
@@ -1412,6 +1412,70 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
 
 **Completion criteria:** After an approved first week, the user can get, review and approve a second week built from the evidence, with one tap to start it.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE` — verified on 2026-10-16. Still owed: `./dev.ps1 check` and `./auth-e2e.ps1` on Windows. A known weakness, reworded repeats, needs an owner decision (below).
 
-**Evidence:** None.
+**Evidence:**
+
+- **Where and when** (Mind Map implementation note in 029 §3, for the owner to confirm):
+  - The offer shows from a week's second-to-last day until seven days after it ends.
+  - It shows on Today (phone and desktop), at the end of Reconcile, and on its own Goal's or Project's page.
+  - The next week starts the day after the last one ends, or today once that has passed.
+  - Rules live only in [`PlanningContinuationRules`](../backend/Services/PlanningContinuation.cs); [tests](../backend.Tests/PlanningContinuationRulesTests.cs).
+- **Record:** `PlanningWindow` (migration `Step24PlanningWindows`, retention R1):
+  - one row per applied draft that planned a Goal or a standalone Project;
+  - the chain is linked by `PreviousWindowId`, with a unique filtered index on it.
+- **Decision**, recorded on the previous week in the 014 §4.5 vocabulary:
+  - `CONTINUE_AS_IS` when the next week is approved as proposed;
+  - `ADJUST` when it is approved after a user edit;
+  - `PAUSE_OR_STOP` for «فعلاً نه» (`POST /planning/continuations/{id}/decline`, with a version and an Idempotency-Key);
+  - `REPLANNED` when a new plan is made for the same scope.
+  - Events: `PLANNING_WINDOW_OPENED` and `PLANNING_CONTINUATION_DECIDED`. Approving and recording happen in the one apply command.
+- **One tap:**
+  - `GET /planning/continuations` lists the offers with their counts and generates nothing.
+  - «برنامهٔ هفتهٔ بعد» opens `/planning?continue=<windowId>`, which starts the attempt with `continuationOfWindowId` once.
+  - The draft goes through the ordinary review and confirmation.
+- **Evidence context** ([builder](../backend/Services/PlanningContextBuilder.cs), version `2026-10-16.2`), covering the previous week:
+  - completed, carried, dropped and left Tasks, the Tasks that wait in a sequence, and Routine slots done and missed;
+  - the days and times of each Routine;
+  - the Goal's active Projects as refs `P1…`. A new Task is placed under one with `contextProjectRef`, stored as `ContextProjectId`, and refused at apply if that Project is no longer active (`CONTEXT_PROJECT_UNAVAILABLE`).
+  - The gate drops a Task whose title repeats an open Task (`DROP_DUPLICATE_TASK`).
+- **Prompt `2026-10-16.2`.** The continuation rules are:
+  - no Goal, existing Project or existing Routine again;
+  - no open Task again in any wording;
+  - lighter after left work;
+  - never ask about availability, and at most one question.
+- **Tests:**
+  - [module test](../backend.Tests/PlanningModuleTests.cs) `An_approved_week_is_offered_near_its_end_and_its_next_week_is_planned_from_how_it_went`;
+  - the gate test for project refs and duplicates;
+  - the [renderer test](../backend.Tests/AiPlanningRuntimeTests.cs) for Routine times;
+  - [offer component tests](../frontend/src/features/planning/components/ContinuationOffer.test.tsx) and the `PlanningPage` continuation test;
+  - [browser test](../frontend/e2e/continuation.spec.ts): week one approved in the UI, one step done, brought to its last day, offered on Today, tapped, the week-two draft reviewed under the existing phase Project and approved; then week two offered on the Goal page at 1440px and declined.
+- **Week-two evaluation** ([`tools/planning-eval`](../tools/planning-eval/README.md) `--week2`, DeepSeek with thinking off, 8 long-horizon cases).
+  - Each case: approve week one, do about 40% of it, drop one Task, rewind to the week's end, tap the offer.
+  - `week2-a` (prompt `.1`):
+    - 8/8 approvable;
+    - 11 questions in 3 cases, mostly asking again for availability;
+    - 21 reworded repeats in 6 cases.
+  - `week2-b` (prompt `.2`):
+    - 8/8 approvable, offered and in the right week;
+    - 0 questions;
+    - 33/33 Tasks under an existing Project;
+    - no planned day outside the week, no second Goal, no exact repeat;
+    - 18 items dropped by the gate.
+  - The 32 first-week cases on prompt `.2` (`step24-all`): 32/32 approvable. Every 029 §10 measure passes.
+- **Known weakness: reworded repeats** (`week2-b`: 19 near repeats in 5 of 8 cases).
+  - The model wants to put an existing undated step into this week, for example «انجام آزمون آزمایشی…» for the open «حل یک آزمون آزمایشی…».
+  - A draft can only create, not date an existing Task. So the step comes back reworded, or it is dropped and the week is thin (python: 2 Tasks).
+  - The prompt rule did not fix it (21 → 19).
+  - The fix is a draft item that dates an existing Task, previewed and version-checked like any other change. **Proposed as a follow-up before the pilot; owner decision.**
+  - Until then, the review shows every item and any one can be left out.
+- **Other limits:**
+  - The eval does not live Routine slots, so their counts are zero there.
+  - Week two cannot change or pause a Routine; it only names one in its assumptions.
+  - `CONTINUE_AS_IS` means approved as proposed, not "nothing changed".
+- **Verified on Linux, 2026-10-16:**
+  - 302 backend tests passed, 2 skipped (the real-provider runs);
+  - 124 frontend tests passed; typecheck, lint and build were clean;
+  - 30 browser scenarios passed on a fresh database, 1 opt-in skipped;
+  - the screenshots of the offer on a phone, the week-two review and the Goal-page offer at 1440px were inspected.
+

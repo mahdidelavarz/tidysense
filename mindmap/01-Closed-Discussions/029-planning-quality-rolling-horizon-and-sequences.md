@@ -139,6 +139,18 @@ Causes found:
 - Generation starts when the user taps «برنامهٔ هفتهٔ بعد», never by itself (§11.4).
 - It is a **separate DevMap step, built after the planning-quality step**, so the first draft is right before it is repeated weekly.
 
+> **Implementation note (STEP-24, 2026-10-16; chosen in implementation, for the owner to confirm or change).** Each choice below follows the bullets above.
+>
+> - **Offer window.** "Near the end" means from the week's second-to-last day until seven days after it ends. After that the offer stops, so it never becomes the weekly nag 014 §4.5 rules out. The Goal stays, and planning it again is one tap away on its page.
+> - **Where the offer shows.** On Today, at the end of Reconcile, and on its own Goal's or Project's page. It shows only what happened, in counts, and judges nothing.
+> - **Which week it plans.** The next week starts the day after the last one ends, or today once that day has passed.
+> - **Decisions (014 §4.5 vocabulary, on the previous week):**
+>   - approving the draft as proposed is `CONTINUE_AS_IS`; approving after an edit is `ADJUST`;
+>   - «فعلاً نه» is `PAUSE_OR_STOP`. It can still be overturned by approving a next week from the Goal's page;
+>   - a new plan for the same Goal or Project is `REPLANNED`.
+> - **Questions in a continuation.** It does not ask about availability again. It keeps last week's rhythm, from its Routines' days and times and its Tasks' days, and states that as an assumption. It asks at most one question, and only for a choice the evidence leaves open.
+> - **Existing work.** It is never proposed again, in any wording. A left Task stays with the user and is moved in Reconcile.
+
 ---
 
 ## 4. Decision C — Which dates the model must set and which it may not invent
