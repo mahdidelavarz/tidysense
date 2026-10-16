@@ -2,6 +2,8 @@
 
 > **Amendment (2026-10-13, decided by the owner, [[01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights]] §6):** inside a Reconcile session, marking a single Task complete and Carrying a single Task to today apply on tap with an immediate undo; the item control states the consequence and the tap confirms that one action. Carry to another date, Drop, bulk/sequence actions and Goal continuation still require preview and explicit confirmation.
 
+> **Amendment (2026-10-16, decided by the owner):** a done tick is undone on the same tick. Pressing a completed Task's tick reopens it exactly as it was before the tick (same planned date, carry count and place; the completion date and end time are cleared), with history kept as a completion-undone event. Pressing a done Routine occurrence returns it to pending while its window is open, else to missed (024 §8 note). The tick states the consequence and the tap is the confirmation, as for completing; nothing else changes. A Task is not reopened while a later step of its sequence is done (025 §16 note).
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

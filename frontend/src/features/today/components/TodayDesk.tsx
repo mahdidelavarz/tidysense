@@ -21,10 +21,11 @@ import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi
 import { useGoalOptions } from '../../goals/hooks/goal-hooks'
 import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { TodayReconcileEntry } from '../../reconcile/components/TodayReconcileEntry'
-import { useCompleteOccurrence, useCorrectOccurrence, useRoutineWeek } from '../../routines/hooks/routine-hooks'
+import { useCompleteOccurrence, useCorrectOccurrence, useRoutineWeek, useUndoOccurrenceDone } from '../../routines/hooks/routine-hooks'
+import { undoneOccurrenceMessage } from '../../routines/types/routine.format'
 import type { RoutineWeeksDto } from '../../routines/types/routine.types'
 import { useProgress } from '../../structure/hooks/progress-hooks'
-import { useCompleteTask, useCreateTask, useTaskOptions, useTaskParentTitle } from '../../tasks/hooks/task-hooks'
+import { useCompleteTask, useCreateTask, useTaskOptions, useTaskParentTitle, useUndoCompleteTask } from '../../tasks/hooks/task-hooks'
 import type { TaskDto } from '../../tasks/types/task.types'
 import { useToday } from '../hooks/today-hooks'
 import { DayStrip } from './DayStrip'
@@ -61,8 +62,10 @@ export function TodayDesk() {
   const week = useRoutineWeek()
   const options = useTaskOptions()
   const complete = useCompleteTask()
+  const undo = useUndoCompleteTask()
   const completeOccurrence = useCompleteOccurrence()
   const correctOccurrence = useCorrectOccurrence()
+  const undoOccurrence = useUndoOccurrenceDone()
   const openCreate = useUiStore(state => state.openCreate)
   const parentTitle = useTaskParentTitle()
   const [chosenDay, setChosenDay] = useState<string | null>(null)
@@ -102,9 +105,8 @@ export function TodayDesk() {
   const ready = [...tasks.filter(task => !task.isBlocked), ...tasks.filter(task => task.isBlocked)]
   const shown = filter === 'open' ? ready : filter === 'done' ? completedTasks : [...ready, ...completedTasks]
   const routines = groupByRoutine(routineOccurrences)
-  const busyOccurrenceId = completeOccurrence.isPending
-    ? completeOccurrence.variables?.occurrenceId
-    : correctOccurrence.isPending ? correctOccurrence.variables?.occurrenceId : undefined
+  const busyOccurrenceId = [completeOccurrence, correctOccurrence, undoOccurrence]
+    .find(mutation => mutation.isPending)?.variables?.occurrenceId
 
   return (
     <div className="page-desk">
@@ -136,7 +138,7 @@ export function TodayDesk() {
             )}
           </div>
           <DayStrip today={localDate} selected={selected} onSelect={day => setChosenDay(day === localDate ? null : day)} />
-          <FormError error={complete.error} />
+          <FormError error={complete.error ?? undo.error} />
           {selected !== localDate ? (
             <PlannedDay date={selected} today={localDate} parentTitle={parentTitle} onCarry={setCarrying} onDrop={setDropping} />
           ) : shown.length === 0 ? (
@@ -154,6 +156,11 @@ export function TodayDesk() {
                   today={localDate}
                   parentTitle={parentTitle(task)}
                   completing={complete.isPending && complete.variables?.taskId === task.id}
+                  undoing={undo.isPending && undo.variables?.taskId === task.id}
+                  onUndo={() => undo.mutate(
+                    { taskId: task.id, expectedVersion: Number(task.version) },
+                    { onSuccess: () => showToast('کار به کارهای باز برگشت.') },
+                  )}
                   onCarry={() => setCarrying(task)}
                   onDrop={() => setDropping(task)}
                   onComplete={() => complete.mutate(
@@ -183,7 +190,7 @@ export function TodayDesk() {
               <h2 id="desk-today-routines" className="desk-card-title">روتین‌های امروز</h2>
               <Link className="desk-link" to="/routines">همه<ChevronLeft size={16} aria-hidden="true" /></Link>
             </div>
-            <FormError error={completeOccurrence.error ?? correctOccurrence.error} />
+            <FormError error={completeOccurrence.error ?? correctOccurrence.error ?? undoOccurrence.error} />
             {routines.length === 0 ? (
               <p className="text-sm text-text-secondary">امروز نوبت روتینی نیست.</p>
             ) : (
@@ -198,6 +205,10 @@ export function TodayDesk() {
                     onComplete={occurrence => completeOccurrence.mutate(
                       { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version) },
                       { onSuccess: () => showToast('نوبت روتین انجام شد.') },
+                    )}
+                    onUndo={occurrence => undoOccurrence.mutate(
+                      { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version) },
+                      { onSuccess: result => showToast(undoneOccurrenceMessage(result.status)) },
                     )}
                     onCorrect={occurrence => correctOccurrence.mutate(
                       { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version), targetStatus: 'DONE' },

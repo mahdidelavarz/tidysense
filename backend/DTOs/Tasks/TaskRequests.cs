@@ -11,7 +11,23 @@ public sealed record CreateTaskRequest(
     DateOnly? Deadline,
     Guid? SequenceId,
     [Range(1, int.MaxValue)] int? SequenceOrder,
-    bool IsProtected = false);
+    bool IsProtected = false,
+    TaskFollowRequest? Follow = null);
+
+/// <summary>
+/// «بعد از…» on a new Task: it is created already following another, in the same command, while every
+/// Task the preview named is unchanged (029 §9.2, 025 §16).
+/// </summary>
+public sealed record TaskFollowRequest(
+    Guid PredecessorId,
+    [Required, MaxLength(200)] IReadOnlyList<TaskVersionRefDto> ExpectedMembers);
+
+/// <summary>What following <paramref name="PredecessorId"/> would do for a Task not yet created.</summary>
+public sealed record NewTaskSequencePreviewRequest(
+    Guid PredecessorId,
+    Guid? GoalId,
+    Guid? ProjectId,
+    [StringLength(200)] string? Title);
 
 public sealed record UpdateTaskRequest(
     [Required, StringLength(200, MinimumLength = 1)] string Title,
@@ -31,6 +47,8 @@ public sealed record CompleteTaskRequest(
     DateOnly CompletedForLocalDate);
 
 public sealed record DropTaskRequest([Range(1, long.MaxValue)] long ExpectedVersion);
+
+public sealed record UndoCompleteTaskRequest([Range(1, long.MaxValue)] long ExpectedVersion);
 
 public sealed record RestoreTaskRequest(
     [Range(1, long.MaxValue)] long ExpectedVersion,

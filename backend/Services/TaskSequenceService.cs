@@ -39,6 +39,48 @@ public sealed class TaskSequenceService(
         }
     }
 
+    /// <summary>
+    /// What «بعد از…» on the New Task form will do. The new Task appears in the steps as
+    /// <see cref="Guid.Empty"/>; the expected members are the saved Tasks only.
+    /// </summary>
+    public async Task<TaskSequencePreviewDto> PreviewNewAsync(NewTaskSequencePreviewRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var unsaved = Unsaved(Guid.Empty, request.Title ?? "", request.GoalId, request.ProjectId);
+            var (plan, involved) = await PlanAsync(db, currentUser.UserId, Guid.Empty, TaskSequenceActions.Follow,
+                request.PredecessorId, Guid.NewGuid, cancellationToken, unsaved);
+            return ToPreview(TaskSequenceActions.Follow, Guid.Empty, plan, involved);
+        }
+        catch (CommandRejectedException rejected)
+        {
+            throw new DomainRuleException(rejected.ErrorCode, "The sequence change is not possible.");
+        }
+    }
+
+    /// <summary>
+    /// Places a Task being created after another, inside the create command, so the Task and its place
+    /// are made together or not at all. Applied only to exactly what was previewed (025 §16).
+    /// </summary>
+    internal static async Task<(Guid SequenceId, int Order, IReadOnlyList<CascadeEvent> Cascades)> PlaceNewAsync(
+        AppDbContext context, Guid owner, Guid id, string title, Guid? goalId, Guid? projectId,
+        TaskFollowRequest follow, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var predecessorSequence = await context.Tasks.AsNoTracking()
+            .Where(x => x.UserId == owner && x.Id == follow.PredecessorId)
+            .Select(x => x.SequenceId).SingleOrDefaultAsync(cancellationToken);
+        await TaskService.LockSequencesAsync(context, predecessorSequence is { } locked ? [locked] : [], cancellationToken);
+        var (plan, involved) = await PlanAsync(context, owner, id, TaskSequenceActions.Follow, follow.PredecessorId,
+            Guid.NewGuid, cancellationToken, Unsaved(id, title, goalId, projectId));
+        var items = await LockExpectedAsync(context, owner, involved, follow.ExpectedMembers, cancellationToken);
+        var cascades = new List<CascadeEvent>();
+        var own = plan.Changes.Single(x => x.TaskId == id);
+        foreach (var change in plan.Changes.Where(x => x.TaskId != id))
+            cascades.Add(Apply(items[change.TaskId], change, now));
+        return (own.SequenceId!.Value, own.SequenceOrder!.Value, cascades);
+    }
+
     public async Task<TaskDto> ChangeAsync(Guid id, ChangeTaskSequenceRequest request, string idempotencyKey,
         CancellationToken cancellationToken)
     {
@@ -59,36 +101,17 @@ public sealed class TaskSequenceService(
             var (plan, involved) = await PlanAsync(context, owner, id, request.Action, request.PredecessorId,
                 Guid.NewGuid, ct);
 
-            // Applied only to exactly what was previewed (025 §16).
-            var expected = request.ExpectedMembers.ToDictionary(x => x.TaskId, x => x.Version);
-            if (expected.Count != request.ExpectedMembers.Count || expected.Count != involved.Count ||
-                involved.Any(x => !expected.ContainsKey(x.Id)))
-                throw new CommandRejectedException("SEQUENCE_PREVIEW_STALE");
-            var locked = new Dictionary<Guid, TaskItem>();
-            foreach (var member in involved.OrderBy(x => x.Id))
-            {
-                var item = await TaskService.LockOwnedAsync(context, member.Id, owner, ct);
-                VersionGuard.RequireMatch(item.Id, expected[item.Id], item.Version);
-                locked[item.Id] = item;
-            }
-
+            var locked = await LockExpectedAsync(context, owner, involved, request.ExpectedMembers, ct);
             CommandMutation? main = null;
             var cascades = new List<CascadeEvent>();
             foreach (var change in plan.Changes)
             {
-                var item = locked[change.TaskId];
-                var changed = new List<string>();
-                if (item.SequenceId != change.SequenceId) { item.SequenceId = change.SequenceId; changed.Add("sequenceId"); }
-                if (item.SequenceOrder != change.SequenceOrder) { item.SequenceOrder = change.SequenceOrder; changed.Add("sequenceOrder"); }
-                item.Version++;
-                item.UpdatedAt = now;
-                var payload = JsonSerializer.Serialize(new { changedFields = changed });
-                if (item.Id == id)
-                    main = new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskUpdated, 1, payload, now);
+                var cascade = Apply(locked[change.TaskId], change, now);
+                if (change.TaskId == id)
+                    main = new CommandMutation("Task", id, cascade.AggregateVersion, cascade.EventType, 1,
+                        cascade.PayloadJson, now);
                 else
-                    // The person confirmed this exact Task in the preview.
-                    cascades.Add(new CascadeEvent("Task", item.Id, item.Version, TaskEventTypes.TaskUpdated, 1,
-                        payload, EventActors.User));
+                    cascades.Add(cascade);
             }
             return (main ?? throw new CommandRejectedException("NO_CHANGES")) with { CascadeEvents = cascades };
         }, cancellationToken);
@@ -96,15 +119,19 @@ public sealed class TaskSequenceService(
         return await tasks.GetByIdAsync(id, cancellationToken);
     }
 
-    /// <summary>The plan from current state, and every Task it reads: the Task, the one to follow, and their sequences.</summary>
+    /// <summary>
+    /// The plan from current state, and every saved Task it reads: the Task, the one to follow, and their
+    /// sequences. A Task about to be created is passed as <paramref name="unsaved"/> and is not among them.
+    /// </summary>
     private static async Task<(TaskSequencePlan Plan, IReadOnlyList<TaskSequenceMember> Involved)> PlanAsync(
         AppDbContext context, Guid owner, Guid id, string action, Guid? predecessorId, Func<Guid> newSequenceId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, TaskSequenceMember? unsaved = null)
     {
         if (!TaskSequenceActions.IsKnown(action)) throw new ArgumentException("action is invalid.");
         if (action == TaskSequenceActions.Follow && predecessorId is null)
             throw new ArgumentException("predecessorId is required.");
-        var target = await Member(context, owner, id, cancellationToken) ?? throw new ResourceNotFoundException("Task", id);
+        var target = unsaved ?? await Member(context, owner, id, cancellationToken)
+            ?? throw new ResourceNotFoundException("Task", id);
         var predecessor = action == TaskSequenceActions.Follow
             ? await Member(context, owner, predecessorId!.Value, cancellationToken)
                 ?? throw new ResourceNotFoundException("Task", predecessorId.Value)
@@ -116,10 +143,44 @@ public sealed class TaskSequenceService(
                 x.SequenceOrder, x.Version))
             .ToListAsync(cancellationToken);
         var plan = TaskSequencePlanner.Plan(action, target, predecessor, members, newSequenceId);
-        var involved = members.Append(target).Concat(predecessor is null ? [] : [predecessor])
+        var involved = members.Concat(unsaved is null ? [target] : []).Concat(predecessor is null ? [] : [predecessor])
             .DistinctBy(x => x.Id).ToArray();
         return (plan, involved);
     }
+
+    /// <summary>Locks every saved Task the preview named, refusing when the set or any version differs (025 §16).</summary>
+    private static async Task<Dictionary<Guid, TaskItem>> LockExpectedAsync(AppDbContext context, Guid owner,
+        IReadOnlyList<TaskSequenceMember> involved, IReadOnlyList<TaskVersionRefDto> expectedMembers,
+        CancellationToken cancellationToken)
+    {
+        var expected = expectedMembers.ToDictionary(x => x.TaskId, x => x.Version);
+        if (expected.Count != expectedMembers.Count || expected.Count != involved.Count ||
+            involved.Any(x => !expected.ContainsKey(x.Id)))
+            throw new CommandRejectedException("SEQUENCE_PREVIEW_STALE");
+        var locked = new Dictionary<Guid, TaskItem>();
+        foreach (var member in involved.OrderBy(x => x.Id))
+        {
+            var item = await TaskService.LockOwnedAsync(context, member.Id, owner, cancellationToken);
+            VersionGuard.RequireMatch(item.Id, expected[item.Id], item.Version);
+            locked[item.Id] = item;
+        }
+        return locked;
+    }
+
+    /// <summary>One Task's new place, as an update event the person confirmed in the preview.</summary>
+    private static CascadeEvent Apply(TaskItem item, TaskSequenceChange change, DateTimeOffset now)
+    {
+        var changed = new List<string>();
+        if (item.SequenceId != change.SequenceId) { item.SequenceId = change.SequenceId; changed.Add("sequenceId"); }
+        if (item.SequenceOrder != change.SequenceOrder) { item.SequenceOrder = change.SequenceOrder; changed.Add("sequenceOrder"); }
+        item.Version++;
+        item.UpdatedAt = now;
+        return new CascadeEvent("Task", item.Id, item.Version, TaskEventTypes.TaskUpdated, 1,
+            JsonSerializer.Serialize(new { changedFields = changed }), EventActors.User);
+    }
+
+    private static TaskSequenceMember Unsaved(Guid id, string title, Guid? goalId, Guid? projectId) =>
+        new(id, title, TaskStatuses.Active, goalId, projectId, null, null, 1);
 
     private static Task<TaskSequenceMember?> Member(AppDbContext context, Guid owner, Guid id,
         CancellationToken cancellationToken) =>

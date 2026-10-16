@@ -478,6 +478,8 @@ If restoring a previously dropped Task creates a direct `sequenceOrder` collisio
 
 Restore-in-place preserves Task identity.
 
+> **Amendment (2026-10-16, decided by the owner, 018 note):** undoing a completed step's tick returns it to the unresolved part only while no later step of its sequence is completed, so the completed prefix stays a prefix; later active steps wait for it again, and the person is told so. Otherwise the undo is refused and nothing changes.
+
 ---
 
 ## 17. Manual Single-Task Carry

@@ -19,11 +19,12 @@ export function taskGroup(task: Pick<TaskDto, 'status' | 'plannedDate'>, today: 
 
 /**
  * One Task on the Tasks timeline. The node completes it with one press (a
- * lock while it waits for earlier steps; how it ended once closed); the card
+ * lock while it waits for earlier steps; how it ended once closed, a done tick
+ * pressed again undoing it); the card
  * opens it. Beside the title: since when it has been waiting for an earlier
  * day, its date on a later one, or else how close its deadline is.
  */
-export function TaskCard({ task, group, today, parentTitle, completing = false, selected = false, onComplete }: {
+export function TaskCard({ task, group, today, parentTitle, completing = false, undoing = false, selected = false, onComplete, onUndo }: {
   task: TaskDto
   group: TaskGroup
   /** Today's ISO local date, for how close the deadline is. */
@@ -31,9 +32,11 @@ export function TaskCard({ task, group, today, parentTitle, completing = false, 
   /** Title of the Goal or Project the Task belongs to, when it is known. */
   parentTitle?: string
   completing?: boolean
+  undoing?: boolean
   /** The Task open beside the list on desktop. */
   selected?: boolean
   onComplete: () => void
+  onUndo?: () => void
 }) {
   const closed = task.status !== 'ACTIVE'
   const planned = task.plannedDate ? dayMonth.format(parseIsoDate(task.plannedDate)) : null
@@ -44,7 +47,13 @@ export function TaskCard({ task, group, today, parentTitle, completing = false, 
     <li className="timeline-row" data-selected={selected || undefined}>
       <div className="timeline-node">
         <span className="timeline-mark">
-          {task.status === 'COMPLETED' ? (
+          {task.status === 'COMPLETED' && onUndo ? (
+            <button className="ring-button" type="button" aria-label={`لغو انجام: ${task.title}`} disabled={undoing} onClick={onUndo}>
+              {undoing
+                ? <LoaderCircle size={20} className="animate-spin text-entity-task" aria-hidden="true" />
+                : <span className="ring-done" aria-hidden="true"><Check size={14} /></span>}
+            </button>
+          ) : task.status === 'COMPLETED' ? (
             <span className="ring-done" role="img" aria-label="تکمیل‌شده"><Check size={14} /></span>
           ) : task.status === 'DROPPED' ? (
             <span className="ring-lock" role="img" aria-label="کنار گذاشته‌شده"><CircleSlash size={14} /></span>

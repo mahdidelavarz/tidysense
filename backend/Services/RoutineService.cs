@@ -350,6 +350,41 @@ public sealed class RoutineService(
         return await OccurrenceByIdAsync(id, cancellationToken);
     }
 
+    /// <summary>
+    /// Undoes a done tick (024 §8 note): the occurrence returns to what it would be without it, PENDING
+    /// while its boundary has not passed, otherwise MISSED. The scheduled date and slot never change.
+    /// </summary>
+    public async Task<RoutineOccurrenceDto> UndoOccurrenceDoneAsync(Guid id,
+        CompleteOccurrenceRequest request, string idempotencyKey, CancellationToken cancellationToken)
+    {
+        var now = dates.UtcNow;
+        var localNow = dates.LocalNow;
+        var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey,
+            "UNDO_ROUTINE_OCCURRENCE_DONE", new { id, request.ExpectedVersion }, now);
+        var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
+        {
+            var item = await LockOwnedOccurrenceAsync(context, id, owner, ct);
+            VersionGuard.RequireMatch(id, request.ExpectedVersion, item.Version);
+            if (item.Status != OccurrenceStatuses.Done)
+                throw new CommandRejectedException("OCCURRENCE_NOT_DONE");
+            var sameDaySlots = await context.RoutineOccurrences.AsNoTracking()
+                .Where(x => x.RoutineId == item.RoutineId &&
+                    x.ScheduledLocalDate == item.ScheduledLocalDate && x.ScheduledLocalTime != null)
+                .Select(x => x.ScheduledLocalTime!.Value).ToListAsync(ct);
+            var missed = RoutineSchedule.IsMissed(item.ScheduledLocalDate, item.ScheduledLocalTime, sameDaySlots,
+                localNow.Date, localNow.Time);
+            item.Status = missed ? OccurrenceStatuses.Missed : OccurrenceStatuses.Pending;
+            item.ResolvedAt = missed ? now : null;
+            item.UpdatedAt = now;
+            item.Version++;
+            return new CommandMutation("RoutineOccurrence", id, item.Version,
+                RoutineEventTypes.OccurrenceCorrected, 1,
+                JsonSerializer.Serialize(new { previousStatus = OccurrenceStatuses.Done, newStatus = item.Status }), now);
+        }, cancellationToken);
+        ParentCommandSupport.RequireSuccess(result);
+        return await OccurrenceByIdAsync(id, cancellationToken);
+    }
+
     /// <summary>Historical correction between DONE and MISSED. The scheduled date and slot never change.</summary>
     public async Task<RoutineOccurrenceDto> CorrectOccurrenceAsync(Guid id,
         CorrectOccurrenceRequest request, string idempotencyKey, CancellationToken cancellationToken)

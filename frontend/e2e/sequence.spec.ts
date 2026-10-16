@@ -89,8 +89,18 @@ test('a new Task is made to follow an existing one from the create form', async 
   await sheet.getByRole('button', { name: /جزئیات بیشتر/ }).click()
   await sheet.getByRole('button', { name: /ترتیب انجام \(اختیاری\)/ }).click()
   await sheet.getByRole('option', { name: `بعد از «${data.title}»` }).click()
+  // The order it will make is shown before anything is made; the Task and its place are then one request.
+  const order = sheet.getByRole('region', { name: 'ترتیب بعد از ساخت' })
+  await expect(order.getByRole('listitem').nth(1)).toContainText(`تحلیل داده ${n}`)
+  await expect(order.getByRole('listitem').nth(1)).toContainText('منتظر می‌ماند')
+  await page.screenshot({ path: 'test-results/step-23-create-follow.png' })
+  const creates: string[] = []
+  page.on('request', request => {
+    if (request.method() === 'POST' && /\/api\/v1\/tasks(\/[^/]+\/sequence)?$/.test(new URL(request.url()).pathname)) creates.push(request.url())
+  })
   await sheet.getByRole('button', { name: 'افزودن به امروز' }).click()
   await expect(sheet).toBeHidden()
+  expect(creates).toHaveLength(1)
 
   const tasks = await (await page.request.get('/api/v1/tasks?limit=100')).json() as
     { items: { title: string; sequenceId: string | null; sequenceOrder: number | null; isBlocked: boolean }[] }

@@ -6,9 +6,12 @@ import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
 import { progressKey } from '../../structure/hooks/progress-hooks'
 import { todayKey } from '../../today/hooks/today-hooks'
 import {
-  carryTask, changeTaskSequence, completeTask, createTask, dropTask, getTask, listTasks, previewTaskSequence, restoreTask, updateTask,
+  carryTask, changeTaskSequence, completeTask, createTask, dropTask, getTask, listTasks, previewNewTaskSequence, previewTaskSequence,
+  restoreTask, undoCompleteTask, updateTask,
 } from '../services/tasks-api'
-import type { CreateTaskRequest, TaskDto, TaskSequenceAction, TaskSequencePreview, UpdateTaskRequest } from '../types/task.types'
+import type {
+  CreateTaskRequest, NewTaskSequencePreviewRequest, TaskDto, TaskSequenceAction, TaskSequencePreview, UpdateTaskRequest,
+} from '../types/task.types'
 
 /** Query key factory for Task queries. The single source of truth other Task hooks and mutations invalidate against. */
 export const taskKeys = {
@@ -141,6 +144,19 @@ export function useCompleteTask() {
   })
 }
 
+/**
+ * Undoes a done tick (018 note). Like completing, the id travels with each
+ * call, because a list undoes whichever row the user presses.
+ */
+export function useUndoCompleteTask() {
+  const sync = useTaskCacheSync()
+  return useMutation({
+    mutationFn: ({ taskId, expectedVersion }: { taskId: string; expectedVersion: number }) =>
+      undoCompleteTask(taskId, expectedVersion),
+    onSuccess: sync,
+  })
+}
+
 /** What a sequence change would do, asked of the server each time; nothing is stored or cached. */
 export function useTaskSequencePreview(taskId: string) {
   return useMutation({
@@ -163,14 +179,9 @@ export function useChangeTaskSequence(taskId: string) {
   })
 }
 
-/** «بعد از…» for a Task just made: the server's preview, then the change it describes. */
-export function useFollowTask() {
-  const sync = useTaskCacheSync()
+/** What «بعد از…» on the New Task form will do; asked of the server each time, nothing is stored. */
+export function useNewTaskSequencePreview() {
   return useMutation({
-    mutationFn: async ({ taskId, predecessorId }: { taskId: string; predecessorId: string }) => {
-      const preview = await previewTaskSequence(taskId, 'FOLLOW', predecessorId)
-      return changeTaskSequence(taskId, 'FOLLOW', predecessorId, preview.expectedMembers)
-    },
-    onSuccess: sync,
+    mutationFn: (request: NewTaskSequencePreviewRequest) => previewNewTaskSequence(request),
   })
 }

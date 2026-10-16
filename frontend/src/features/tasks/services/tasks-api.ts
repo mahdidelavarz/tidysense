@@ -3,7 +3,8 @@
 // its own endpoint and lives in the `today` feature.
 import { http } from '../../../shared/api/http'
 import type {
-  CreateTaskRequest, TaskDto, TaskPage, TaskSequenceAction, TaskSequencePreview, TaskVersionRef, UpdateTaskRequest,
+  CreateTaskRequest, NewTaskSequencePreviewRequest, TaskDto, TaskPage, TaskSequenceAction, TaskSequencePreview, TaskVersionRef,
+  UpdateTaskRequest,
 } from '../types/task.types'
 
 /** Generates a fresh per-request idempotency key for a consequential write. */
@@ -67,6 +68,16 @@ export async function restoreTask(id: string, expectedVersion: number, plannedDa
   return response.data
 }
 
+/** Undoes a done tick: the Task is active again exactly as it was before it. */
+export async function undoCompleteTask(id: string, expectedVersion: number): Promise<TaskDto> {
+  const response = await http.post<TaskDto>(
+    `/tasks/${encodeURIComponent(id)}/undo-complete`,
+    { expectedVersion },
+    { headers: commandHeaders() },
+  )
+  return response.data
+}
+
 /** Marks a Task complete for a given local date. Idempotent under its optimistic version. */
 export async function completeTask(id: string, expectedVersion: number, completedForLocalDate: string): Promise<TaskDto> {
   const response = await http.post<TaskDto>(
@@ -82,6 +93,12 @@ export async function previewTaskSequence(id: string, action: TaskSequenceAction
   const response = await http.post<TaskSequencePreview>(`/tasks/${encodeURIComponent(id)}/sequence-preview`, {
     action, predecessorId: predecessorId ?? null,
   })
+  return response.data
+}
+
+/** What «بعد از…» will do for a Task not yet created; the new Task is the step whose id is all zeros. */
+export async function previewNewTaskSequence(request: NewTaskSequencePreviewRequest): Promise<TaskSequencePreview> {
+  const response = await http.post<TaskSequencePreview>('/tasks/sequence-preview', request)
   return response.data
 }
 

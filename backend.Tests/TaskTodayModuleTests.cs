@@ -402,6 +402,154 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
         Assert.Contains(linkEvents, x => x.AggregateId == first.Id && x.Actor == "USER" && x.PayloadJson.Contains("sequenceId"));
     }
 
+    [Fact]
+    public async Task A_done_tick_is_undone_exactly_and_never_breaks_the_completed_part_of_a_sequence()
+    {
+        var session = await CreateSessionAsync();
+        using var client = Client(session.Token);
+        DateOnly today;
+        await using (var scope = factory.Services.CreateAsyncScope())
+            today = scope.ServiceProvider.GetRequiredService<ApplicationDateService>().Today;
+        async Task<HttpResponseMessage> Post(Guid id, string verb, object body, string key) =>
+            await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{id}/{verb}", body, key);
+        async Task<TaskDto> Read(Guid id) => (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{id}"))!;
+        async Task<TaskDto> Complete(TaskDto task, string key)
+        {
+            var response = await Post(task.Id, "complete", new { expectedVersion = task.Version, completedForLocalDate = today }, key);
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<TaskDto>())!;
+        }
+
+        // An overdue Task ticked today and unticked is overdue again, exactly as before the tick.
+        var late = await CreateTaskAsync(client, "undo-late", plannedDate: today.AddDays(-3));
+        var lateDone = await Complete(late, "undo-late-done");
+        var reopened = await Post(late.Id, "undo-complete", new { expectedVersion = lateDone.Version }, "undo-late-undo");
+        var replay = await Post(late.Id, "undo-complete", new { expectedVersion = lateDone.Version }, "undo-late-undo");
+        reopened.EnsureSuccessStatusCode();
+        replay.EnsureSuccessStatusCode();
+        var active = (await reopened.Content.ReadFromJsonAsync<TaskDto>())!;
+        Assert.Equal(("ACTIVE", (DateOnly?)today.AddDays(-3), (DateOnly?)null, (DateTimeOffset?)null),
+            (active.Status, active.PlannedDate, active.CompletedForLocalDate, active.TerminalAt));
+        Assert.Equal(late.CarryCount, active.CarryCount);
+        Assert.Equivalent(active, await replay.Content.ReadFromJsonAsync<TaskDto>(), strict: true);
+        var notDone = await Post(late.Id, "undo-complete", new { expectedVersion = active.Version }, "undo-late-active");
+        Assert.Equal("TASK_NOT_COMPLETED", await ProblemCodeAsync(notDone));
+
+        // In a sequence, a step is reopened only while no later step is done; then later steps wait again.
+        var sequenceId = Guid.NewGuid();
+        var first = await CreateTaskAsync(client, "undo-first", plannedDate: today, sequenceId: sequenceId, sequenceOrder: 10);
+        var second = await CreateTaskAsync(client, "undo-second", plannedDate: today, sequenceId: sequenceId, sequenceOrder: 20);
+        var third = await CreateTaskAsync(client, "undo-third", plannedDate: today, sequenceId: sequenceId, sequenceOrder: 30);
+        var firstDone = await Complete(first, "undo-first-done");
+        var secondDone = await Complete(await Read(second.Id), "undo-second-done");
+        Assert.False((await Read(third.Id)).IsBlocked);
+        var behind = await Post(first.Id, "undo-complete", new { expectedVersion = firstDone.Version }, "undo-first-early");
+        Assert.Equal("SEQUENCE_LATER_STEP_DONE", await ProblemCodeAsync(behind));
+        // Restore is for dropped Tasks only, so it cannot reopen the done part of a sequence either.
+        var restored = await Post(first.Id, "restore", new { expectedVersion = firstDone.Version, plannedDate = today }, "undo-first-restore");
+        Assert.Equal("TASK_COMPLETED_UNDO_INSTEAD", await ProblemCodeAsync(restored));
+        Assert.Equal("COMPLETED", (await Read(first.Id)).Status);
+        (await Post(second.Id, "undo-complete", new { expectedVersion = secondDone.Version }, "undo-second-undo")).EnsureSuccessStatusCode();
+        Assert.Equal(second.Id, Assert.Single((await Read(third.Id)).BlockedBy).Id);
+        (await Post(first.Id, "undo-complete", new { expectedVersion = firstDone.Version }, "undo-first-undo")).EnsureSuccessStatusCode();
+        Assert.Equal(first.Id, Assert.Single((await Read(second.Id)).BlockedBy).Id);
+
+        // A Task under a Goal that has ended is not reopened.
+        var goal = await CreateGoalAsync(client, "undo-goal");
+        var owned = await Complete(await CreateTaskAsync(client, "undo-owned", goalId: goal.Id), "undo-owned-done");
+        var preview = await PreviewAsync(client, "goals", goal.Id, "ACHIEVED", goal.Version);
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/goals/{goal.Id}/terminal", new
+        {
+            targetStatus = "ACHIEVED", expectedVersion = goal.Version, previewHash = preview.PreviewHash
+        }, "undo-goal-achieve")).EnsureSuccessStatusCode();
+        var ended = await Post(owned.Id, "undo-complete", new { expectedVersion = owned.Version }, "undo-owned-undo");
+        Assert.Equal("PARENT_NOT_ACTIVE", await ProblemCodeAsync(ended));
+
+        await using var events = factory.Services.CreateAsyncScope();
+        var db = events.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(3, await db.DomainEvents.CountAsync(x => x.UserId == session.UserId &&
+            x.EventType == "TASK_COMPLETION_UNDONE"));
+    }
+
+    [Fact]
+    public async Task A_new_task_is_made_already_following_another_or_not_at_all()
+    {
+        var session = await CreateSessionAsync();
+        using var client = Client(session.Token);
+        var goal = await CreateGoalAsync(client, "follow-new-goal");
+        var elsewhere = await CreateGoalAsync(client, "follow-new-elsewhere");
+        var sequenceId = Guid.NewGuid();
+        var head = await CreateTaskAsync(client, "follow-new-head", goalId: goal.Id, sequenceId: sequenceId, sequenceOrder: 10);
+        var tail = await CreateTaskAsync(client, "follow-new-tail", goalId: goal.Id, sequenceId: sequenceId, sequenceOrder: 20);
+        async Task<TaskSequencePreviewDto> Preview(Guid predecessorId, Guid goalId)
+        {
+            var response = await SendAsync(client, HttpMethod.Post, "/api/v1/tasks/sequence-preview",
+                new { predecessorId, goalId, title = "کار تازه" });
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<TaskSequencePreviewDto>())!;
+        }
+        Task<HttpResponseMessage> Create(string title, Guid goalId, object follow, string key, Guid? sequence = null) =>
+            SendAsync(client, HttpMethod.Post, "/api/v1/tasks", new
+            {
+                title, description = (string?)null, goalId, projectId = (Guid?)null, plannedDate = (string?)null,
+                deadline = (string?)null, sequenceId = sequence, sequenceOrder = sequence is null ? (int?)null : 99, follow
+            }, key);
+        async Task<int> Count(string title)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Tasks
+                .CountAsync(x => x.UserId == session.UserId && x.Title == title);
+        }
+
+        // The preview shows the new Task between the two, and that both it and the tail will wait.
+        var preview = await Preview(head.Id, goal.Id);
+        Assert.Equal([head.Id, Guid.Empty, tail.Id], preview.Steps.Select(x => x.TaskId));
+        Assert.Equal("کار تازه", preview.Steps[1].Title);
+        Assert.Equal([false, true, true], preview.Steps.Select(x => x.Waits));
+        Assert.Equal(new[] { head.Id, tail.Id }.Order(), preview.ExpectedMembers.Select(x => x.TaskId));
+
+        // A Task changed since the preview refuses the whole create: nothing is made.
+        var touched = await SendAsync(client, HttpMethod.Put, $"/api/v1/tasks/{tail.Id}", new
+        {
+            title = "دم عوض‌شده", description = (string?)null, goalId = goal.Id, projectId = (Guid?)null,
+            plannedDate = (string?)null, deadline = (string?)null, sequenceId, sequenceOrder = 20, expectedVersion = tail.Version
+        }, "follow-new-touch");
+        touched.EnsureSuccessStatusCode();
+        var stale = await Create("follow-new-stale", goal.Id, new { predecessorId = head.Id, preview.ExpectedMembers }, "follow-new-stale");
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        var partial = await Create("follow-new-partial", goal.Id,
+            new { predecessorId = head.Id, expectedMembers = preview.ExpectedMembers.Take(1) }, "follow-new-partial");
+        Assert.Equal("SEQUENCE_PREVIEW_STALE", await ProblemCodeAsync(partial));
+        var mismatch = await Create("follow-new-mismatch", elsewhere.Id,
+            new { predecessorId = head.Id, preview.ExpectedMembers }, "follow-new-mismatch");
+        Assert.Equal("SEQUENCE_SCOPE_MISMATCH", await ProblemCodeAsync(mismatch));
+        var both = await Create("follow-new-both", goal.Id, new { predecessorId = head.Id, preview.ExpectedMembers },
+            "follow-new-both", Guid.NewGuid());
+        Assert.Equal(HttpStatusCode.BadRequest, both.StatusCode);
+        foreach (var title in new[] { "follow-new-stale", "follow-new-partial", "follow-new-mismatch", "follow-new-both" })
+            Assert.Equal(0, await Count(title));
+
+        // From a fresh preview it is made and placed together; the tail now waits for it.
+        var fresh = await Preview(head.Id, goal.Id);
+        var created = await Create("follow-new-made", goal.Id, new { predecessorId = head.Id, fresh.ExpectedMembers }, "follow-new-made");
+        created.EnsureSuccessStatusCode();
+        var made = (await created.Content.ReadFromJsonAsync<TaskDto>())!;
+        Assert.Equal(sequenceId, made.SequenceId);
+        Assert.True(made.SequenceOrder > head.SequenceOrder);
+        Assert.Equal(head.Id, Assert.Single(made.BlockedBy).Id);
+        var waiting = (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{tail.Id}"))!;
+        Assert.True(waiting.SequenceOrder > made.SequenceOrder);
+        Assert.Equal([head.Id, made.Id], waiting.BlockedBy.Select(x => x.Id));
+
+        // A Task with no order starts one with the new Task, both placed in the same command.
+        var alone = await CreateTaskAsync(client, "follow-new-alone", goalId: goal.Id);
+        var starting = await Preview(alone.Id, goal.Id);
+        var pair = (await (await Create("follow-new-pair", goal.Id, new { predecessorId = alone.Id, starting.ExpectedMembers },
+            "follow-new-pair")).Content.ReadFromJsonAsync<TaskDto>())!;
+        Assert.NotNull(pair.SequenceId);
+        Assert.Equal(pair.SequenceId, (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{alone.Id}"))!.SequenceId);
+    }
+
     private HttpClient Client(string token)
     {
         var client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions

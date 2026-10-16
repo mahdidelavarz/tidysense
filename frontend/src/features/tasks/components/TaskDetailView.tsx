@@ -18,7 +18,8 @@ import { useGoalOptions } from '../../goals/hooks/goal-hooks'
 import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { useToday } from '../../today/hooks/today-hooks'
 import {
-  useCarryTask, useCompleteTask, useDropTask, useRestoreTask, useTask, useTaskOptions, useTaskParentTitle, useUpdateTask,
+  useCarryTask, useCompleteTask, useDropTask, useRestoreTask, useTask, useTaskOptions, useTaskParentTitle, useUndoCompleteTask,
+  useUpdateTask,
 } from '../hooks/task-hooks'
 import type { TaskDto, TaskSequenceAction, UpdateTaskRequest } from '../types/task.types'
 import { TaskCarrySheet } from './TaskCarrySheet'
@@ -40,6 +41,7 @@ export function TaskDetailView({ taskId, panel = false }: { taskId: string; pane
   const drop = useDropTask(taskId)
   const restore = useRestoreTask(taskId)
   const complete = useCompleteTask()
+  const undo = useUndoCompleteTask()
   const parentTitle = useTaskParentTitle()
   // The server's local date when it is known; the browser's until then (the pilot runs in one time zone).
   const today = useToday().data?.localDate ?? toIsoDate(new Date())
@@ -116,6 +118,21 @@ export function TaskDetailView({ taskId, panel = false }: { taskId: string; pane
             </button>
           )}
         </div>
+      ) : data.status === 'COMPLETED' ? (
+        // Undoing the tick puts it back exactly as it was; a later step already done keeps it done (025 §16 note).
+        <div className="mt-6">
+          <button
+            className="secondary-button min-h-14 w-full rounded-[1.25rem]"
+            type="button"
+            disabled={undo.isPending}
+            onClick={() => undo.mutate({ taskId: data.id, expectedVersion: version }, {
+              onSuccess: () => showToast('کار به کارهای باز برگشت.'),
+            })}
+          >
+            <RotateCcw size={20} aria-hidden="true" />
+            {undo.isPending ? 'در حال بازگرداندن…' : 'لغو انجام'}
+          </button>
+        </div>
       ) : (
         <div className="mt-6">
           <button
@@ -183,7 +200,7 @@ export function TaskDetailView({ taskId, panel = false }: { taskId: string; pane
       )}
 
       <div className="mt-4">
-        <FormError error={complete.error ?? drop.error ?? restore.error} />
+        <FormError error={complete.error ?? undo.error ?? drop.error ?? restore.error} />
       </div>
 
       {editing && (

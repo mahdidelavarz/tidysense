@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { listGoals } from '../../goals/services/goals-api'
 import { listProjects } from '../../projects/services/projects-api'
 import { getToday } from '../../today/services/today-api'
-import { changeTaskSequence, getTask, listTasks, previewTaskSequence } from '../services/tasks-api'
+import { changeTaskSequence, getTask, listTasks, previewNewTaskSequence, previewTaskSequence } from '../services/tasks-api'
 import { TaskDetailView } from './TaskDetailView'
 import { TaskForm } from './TaskForm'
 
@@ -12,7 +12,7 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, className }: { children: React.ReactNode; className?: string }) => <a href="/" className={className}>{children}</a>,
 }))
 vi.mock('../services/tasks-api', () => ({
-  listTasks: vi.fn(), getTask: vi.fn(), previewTaskSequence: vi.fn(), changeTaskSequence: vi.fn(),
+  listTasks: vi.fn(), getTask: vi.fn(), previewTaskSequence: vi.fn(), changeTaskSequence: vi.fn(), previewNewTaskSequence: vi.fn(),
 }))
 vi.mock('../../goals/services/goals-api', () => ({ listGoals: vi.fn() }))
 vi.mock('../../projects/services/projects-api', () => ({ listProjects: vi.fn() }))
@@ -111,35 +111,53 @@ describe('A sequence built and changed by hand (029 §9.2)', () => {
     await waitFor(() => expect(previewTaskSequence).toHaveBeenCalledTimes(2))
   })
 
-  it('a new Task follows the chosen Task only while it still belongs to the same owner', async () => {
+  it('a new Task is sent with the order the server previewed, and with none once its owner changes', async () => {
     const other = '00000000-0000-0000-0000-000000000401'
     const goals = [
       { id: goal, title: 'آلمانی', status: 'ACTIVE' },
       { id: other, title: 'اسباب‌کشی', status: 'ACTIVE' },
     ]
+    const preview = {
+      action: 'FOLLOW', taskId: '00000000-0000-0000-0000-000000000000',
+      steps: [
+        { taskId: id(1), title: 'ثبت‌نام کلاس', status: 'ACTIVE', changed: true, waits: false },
+        { taskId: '00000000-0000-0000-0000-000000000000', title: '', status: 'ACTIVE', changed: true, waits: true },
+      ],
+      expectedMembers: [{ taskId: id(1), version: 2 }],
+    }
+    vi.mocked(previewNewTaskSequence).mockResolvedValue(preview as never)
     const onSubmit = vi.fn()
-    const view = (
-      <TaskForm today={day} goals={goals as never} projects={[]} tasks={[task(1, 'ثبت‌نام کلاس')] as never}
-        pending={false} error={null} onSubmit={onSubmit} onCancel={() => {}} />
-    )
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
     const submitWithOwnerChange = async (change: boolean) => {
-      const { unmount } = render(view)
+      const { unmount } = render(
+        <QueryClientProvider client={client}>
+          <TaskForm today={day} goals={goals as never} projects={[]} tasks={[task(1, 'ثبت‌نام کلاس')] as never}
+            pending={false} error={null} onSubmit={onSubmit} onCancel={() => {}} />
+        </QueryClientProvider>,
+      )
       fireEvent.change(screen.getByLabelText('چه کاری باید انجام شود؟'), { target: { value: 'خرید کتاب' } })
       fireEvent.click(screen.getByRole('button', { name: 'آلمانی' }))
       fireEvent.click(screen.getByRole('button', { name: /جزئیات بیشتر/ }))
       fireEvent.click(screen.getByLabelText(/ترتیب انجام/))
       fireEvent.click(screen.getByRole('option', { name: 'بعد از «ثبت‌نام کلاس»' }))
+      // The order it will make is shown before anything is created, the new Task by its typed title.
+      const steps = await screen.findByRole('region', { name: 'ترتیب بعد از ساخت' })
+      expect(within(steps).getAllByRole('listitem')[1]).toHaveTextContent('خرید کتاب')
+      expect(within(steps).getAllByRole('listitem')[1]).toHaveTextContent('منتظر می‌ماند')
       if (change) fireEvent.click(screen.getByRole('button', { name: 'اسباب‌کشی' }))
       fireEvent.click(screen.getByRole('button', { name: 'افزودن به امروز' }))
       await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
-      const followAfter = onSubmit.mock.calls[0][1]
+      const request = onSubmit.mock.calls[0][0]
       onSubmit.mockClear()
       unmount()
-      return followAfter
+      return request
     }
 
-    expect(await submitWithOwnerChange(false)).toBe(id(1))
-    // Moved to another Goal, the Task it was to follow is no longer a choice, and nothing is sent for it.
-    expect(await submitWithOwnerChange(true)).toBeUndefined()
+    expect((await submitWithOwnerChange(false)).follow).toEqual({ predecessorId: id(1), expectedMembers: preview.expectedMembers })
+    expect(previewNewTaskSequence).toHaveBeenCalledWith({ predecessorId: id(1), goalId: goal, projectId: null, title: null })
+    // Moved to another Goal, the Task it was to follow is no longer a choice, and no order is sent.
+    const moved = await submitWithOwnerChange(true)
+    expect(moved.follow).toBeUndefined()
+    expect(moved.goalId).toBe(other)
   })
 })

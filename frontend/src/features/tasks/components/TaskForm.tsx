@@ -1,5 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import { toApiError } from '../../../shared/api/http'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { addDays } from 'date-fns-jalali'
 import { formatNumber, parseIsoDate, toIsoDate } from '../../../shared/lib/date'
@@ -9,16 +11,19 @@ import { FormError, FormField, MoreFields, SwitchField, ValidationSummary } from
 import type { GoalDto } from '../../goals/types/goal.types'
 import type { ProjectDto } from '../../projects/types/project.types'
 import { type TaskFields, taskCreateFieldsSchema, taskFieldsSchema } from '../types/task.schema'
-import type { CreateTaskRequest, TaskDto, UpdateTaskRequest } from '../types/task.types'
+import { useNewTaskSequencePreview } from '../hooks/task-hooks'
+import { type CreateTaskRequest, newTaskId, type TaskDto, type UpdateTaskRequest } from '../types/task.types'
 import { ParentChoice } from './ParentChoice'
 import { TaskParentSelect } from './TaskParentSelect'
 import { TaskSequenceSelect } from './TaskSequenceSelect'
-import { followCandidates } from './TaskSequenceSheet'
+import { followCandidates, SequenceSteps } from './TaskSequenceSheet'
 
 /**
  * Create/edit form for a Task, rendered as the body of a Sheet. On create a
- * Task may be set to follow another («بعد از…»); an existing Task's place in a
- * sequence is changed from its page, not here. On create, the day and the owner are one-press choices and
+ * Task may be set to follow another («بعد از…»): the server previews the order
+ * it will make, and the Task is created already in that order, in one request,
+ * or not at all. An existing Task's place in a sequence is changed from its
+ * page, not here. On create, the day and the owner are one-press choices and
  * the day starts at today, so a title alone is a Task for today; a title with
  * no date and no owner is not yet a Task: it is handed to `onCapture` and
  * saved as a quick capture.
@@ -34,8 +39,7 @@ export function TaskForm({ task, today, parentScope, goals, projects, tasks = []
   tasks?: TaskDto[]
   pending: boolean
   error: unknown
-  /** `followAfter` is the Task a new Task should follow, applied once it exists. */
-  onSubmit: (request: CreateTaskRequest | UpdateTaskRequest, followAfter?: string) => void
+  onSubmit: (request: CreateTaskRequest | UpdateTaskRequest) => void
   onCapture?: (title: string) => void
   onCancel: () => void
 }) {
@@ -53,19 +57,44 @@ export function TaskForm({ task, today, parentScope, goals, projects, tasks = []
   })
   const { errors } = form.formState
   const capturing = Boolean(onCapture) && !task && form.watch('parentScope') === 'none' && !form.watch('plannedDate')
+  // «بعد از…» counts only while the chosen Task belongs to the chosen owner: changing the owner leaves it unchosen.
+  const [scope, parentId] = form.watch('parentScope').split(':')
+  const goalId = scope === 'goal' ? parentId : null
+  const projectId = scope === 'project' ? parentId : null
+  const choice = form.watch('sequenceChoice')
+  const chosen = !task && choice.startsWith('after:') ? choice.slice(6) : undefined
+  const predecessorId = chosen && followCandidates({ id: '', goalId, projectId }, tasks).some(item => item.id === chosen)
+    ? chosen
+    : undefined
+  const followPreview = useNewTaskSequencePreview()
+  const { mutate: askFollow, reset: clearFollow } = followPreview
+  useEffect(() => {
+    if (predecessorId) askFollow({ predecessorId, goalId, projectId, title: null })
+    else clearFollow()
+  }, [predecessorId, goalId, projectId, askFollow, clearFollow])
+  // Refused because the order changed since it was shown: show what is true now.
+  const refusedCode = error ? toApiError(error).code : undefined
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a stale refusal asks again; a changed choice is the effect above.
+  useEffect(() => {
+    if (predecessorId && (refusedCode === 'CONFLICT_STALE_VERSION' || refusedCode === 'SEQUENCE_PREVIEW_STALE'))
+      askFollow({ predecessorId, goalId, projectId, title: null })
+  }, [error])
+  const shown = predecessorId && followPreview.data?.steps.some(step => step.taskId === predecessorId)
+    ? followPreview.data
+    : undefined
+  const waitingForPreview = Boolean(predecessorId) && (!shown || followPreview.isPending)
   const submit = form.handleSubmit(values => {
     const [scope, parentId] = values.parentScope.split(':')
     if (onCapture && !task && scope === 'none' && !values.plannedDate) {
       onCapture(values.title)
       return
     }
+    if (waitingForPreview) return
     const sequence = task
       ? { sequenceId: task.sequenceId, sequenceOrder: task.sequenceOrder }
       : { sequenceId: null, sequenceOrder: null }
-    // Followed only while it is still a Task of the chosen owner: changing the owner leaves it unchosen.
-    const chosen = values.sequenceChoice.startsWith('after:') ? values.sequenceChoice.slice(6) : undefined
-    const owner = { id: '', goalId: scope === 'goal' ? parentId : null, projectId: scope === 'project' ? parentId : null }
-    const followAfter = !task && chosen && followCandidates(owner, tasks).some(item => item.id === chosen) ? chosen : undefined
+    // Exactly the order that was shown; refused, and nothing made, if any Task in it changed since.
+    const follow = predecessorId && shown ? { predecessorId, expectedMembers: shown.expectedMembers } : null
     onSubmit({
       title: values.title,
       description: emptyToNull(values.description),
@@ -75,8 +104,8 @@ export function TaskForm({ task, today, parentScope, goals, projects, tasks = []
       deadline: emptyToNull(values.deadline),
       ...sequence,
       isProtected: values.isProtected,
-      ...(task ? { expectedVersion: task.version } : {}),
-    }, followAfter)
+      ...(task ? { expectedVersion: task.version } : follow ? { follow } : {}),
+    })
   })
 
   return (
@@ -126,6 +155,11 @@ export function TaskForm({ task, today, parentScope, goals, projects, tasks = []
             render={({ field }) => <TaskSequenceSelect tasks={tasks} parentScope={form.watch('parentScope')} value={field.value} onChange={field.onChange} />}
           />
         )}
+        {predecessorId && followPreview.isPending && <p className="text-xs text-text-secondary" role="status">در حال پیش‌نمایش…</p>}
+        {shown && !followPreview.isPending && (
+          <SequenceSteps steps={shown.steps} currentId={newTaskId} heading="ترتیب بعد از ساخت" currentTitle={form.watch('title')} />
+        )}
+        {predecessorId && <FormError error={followPreview.error} />}
         <SwitchField
           label="این کار محافظت شود"
           description="در بازبینی، کنار گذاشتن کار محافظت‌شده پیشنهاد نمی‌شود."
@@ -140,10 +174,10 @@ export function TaskForm({ task, today, parentScope, goals, projects, tasks = []
           بدون تاریخ و بدون هدف یا پروژه، این مورد هنوز یک کار نیست. فقط عنوانش به‌صورت یادداشت سریع ذخیره می‌شود و بعداً در «بازبینی» تعیین تکلیف می‌شود.
         </p>
       )}
-      <FormError error={error} />
+      <FormError error={error} previewed={Boolean(predecessorId)} />
       <div className="sheet-actions">
         <button className="secondary-button" type="button" disabled={pending} onClick={onCancel}>انصراف</button>
-        <button className="primary-button" type="submit" disabled={pending}>
+        <button className="primary-button" type="submit" disabled={pending || waitingForPreview}>
           {pending ? 'در حال ذخیره…' : task ? 'ذخیره تغییرات' : capturing ? 'ذخیره یادداشت' : submitLabel(form.watch('plannedDate'), today)}
         </button>
       </div>

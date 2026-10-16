@@ -1320,8 +1320,8 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
 - **Frontend:**
   - [Task page](../frontend/src/features/tasks/components/TaskDetailView.tsx): «بعد از…» on an active Task without a sequence, when a same-owner Task exists. A sequence has «زودتر», «دیرتر» and «بیرون از ترتیب»; a move that is not possible is disabled.
   - [sheet](../frontend/src/features/tasks/components/TaskSequenceSheet.tsx): previews at once, or once the Task to follow is chosen. It shows the order with «منتظر می‌ماند». «تأیید» sends exactly the preview, and a refusal previews again.
-  - [New Task](../frontend/src/features/tasks/components/TaskSequenceSelect.tsx): «مستقل، منتظر کاری نیست» or «بعد از «…»» in place of «شروع دنبالهٔ جدید». The Task is made, then follows through the same command.
-    - If following fails, the Task stays on its own and a toast says so.
+  - [New Task](../frontend/src/features/tasks/components/TaskSequenceSelect.tsx): «مستقل، منتظر کاری نیست» or «بعد از «…»» in place of «شروع دنبالهٔ جدید».
+    - The server's preview of the order is shown («ترتیب بعد از ساخت»), and the create request carries it as `follow`. The Task is made in that order or not at all (follow-up below).
     - A choice no longer of the chosen owner is not sent.
   - [component tests](../frontend/src/features/tasks/components/TaskSequence.test.tsx), three.
 - **Verified on Linux, 2026-10-16:**
@@ -1332,13 +1332,30 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
     - a new Task made to follow from the create form;
   - the phone and desktop screenshots of the sheet and the sequence card were inspected.
 
+**Follow-up, 2026-10-16 (asked by the owner):**
+
+- **Create and follow are one request.**
+  - `POST /api/v1/tasks/sequence-preview` previews the order for a Task not yet made; the new Task is the step `00000000-…`.
+  - `CREATE_TASK` takes `follow` (predecessor and expected members) and places the Task inside the same transaction. A changed or partial preview, a scope mismatch, or `follow` with a `sequenceId` creates nothing. [Command test](../backend.Tests/TaskTodayModuleTests.cs) `A_new_task_is_made_already_following_another_or_not_at_all`.
+- **Crossing the desktop breakpoint no longer closes an open sheet, anywhere.**
+  - While a modal is open, `useIsDesktop` keeps the page's layout and switches once the last modal closes ([use-desktop](../frontend/src/shared/lib/use-desktop.ts)).
+  - The [unit test](../frontend/src/shared/lib/use-desktop.test.tsx) and the [browser test](../frontend/e2e/undo-tick.spec.ts) type into a sheet, resize from 1440px to 800px and back, and keep the text. Both fail without the change.
+- **A done tick is undone on the same tick** (owner decision; Mind Map notes in 018, 024 §8 and 025 §16):
+  - `POST /tasks/{id}/undo-complete` reopens a Task exactly as it was. It is refused while a later step of its sequence is done, and under an ended Goal or Project.
+  - Restore now refuses a completed Task (`TASK_COMPLETED_UNDO_INSTEAD`), so the guard cannot be bypassed.
+  - `POST /routine-occurrences/{id}/undo-done` returns a slot to pending while its window is open, otherwise to missed.
+  - On Today, the Tasks list, the Task page and the Routine page, the done tick is a «لغو انجام: …» button.
+  - Tests: [Task](../backend.Tests/TaskTodayModuleTests.cs) `A_done_tick_is_undone_exactly_and_never_breaks_the_completed_part_of_a_sequence`, [Routine](../backend.Tests/RoutineModuleTests.cs) `Undoing_a_done_tick_returns_the_slot_to_what_it_would_be_without_it`, [Today](../frontend/src/features/today/components/TodayView.test.tsx), and the browser test above.
+- **Found while checking:** a sheet's sticky action bar sat 24px above the sheet's edge, so content showed beneath it in long forms. It now sits at the edge.
+- **Verified on Linux, 2026-10-16:**
+  - 295 backend tests passed, 2 skipped;
+  - 119 frontend tests passed; typecheck, lint and build were clean;
+  - 27 browser scenarios passed on a fresh database, 1 opt-in skipped. Three older scenarios asserted a read-only done tick and now assert the undo button.
+
 **Known limits:**
 
-- **Create and follow are two requests.** If the second is refused, the Task exists without its order; it is said, not hidden.
-- **Crossing the desktop breakpoint closes an open sheet** on a Task page, because the page swaps its layout. This holds for every sheet there, not only this one.
-  - It is found because a full-page screenshot briefly resizes the window to 1×1.
-  - The browser test now takes viewport screenshots.
 - **The control is a Task-page action.** There is no drag-and-drop or reorder in the list.
+- **Undoing a completion is not limited in time.** A Task completed long ago can still be reopened from the Tasks list. It returns to its old planned date, which may be overdue, and Reconcile then picks it up.
 
 ---
 

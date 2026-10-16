@@ -26,3 +26,8 @@ export function recurrenceLabel(recurrence: RecurrenceDto): string {
 export function slotsLabel(timesOfDay: string[]): string {
   return timesOfDay.length === 0 ? 'بدون ساعت مشخص' : timesOfDay.map(formatTime).join(' و ')
 }
+
+/** What a person is told once a done slot is undone: open again, or missed if its time had passed (024 §8 note). */
+export function undoneOccurrenceMessage(status: string) {
+  return status === 'MISSED' ? 'زمان این نوبت گذشته بود؛ «انجام نشد» ثبت شد.' : 'انجام این نوبت لغو شد.'
+}

@@ -7,9 +7,10 @@ import { PageHeader } from '../../../shared/ui/PageHeader'
 import { PhotoHero } from '../../../shared/ui/PhotoHero'
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui/StateUi'
 import { TodayReconcileEntry } from '../../reconcile/components/TodayReconcileEntry'
-import { useCompleteOccurrence, useCorrectOccurrence, useRoutineWeek } from '../../routines/hooks/routine-hooks'
+import { useCompleteOccurrence, useCorrectOccurrence, useRoutineWeek, useUndoOccurrenceDone } from '../../routines/hooks/routine-hooks'
+import { undoneOccurrenceMessage } from '../../routines/types/routine.format'
 import { AccountButton } from '../../shell/components/AccountButton'
-import { useCompleteTask, useTaskParentTitle } from '../../tasks/hooks/task-hooks'
+import { useCompleteTask, useTaskParentTitle, useUndoCompleteTask } from '../../tasks/hooks/task-hooks'
 import type { TaskDto } from '../../tasks/types/task.types'
 import { useIsDesktop } from '../../../shared/lib/use-desktop'
 import { useToday } from '../hooks/today-hooks'
@@ -34,8 +35,10 @@ function TodayPhone() {
   const today = useToday()
   const week = useRoutineWeek()
   const complete = useCompleteTask()
+  const undo = useUndoCompleteTask()
   const completeOccurrence = useCompleteOccurrence()
   const correctOccurrence = useCorrectOccurrence()
+  const undoOccurrence = useUndoOccurrenceDone()
   const openCreate = useUiStore(state => state.openCreate)
   const parentTitle = useTaskParentTitle()
   // Null follows the server's local date; a later day is a look ahead.
@@ -59,9 +62,8 @@ function TodayPhone() {
   const selected = chosenDay ?? localDate
   const ordered = [...tasks.filter(task => !task.isBlocked), ...tasks.filter(task => task.isBlocked), ...completedTasks]
   const routines = groupByRoutine(routineOccurrences)
-  const busyOccurrenceId = completeOccurrence.isPending
-    ? completeOccurrence.variables?.occurrenceId
-    : correctOccurrence.isPending ? correctOccurrence.variables?.occurrenceId : undefined
+  const busyOccurrenceId = [completeOccurrence, correctOccurrence, undoOccurrence]
+    .find(mutation => mutation.isPending)?.variables?.occurrenceId
 
   return (
     <div className="page page-sky">
@@ -88,7 +90,7 @@ function TodayPhone() {
       ) : (
         <>
           <div className="mb-4">
-            <FormError error={complete.error ?? completeOccurrence.error ?? correctOccurrence.error} />
+            <FormError error={complete.error ?? undo.error ?? completeOccurrence.error ?? correctOccurrence.error ?? undoOccurrence.error} />
           </div>
 
           {ordered.length === 0 && routines.length === 0 ? (
@@ -110,6 +112,11 @@ function TodayPhone() {
                         today={localDate}
                         parentTitle={parentTitle(task)}
                         completing={complete.isPending && complete.variables?.taskId === task.id}
+                        undoing={undo.isPending && undo.variables?.taskId === task.id}
+                        onUndo={() => undo.mutate(
+                          { taskId: task.id, expectedVersion: Number(task.version) },
+                          { onSuccess: () => showToast('کار به کارهای باز برگشت.') },
+                        )}
                         onCarry={() => setCarrying(task)}
                         onDrop={() => setDropping(task)}
                         onComplete={() => complete.mutate(
@@ -135,6 +142,10 @@ function TodayPhone() {
                         onComplete={occurrence => completeOccurrence.mutate(
                           { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version) },
                           { onSuccess: () => showToast('نوبت روتین انجام شد.') },
+                        )}
+                        onUndo={occurrence => undoOccurrence.mutate(
+                          { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version) },
+                          { onSuccess: result => showToast(undoneOccurrenceMessage(result.status)) },
                         )}
                         onCorrect={occurrence => correctOccurrence.mutate(
                           { occurrenceId: occurrence.id, expectedVersion: Number(occurrence.version), targetStatus: 'DONE' },

@@ -8,7 +8,7 @@ import { PageHeader } from '../../../shared/ui/PageHeader'
 import { SegmentedControl, type StatusFilter, statusFilterOptions } from '../../../shared/ui/SegmentedControl'
 import { LoadMoreButton, ResourceState } from '../../../shared/ui/StateUi'
 import { useToday } from '../../today/hooks/today-hooks'
-import { useCompleteTask, useTaskParentTitle, useTasks } from '../hooks/task-hooks'
+import { useCompleteTask, useTaskParentTitle, useTasks, useUndoCompleteTask } from '../hooks/task-hooks'
 import { TaskCard, type TaskGroup, taskGroup } from './TaskCard'
 import { TasksDesk } from './TasksDesk'
 import { useIsDesktop } from '../../../shared/lib/use-desktop'
@@ -38,6 +38,7 @@ function TasksPhone() {
   const [filtering, setFiltering] = useState(false)
   const tasks = useTasks(filter === 'all' ? undefined : filter)
   const complete = useCompleteTask()
+  const undo = useUndoCompleteTask()
   const openCreate = useUiStore(state => state.openCreate)
   const parentTitle = useTaskParentTitle()
   const items = tasks.data?.pages.flatMap(page => page.items) ?? []
@@ -83,7 +84,7 @@ function TasksPhone() {
         {tasks.isFetching && !tasks.isPending && <span className="text-xs text-text-secondary" role="status">در حال به‌روزرسانی…</span>}
       </div>
       <div className="mb-4">
-        <FormError error={complete.error} />
+        <FormError error={complete.error ?? undo.error} />
       </div>
       <ResourceState
         pending={tasks.isPending}
@@ -118,6 +119,11 @@ function TasksPhone() {
                       today={today}
                       parentTitle={parentTitle(task)}
                       completing={complete.isPending && complete.variables?.taskId === task.id}
+                      undoing={undo.isPending && undo.variables?.taskId === task.id}
+                      onUndo={() => undo.mutate(
+                        { taskId: task.id, expectedVersion: Number(task.version) },
+                        { onSuccess: () => showToast('کار به کارهای باز برگشت.') },
+                      )}
                       onComplete={() => complete.mutate(
                         { taskId: task.id, expectedVersion: Number(task.version), completedForLocalDate: today },
                         { onSuccess: () => showToast('کار انجام شد.') },
