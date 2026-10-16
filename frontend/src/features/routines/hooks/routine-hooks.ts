@@ -6,6 +6,7 @@ import {
   completeOccurrence,
   continueRoutine,
   correctOccurrence,
+  undoOccurrenceDone,
   createRoutine,
   getRoutine,
   getRoutineWeek,
@@ -131,6 +132,16 @@ export function useCompleteOccurrence() {
   return useMutation({
     mutationFn: ({ occurrenceId, expectedVersion }: { occurrenceId: string; expectedVersion: number }) =>
       completeOccurrence(occurrenceId, expectedVersion),
+    onSettled: invalidate,
+  })
+}
+
+/** Undoes a done tick on the same tick (024 §8 note). */
+export function useUndoOccurrenceDone() {
+  const invalidate = useRoutineInvalidation()
+  return useMutation({
+    mutationFn: ({ occurrenceId, expectedVersion }: { occurrenceId: string; expectedVersion: number }) =>
+      undoOccurrenceDone(occurrenceId, expectedVersion),
     onSettled: invalidate,
   })
 }

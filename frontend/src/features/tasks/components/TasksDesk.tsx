@@ -19,9 +19,9 @@ import { EmptyState, ResourceState } from '../../../shared/ui/StateUi'
 import { useGoalOptions } from '../../goals/hooks/goal-hooks'
 import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { useToday } from '../../today/hooks/today-hooks'
-import { useCompleteTask, useTaskParentTitle, useTasks } from '../hooks/task-hooks'
+import { useCompleteTask, useTaskParentTitle, useTasks, useUndoCompleteTask } from '../hooks/task-hooks'
 import type { TaskDto } from '../types/task.types'
-import { TaskCard, type TaskGroup, taskGroup } from './TaskCard'
+import { doneInLastWeek, TaskCard, type TaskGroup, taskGroup } from './TaskCard'
 import { TaskDetailView } from './TaskDetailView'
 
 /** A way of narrowing the list: by when, or by what the Task belongs to. */
@@ -54,6 +54,7 @@ export function TasksDesk({ selectedId }: { selectedId?: string }) {
   const goals = useGoalOptions()
   const projects = useProjectOptions()
   const complete = useCompleteTask()
+  const undo = useUndoCompleteTask()
   const openCreate = useUiStore(state => state.openCreate)
   const parentTitle = useTaskParentTitle()
   const [view, setView] = useState<View>({ kind: 'open' })
@@ -87,8 +88,7 @@ export function TasksDesk({ selectedId }: { selectedId?: string }) {
   }
   const count = (current: View) => items.filter(task => matches(task, current)).length
   const shown = items.filter(task => matches(task, view))
-  const doneThisWeek = items.filter(task => task.status === 'COMPLETED' && task.completedForLocalDate
-    && task.completedForLocalDate >= toIsoDate(addDays(parseIsoDate(today), -6))).length
+  const doneThisWeek = items.filter(task => doneInLastWeek(task, today)).length
 
   const dates: Partial<Record<TaskGroup, string>> = { today: formatLongDate(today), tomorrow: formatLongDate(tomorrow) }
   const activeProjects = (projects.data?.items ?? []).filter(project => project.status === 'ACTIVE')
@@ -148,7 +148,7 @@ export function TasksDesk({ selectedId }: { selectedId?: string }) {
             کار جدید
           </button>
         </div>
-        <FormError error={complete.error} />
+        <FormError error={complete.error ?? undo.error} />
         <ResourceState
           pending={tasks.isPending}
           error={tasks.error}
@@ -185,6 +185,11 @@ export function TasksDesk({ selectedId }: { selectedId?: string }) {
                             today={today}
                             parentTitle={parentTitle(task)}
                             completing={complete.isPending && complete.variables?.taskId === task.id}
+                            undoing={undo.isPending && undo.variables?.taskId === task.id}
+                            onUndo={() => undo.mutate(
+                              { taskId: task.id, expectedVersion: Number(task.version) },
+                              { onSuccess: () => showToast('کار به کارهای باز برگشت.') },
+                            )}
                             onComplete={() => complete.mutate(
                               { taskId: task.id, expectedVersion: Number(task.version), completedForLocalDate: today },
                               { onSuccess: () => showToast('کار انجام شد.') },

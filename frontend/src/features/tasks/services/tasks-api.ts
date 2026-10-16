@@ -2,7 +2,10 @@
 // in ../hooks call these and own caching/state. The Today projection has
 // its own endpoint and lives in the `today` feature.
 import { http } from '../../../shared/api/http'
-import type { CreateTaskRequest, TaskDto, TaskPage, UpdateTaskRequest } from '../types/task.types'
+import type {
+  CreateTaskRequest, NewTaskSequencePreviewRequest, TaskDto, TaskPage, TaskSequenceAction, TaskSequencePreview, TaskVersionRef,
+  UpdateTaskRequest,
+} from '../types/task.types'
 
 /** Generates a fresh per-request idempotency key for a consequential write. */
 const commandHeaders = () => ({ 'Idempotency-Key': crypto.randomUUID() })
@@ -65,6 +68,16 @@ export async function restoreTask(id: string, expectedVersion: number, plannedDa
   return response.data
 }
 
+/** Undoes a done tick: the Task is active again exactly as it was before it. */
+export async function undoCompleteTask(id: string, expectedVersion: number): Promise<TaskDto> {
+  const response = await http.post<TaskDto>(
+    `/tasks/${encodeURIComponent(id)}/undo-complete`,
+    { expectedVersion },
+    { headers: commandHeaders() },
+  )
+  return response.data
+}
+
 /** Marks a Task complete for a given local date. Idempotent under its optimistic version. */
 export async function completeTask(id: string, expectedVersion: number, completedForLocalDate: string): Promise<TaskDto> {
   const response = await http.post<TaskDto>(
@@ -72,5 +85,27 @@ export async function completeTask(id: string, expectedVersion: number, complete
     { expectedVersion, completedForLocalDate },
     { headers: commandHeaders() },
   )
+  return response.data
+}
+
+/** What a change to a Task's place in a sequence would do. The server builds it and stores nothing. */
+export async function previewTaskSequence(id: string, action: TaskSequenceAction, predecessorId?: string | null): Promise<TaskSequencePreview> {
+  const response = await http.post<TaskSequencePreview>(`/tasks/${encodeURIComponent(id)}/sequence-preview`, {
+    action, predecessorId: predecessorId ?? null,
+  })
+  return response.data
+}
+
+/** What «بعد از…» will do for a Task not yet created; the new Task is the step whose id is all zeros. */
+export async function previewNewTaskSequence(request: NewTaskSequencePreviewRequest): Promise<TaskSequencePreview> {
+  const response = await http.post<TaskSequencePreview>('/tasks/sequence-preview', request)
+  return response.data
+}
+
+/** Applies a previewed sequence change; refused when any Task the preview named has changed since. */
+export async function changeTaskSequence(id: string, action: TaskSequenceAction, predecessorId: string | null,
+  expectedMembers: TaskVersionRef[]): Promise<TaskDto> {
+  const response = await http.post<TaskDto>(`/tasks/${encodeURIComponent(id)}/sequence`,
+    { action, predecessorId, expectedMembers }, { headers: commandHeaders() })
   return response.data
 }

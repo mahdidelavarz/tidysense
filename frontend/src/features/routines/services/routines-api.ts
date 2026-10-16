@@ -93,6 +93,16 @@ export async function completeOccurrence(id: string, expectedVersion: number): P
   return response.data
 }
 
+/** Undoes a done tick: pending while the slot's window is open, otherwise missed. */
+export async function undoOccurrenceDone(id: string, expectedVersion: number): Promise<RoutineOccurrenceDto> {
+  const response = await http.post<RoutineOccurrenceDto>(
+    `/routine-occurrences/${encodeURIComponent(id)}/undo-done`,
+    { expectedVersion },
+    { headers: commandHeaders() },
+  )
+  return response.data
+}
+
 /** Corrects a resolved occurrence between done and missed. Its date and slot never change. */
 export async function correctOccurrence(id: string, expectedVersion: number, targetStatus: OccurrenceCorrection): Promise<RoutineOccurrenceDto> {
   const response = await http.post<RoutineOccurrenceDto>(

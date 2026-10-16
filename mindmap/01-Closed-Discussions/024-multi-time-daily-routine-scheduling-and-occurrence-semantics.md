@@ -334,6 +334,8 @@ Historical correction remains:
 DONE ↔ MISSED
 ```
 
+> **Amendment (2026-10-16, decided by the owner, 018 note):** pressing a DONE occurrence's tick again undoes it: it returns to what it would be without the tick — PENDING while its boundary (§8) has not passed, and it then resolves as any pending occurrence does; otherwise MISSED, the historical correction above. The scheduled date and slot never change.
+
 The scheduled local date/time never changes as part of a historical correction.
 
 ---

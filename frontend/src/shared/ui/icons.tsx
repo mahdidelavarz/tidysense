@@ -49,6 +49,7 @@ import SolarPlayLinear from '~icons/solar/play-linear'
 import SolarPulseLinear from '~icons/solar/pulse-linear'
 import SolarRecordCircleLinear from '~icons/solar/record-circle-linear'
 import SolarRefreshLinear from '~icons/solar/refresh-linear'
+import SolarReorderLinear from '~icons/solar/reorder-linear'
 import SolarRestartLinear from '~icons/solar/restart-linear'
 import SolarShieldCheckLinear from '~icons/solar/shield-check-linear'
 import SolarSmartphoneLinear from '~icons/solar/smartphone-linear'
@@ -109,6 +110,7 @@ export const Send = sized(SolarPlainLinear)
 export const Filter = sized(SolarFilterLinear)
 export const X = sized(SolarCloseLinear)
 export const Ellipsis = sized(SolarMenuDotsLinear)
+export const Reorder = sized(SolarReorderLinear)
 export const LogOut = sized(SolarLogout2Linear)
 export const Sparkles = sized(SolarMagicStick3Linear)
 

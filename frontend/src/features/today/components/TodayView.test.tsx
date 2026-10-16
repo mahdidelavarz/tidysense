@@ -2,20 +2,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getReconcileOverview, resolveReconcilePrompt } from '../../reconcile/services/reconcile-api'
-import { completeOccurrence, correctOccurrence, getRoutineWeek } from '../../routines/services/routines-api'
-import { completeTask, dropTask } from '../../tasks/services/tasks-api'
+import { completeOccurrence, correctOccurrence, getRoutineWeek, undoOccurrenceDone } from '../../routines/services/routines-api'
+import { completeTask, dropTask, undoCompleteTask } from '../../tasks/services/tasks-api'
 import { getToday } from '../services/today-api'
 import { TodayView } from './TodayView'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, 'aria-label': label }: { children: React.ReactNode; 'aria-label'?: string }) => <a href="/" aria-label={label}>{children}</a>,
 }))
-vi.mock('../../tasks/services/tasks-api', () => ({ completeTask: vi.fn(), carryTask: vi.fn(), dropTask: vi.fn(), listTasks: vi.fn() }))
+vi.mock('../../tasks/services/tasks-api', () => ({
+  completeTask: vi.fn(), undoCompleteTask: vi.fn(), carryTask: vi.fn(), dropTask: vi.fn(), listTasks: vi.fn(),
+}))
 // Parent titles for the badges are a lookup; these tests do not depend on them.
 vi.mock('../../goals/services/goals-api', () => ({ listGoals: vi.fn().mockResolvedValue({ items: [], page: { nextCursor: null } }) }))
 vi.mock('../../projects/services/projects-api', () => ({ listProjects: vi.fn().mockResolvedValue({ items: [], page: { nextCursor: null } }) }))
 vi.mock('../../routines/services/routines-api', () => ({
-  completeOccurrence: vi.fn(), correctOccurrence: vi.fn(), getRoutineWeek: vi.fn(),
+  completeOccurrence: vi.fn(), correctOccurrence: vi.fn(), undoOccurrenceDone: vi.fn(), getRoutineWeek: vi.fn(),
 }))
 vi.mock('../../reconcile/services/reconcile-api', () => ({ getReconcileOverview: vi.fn(), resolveReconcilePrompt: vi.fn() }))
 vi.mock('../services/today-api', () => ({ getToday: vi.fn() }))
@@ -106,13 +108,14 @@ describe('TodayView', () => {
     vi.mocked(getToday).mockResolvedValue({ localDate: '2026-09-28', tasks: [], completedTasks: [], routineOccurrences: [missed, done, pending] })
     vi.mocked(completeOccurrence).mockResolvedValue({ ...pending, status: 'DONE', version: 2 })
     vi.mocked(correctOccurrence).mockResolvedValue({ ...missed, status: 'DONE', version: 3 })
+    vi.mocked(undoOccurrenceDone).mockResolvedValue({ ...done, status: 'PENDING', resolvedAt: null, version: 3 })
     renderToday()
     const section = within(await screen.findByRole('region', { name: 'روتین‌های امروز' }))
     expect(section.getAllByRole('heading', { name: 'دارو' })).toHaveLength(1)
     expect(section.getAllByRole('listitem')).toHaveLength(4)
     expect(section.getByText('۰۸:۰۰')).toBeInTheDocument()
     expect(section.getByText('، انجام نشد')).toBeInTheDocument()
-    expect(section.getByText('، انجام شد')).toBeInTheDocument()
+    expect(section.getByRole('button', { name: 'لغو انجام: دارو، ۱۲:۰۰' })).toBeInTheDocument()
     expect(screen.queryByText('برای امروز کاری نمانده است.')).not.toBeInTheDocument()
 
     // Only the pending slot can be marked done; the missed one is corrected, never carried.
@@ -121,6 +124,9 @@ describe('TodayView', () => {
     await waitFor(() => expect(completeOccurrence).toHaveBeenCalledWith(pending.id, 1))
     fireEvent.click(section.getByRole('button', { name: 'انجام داده بودم' }))
     await waitFor(() => expect(correctOccurrence).toHaveBeenCalledWith(missed.id, 2, 'DONE'))
+    // A done slot pressed again is undone (024 §8 note).
+    fireEvent.click(section.getByRole('button', { name: 'لغو انجام: دارو، ۱۲:۰۰' }))
+    await waitFor(() => expect(undoOccurrenceDone).toHaveBeenCalledWith(done.id, 2))
   })
 
   it('labels an untimed occurrence by the day and shows the empty state only with no work at all', async () => {
@@ -137,20 +143,23 @@ describe('TodayView', () => {
     expect(await screen.findByText('برای امروز کاری نمانده است.')).toBeInTheDocument()
   })
 
-  it('shows work already done today, read-only, after the open work', async () => {
+  it('shows work already done today after the open work, its tick pressed again to undo it', async () => {
     const finished = {
       ...actionable, id: '00000000-0000-0000-0000-000000000113', title: 'کار تمام‌شده', status: 'COMPLETED',
       completedForLocalDate: '2026-09-28', terminalAt: '2026-09-28T01:00:00Z',
     }
     vi.mocked(getToday).mockResolvedValue({ localDate: '2026-09-28', tasks: [actionable], completedTasks: [finished], routineOccurrences: [] })
+    vi.mocked(undoCompleteTask).mockResolvedValue({ ...finished, status: 'ACTIVE', completedForLocalDate: null, terminalAt: null, version: 4 })
     renderToday()
     const section = within(await screen.findByRole('region', { name: 'کارهای امروز' }))
     const rows = section.getAllByRole('listitem')
     expect(rows.map(row => row.textContent)).toEqual([expect.stringContaining('کار آماده'), expect.stringContaining('کار تمام‌شده')])
-    expect(within(rows[1]).getByRole('img', { name: 'انجام شد' })).toBeInTheDocument()
-    expect(within(rows[1]).queryByRole('button')).not.toBeInTheDocument()
     // The count is of the work still open.
     expect(screen.getByRole('heading', { name: /کارهای امروز/ })).toHaveTextContent('۱')
+    // Its only control is the tick, and pressing it undoes the completion.
+    expect(within(rows[1]).getAllByRole('button')).toHaveLength(1)
+    fireEvent.click(within(rows[1]).getByRole('button', { name: 'لغو انجام: کار تمام‌شده' }))
+    await waitFor(() => expect(undoCompleteTask).toHaveBeenCalledWith(finished.id, 3))
   })
 
   it('drops a Task from its hidden actions only after confirmation', async () => {

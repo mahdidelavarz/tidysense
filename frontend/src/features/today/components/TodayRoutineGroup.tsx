@@ -7,17 +7,18 @@ import type { RoutineOccurrenceDto, RoutineWeekDto } from '../../routines/types/
 
 /**
  * One Routine in Today's timeline: its schedule, this week so far, and a pill
- * per slot today. A pending slot is completed with one press; a missed one can
- * be corrected if it was actually done. A missed slot is a neutral fact, not a
+ * per slot today. A pending slot is completed with one press, and a done one
+ * pressed again undoes it; a missed one can be corrected if it was actually done. A missed slot is a neutral fact, not a
  * debt, so it is never carried. The card opens the Routine.
  */
-export function TodayRoutineGroup({ occurrences, week, today, busyId, onComplete, onCorrect }: {
+export function TodayRoutineGroup({ occurrences, week, today, busyId, onComplete, onUndo, onCorrect }: {
   occurrences: RoutineOccurrenceDto[]
   /** This week of the Routine; absent once it is stopped (today's slots still stand). */
   week?: RoutineWeekDto
   today: string
   busyId?: string
   onComplete: (occurrence: RoutineOccurrenceDto) => void
+  onUndo: (occurrence: RoutineOccurrenceDto) => void
   onCorrect: (occurrence: RoutineOccurrenceDto) => void
 }) {
   const [first] = occurrences
@@ -65,6 +66,20 @@ export function TodayRoutineGroup({ occurrences, week, today, busyId, onComplete
                     {busy
                       ? <LoaderCircle size={20} className="animate-spin text-entity-routine" aria-hidden="true" />
                       : <span className="slot-ring" aria-hidden="true" />}
+                    {time}
+                  </button>
+                ) : occurrence.status === 'DONE' ? (
+                  <button
+                    className="slot-pill"
+                    type="button"
+                    data-status="DONE"
+                    aria-label={`لغو انجام: ${first.routineTitle}، ${slot}`}
+                    disabled={busy}
+                    onClick={() => onUndo(occurrence)}
+                  >
+                    {busy
+                      ? <LoaderCircle size={20} className="animate-spin text-entity-routine" aria-hidden="true" />
+                      : <span className="slot-done" aria-hidden="true"><Check size={13} /></span>}
                     {time}
                   </button>
                 ) : (

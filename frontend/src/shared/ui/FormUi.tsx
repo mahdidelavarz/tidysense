@@ -154,16 +154,34 @@ export function ValidationSummary({ messages }: { messages: Array<string | undef
   )
 }
 
-/** Explains a failed command in plain language. A stale-version conflict offers a reload, since retrying cannot succeed. */
-export function FormError({ error }: { error: unknown }) {
+/** Refusals whose reason the person can act on, said in their own terms rather than as a connection problem. */
+const refusals: Record<string, string> = {
+  SEQUENCE_LATER_STEP_DONE: 'مرحله‌ی بعدیِ این ترتیب انجام شده است؛ اول آن را برگردانید.',
+  PARENT_NOT_ACTIVE: 'هدف یا پروژه‌ی این مورد به پایان رسیده است و دیگر کار فعال نمی‌پذیرد.',
+  SEQUENCE_NEEDS_RECONCILE: 'یکی از کارهای این ترتیب کنار گذاشته شده است؛ اول در «بازبینی» تکلیفش را روشن کنید.',
+  SEQUENCE_SCOPE_MISMATCH: 'فقط کاری از همین هدف یا پروژه را می‌شود انتخاب کرد.',
+  SEQUENCE_ORDER_FULL: 'جای خالی برای این مرحله نماند؛ یکی از کارهای ترتیب را جابه‌جا کنید و دوباره امتحان کنید.',
+  TASK_BLOCKED: 'این کار منتظر کار پیشین است و هنوز انجام‌شدنی نیست.',
+}
+
+/**
+ * Explains a failed command in plain language. A stale-version conflict offers
+ * a reload, since retrying cannot succeed, except for a change applied from a
+ * server preview (`previewed`): there the form asks the preview again, so the
+ * person is told to look again instead.
+ */
+export function FormError({ error, previewed = false }: { error: unknown; previewed?: boolean }) {
   if (!error) return null
   const api = toApiError(error)
-  const stale = api.code === 'CONFLICT_STALE_VERSION'
-  const copy = stale
-    ? 'این مورد در جای دیگری تغییر کرده است. برای دیدن آخرین وضعیت، صفحه را تازه کنید.'
-    : api.code === 'IDEMPOTENCY_MISMATCH'
-      ? 'درخواست تکراری با محتوای متفاوت ارسال شد. دوباره تلاش کنید.'
-      : 'ارتباط یا ورودی‌ها را بررسی کنید و دوباره تلاش کنید.'
+  const changed = api.code === 'CONFLICT_STALE_VERSION' || api.code === 'SEQUENCE_PREVIEW_STALE'
+  const stale = changed && !previewed
+  const copy = changed && previewed
+    ? 'ترتیب در این فاصله عوض شد. پیش‌نمایش تازه را ببینید و دوباره تأیید کنید.'
+    : stale
+      ? 'این مورد در جای دیگری تغییر کرده است. برای دیدن آخرین وضعیت، صفحه را تازه کنید.'
+      : api.code === 'IDEMPOTENCY_MISMATCH'
+        ? 'درخواست تکراری با محتوای متفاوت ارسال شد. دوباره تلاش کنید.'
+        : refusals[api.code] ?? 'ارتباط یا ورودی‌ها را بررسی کنید و دوباره تلاش کنید.'
   return (
     <div className="notice-attention" role="alert">
       <p className="font-bold">انجام نشد</p>

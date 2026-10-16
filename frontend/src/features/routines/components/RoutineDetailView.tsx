@@ -16,9 +16,9 @@ import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { useTaskParentTitle } from '../../tasks/hooks/task-hooks'
 import { useToday } from '../../today/hooks/today-hooks'
 import {
-  useCompleteOccurrence, useContinueRoutine, useCorrectOccurrence, useRoutine, useRoutineMonth, useStopRoutine, useUpdateRoutine,
+  useCompleteOccurrence, useContinueRoutine, useCorrectOccurrence, useRoutine, useRoutineMonth, useStopRoutine, useUndoOccurrenceDone, useUpdateRoutine,
 } from '../hooks/routine-hooks'
-import { recurrenceLabel, slotsLabel } from '../types/routine.format'
+import { recurrenceLabel, slotsLabel, undoneOccurrenceMessage } from '../types/routine.format'
 import type { CreateRoutineRequest, RoutineDto, RoutineOccurrenceDto, UpdateRoutineRequest } from '../types/routine.types'
 import { RoutineForm } from './RoutineForm'
 import { RoutineMonth } from './RoutineMonth'
@@ -239,9 +239,10 @@ function OwnerValue({ routine, title }: { routine: RoutineDto; title?: string })
   return 'مستقل'
 }
 
-/** One of today's slots: done, missed (correctable), or open and completed with one press. */
+/** One of today's slots: open and completed with one press, done and undone with another, or missed (correctable). */
 function TodaySlot({ slot, title, next }: { slot: RoutineOccurrenceDto; title: string; next: boolean }) {
   const complete = useCompleteOccurrence()
+  const undo = useUndoOccurrenceDone()
   const correct = useCorrectOccurrence()
   const time = slot.scheduledLocalTime ? formatTime(slot.scheduledLocalTime) : 'امروز'
   const face = (mark: React.ReactNode, words: string) => (
@@ -276,14 +277,33 @@ function TodaySlot({ slot, title, next }: { slot: RoutineOccurrenceDto; title: s
       </li>
     )
   }
+  if (slot.status === 'DONE') {
+    return (
+      <li>
+        <button
+          className="slot-tile w-full"
+          type="button"
+          data-status="DONE"
+          aria-label={`لغو انجام: ${title}، ${time}`}
+          disabled={undo.isPending}
+          onClick={() => undo.mutate(
+            { occurrenceId: slot.id, expectedVersion: Number(slot.version) },
+            { onSuccess: result => showToast(undoneOccurrenceMessage(result.status)) },
+          )}
+        >
+          {face(
+            undo.isPending
+              ? <LoaderCircle size={28} className="animate-spin text-entity-routine" aria-hidden="true" />
+              : <span className="slot-done size-7" aria-hidden="true"><Check size={16} /></span>,
+            'انجام شد',
+          )}
+        </button>
+      </li>
+    )
+  }
   return (
     <li className="slot-tile" data-status={slot.status}>
-      {face(
-        slot.status === 'DONE'
-          ? <span className="slot-done size-7" aria-hidden="true"><Check size={16} /></span>
-          : <span className="slot-missed size-7" aria-hidden="true" />,
-        slot.status === 'DONE' ? 'انجام شد' : 'انجام نشد',
-      )}
+      {face(<span className="slot-missed size-7" aria-hidden="true" />, 'انجام نشد')}
       {slot.status === 'MISSED' && (
         <button
           className="text-link relative ms-auto text-xs"

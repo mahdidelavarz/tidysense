@@ -5,8 +5,13 @@ import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
 import { progressKey } from '../../structure/hooks/progress-hooks'
 import { todayKey } from '../../today/hooks/today-hooks'
-import { carryTask, completeTask, createTask, dropTask, getTask, listTasks, restoreTask, updateTask } from '../services/tasks-api'
-import type { CreateTaskRequest, TaskDto, UpdateTaskRequest } from '../types/task.types'
+import {
+  carryTask, changeTaskSequence, completeTask, createTask, dropTask, getTask, listTasks, previewNewTaskSequence, previewTaskSequence,
+  restoreTask, undoCompleteTask, updateTask,
+} from '../services/tasks-api'
+import type {
+  CreateTaskRequest, NewTaskSequencePreviewRequest, TaskDto, TaskSequenceAction, TaskSequencePreview, UpdateTaskRequest,
+} from '../types/task.types'
 
 /** Query key factory for Task queries. The single source of truth other Task hooks and mutations invalidate against. */
 export const taskKeys = {
@@ -136,5 +141,47 @@ export function useCompleteTask() {
       completedForLocalDate: string
     }) => completeTask(taskId, expectedVersion, completedForLocalDate),
     onSuccess: sync,
+  })
+}
+
+/**
+ * Undoes a done tick (018 note). Like completing, the id travels with each
+ * call, because a list undoes whichever row the user presses.
+ */
+export function useUndoCompleteTask() {
+  const sync = useTaskCacheSync()
+  return useMutation({
+    mutationFn: ({ taskId, expectedVersion }: { taskId: string; expectedVersion: number }) =>
+      undoCompleteTask(taskId, expectedVersion),
+    onSuccess: sync,
+  })
+}
+
+/** What a sequence change would do, asked of the server each time; nothing is stored or cached. */
+export function useTaskSequencePreview(taskId: string) {
+  return useMutation({
+    mutationFn: ({ action, predecessorId }: { action: TaskSequenceAction; predecessorId?: string | null }) =>
+      previewTaskSequence(taskId, action, predecessorId),
+  })
+}
+
+/** Applies exactly the change a preview showed. Every re-placed Task may have changed, so all Task views refresh. */
+export function useChangeTaskSequence(taskId: string) {
+  const sync = useTaskCacheSync()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (preview: TaskSequencePreview & { predecessorId?: string | null }) => changeTaskSequence(taskId,
+      preview.action as TaskSequenceAction, preview.predecessorId ?? null, preview.expectedMembers),
+    onSuccess: async task => {
+      await sync(task)
+      await client.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
+/** What «بعد از…» on the New Task form will do; asked of the server each time, nothing is stored. */
+export function useNewTaskSequencePreview() {
+  return useMutation({
+    mutationFn: (request: NewTaskSequencePreviewRequest) => previewNewTaskSequence(request),
   })
 }

@@ -81,23 +81,41 @@ public sealed class TaskService(
         var description = ParentCommandSupport.OptionalText(request.Description, 2000, "description");
         ValidateShape(request.GoalId, request.ProjectId, request.PlannedDate, request.Deadline,
             request.SequenceId, request.SequenceOrder, true);
+        if (request.Follow is not null && request.SequenceId is not null)
+            throw new ArgumentException("A new Task either follows another or names its sequence, not both.");
         var now = dates.UtcNow;
         var id = Guid.NewGuid();
         var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "CREATE_TASK",
             new
             {
                 title, description, request.GoalId, request.ProjectId, request.PlannedDate,
-                request.Deadline, request.SequenceId, request.SequenceOrder, request.IsProtected
+                request.Deadline, request.SequenceId, request.SequenceOrder, request.IsProtected,
+                follow = request.Follow is { } follow
+                    ? new
+                    {
+                        follow.PredecessorId,
+                        expected = follow.ExpectedMembers.OrderBy(x => x.TaskId).Select(x => $"{x.TaskId}:{x.Version}")
+                    }
+                    : null
             }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
         {
             await LockParentsAsync(context, owner, [(request.GoalId, request.ProjectId)],
                 request.GoalId, request.ProjectId, ct);
-            if (request.SequenceId is { } sequenceId)
+            var (sequenceId, sequenceOrder) = (request.SequenceId, request.SequenceOrder);
+            IReadOnlyList<CascadeEvent> cascades = [];
+            if (request.SequenceId is { } requested)
             {
-                await LockSequencesAsync(context, [sequenceId], ct);
-                await RequireSequencePlacementAsync(context, owner, sequenceId,
+                await LockSequencesAsync(context, [requested], ct);
+                await RequireSequencePlacementAsync(context, owner, requested,
                     request.SequenceOrder!.Value, request.GoalId, request.ProjectId, null, ct);
+            }
+            else if (request.Follow is { } follow)
+            {
+                // Made and placed together, or not at all.
+                var placed = await TaskSequenceService.PlaceNewAsync(context, owner, id, title, request.GoalId,
+                    request.ProjectId, follow, now, ct);
+                (sequenceId, sequenceOrder, cascades) = (placed.SequenceId, placed.Order, placed.Cascades);
             }
             context.Tasks.Add(new TaskItem
             {
@@ -109,15 +127,16 @@ public sealed class TaskService(
                 Description = description,
                 PlannedDate = request.PlannedDate,
                 Deadline = request.Deadline,
-                SequenceId = request.SequenceId,
-                SequenceOrder = request.SequenceOrder,
+                SequenceId = sequenceId,
+                SequenceOrder = sequenceOrder,
                 IsProtected = request.IsProtected,
                 ProtectionReasonCode = request.IsProtected ? ProtectionReasonCodes.User : null,
                 CreatedAt = now,
                 UpdatedAt = now
             });
             return new CommandMutation("Task", id, 1, TaskEventTypes.TaskCreated, 1,
-                CreatedPayload(request.GoalId, request.ProjectId, request.PlannedDate, request.SequenceId), now);
+                CreatedPayload(request.GoalId, request.ProjectId, request.PlannedDate, sequenceId), now)
+                { CascadeEvents = cascades };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(result.AggregateId!.Value, cancellationToken);
@@ -208,6 +227,46 @@ public sealed class TaskService(
             item.UpdatedAt = now;
             item.Version++;
             return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskCompleted, 1,
+                "{}", now);
+        }, cancellationToken);
+        ParentCommandSupport.RequireSuccess(result);
+        return await GetByIdAsync(id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Undoes a done tick (018 note): the Task is active again with its planned date, carry count and
+    /// place unchanged. Its parent must still be active, and a completed step is reopened only while no
+    /// later step of its sequence is completed, so the completed part stays a prefix (025 §16 note).
+    /// </summary>
+    public async Task<TaskDto> UndoCompleteAsync(Guid id, UndoCompleteTaskRequest request,
+        string idempotencyKey, CancellationToken cancellationToken)
+    {
+        var now = dates.UtcNow;
+        var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "UNDO_COMPLETE_TASK",
+            new { id, request.ExpectedVersion }, now);
+        var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
+        {
+            var snapshot = await context.Tasks.AsNoTracking().SingleOrDefaultAsync(
+                x => x.Id == id && x.UserId == owner, ct)
+                ?? throw new ResourceNotFoundException("Task", id);
+            await LockParentsAsync(context, owner, [(snapshot.GoalId, snapshot.ProjectId)],
+                snapshot.GoalId, snapshot.ProjectId, ct);
+            if (snapshot.SequenceId is { } sequenceId)
+                await LockSequencesAsync(context, [sequenceId], ct);
+            var item = await LockOwnedAsync(context, id, owner, ct);
+            VersionGuard.RequireMatch(id, request.ExpectedVersion, item.Version);
+            if (item.Status != TaskStatuses.Completed)
+                throw new CommandRejectedException("TASK_NOT_COMPLETED");
+            if (item.SequenceId is { } sequence && await context.Tasks.AnyAsync(x =>
+                    x.UserId == owner && x.SequenceId == sequence && x.SequenceOrder > item.SequenceOrder &&
+                    x.Status == TaskStatuses.Completed, ct))
+                throw new CommandRejectedException("SEQUENCE_LATER_STEP_DONE");
+            item.Status = TaskStatuses.Active;
+            item.CompletedForLocalDate = null;
+            item.TerminalAt = null;
+            item.UpdatedAt = now;
+            item.Version++;
+            return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskCompletionUndone, 1,
                 "{}", now);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
@@ -315,6 +374,9 @@ public sealed class TaskService(
             VersionGuard.RequireMatch(id, request.ExpectedVersion, item.Version);
             if (item.Status == TaskStatuses.Active)
                 throw new CommandRejectedException("RESOURCE_ALREADY_ACTIVE");
+            // Restore is for a dropped Task (018); a completed one is undone, which keeps a sequence's done part intact.
+            if (item.Status == TaskStatuses.Completed)
+                throw new CommandRejectedException("TASK_COMPLETED_UNDO_INSTEAD");
             item.Status = TaskStatuses.Active;
             item.PlannedDate = request.PlannedDate;
             item.CompletedForLocalDate = null;

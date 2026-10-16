@@ -46,10 +46,10 @@ test('a multi-slot Routine and a Task are executed together from Today', async (
   await page.screenshot({ path: 'test-results/step-06-today-before.png', fullPage: true })
 
   await group.getByRole('button', { name: `انجام شد: ${routineTitle}، ۰۰:۰۰` }).click()
-  await expect(group.getByText('، انجام شد')).toBeAttached()
+  await expect(group.getByRole('button', { name: `لغو انجام: ${routineTitle}، ۰۰:۰۰` })).toBeVisible()
   await expect(group.getByRole('button', { name: /^انجام شد:/ })).toHaveCount(1)
   await page.getByRole('button', { name: `تکمیل کار: ${taskTitle}` }).click()
-  // A Task done today stays on the timeline, read-only.
+  // A Task done today stays on the timeline, its tick now undoing it.
   await expect(page.getByRole('button', { name: `تکمیل کار: ${taskTitle}` })).toBeHidden()
   await expect(page.getByRole('heading', { name: taskTitle })).toBeVisible()
   // The Routine's remaining slot keeps Today from being empty.

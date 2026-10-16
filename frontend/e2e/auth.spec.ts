@@ -97,9 +97,9 @@ test('manual task moves through Today to completion', async ({ page }) => {
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-before.png', fullPage: true })
   await page.getByRole('button', { name: `تکمیل کار: ${title}` }).click()
-  // Done today, it stays on the timeline as a finished row with nothing left to press.
+  // Done today, it stays on the timeline as a finished row whose tick, pressed again, would undo it.
   await expect(page.getByRole('button', { name: `تکمیل کار: ${title}` })).toBeHidden()
-  await expect(page.getByRole('listitem').filter({ hasText: title }).getByRole('img', { name: 'انجام شد' })).toBeVisible()
+  await expect(page.getByRole('listitem').filter({ hasText: title }).getByRole('button', { name: `لغو انجام: ${title}` })).toBeVisible()
   await page.screenshot({ path: 'test-results/step-05-today-after.png', fullPage: true })
 
   // The list shows open Tasks first; on desktop a completed one is in the «پایان‌یافته» view and opens beside it.

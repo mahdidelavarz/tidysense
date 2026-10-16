@@ -1,4 +1,5 @@
 import { type RefObject, useEffect } from 'react'
+import { holdLayout } from './use-desktop'
 
 const focusableSelector =
   'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'
@@ -6,8 +7,8 @@ const focusableSelector =
 /**
  * Shared modal behaviour for dialogs, sheets and the navigation drawer:
  * moves focus inside on open (to `[data-autofocus]` when present), traps Tab, closes on Escape (unless locked by a
- * pending action), prevents the page behind from scrolling, and restores
- * focus to the trigger on close.
+ * pending action), prevents the page behind from scrolling, keeps the page's
+ * layout while open (`holdLayout`), and restores focus to the trigger on close.
  */
 export function useModal(panel: RefObject<HTMLElement | null>, onClose: () => void, locked = false) {
   useEffect(() => {
@@ -17,8 +18,10 @@ export function useModal(panel: RefObject<HTMLElement | null>, onClose: () => vo
     start?.focus()
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    const release = holdLayout()
     return () => {
       document.body.style.overflow = previousOverflow
+      release()
       previousFocus?.focus()
     }
   }, [panel])

@@ -57,7 +57,7 @@ test('desktop layouts show the phone’s data and actions at 1440px, by pointer 
   await expect(list.getByRole('heading', { name: names.bread })).toBeVisible()
   await list.getByRole('button', { name: `تکمیل کار: ${names.bread}` }).focus()
   await page.keyboard.press('Enter')
-  await expect(list.getByRole('listitem').filter({ hasText: names.bread }).getByRole('img', { name: 'انجام شد' })).toBeVisible()
+  await expect(list.getByRole('listitem').filter({ hasText: names.bread }).getByRole('button', { name: `لغو انجام: ${names.bread}` })).toBeVisible()
   await noSidewaysScroll(page)
   for (const theme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: theme })

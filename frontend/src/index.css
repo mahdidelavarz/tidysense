@@ -899,9 +899,9 @@ select:not(:disabled),
     @apply flex-1 overflow-y-auto px-5 pb-6 pt-5 sm:px-6;
   }
 
-  /* Keeps a form's submit row visible while the sheet body scrolls. */
+  /* Keeps a form's submit row visible while the sheet body scrolls, at its very edge: the body's bottom padding would otherwise show content beneath it. */
   .sheet-actions {
-    @apply sticky bottom-0 z-1 -mx-5 -mb-6 mt-2 flex gap-3 border-t border-border-subtle bg-surface-raised px-5 py-4 sm:-mx-6 sm:justify-end sm:px-6;
+    @apply sticky -bottom-6 z-1 -mx-5 -mb-6 mt-2 flex gap-3 border-t border-border-subtle bg-surface-raised px-5 py-4 sm:-mx-6 sm:justify-end sm:px-6;
   }
 
   /* On phones the primary action takes the remaining width beside a compact cancel. */
@@ -1736,6 +1736,21 @@ select:not(:disabled),
 
   .ring-done {
     @apply flex size-6 items-center justify-center rounded-full bg-entity-task text-surface;
+  }
+
+  /* The grip a step of a sequence is dragged by; on touch it drags instead of scrolling the page. */
+  .drag-handle {
+    @apply -my-2 -me-2 flex size-11 shrink-0 cursor-grab items-center justify-center rounded-full text-text-tertiary hover:text-text-secondary active:cursor-grabbing;
+    touch-action: none;
+  }
+
+  /* A done tick stays pressable: pressed again, it undoes the completion. */
+  .ring-button > .ring-done {
+    @apply border-entity-task bg-entity-task;
+  }
+
+  .ring-button:not(:disabled):hover > .ring-done {
+    background: color-mix(in srgb, var(--color-entity-task) 80%, var(--color-surface));
   }
 
   .ring-lock {

@@ -6,18 +6,21 @@ import { SwipeActions } from './SwipeActions'
 
 /**
  * One Task in Today's timeline. The node is its completion ring (a lock while
- * it waits for earlier steps, a filled ring once done today); the card opens
- * the Task. Moving it to another day and dropping it are the card's hidden
+ * it waits for earlier steps, a filled ring once done today, pressed again to
+ * undo it); the card opens the Task. Moving it to another day and dropping it are the card's hidden
  * actions. `onComplete` is absent when the row only previews another day.
  */
-export function TodayTaskCard({ task, today, parentTitle, completing = false, onComplete, onCarry, onDrop }: {
+export function TodayTaskCard({ task, today, parentTitle, completing = false, undoing = false, onComplete, onUndo, onCarry, onDrop }: {
   task: TaskDto
   /** Today's ISO local date, for how close the deadline is. */
   today: string
   /** Title of the Goal or Project the Task belongs to, when it is known. */
   parentTitle?: string
   completing?: boolean
+  undoing?: boolean
   onComplete?: () => void
+  /** Undoes the done tick; absent where the row only previews. */
+  onUndo?: () => void
   onCarry: () => void
   onDrop: () => void
 }) {
@@ -52,7 +55,13 @@ export function TodayTaskCard({ task, today, parentTitle, completing = false, on
     <li className="timeline-row">
       <div className="timeline-node">
         <span className="timeline-mark">
-          {done ? (
+          {done && onUndo ? (
+            <button className="ring-button" type="button" aria-label={`لغو انجام: ${task.title}`} disabled={undoing} onClick={onUndo}>
+              {undoing
+                ? <LoaderCircle size={20} className="animate-spin text-entity-task" aria-hidden="true" />
+                : <span className="ring-done" aria-hidden="true"><Check size={14} /></span>}
+            </button>
+          ) : done ? (
             <span className="ring-done" role="img" aria-label="انجام شد"><Check size={14} /></span>
           ) : task.isBlocked ? (
             <span className="ring-lock" role="img" aria-label="منتظر کارهای پیشین"><Lock size={13} /></span>

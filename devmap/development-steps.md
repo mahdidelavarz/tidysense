@@ -1294,9 +1294,77 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
 
 **Completion criteria:** A user can link two existing Tasks, reorder the unresolved part and remove a Task from its order, all on the phone and on desktop.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE` — verified on 2026-10-16. Still owed: `./dev.ps1 check` and `./auth-e2e.ps1` on Windows.
 
-**Evidence:** None.
+**Evidence:**
+
+- **One command, a preview that is not stored.** This is the second exception to the stored `ActionConfirmation` convention ([active conventions](context/active-conventions.md)).
+  - `POST /api/v1/tasks/{id}/sequence-preview` returns:
+    - the order after the change;
+    - who will wait;
+    - the id and version of every Task it read.
+  - `POST /api/v1/tasks/{id}/sequence` (`CHANGE_TASK_SEQUENCE`, with an Idempotency-Key) sends them back. Under the sequence lock it plans again, then refuses:
+    - `SEQUENCE_PREVIEW_STALE` if the set of Tasks differs;
+    - `CONFLICT_STALE_VERSION` if a version differs.
+  - Other Tasks it re-places are cascade events with actor `USER`.
+  - Existing create and update commands were kept; only this one was added.
+- **Rules** ([planner](../backend/Services/TaskSequencePlanner.cs), [service](../backend/Services/TaskSequenceService.cs)), per 025 §2–§4 and §16:
+  - «بعد از…» needs an active Task without a sequence and an undropped Task of the same Goal, Project or none (`SEQUENCE_SCOPE_MISMATCH`, `SEQUENCE_ALREADY_SET`, `PREDECESSOR_NOT_AVAILABLE`). It starts a sequence when that Task has none.
+  - A move swaps with an active neighbour, never past a completed step (`SEQUENCE_MOVE_UNAVAILABLE`).
+  - Leaving clears the Task, and also the last one left.
+  - A sequence with a dropped step is refused with `SEQUENCE_NEEDS_RECONCILE` and resolved in Reconcile.
+  - Order values are kept where they still fit. A new value is never one another member holds, so the unique index is never hit mid-write.
+- **Tests:**
+  - [planner tests](../backend.Tests/TaskSequencePlannerTests.cs), five;
+  - [command test](../backend.Tests/TaskTodayModuleTests.cs) `Two_existing_tasks_become_a_sequence_by_hand_that_moves_and_releases_only_as_previewed`: link, replay, joining a sequence, move, stale version 409, a partial preview, leave, another owner's Task 404, scope mismatch, unknown action 400, and the `USER` cascade event.
+- **Frontend:**
+  - [Task page](../frontend/src/features/tasks/components/TaskDetailView.tsx): «بعد از…» on an active Task without a sequence, when a same-owner Task exists. A sequence has «زودتر», «دیرتر» and «بیرون از ترتیب»; a move that is not possible is disabled.
+  - [sheet](../frontend/src/features/tasks/components/TaskSequenceSheet.tsx): previews at once, or once the Task to follow is chosen. It shows the order with «منتظر می‌ماند». «تأیید» sends exactly the preview, and a refusal previews again.
+  - [New Task](../frontend/src/features/tasks/components/TaskSequenceSelect.tsx): «مستقل، منتظر کاری نیست» or «بعد از «…»» in place of «شروع دنبالهٔ جدید».
+    - The server's preview of the order is shown («ترتیب بعد از ساخت»), and the create request carries it as `follow`. The Task is made in that order or not at all (follow-up below).
+    - A choice no longer of the chosen owner is not sent.
+  - [component tests](../frontend/src/features/tasks/components/TaskSequence.test.tsx), three.
+- **Verified on Linux, 2026-10-16:**
+  - 292 backend tests passed, 2 skipped (the real-provider runs);
+  - 118 frontend tests passed; typecheck, lint and build were clean;
+  - all browser scenarios passed on a fresh database, the opt-in time-to-draft one skipped. [`sequence.spec.ts`](../frontend/e2e/sequence.spec.ts):
+    - two existing Tasks linked, moved and released on 390 px and 1440 px;
+    - a new Task made to follow from the create form;
+  - the phone and desktop screenshots of the sheet and the sequence card were inspected.
+
+**Follow-up, 2026-10-16 (asked by the owner):**
+
+- **Create and follow are one request.**
+  - `POST /api/v1/tasks/sequence-preview` previews the order for a Task not yet made; the new Task is the step `00000000-…`.
+  - `CREATE_TASK` takes `follow` (predecessor and expected members) and places the Task inside the same transaction. A changed or partial preview, a scope mismatch, or `follow` with a `sequenceId` creates nothing. [Command test](../backend.Tests/TaskTodayModuleTests.cs) `A_new_task_is_made_already_following_another_or_not_at_all`.
+- **Crossing the desktop breakpoint no longer closes an open sheet, anywhere.**
+  - While a modal is open, `useIsDesktop` keeps the page's layout and switches once the last modal closes ([use-desktop](../frontend/src/shared/lib/use-desktop.ts)).
+  - The [unit test](../frontend/src/shared/lib/use-desktop.test.tsx) and the [browser test](../frontend/e2e/undo-tick.spec.ts) type into a sheet, resize from 1440px to 800px and back, and keep the text. Both fail without the change.
+- **A done tick is undone on the same tick** (owner decision; Mind Map notes in 018, 024 §8 and 025 §16):
+  - `POST /tasks/{id}/undo-complete` reopens a Task exactly as it was. It is refused while a later step of its sequence is done, and under an ended Goal or Project.
+  - Restore now refuses a completed Task (`TASK_COMPLETED_UNDO_INSTEAD`), so the guard cannot be bypassed.
+  - `POST /routine-occurrences/{id}/undo-done` returns a slot to pending while its window is open, otherwise to missed.
+  - On Today, the Tasks list, the Task page and the Routine page, the done tick is a «لغو انجام: …» button.
+  - Tests: [Task](../backend.Tests/TaskTodayModuleTests.cs) `A_done_tick_is_undone_exactly_and_never_breaks_the_completed_part_of_a_sequence`, [Routine](../backend.Tests/RoutineModuleTests.cs) `Undoing_a_done_tick_returns_the_slot_to_what_it_would_be_without_it`, [Today](../frontend/src/features/today/components/TodayView.test.tsx), and the browser test above.
+- **Found while checking:** a sheet's sticky action bar sat 24px above the sheet's edge, so content showed beneath it in long forms. It now sits at the edge.
+- **Verified on Linux, 2026-10-16:**
+  - 295 backend tests passed, 2 skipped;
+  - 119 frontend tests passed; typecheck, lint and build were clean;
+  - 27 browser scenarios passed on a fresh database, 1 opt-in skipped. Three older scenarios asserted a read-only done tick and now assert the undo button.
+
+**Second follow-up, 2026-10-16 (owner decisions):**
+
+- **Drag to reorder.**
+  - On the Task page, each open step of a sequence has a grip. A drop is only a proposal: it opens the same preview, and nothing changes until «تأیید».
+  - The planner's new `MOVE_TO` places a step after a given one (none: first), never among the completed steps, outside the sequence, after itself, or in place.
+  - Tests: [planner](../backend.Tests/TaskSequencePlannerTests.cs) `A_dragged_step_lands_after_the_chosen_one_but_never_among_the_completed_ones`, the API drag in `Two_existing_tasks_become_a_sequence…`, the [component test](../frontend/src/features/tasks/components/TaskSequence.test.tsx), and the [browser test](../frontend/e2e/sequence.spec.ts) at 390px and 1440px with a real pointer drag.
+- **Undo window in the Tasks list:** the tick undoes only a completion of the last seven days (`doneInLastWeek`, the same reach as the list's «هفت روز اخیر»). An older one is undone from the Task's page. The server rule is unchanged.
+- **Verified on Linux, 2026-10-16:** 296 backend tests passed, 2 skipped; 121 frontend tests passed, with typecheck, lint and build clean; 29 browser scenarios passed on a fresh database, 1 opt-in skipped.
+
+**Known limits:**
+
+- **Dragging is pointer only.** The keyboard and assistive technology move a step with «زودتر» and «دیرتر» on that step's own page, one place at a time.
+- **There is no reorder in the Tasks list itself**, which is grouped by date, not by sequence.
 
 ---
 

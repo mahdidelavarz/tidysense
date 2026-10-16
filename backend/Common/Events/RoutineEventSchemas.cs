@@ -33,6 +33,8 @@ public static class RoutineEventSchemas
         { RoutineStopCauses.User, RoutineStopCauses.ProjectTerminal };
     private static readonly HashSet<string> ResolvedStatuses = new(StringComparer.Ordinal)
         { "DONE", "MISSED" };
+    private static readonly HashSet<string> CorrectedStatuses = new(StringComparer.Ordinal)
+        { "DONE", "MISSED", "PENDING" };
     private static readonly HashSet<string> MetadataFields = new(StringComparer.Ordinal)
         { "title", "description", "goalId", "projectId" };
     private static readonly HashSet<string> ScheduleFields = new(StringComparer.Ordinal)
@@ -56,7 +58,8 @@ public static class RoutineEventSchemas
         yield return new EventPayloadSchema(RoutineEventTypes.OccurrenceMissed, 1);
         yield return new EventPayloadSchema(RoutineEventTypes.OccurrenceCorrected, 1,
             new EventPayloadFieldPolicy("previousStatus", true, value => Allowed(value, ResolvedStatuses)),
-            new EventPayloadFieldPolicy("newStatus", true, value => Allowed(value, ResolvedStatuses)));
+            // PENDING only when a tick is undone inside its window (024 §8 note).
+            new EventPayloadFieldPolicy("newStatus", true, value => Allowed(value, CorrectedStatuses)));
     }
 
     private static EventPayloadSchema Created(string type) => new(type, 1,

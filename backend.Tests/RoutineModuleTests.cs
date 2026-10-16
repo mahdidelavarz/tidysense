@@ -184,6 +184,44 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task Undoing_a_done_tick_returns_the_slot_to_what_it_would_be_without_it()
+    {
+        PinLocal(Day, 10, 0);
+        var session = await CreateSessionAsync();
+        using var client = Client(session.Token);
+        await CreateRoutineAsync(client, "undo-tick", times: [new TimeOnly(9, 0), new TimeOnly(15, 0)]);
+        var slots = (await TodayAsync(client)).RoutineOccurrences;
+        var nine = slots.Single(x => x.ScheduledLocalTime == new TimeOnly(9, 0));
+        var fifteen = slots.Single(x => x.ScheduledLocalTime == new TimeOnly(15, 0));
+        async Task<RoutineOccurrenceDto> Post(Guid id, string verb, long version, string key)
+        {
+            var response = await SendAsync(client, HttpMethod.Post, $"/api/v1/routine-occurrences/{id}/{verb}",
+                new { expectedVersion = version }, key);
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<RoutineOccurrenceDto>())!;
+        }
+
+        // Inside its window the slot is pending again, and can be ticked again.
+        var done = await Post(nine.Id, "done", nine.Version, "undo-tick-done");
+        var undone = await Post(nine.Id, "undo-done", done.Version, "undo-tick-undo");
+        Assert.Equal(("PENDING", (DateTimeOffset?)null), (undone.Status, undone.ResolvedAt));
+        Assert.Equal((Day, new TimeOnly(9, 0)), (undone.ScheduledLocalDate, undone.ScheduledLocalTime!.Value));
+        var notDone = await SendAsync(client, HttpMethod.Post, $"/api/v1/routine-occurrences/{nine.Id}/undo-done",
+            new { expectedVersion = undone.Version }, "undo-tick-pending");
+        Assert.Equal("OCCURRENCE_NOT_DONE", await ProblemCodeAsync(notDone));
+        done = await Post(nine.Id, "done", undone.Version, "undo-tick-again");
+
+        // Once the next slot has begun, the morning slot's window has passed: undone, it was missed.
+        PinLocal(Day, 15, 0);
+        var missed = await Post(nine.Id, "undo-done", done.Version, "undo-tick-late");
+        Assert.Equal("MISSED", missed.Status);
+        Assert.NotNull(missed.ResolvedAt);
+        var afternoon = await Post(fifteen.Id, "done", fifteen.Version, "undo-tick-fifteen");
+        Assert.Equal("PENDING", (await Post(fifteen.Id, "undo-done", afternoon.Version, "undo-tick-fifteen-undo")).Status);
+        Assert.Equal("PENDING", (await TodayAsync(client)).RoutineOccurrences.Single(x => x.Id == fifteen.Id).Status);
+    }
+
+    [Fact]
     public async Task Occurrences_resolve_once_at_slot_and_day_boundaries_and_corrections_keep_identity()
     {
         PinLocal(Day, 10, 0);
