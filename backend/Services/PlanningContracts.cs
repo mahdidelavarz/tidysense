@@ -64,7 +64,12 @@ public sealed record PlanningProposal(
     IReadOnlyList<TimeOnly>? TimesOfDay,
     DateOnly? EffectiveFromLocalDate,
     string? SequenceKey = null,
-    int? SequenceOrder = null);
+    int? SequenceOrder = null,
+    // An existing active Project of the Goal context the Task or Routine belongs to (with UnderContext).
+    Guid? ContextProjectId = null,
+    // An existing open Task of the context this proposal dates (029 §3 follow-up): only its planned date
+    // and whether it is included are proposed; it is never created, renamed or moved.
+    Guid? ExistingTaskId = null);
 
 /// <summary>Only the field that belongs to the fact type is set. Weekdays are ISO numbers (Monday = 1).</summary>
 public sealed record PlanningFactValue(
@@ -114,7 +119,7 @@ public static class PlanningRemovedItemTypes
 
 public static class PlanningJson
 {
-    public const string SchemaVersion = "2026-10-15.1";
+    public const string SchemaVersion = "2026-10-16.2";
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     public static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Options);
@@ -130,30 +135,48 @@ public static class PlanningContextTypes
     public const string Project = "PROJECT";
 }
 
-/// <summary>The Goal or Project the planning started from, and where its planning details live.</summary>
+/// <summary>
+/// The Goal or Project the planning started from, and where its planning details live. <c>Meaning</c>
+/// is what the user approved as its point: a Goal's desired outcome or a Project's completion meaning.
+/// </summary>
 public sealed record PlanningScope(
     string Type,
     Guid Id,
     string Title,
     long Version,
     string FactScopeType,
-    Guid FactScopeId);
+    Guid FactScopeId,
+    string? Meaning = null,
+    DateOnly? TargetDate = null);
 
 public sealed record PlanningFactData(string FactType, string Strength, PlanningFactValue Value);
 
-public sealed record PlanningContextProject(Guid Id, string Title, DateOnly? TargetDate);
+/// <summary>An active Project of the scope. <c>Ref</c> is how a proposal names it as its parent ("P1", "P2", …).</summary>
+public sealed record PlanningContextProject(Guid Id, string Title, DateOnly? TargetDate, string Ref = "");
 
-public sealed record PlanningContextRoutine(Guid Id, string Title, Guid? ProjectId, PlanningRecurrence Recurrence);
+/// <summary>An active Routine of the scope, with its slots kept and missed in the previous window.</summary>
+public sealed record PlanningContextRoutine(Guid Id, string Title, Guid? ProjectId, PlanningRecurrence Recurrence,
+    int DoneCount = 0, int MissedCount = 0, IReadOnlyList<TimeOnly>? TimesOfDay = null);
 
+/// <summary>
+/// An unfinished Task of the scope; <c>WaitsFor</c> names the earlier steps of its sequence still open.
+/// <c>Ref</c> is how a proposal names it to give it a date in the planned week ("T1", "T2", …).
+/// </summary>
 public sealed record PlanningContextTask(
     Guid Id,
     string Title,
     Guid? ProjectId,
     DateOnly? PlannedDate,
     DateOnly? Deadline,
-    IReadOnlyList<string> ReasonCodes);
+    IReadOnlyList<string> ReasonCodes,
+    IReadOnlyList<string>? WaitsFor = null,
+    string Ref = "");
 
-/// <summary>What happened in the scope during the previous seven local days. Nothing older is supplied.</summary>
+/// <summary>
+/// What happened in the scope during the previous window: the seven local days before today, or
+/// for a continuation the planned week itself through today (029 §3). Nothing older is supplied.
+/// <c>Left</c> Tasks were planned inside it and are still open.
+/// </summary>
 public sealed record PlanningPreviousWindow(
     DateOnly StartDate,
     DateOnly EndDate,
@@ -162,7 +185,12 @@ public sealed record PlanningPreviousWindow(
     int CarriedTaskCount,
     int DroppedTaskCount,
     int RoutineDoneCount,
-    int RoutineMissedCount);
+    int RoutineMissedCount,
+    IReadOnlyList<string>? LeftTaskTitles = null,
+    int LeftTaskCount = 0);
+
+/// <summary>The planned week a generation continues: its number and its dates.</summary>
+public sealed record PlanningContinuationContext(Guid WindowId, int Week, DateOnly PreviousStart, DateOnly PreviousEnd);
 
 /// <summary>
 /// The bounded input of one generation, rebuilt from current product state. It never contains a
@@ -179,7 +207,8 @@ public sealed record PlanningContext(
     IReadOnlyList<PlanningContextProject> Projects,
     IReadOnlyList<PlanningContextRoutine> Routines,
     IReadOnlyList<PlanningContextTask> UnfinishedTasks,
-    PlanningPreviousWindow? PreviousWindow)
+    PlanningPreviousWindow? PreviousWindow,
+    PlanningContinuationContext? Continuation = null)
 {
     /// <summary>Identifies exactly this context. A result produced from another context is rejected.</summary>
     public string Fingerprint { get; init; } = string.Empty;

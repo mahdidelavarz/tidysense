@@ -31,6 +31,7 @@ public static class RetentionCatalog
         new(typeof(RoutineOccurrence), Canonical, UntilErasure),
         new(typeof(CaptureItem), Canonical, UntilErasure),
         new(typeof(PlanningFact), R1, UntilErasure),
+        new(typeof(PlanningWindow), R1, UntilErasure),
         new(typeof(DomainEvent), R1, "Never purged. On erasure the user id is replaced by a tombstone."),
         new(typeof(CommandResult), R1, "Never purged. On erasure the user id is replaced by a tombstone."),
         new(typeof(ReconcileSession), R2, "A closed session is removed R2 days after it closed."),

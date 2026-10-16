@@ -311,6 +311,24 @@ public sealed class AiPlanningRuntimeTests
     }
 
     [Fact]
+    public void A_routines_days_and_times_reach_the_model_so_a_next_week_keeps_its_rhythm_without_asking()
+    {
+        // 029 §3: the next week does not ask for availability again; the Routine already says when.
+        var context = PlanningOutputGateTests.Context() with
+        {
+            Routines = [new PlanningContextRoutine(Guid.NewGuid(), "تمرین شبانه", null,
+                new PlanningRecurrence("SPECIFIC_WEEKDAYS", [1, 3, 6], null), 2, 1, [new TimeOnly(21, 30)])]
+        };
+        var prompt = PlanningPromptRenderer.Render(new PlanningGenerationRequest(Guid.NewGuid(), Intention, context, null), int.MaxValue)!;
+        Assert.Contains("\"timesOfDay\":[\"21:30\"]", prompt.User);
+        Assert.Contains("Never ask about availability", prompt.System);
+        // A weekday just beyond the window has its real date: the seven days after it are in the calendar.
+        var after = context.WindowEnd.AddDays(PlanningLimits.HorizonDays).ToString("yyyy-MM-dd");
+        Assert.Contains("\"afterWindow\":[", prompt.User);
+        Assert.Contains($"\"date\":\"{after}\"", prompt.User);
+    }
+
+    [Fact]
     public async Task Only_history_is_reduced_and_a_mandatory_context_that_does_not_fit_is_never_sent()
     {
         var context = PlanningOutputGateTests.Context() with

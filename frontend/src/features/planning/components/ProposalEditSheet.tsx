@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { emptyToNull } from '../../../shared/lib/forms'
 import { DateField } from '../../../shared/ui/DateField'
@@ -13,6 +14,45 @@ const sheetTitles: Record<string, string> = {
   GOAL: 'ویرایش هدف پیشنهادی', PROJECT: 'ویرایش پروژه پیشنهادی', TASK: 'ویرایش کار پیشنهادی', ROUTINE: 'ویرایش روتین پیشنهادی',
 }
 const supported = ['DAILY', 'SPECIFIC_WEEKDAYS', 'MONTHLY_ON_DAY']
+
+/**
+ * An existing Task the plan puts into the week: only its day is chosen here. Its
+ * title, place, deadline and order stay its own; they are edited on the Task itself.
+ */
+export function ExistingTaskDateSheet({ proposal, pending, error, onSubmit, onClose }: {
+  proposal: PlanningProposal
+  pending: boolean
+  error: unknown
+  onSubmit: (changed: PlanningProposal) => void
+  onClose: () => void
+}) {
+  const [plannedDate, setPlannedDate] = useState(proposal.plannedDate ?? '')
+  return (
+    <Sheet
+      title="روز کار موجود"
+      description={`«${proposal.title}» از قبل هست. این برنامه فقط روزش را در این هفته می‌گذارد؛ تا تأیید نهایی چیزی عوض نمی‌شود.`}
+      onClose={onClose}
+      locked={pending}
+    >
+      <form
+        className="form-stack"
+        noValidate
+        aria-busy={pending}
+        onSubmit={event => {
+          event.preventDefault()
+          onSubmit({ ...proposal, plannedDate: emptyToNull(plannedDate) })
+        }}
+      >
+        <DateField label="روز انجام" hint="باید در هفت روز پیش رو باشد." value={plannedDate} onChange={setPlannedDate} />
+        <FormError error={error} />
+        <div className="sheet-actions">
+          <button className="secondary-button" type="button" disabled={pending} onClick={onClose}>انصراف</button>
+          <button className="primary-button" type="submit" disabled={pending}>{pending ? 'در حال ذخیره…' : 'ذخیره در پیش‌نویس'}</button>
+        </div>
+      </form>
+    </Sheet>
+  )
+}
 
 /**
  * Edits one proposal before approval. Saving stores a new draft revision on
@@ -35,6 +75,8 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
     item.draftId !== proposal.draftId &&
     (type === 'PROJECT' ? item.entityType === 'GOAL' : type !== 'GOAL' && (item.entityType === 'GOAL' || item.entityType === 'PROJECT')))
   const contextAllowed = draft.context !== null && type !== 'GOAL' && !(type === 'PROJECT' && draft.context.type === 'PROJECT')
+  // A Task or Routine of a Goal plan may also go under one of the Goal's existing Projects.
+  const existingProjects = draft.context?.type === 'GOAL' && (type === 'TASK' || type === 'ROUTINE') ? draft.contextProjects ?? [] : []
 
   const form = useForm<ProposalFields>({
     resolver: zodResolver(proposalFieldsSchema),
@@ -42,7 +84,9 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
       entityType: type,
       title: proposal.title,
       description: proposal.description ?? '',
-      parent: proposal.parentDraftId ? `draft:${proposal.parentDraftId}` : proposal.underContext ? 'context' : 'none',
+      parent: proposal.parentDraftId ? `draft:${proposal.parentDraftId}`
+        : proposal.contextProjectId ? `project:${proposal.contextProjectId}`
+        : proposal.underContext ? 'context' : 'none',
       desiredOutcome: proposal.desiredOutcome ?? '',
       completionMeaning: proposal.completionMeaning ?? '',
       targetDate: proposal.targetDate ?? '',
@@ -64,7 +108,8 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
     title: values.title,
     description: emptyToNull(values.description),
     parentDraftId: values.parent.startsWith('draft:') ? values.parent.slice('draft:'.length) : null,
-    underContext: values.parent === 'context',
+    underContext: values.parent === 'context' || values.parent.startsWith('project:'),
+    contextProjectId: values.parent.startsWith('project:') ? values.parent.slice('project:'.length) : null,
     desiredOutcome: type === 'GOAL' ? values.desiredOutcome : null,
     completionMeaning: type === 'PROJECT' ? emptyToNull(values.completionMeaning) : null,
     targetDate: isParent ? emptyToNull(values.targetDate) : null,
@@ -122,6 +167,7 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
                 options={[
                   { value: 'none', label: 'مستقل' },
                   ...(contextAllowed && draft.context ? [{ value: 'context', label: `زیر «${draft.context.title}»` }] : []),
+                  ...existingProjects.map(project => ({ value: `project:${project.id}`, label: `زیر «${project.title}»` })),
                   ...parents.map(item => ({ value: `draft:${item.draftId}`, label: `زیر «${item.title}»` })),
                 ]}
               />

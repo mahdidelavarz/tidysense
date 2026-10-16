@@ -12,6 +12,8 @@ public static class PlanningEventTypes
     public const string FactRemoved = "PLANNING_FACT_REMOVED";
     public const string ClarificationAsked = "PLANNING_CLARIFICATION_ASKED";
     public const string ClarificationAnswered = "PLANNING_CLARIFICATION_ANSWERED";
+    public const string WindowOpened = "PLANNING_WINDOW_OPENED";
+    public const string ContinuationDecided = "PLANNING_CONTINUATION_DECIDED";
 }
 
 public static class PlanningDraftEndReasons
@@ -37,6 +39,8 @@ public static class PlanningEventSchemas
     private static readonly HashSet<string> FactSources = new(StringComparer.Ordinal)
         { "USER_EXPLICIT", "USER_CONFIRMED_AI_EXTRACTION" };
     private static readonly HashSet<string> FactScopes = new(StringComparer.Ordinal) { "GOAL", "PROJECT" };
+    private static readonly HashSet<string> Decisions = new(StringComparer.Ordinal)
+        { "CONTINUE_AS_IS", "ADJUST", "PAUSE_OR_STOP", "REPLANNED" };
 
     public static IEnumerable<EventPayloadSchema> All()
     {
@@ -77,6 +81,11 @@ public static class PlanningEventSchemas
             Count("goalCount"), Count("projectCount"), Count("taskCount"), Count("routineCount"),
             Count("factCount"), Count("excludedGoalCount"), Count("excludedProjectCount"),
             Count("excludedTaskCount"), Count("excludedRoutineCount"));
+        // Version 3 (029 §3 follow-up) adds the existing Tasks the approval only dated; taskCount stays new Tasks.
+        yield return new EventPayloadSchema(PlanningEventTypes.DraftApplied, 3,
+            Count("goalCount"), Count("projectCount"), Count("taskCount"), Count("routineCount"),
+            Count("factCount"), Count("excludedGoalCount"), Count("excludedProjectCount"),
+            Count("excludedTaskCount"), Count("excludedRoutineCount"), Count("datedTaskCount"));
         yield return new EventPayloadSchema(PlanningEventTypes.FactCreated, 1,
             new EventPayloadFieldPolicy("factType", true, value => Allowed(value, FactTypes)),
             new EventPayloadFieldPolicy("strength", true, value => Allowed(value, Strengths)),
@@ -84,6 +93,12 @@ public static class PlanningEventSchemas
             new EventPayloadFieldPolicy("scope", true, value => Allowed(value, FactScopes)));
         yield return new EventPayloadSchema(PlanningEventTypes.FactRemoved, 1,
             new EventPayloadFieldPolicy("factType", true, value => Allowed(value, FactTypes)));
+        // A planned week (029 §3): its scope kind and number, and what was decided about the next one.
+        yield return new EventPayloadSchema(PlanningEventTypes.WindowOpened, 1,
+            new EventPayloadFieldPolicy("scope", true, value => Allowed(value, FactScopes)), Count("week"));
+        yield return new EventPayloadSchema(PlanningEventTypes.ContinuationDecided, 1,
+            new EventPayloadFieldPolicy("decision", true, value => Allowed(value, Decisions)), Count("week"),
+            Count("daysAfterEnd"));
     }
 
     private static readonly HashSet<string> QuestionKinds = new(StringComparer.Ordinal)

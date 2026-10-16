@@ -30,6 +30,8 @@ public sealed class PlanningAttempt
     public bool DraftNow { get; set; }
     public string? AnswersJson { get; set; }
     public Guid? DraftId { get; set; }
+    /// <summary>The planned week this attempt continues (029 §3); null for any other planning.</summary>
+    public Guid? ContinuationOfWindowId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
@@ -146,6 +148,44 @@ public static class PlanningRevisionOrigins
 /// field of its own. It belongs to exactly one Goal or one standalone Project. It is planning
 /// context, not a work entity.
 /// </summary>
+/// <summary>
+/// One approved week of detailed work for a Goal or standalone Project (014 §4.4–§4.5, 029 §3): its
+/// local dates, its place in the chain of weeks, and the decision taken about the next one. It holds
+/// no work of its own, so it is not a plan (023 §3); the work is the Goal's Tasks and Routines.
+/// </summary>
+public sealed class PlanningWindow
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid? GoalId { get; set; }
+    public Guid? ProjectId { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+    /// <summary>1 for the first approved week, then one more for each continuation.</summary>
+    public int Week { get; set; } = 1;
+    public Guid? PreviousWindowId { get; set; }
+    public Guid SourceDraftId { get; set; }
+    public string? Decision { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public long Version { get; set; } = 1;
+    public string RetentionClass { get; set; } = "R1";
+}
+
+/// <summary>What became of the week after a planned window (014 §4.5, §5.6).</summary>
+public static class PlanningWindowDecisions
+{
+    /// <summary>The next week was approved as proposed.</summary>
+    public const string ContinueAsIs = "CONTINUE_AS_IS";
+    /// <summary>The next week was approved after the person changed it.</summary>
+    public const string Adjust = "ADJUST";
+    /// <summary>«فعلاً نه»: no next week now; the Goal or Project stays as it is.</summary>
+    public const string PauseOrStop = "PAUSE_OR_STOP";
+    /// <summary>A new plan for the same Goal or Project was approved instead.</summary>
+    public const string Replanned = "REPLANNED";
+}
+
 public sealed class PlanningFact
 {
     public Guid Id { get; set; }

@@ -139,6 +139,26 @@ Causes found:
 - Generation starts when the user taps «برنامهٔ هفتهٔ بعد», never by itself (§11.4).
 - It is a **separate DevMap step, built after the planning-quality step**, so the first draft is right before it is repeated weekly.
 
+> **Implementation note (STEP-24, 2026-10-16; chosen in implementation, for the owner to confirm or change).** Each choice below follows the bullets above.
+>
+> - **Offer window.** "Near the end" means from the week's second-to-last day until seven days after it ends. After that the offer stops, so it never becomes the weekly nag 014 §4.5 rules out. The Goal stays, and planning it again is one tap away on its page.
+> - **Where the offer shows.** On Today, at the end of Reconcile, and on its own Goal's or Project's page. It shows only what happened, in counts, and judges nothing.
+> - **Which week it plans.** The next week starts the day after the last one ends, or today once that day has passed.
+> - **Decisions (014 §4.5 vocabulary, on the previous week):**
+>   - approving the draft as proposed is `CONTINUE_AS_IS`; approving after an edit is `ADJUST`;
+>   - «فعلاً نه» is `PAUSE_OR_STOP`. It can still be overturned by approving a next week from the Goal's page;
+>   - a new plan for the same Goal or Project is `REPLANNED`.
+> - **Questions in a continuation.** It does not ask about availability again. It keeps last week's rhythm, from its Routines' days and times and its Tasks' days, and states that as an assumption. It asks at most one question, and only for a choice the evidence leaves open.
+> - **Existing work.** It is never proposed again, in any wording. A left Task stays with the user and is moved in Reconcile.
+
+> **Amendment (2026-10-16, decided by the owner, after the week-two evaluation).** Three changes make the next week more accurate without keeping the conversation:
+>
+> 1. **Existing work is dated.** The next week may put an existing open step into its days (014 note). In the evaluation, week two kept proposing existing steps again in other words, because a draft could only create. Those repeats were then dropped, which left thin weeks.
+> 2. **The Goal's point reaches every week.** The Goal's own desired outcome and target date, or a Project's completion meaning and target date, are part of the planning context. They are what the user approved, so every week is planned as a step towards it.
+> 3. **What the user said is remembered as planning details.** Their starting point, focus, tools and ruled-out ways are offered as planning details in the review («برای دفعه‌های بعد یادم بماند؟»). Kept ones reach later weeks (023).
+>
+> The raw intention and answers are **not** kept or sent later (023 §bounded history). They can go stale, the user cannot see or correct them, and they are not what the evaluation showed missing.
+
 ---
 
 ## 4. Decision C — Which dates the model must set and which it may not invent

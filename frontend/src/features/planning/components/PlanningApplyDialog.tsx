@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
-import { formatNumber } from '../../../shared/lib/date'
+import { formatDayMonth, formatNumber } from '../../../shared/lib/date'
 import { EntityLabel } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
-import { CircleCheck, ShieldCheck, Target } from '../../../shared/ui/icons'
+import { CalendarDays, CircleCheck, ShieldCheck, Target } from '../../../shared/ui/icons'
 import { Sheet } from '../../../shared/ui/Sheet'
 import type { PlanningApplyFlow } from '../hooks/planning-hooks'
 import { confirmationWarningLabels, entityKinds, factTypeLabels } from '../types/planning.format'
@@ -49,7 +49,14 @@ export function PlanningApplyDialog({ flow, draft }: { flow: PlanningApplyFlow; 
   const conflicted = phase === 'commandConflicted'
   // A warning names items that will not be created, so titles come from the draft, not the preview.
   const titles = new Map(draft.proposals.map(item => [item.proposal.draftId, item.proposal.title]))
-  const count = (type: string) => preview.items.filter(item => item.entityType === type).length
+  // What is made, and existing Tasks the approval only gives a day.
+  const made = preview.items.filter(item => !item.existingTaskId)
+  const dated = preview.items.filter(item => item.existingTaskId)
+  const days = new Map(draft.proposals.map(item => [item.proposal.draftId, item.proposal.plannedDate]))
+  const count = (type: string) => made.filter(item => item.entityType === type).length
+  const action = dated.length === 0 ? `تأیید و ساخت ${formatNumber(made.length)} مورد`
+    : made.length === 0 ? `تأیید و روز دادن به ${formatNumber(dated.length)} کار`
+    : `تأیید: ساخت ${formatNumber(made.length)} مورد و روز ${formatNumber(dated.length)} کار`
 
   return (
     <Sheet title={title} aside={step} onClose={flow.cancel} locked={flow.submitPending}>
@@ -66,11 +73,32 @@ export function PlanningApplyDialog({ flow, draft }: { flow: PlanningApplyFlow; 
         ))}
       </ul>
 
-      <h3 className="mt-5 flex items-center gap-1.5 text-sm font-extrabold text-positive">
-        <CircleCheck size={17} aria-hidden="true" />
-        ساخته می‌شود
-      </h3>
-      <PreviewTree preview={preview} draft={draft} />
+      {made.length > 0 && (
+        <>
+          <h3 className="mt-5 flex items-center gap-1.5 text-sm font-extrabold text-positive">
+            <CircleCheck size={17} aria-hidden="true" />
+            ساخته می‌شود
+          </h3>
+          <PreviewTree items={made} draft={draft} />
+        </>
+      )}
+      {dated.length > 0 && (
+        <>
+          <h3 className="mt-5 flex items-center gap-1.5 text-sm font-extrabold text-positive">
+            <CalendarDays size={17} aria-hidden="true" />
+            کارهای موجود که در این هفته روز می‌گیرند
+          </h3>
+          <ul className="apply-box mt-2.5" aria-label="کارهای موجود که روز می‌گیرند">
+            {dated.map(item => (
+              <li key={item.draftId} className="flex items-center gap-2 py-1">
+                <EntityLabel entity="task" />
+                <span className="min-w-0 flex-1 text-[0.8125rem] font-extrabold wrap-break-word">{item.title}</span>
+                {days.get(item.draftId) && <span className="shrink-0 text-xs text-text-secondary">{formatDayMonth(days.get(item.draftId) ?? '')}</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       {preview.facts.length > 0 && (
         <p className="notice mt-4">
@@ -125,7 +153,7 @@ export function PlanningApplyDialog({ flow, draft }: { flow: PlanningApplyFlow; 
               onClick={() => flow.confirm(preview.warnings)}
             >
               <CircleCheck size={19} aria-hidden="true" />
-              {phase === 'submittingCommand' ? 'در حال ساخت…' : `تأیید و ساخت ${formatNumber(preview.items.length)} مورد`}
+              {phase === 'submittingCommand' ? 'در حال ساخت…' : action}
             </button>
           )}
       </div>
@@ -138,10 +166,10 @@ export function PlanningApplyDialog({ flow, draft }: { flow: PlanningApplyFlow; 
  * Projects and its direct Tasks and Routines, each Project its own. Only items
  * in the preview appear; the nesting comes from the draft.
  */
-function PreviewTree({ preview, draft }: { preview: PlanningConfirmationDto; draft: PlanningDraftDto }) {
+function PreviewTree({ items, draft }: { items: PlanningConfirmationDto['items']; draft: PlanningDraftDto }) {
   const parentOf = new Map(draft.proposals.map(item => [item.proposal.draftId, item.proposal.parentDraftId ?? null]))
-  const created = new Set(preview.items.map(item => item.draftId))
-  const under = (parent: string | null) => preview.items.filter(item =>
+  const created = new Set(items.map(item => item.draftId))
+  const under = (parent: string | null) => items.filter(item =>
     (created.has(parentOf.get(item.draftId) ?? '') ? parentOf.get(item.draftId) ?? null : null) === parent)
   const line = (item: PlanningConfirmationDto['items'][number]) => (
     <li key={item.draftId} className="flex items-center gap-2 py-1">

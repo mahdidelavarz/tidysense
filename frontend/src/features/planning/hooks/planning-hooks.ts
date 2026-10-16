@@ -5,10 +5,12 @@ import {
   cancelPlanningAttempt,
   cancelPlanningDraft,
   createPlanningPreview,
+  declinePlanningContinuation,
   getPlanningActive,
   getPlanningAttempt,
   getPlanningConfirmation,
   getPlanningDraft,
+  listPlanningContinuations,
   listPlanningFacts,
   removePlanningFact,
   revisePlanningDraft,
@@ -33,6 +35,22 @@ export const planningKeys = {
   attempt: (id: string) => ['planning', 'attempt', id] as const,
   draft: (id: string) => ['planning', 'draft', id] as const,
   facts: (scope: PlanningScopeInput) => ['planning', 'facts', scope.goalId ?? '', scope.projectId ?? ''] as const,
+  continuations: ['planning', 'continuations'] as const,
+}
+
+/** The planned weeks whose next week can be planned now: offered on Today, the Goal or Project page and Reconcile. */
+export function usePlanningContinuations() {
+  return useQuery({ queryKey: planningKeys.continuations, queryFn: listPlanningContinuations })
+}
+
+/** «فعلاً نه» on an offered week. */
+export function useDeclinePlanningContinuation() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ windowId, expectedVersion }: { windowId: string; expectedVersion: number }) =>
+      declinePlanningContinuation(windowId, expectedVersion),
+    onSettled: () => client.invalidateQueries({ queryKey: planningKeys.continuations }),
+  })
 }
 
 const pollIntervalMs = 1000

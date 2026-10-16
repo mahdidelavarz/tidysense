@@ -32,6 +32,7 @@ import { DayStrip } from './DayStrip'
 import { groupByRoutine, PlannedDay, TodayCarrySheet, TodayDropDialog } from './TodayParts'
 import { TodayRoutineGroup } from './TodayRoutineGroup'
 import { TodayTaskCard } from './TodayTaskCard'
+import { ContinuationOffers } from '../../planning/components/ContinuationOffer'
 
 type TaskFilter = 'all' | 'open' | 'done'
 
@@ -138,6 +139,7 @@ export function TodayDesk() {
             )}
           </div>
           <DayStrip today={localDate} selected={selected} onSelect={day => setChosenDay(day === localDate ? null : day)} />
+          {selected === localDate && <ContinuationOffers today={localDate} className="mb-4" />}
           <FormError error={complete.error ?? undo.error} />
           {selected !== localDate ? (
             <PlannedDay date={selected} today={localDate} parentTitle={parentTitle} onCarry={setCarrying} onDrop={setDropping} />

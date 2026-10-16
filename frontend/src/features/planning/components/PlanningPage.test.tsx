@@ -608,4 +608,67 @@ describe('PlanningPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ساخت دستی' }))
     expect(useUiStore.getState().createTarget).toBe('menu')
   })
+
+  it('shows an existing Task the next week only dates apart from what it makes, and lets only its day change', async () => {
+    const existingTaskId = '00000000-0000-0000-0000-000000000777'
+    const dated = proposal('dated', 'TASK', 'حل یک آزمون آزمایشی', { underContext: true, plannedDate: '2026-10-05', existingTaskId })
+    const fresh = proposal('next-1', 'TASK', 'نوشتن رایتینگ تسک ۲', { underContext: true, plannedDate: '2026-10-04' })
+    const weekTwo = draft({
+      continuationWeek: 2, context: { type: 'GOAL', id: goalId, title: 'آیلتس' }, proposals: [view(fresh), view(dated)],
+      facts: [], assumptions: [], firstWeek: [{ draftId: 'next-1', date: '2026-10-04' }, { draftId: 'dated', date: '2026-10-05' }],
+    })
+    await openDraft(weekTwo)
+    expect(screen.getByText(/۱ کار موجود در این هفته روز می‌گیرد/)).toBeInTheDocument()
+    expect(screen.getByText('کار موجود؛ فقط روزش گذاشته می‌شود')).toBeInTheDocument()
+    // The tiles count what is made: one new Task, not the existing one.
+    expect(within(screen.getByRole('list', { name: 'آنچه در برنامه است' })).getByText('۱')).toBeInTheDocument()
+
+    // Its sheet changes only the day; the title stays the Task's own.
+    vi.mocked(revisePlanningDraft).mockResolvedValue(weekTwo)
+    fireEvent.click(screen.getByRole('button', { name: `ویرایش: ${dated.title}` }))
+    const sheet = within(await screen.findByRole('dialog', { name: 'روز کار موجود' }))
+    expect(sheet.queryByLabelText(/عنوان/)).not.toBeInTheDocument()
+    fireEvent.click(sheet.getByRole('button', { name: 'ذخیره در پیش‌نویس' }))
+    await waitFor(() => expect(revisePlanningDraft).toHaveBeenCalled())
+    const sent = vi.mocked(revisePlanningDraft).mock.calls[0][2].proposals.find(item => item.draftId === 'dated')
+    expect(sent).toMatchObject({ title: dated.title, plannedDate: '2026-10-05', existingTaskId })
+
+    // The confirmation names it apart, with its day, and the button says both.
+    vi.mocked(createPlanningPreview).mockResolvedValue(confirmation({
+      items: [
+        { draftId: 'next-1', entityType: 'TASK', title: fresh.title, parentDraftId: null, underContext: true },
+        { draftId: 'dated', entityType: 'TASK', title: dated.title, parentDraftId: null, underContext: true, existingTaskId },
+      ],
+      facts: [],
+    }))
+    fireEvent.click(screen.getByRole('button', { name: 'مرور نهایی و تأیید' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'مرور نهایی و تأیید' }))
+    expect(within(dialog.getByRole('list', { name: 'کارهای موجود که روز می‌گیرند' })).getByText(dated.title)).toBeInTheDocument()
+    expect(within(dialog.getByRole('list', { name: 'مواردی که ساخته می‌شوند' })).queryByText(dated.title)).not.toBeInTheDocument()
+    expect(dialog.getByRole('button', { name: 'تأیید: ساخت ۱ مورد و روز ۱ کار' })).toBeEnabled()
+  })
+
+  it('plans the next week of a planned one with the tap that opened the page, and resumes it rather than asking twice', async () => {
+    const windowId = '00000000-0000-0000-0000-000000000501'
+    const client = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: null, sampleGenerator: true })
+    vi.mocked(startPlanningAttempt).mockResolvedValue(attempt('QUEUED', { continuationOfWindowId: windowId, goalId }))
+    vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('QUEUED', { continuationOfWindowId: windowId, goalId }))
+    const first = render(<QueryClientProvider client={client()}><PlanningPage continuationOf={windowId} /></QueryClientProvider>)
+    await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(startPlanningAttempt).mock.calls[0][1]).toEqual({
+      intention: 'برنامهٔ هفتهٔ بعد', replaceActive: false, continuationOfWindowId: windowId,
+    })
+    first.unmount()
+
+    // A draft of that week already waiting is offered to continue, not generated again.
+    vi.mocked(startPlanningAttempt).mockClear()
+    const waiting = draft({ continuationOfWindowId: windowId, continuationWeek: 2, context: { type: 'GOAL', id: goalId, title: 'یادگیری زبان' } })
+    vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: waiting, sampleGenerator: true })
+    vi.mocked(getPlanningDraft).mockResolvedValue(waiting)
+    render(<QueryClientProvider client={client()}><PlanningPage continuationOf={windowId} /></QueryClientProvider>)
+    fireEvent.click(await screen.findByRole('button', { name: 'ادامه پیش‌نویس قبلی' }))
+    expect(await screen.findByText(/هفتهٔ دوم را دقیق چیدیم/)).toBeInTheDocument()
+    expect(startPlanningAttempt).not.toHaveBeenCalled()
+  })
 })

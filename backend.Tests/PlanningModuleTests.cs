@@ -397,7 +397,10 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
             var events = await db.DomainEvents.AsNoTracking()
                 .Where(x => x.ConfirmationId == confirmation.Id).ToListAsync();
             var appliedEvent = Assert.Single(events, x => x.EventType == "PLANNING_DRAFT_APPLIED");
-            Assert.Equal(9, events.Count);
+            // The entities, the detail and the approved week (029 §3), all in one transaction.
+            Assert.Equal(10, events.Count);
+            var week = JsonDocument.Parse(Assert.Single(events, x => x.EventType == "PLANNING_WINDOW_OPENED").PayloadJson).RootElement;
+            Assert.Equal(("GOAL", 1), (week.GetProperty("scope").GetString(), week.GetProperty("week").GetInt32()));
             Assert.All(events, x =>
             {
                 Assert.Equal("USER", x.Actor);
@@ -1006,6 +1009,142 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         Assert.Equal(0, await db.Goals.CountAsync(x => x.UserId == session.UserId));
         Assert.Equal(0, await db.Tasks.CountAsync(x => x.UserId == session.UserId));
         await CreateGoalAsync(client, "model-goal");
+    }
+
+    [Fact]
+    public async Task An_approved_week_is_offered_near_its_end_and_its_next_week_is_planned_from_how_it_went()
+    {
+        PinLocal(Day);
+        var session = await CreateSessionAsync();
+        using var client = Client(session.Token);
+        async Task<PlanningApplyResultDto> Apply(PlanningDraftDto draft, string key)
+        {
+            var confirmation = await PreviewAsync(client, draft);
+            return await ReadAsync<PlanningApplyResultDto>(await SendAsync(client, HttpMethod.Post,
+                $"/api/v1/planning/confirmations/{confirmation.Id}/submit", new { }, key));
+        }
+        async Task<IReadOnlyList<PlanningContinuationDto>> Offers() =>
+            (await client.GetFromJsonAsync<List<PlanningContinuationDto>>("/api/v1/planning/continuations"))!;
+        async Task<PlanningWindow[]> Windows()
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<AppDbContext>().PlanningWindows.AsNoTracking()
+                .Where(x => x.UserId == session.UserId).OrderBy(x => x.CreatedAt).ThenBy(x => x.Week).ToArrayAsync();
+        }
+
+        // Week one: approving a plan opens a week for the Goal it created, over the draft's own dates.
+        var weekOne = await ReviseAsync(client, await GenerateAsync(client, "continue-week-one"),
+            fact: x => x.DraftId == "fact-device" ? x with { Included = false } : x);
+        var applied = await Apply(weekOne, "continue-apply-one");
+        var opened = Assert.Single(await Windows());
+        Assert.Equal((applied.GoalId, (Guid?)null, 1, weekOne.WindowStart, weekOne.WindowEnd, (string?)null),
+            (opened.GoalId, opened.ProjectId, opened.Week, opened.StartDate, opened.EndDate, opened.Decision));
+        // Nothing is offered while the week has days to go.
+        Assert.Empty(await Offers());
+
+        // The week happens: one Task done, one let go.
+        var tasks = new List<TaskDto>();
+        foreach (var id in applied.TaskIds) tasks.Add((await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{id}"))!);
+        var done = tasks.First(x => !x.IsBlocked);
+        await CompleteAsync(client, done, Day, "continue-complete");
+        var dropped = tasks.First(x => x.Id != done.Id && x.SequenceId is null);
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{dropped.Id}/drop",
+            new { expectedVersion = dropped.Version }, "continue-drop")).EnsureSuccessStatusCode();
+
+        // From the second-to-last day, the next week is offered with what happened in this one.
+        PinLocal(opened.EndDate.AddDays(-1));
+        var offer = Assert.Single(await Offers());
+        Assert.Equal((opened.Id, 1, "GOAL", applied.GoalId!.Value), (offer.WindowId, offer.Week, offer.ScopeType, offer.ScopeId));
+        Assert.Equal((opened.EndDate.AddDays(1), opened.EndDate.AddDays(7)), (offer.NextStartDate, offer.NextEndDate));
+        Assert.Equal((1, 1), (offer.Evidence.CompletedTasks, offer.Evidence.DroppedTasks));
+
+        // «برنامهٔ هفتهٔ بعد»: a draft for the next week, in the Goal, built from that week.
+        var started = await ReadAsync<PlanningAttemptDto>(await StartAsync(client, new
+        {
+            clientAttemptId = "attempt-continue-week-two", intention = "برنامهٔ هفتهٔ بعد", goalId = (Guid?)null,
+            projectId = (Guid?)null, replaceActive = true, continuationOfWindowId = opened.Id
+        }));
+        Assert.Equal(opened.Id, started.ContinuationOfWindowId);
+        Assert.Equal(applied.GoalId, started.GoalId);
+        var finished = await WaitAsync(client, started.Id);
+        Assert.Equal("SUCCEEDED", finished.Status);
+        var weekTwo = await DraftAsync(client, finished.DraftId!.Value);
+        Assert.Equal(2, weekTwo.ContinuationWeek);
+        Assert.Equal((opened.EndDate.AddDays(1), opened.EndDate.AddDays(7)), (weekTwo.WindowStart, weekTwo.WindowEnd));
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var manifest = await scope.ServiceProvider.GetRequiredService<AppDbContext>().PlanningAttempts.AsNoTracking()
+                .Where(x => x.Id == started.Id).Select(x => x.ContextManifestJson).SingleAsync();
+            Assert.Equal(1, JsonDocument.Parse(manifest).RootElement.GetProperty("categories").GetProperty("CONTINUATION").GetInt32());
+        }
+
+        // The next steps go under week one's phase Project, which the draft names; no new Project or Goal.
+        Assert.All(weekTwo.Proposals, x => Assert.Equal(PlanningEntityTypes.Task, x.Proposal.EntityType));
+        var newSteps = weekTwo.Proposals.Where(x => x.Proposal.ExistingTaskId is null).ToArray();
+        Assert.All(newSteps, x => Assert.Equal(Assert.Single(applied.ProjectIds), x.Proposal.ContextProjectId));
+        Assert.Equal(applied.ProjectIds, weekTwo.ContextProjects!.Select(x => x.Id));
+        // A step that already exists without a date is dated this week, not proposed again.
+        var resources = tasks.Single(x => x.PlannedDate is null && x.Id != dropped.Id);
+        var dating = Assert.Single(weekTwo.Proposals, x => x.Proposal.ExistingTaskId is not null).Proposal;
+        Assert.Equal((resources.Id, resources.Title, (Guid?)null), (dating.ExistingTaskId!.Value, dating.Title, dating.ContextProjectId));
+        Assert.InRange(dating.PlannedDate!.Value, weekTwo.WindowStart, weekTwo.WindowEnd);
+
+        // A change to that Task after the preview makes the approval stale; nothing is created or dated.
+        var stale = await PreviewAsync(client, weekTwo);
+        await using (var scope = factory.Services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Tasks.Where(x => x.Id == resources.Id)
+                .ExecuteUpdateAsync(x => x.SetProperty(t => t.Version, t => t.Version + 1));
+        var refused = await SendAsync(client, HttpMethod.Post, $"/api/v1/planning/confirmations/{stale.Id}/submit",
+            new { }, "continue-apply-stale");
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Null((await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{resources.Id}"))!.PlannedDate);
+
+        // Approving it is the decision about week one, and week two begins.
+        var appliedTwo = await Apply(weekTwo, "continue-apply-two");
+        Assert.Equal(newSteps.Length, appliedTwo.TaskIds.Count);
+        foreach (var id in appliedTwo.TaskIds)
+            Assert.Equal(applied.ProjectIds[0], (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{id}"))!.ProjectId);
+        // The existing step keeps its title and place and only gains its day.
+        Assert.Equal([resources.Id], appliedTwo.DatedTaskIds!);
+        var datedTask = (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{resources.Id}"))!;
+        Assert.Equal((resources.Title, resources.GoalId, resources.ProjectId, dating.PlannedDate),
+            (datedTask.Title, datedTask.GoalId, datedTask.ProjectId, datedTask.PlannedDate));
+        var chain = await Windows();
+        Assert.Equal(2, chain.Length);
+        Assert.Equal(PlanningWindowDecisions.ContinueAsIs, chain[0].Decision);
+        Assert.Equal((2, chain[0].Id, (string?)null), (chain[1].Week, chain[1].PreviousWindowId, chain[1].Decision));
+        Assert.Empty(await Offers());
+
+        // A new plan for the same Goal replaces the open week instead of stacking a second one.
+        var replanned = await GenerateAsync(client, "continue-replan", goalId: applied.GoalId, replaceActive: true);
+        await Apply(replanned, "continue-apply-replan");
+        chain = await Windows();
+        Assert.Equal(PlanningWindowDecisions.Replanned, chain.Single(x => x.Week == 2).Decision);
+        var current = chain.Single(x => x.Decision is null);
+        Assert.Equal(1, current.Week);
+
+        // «فعلاً نه»: decided once; the next week is then no longer offered or startable from the offer.
+        PinLocal(current.EndDate);
+        var declined = await SendAsync(client, HttpMethod.Post, $"/api/v1/planning/continuations/{current.Id}/decline",
+            new { expectedVersion = current.Version }, "continue-decline");
+        Assert.Equal(PlanningWindowDecisions.PauseOrStop, (await ReadAsync<PlanningContinuationDecisionDto>(declined)).Decision);
+        Assert.Empty(await Offers());
+        var again = await SendAsync(client, HttpMethod.Post, $"/api/v1/planning/continuations/{current.Id}/decline",
+            new { expectedVersion = current.Version + 1 }, "continue-decline-again");
+        Assert.Equal("CONTINUATION_ALREADY_DECIDED", await ProblemCodeAsync(again));
+        var late = await StartAsync(client, new
+        {
+            clientAttemptId = "attempt-continue-declined", intention = "برنامهٔ هفتهٔ بعد", goalId = (Guid?)null,
+            projectId = (Guid?)null, replaceActive = true, continuationOfWindowId = current.Id
+        });
+        Assert.Equal("CONTINUATION_NOT_OFFERED", await ProblemCodeAsync(late));
+
+        // Another person's week is not theirs to see or decide.
+        var other = await CreateSessionAsync();
+        using var otherClient = Client(other.Token);
+        Assert.Empty((await otherClient.GetFromJsonAsync<List<PlanningContinuationDto>>("/api/v1/planning/continuations"))!);
+        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(otherClient, HttpMethod.Post,
+            $"/api/v1/planning/continuations/{current.Id}/decline", new { expectedVersion = 2 }, "continue-other")).StatusCode);
     }
 
     private static object Body(string clientAttemptId, string? intention = null, Guid? goalId = null,

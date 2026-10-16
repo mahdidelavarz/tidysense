@@ -37,7 +37,7 @@ public sealed record PlanningGateResult(
 /// </summary>
 public static partial class PlanningOutputGate
 {
-    public const string RepairPolicyVersion = "2026-10-15.1";
+    public const string RepairPolicyVersion = "2026-10-16.7";
     public const int MaxOutputChars = 60_000;
     public const int MaxCorrectionChars = 1_500;
 
@@ -55,6 +55,9 @@ public static partial class PlanningOutputGate
     public const string PadDate = "PAD_YEAR_FIRST_MONTH_OR_DAY";
     public const string RemoveInvalidItems = "REMOVE_INVALID_ITEMS";
     public const string DropInvalidSequence = "DROP_INVALID_SEQUENCE";
+    public const string DropDuplicateTask = "DROP_DUPLICATE_TASK";
+    public const string DropDuplicateRoutine = "DROP_DUPLICATE_ROUTINE";
+    public const string KeepExistingTaskPlace = "KEEP_EXISTING_TASK_PLACE";
 
     // Structural faults a draft can be cured of by leaving items out: its later items past a count
     // limit, and planning details that break the catalogue.
@@ -141,6 +144,11 @@ public static partial class PlanningOutputGate
                 if (kind == PlanningOutcomes.Clarification && !allowClarification)
                     throw new GateFailure(GatePolicy, AiFailureClasses.Policy,
                         "clarificationAllowed is false, so kind CLARIFICATION is not allowed: return a DRAFT with visible assumptions or INPUT_BLOCKED");
+                // The next week drafts from the evidence (029 §3 note): at most one question, never about availability.
+                if (kind == PlanningOutcomes.Clarification && context.Continuation is not null &&
+                    (questions.Length > 1 || questions.Any(x => x.Kind is PlanningQuestionKinds.Constraint or PlanningQuestionKinds.Recurrence)))
+                    throw new GateFailure(GatePolicy, AiFailureClasses.Policy,
+                        "continuation is not null, so ask at most one question and never about availability (CONSTRAINT or RECURRENCE): keep last week's rhythm, state it in \"assumptions\" and return a DRAFT");
                 var asked = new PlanningGateResult(kind, null, clarification, null, null, rules);
                 // A wrong Persian date is asked for again once; otherwise the questions are kept as written.
                 if (PlanningTextDates.HasError(PlanningTextDates.Of(clarification), context.Today))
@@ -151,15 +159,40 @@ public static partial class PlanningOutputGate
             if (draftNode is null || questions.Length > 0 || blockReason is not null)
                 throw Schema("kind DRAFT: \"draft\" must be an object, \"questions\" must be empty and \"blockReason\" must be null");
             reader.Path = "draft";
-            var parsed = Draft(reader, reader.Object(draftNode), context);
+            var parsed = Draft(reader, reader.Object(draftNode), context, rules);
             try
             {
                 var draft = PlanningDraftRules.Repair(parsed, context.Today);
+                // A Task the scope already has open is not proposed again; it is named as left out (029 §8).
+                if (PlanningDraftRules.WithoutDuplicates(draft, context.UnfinishedTasks.Select(x => x.Title)) is { } unique)
+                {
+                    draft = unique;
+                    rules.Add(DropDuplicateTask);
+                }
+                if (PlanningDraftRules.WithoutDuplicateRoutines(draft, context.Routines.Select(x => x.Title)) is { } single)
+                {
+                    draft = single;
+                    rules.Add(DropDuplicateRoutine);
+                }
                 // An invalid sequence loses only its order; its Tasks stay (029 §9).
                 if (PlanningDraftRules.WithoutInvalidSequences(draft) is { } unchained)
                 {
                     draft = unchained;
                     rules.Add(DropInvalidSequence);
+                }
+                // The next week of a Goal whose phases are laid out adds no new phase beside them (029 §3 note):
+                // its work goes under an existing Project. Asked for again once; otherwise the new Project is left out.
+                if (context.Continuation is not null && context.Projects.Count > 0 &&
+                    draft.Proposals.Any(x => x.EntityType == PlanningEntityTypes.Project))
+                {
+                    var phases = draft.Proposals.Where(x => x.EntityType == PlanningEntityTypes.Project).Select(x => x.DraftId);
+                    var withoutPhases = PlanningDraftRules.Without(draft, phases);
+                    throw new GateFailure(GateSemantic, AiFailureClasses.Semantic,
+                        "continuation is not null and activeProjects is not empty, so propose no new PROJECT: put each new TASK under the active Project it belongs to with \"contextProjectRef\"")
+                    {
+                        Fallback = withoutPhases is not null && PlanningDraftRules.StructuralErrors(withoutPhases, context.Scope?.Type).Count == 0
+                            ? Approvable(kind, withoutPhases, context, rules, out _) : null
+                    };
                 }
                 var errors = PlanningDraftRules.StructuralErrors(draft, context.Scope?.Type);
                 if (errors.Count > 0)
@@ -220,7 +253,8 @@ public static partial class PlanningOutputGate
     private static PlanningGateResult? Approvable(string kind, PlanningDraftContent draft, PlanningContext context,
         List<string> rules, out IReadOnlyList<(string? DraftId, string Code)> defects)
     {
-        var ruleContext = new PlanningRuleContext(context.Today, context.Scope?.Type, context.Facts);
+        var ruleContext = new PlanningRuleContext(context.Today, context.Scope?.Type, context.Facts,
+            context.UnfinishedTasks.Select(x => x.Id).ToHashSet());
         defects = PlanningDraftRules.Defects(PlanningDraftRules.Evaluate(draft, ruleContext));
         var reduced = draft.RemovedItems is { Count: > 0 };
         if (defects.Count == 0)
@@ -261,6 +295,8 @@ public static partial class PlanningOutputGate
     private static string ExplainIssue(string code) => code switch
     {
         PlanningIssueCodes.StandaloneTaskNeedsDate => "a TASK without a parent and not under the context needs a \"plannedDate\" inside the window; give it a date, or leave it out",
+        PlanningIssueCodes.ExistingTaskNeedsDate => "a TASK with \"existingTaskRef\" needs a \"plannedDate\" inside the window; give it one, or leave it out",
+        PlanningIssueCodes.ExistingTaskUnavailable => "\"existingTaskRef\" names a Task that is no longer open; leave it out",
         PlanningIssueCodes.DateOutsideWindow => "\"plannedDate\" and \"effectiveFromLocalDate\" must lie between windowStart and windowEnd",
         PlanningIssueCodes.DateInPast => "a date is before today",
         PlanningIssueCodes.DateAfterDeadline => "\"plannedDate\" is after the Task's own \"deadline\"",
@@ -312,6 +348,9 @@ public static partial class PlanningOutputGate
         "ROUTINE_RECURRENCE_REQUIRED" => "a ROUTINE needs \"recurrence\"",
         "PARENT_INVALID" => "a \"parentDraftId\" must be the draftId of another proposal in this output of an allowed parent type (GOAL for a PROJECT; GOAL or PROJECT for a TASK or ROUTINE), and never together with \"underContext\": true",
         "CONTEXT_PARENT_INVALID" => "\"underContext\": true is allowed only when planningContext is not null, never on a GOAL, and never on a PROJECT inside a PROJECT context",
+        "CONTEXT_PROJECT_INVALID" => "\"contextProjectRef\" is allowed only on a TASK or ROUTINE inside a GOAL context, never together with \"parentDraftId\"",
+        "EXISTING_TASK_DUPLICATE" => "the same \"existingTaskRef\" is used twice; give each existing Task at most one date",
+        "EXISTING_TASK_INVALID" => "\"existingTaskRef\" is allowed only on a TASK under the context, without \"parentDraftId\" or \"sequenceKey\"",
         "FACT_INVALID" => "a fact's \"factType\", \"strength\" and \"value\" do not match the PLANNING DETAILS rules",
         "FACT_SCOPE_INVALID" => "a fact's \"scopeDraftId\" must be null or the draftId of a proposal in this output",
         "NOTE_INVALID" => "each item of \"assumptions\" and \"unresolvedQuestions\" needs a \"text\" of 1 to 300 characters and a \"draftId\" that is null or the draftId of a proposal or fact in this output",
@@ -320,7 +359,7 @@ public static partial class PlanningOutputGate
         _ => error
     };
 
-    private static PlanningDraftContent Draft(Reader reader, JsonObject draft, PlanningContext context)
+    private static PlanningDraftContent Draft(Reader reader, JsonObject draft, PlanningContext context, List<string> rules)
     {
         reader.Only(draft, "summary", "proposals", "facts", "assumptions", "warnings", "unresolvedQuestions");
         var proposals = List("proposals").Select((node, index) =>
@@ -329,8 +368,32 @@ public static partial class PlanningOutputGate
             var item = reader.Object(node);
             // A review date is product policy; a model that supplies one fails here as an unknown field.
             reader.Only(item, "draftId", "entityType", "title", "description", "parentDraftId", "underContext",
-                "source", "confidence", "desiredOutcome", "completionMeaning", "targetDate", "plannedDate",
-                "deadline", "recurrence", "timesOfDay", "effectiveFromLocalDate", "sequenceKey", "sequenceOrder");
+                "contextProjectRef", "existingTaskRef", "source", "confidence", "desiredOutcome", "completionMeaning",
+                "targetDate", "plannedDate", "deadline", "recurrence", "timesOfDay", "effectiveFromLocalDate",
+                "sequenceKey", "sequenceOrder");
+            // An existing Project of the context, named by its ref; the proposal then sits under the context.
+            Guid? contextProject = null;
+            if (reader.Text(item, "contextProjectRef") is { } projectRef)
+                contextProject = context.Projects.FirstOrDefault(x => x.Ref == projectRef)?.Id
+                    ?? throw Schema($"{path}.contextProjectRef: must be the \"ref\" of one of activeProjects");
+            // An existing open Task of the context given a date this week. Only its date is read; its title,
+            // owner, deadline and order come from the planner, so the proposal can never rename, move or chain it.
+            if (reader.Text(item, "existingTaskRef") is { } taskRef)
+            {
+                var task = context.UnfinishedTasks.FirstOrDefault(x => x.Ref == taskRef)
+                    ?? throw Schema($"{path}.existingTaskRef: must be the \"ref\" of one of unfinishedTasks");
+                if (reader.RequiredEnum(item, "entityType", EntityTypes) != PlanningEntityTypes.Task)
+                    throw Schema($"{path}.entityType: a proposal with \"existingTaskRef\" is a TASK");
+                // A parent, a sequence or another Project would move the Task; they are not read, and it stays where it is.
+                if (reader.Text(item, "parentDraftId") is not null || reader.Text(item, "sequenceKey") is not null ||
+                    (contextProject is not null && contextProject != task.ProjectId))
+                    rules.Add(KeepExistingTaskPlace);
+                var place = context.Projects.Any(x => x.Id == task.ProjectId) ? task.ProjectId : null;
+                return new PlanningProposal(reader.Required(item, "draftId"), PlanningEntityTypes.Task, task.Title,
+                    null, null, true, reader.RequiredEnum(item, "source", Sources),
+                    reader.RequiredEnum(item, "confidence", Confidences), true, null, null, null, null, null,
+                    reader.Date(item, "plannedDate"), task.Deadline, null, null, null, null, null, place, task.Id);
+            }
             PlanningRecurrence? recurrence = null;
             if (reader.Node(item, "recurrence") is { } recurrenceNode)
             {
@@ -348,7 +411,7 @@ public static partial class PlanningOutputGate
                 reader.Required(item, "title"),
                 reader.Text(item, "description"),
                 reader.Text(item, "parentDraftId"),
-                reader.Flag(item, "underContext"),
+                reader.Flag(item, "underContext") || contextProject is not null,
                 reader.RequiredEnum(item, "source", Sources),
                 reader.RequiredEnum(item, "confidence", Confidences),
                 true,
@@ -363,7 +426,8 @@ public static partial class PlanningOutputGate
                 reader.Node(item, "timesOfDay") is null ? null : reader.Times(item, "timesOfDay"),
                 reader.Date(item, "effectiveFromLocalDate"),
                 reader.Text(item, "sequenceKey"),
-                reader.Integer(item, "sequenceOrder"));
+                reader.Integer(item, "sequenceOrder"),
+                contextProject);
         }).ToArray();
         var facts = List("facts").Select((node, index) =>
         {

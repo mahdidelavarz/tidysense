@@ -19,6 +19,7 @@ import { ReviewApplyDialog } from './ReviewApplyDialog'
 import { ReviewLane } from './ReviewLane'
 import { EarlierDays, TodayAfter } from './ReconcileDesk'
 import { useIsDesktop } from '../../../shared/lib/use-desktop'
+import { ContinuationOffers } from '../../planning/components/ContinuationOffer'
 
 /** Reconcile page: opens today's session and shows its three lanes. It never stands between the user and Today. */
 export function ReconcilePage() {
@@ -239,6 +240,8 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
               {summary}
               {lanes}
               {finishSection}
+          {/* Reviewed, the next week of a planned Goal can be asked for here too; it is never part of the review. */}
+          <ContinuationOffers today={session.localDate} />
             </div>
             <TodayAfter quickActions={session.quickActions} />
           </div>
@@ -257,6 +260,8 @@ function ReconcileSession({ session, onRestart }: { session: ReconcileSessionDto
           {explanation}
           {lanes}
           {finishSection}
+          {/* Reviewed, the next week of a planned Goal can be asked for here too; it is never part of the review. */}
+          <ContinuationOffers today={session.localDate} />
         </div>
       )}
       {sheets}

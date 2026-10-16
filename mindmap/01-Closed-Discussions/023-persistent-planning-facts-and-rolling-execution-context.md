@@ -4,6 +4,12 @@
 
 **Accepted and closed after two Claude review rounds.**
 
+> **Amendment (2026-10-16, decided by the owner, 029 §3 note):**
+> - The planning context also carries the scope's own approved meaning and date: a Goal's desired outcome and target date, or a Project's completion meaning and target date.
+> - Its unfinished Tasks carry a reference, so a draft can give one a day in the week instead of proposing it again.
+> - Planning should offer as Planning Facts what the user stated (starting point, focus, tools, ruled-out ways, unavailable days). They are kept only when the user keeps them in review.
+> - Raw conversation is still not persisted or resent.
+
 All round-one findings (1 Blocking, 6 Important, 5 Minor) were resolved and re-reviewed. The final Claude review found no new Blocking or Important issue. The remaining retention-class closure condition is resolved in this document.
 
 ```txt

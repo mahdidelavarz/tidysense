@@ -62,7 +62,7 @@ public sealed partial class PlanningService(
         var hash = CommandExecutionRequest.HashCanonicalRequest(JsonSerializer.SerializeToUtf8Bytes(new
         {
             intention, request.GoalId, request.ProjectId, request.ReplaceActive, fixture,
-            request.PreviousAttemptId, answers, request.DraftNow
+            request.PreviousAttemptId, answers, request.DraftNow, request.ContinuationOfWindowId
         }));
 
         var existing = await db.PlanningAttempts.AsNoTracking().SingleOrDefaultAsync(
@@ -72,6 +72,7 @@ public sealed partial class PlanningService(
         // Answering continues the flow the questions belong to: same intention, same planning context.
         var goalId = request.GoalId;
         var projectId = request.ProjectId;
+        var continuationId = request.ContinuationOfWindowId;
         PlanningAttempt? previous = null;
         IReadOnlyList<PlanningTurn> turns = [];
         if (request.PreviousAttemptId is { } previousId)
@@ -94,6 +95,7 @@ public sealed partial class PlanningService(
             intention = previous.Intention;
             goalId = previous.ContextGoalId;
             projectId = previous.ContextProjectId;
+            continuationId = previous.ContinuationOfWindowId;
             turns = await TurnsAsync(previous, answers, cancellationToken);
         }
         else if (answers.Length > 0)
@@ -102,7 +104,23 @@ public sealed partial class PlanningService(
         // A switched-off AI path is said plainly before anything is stored; manual creation is unaffected.
         var settings = ai.CurrentValue;
         if (settings.GlobalKillSwitch || settings.Planning.KillSwitch) throw new AiUnavailableException();
-        var context = await contexts.BuildAsync(owner, goalId, projectId, cancellationToken);
+        // A continuation plans the week after a planned one, in that week's own Goal or Project.
+        PlanningWindow? continuing = null;
+        if (continuationId is { } windowId)
+        {
+            continuing = await db.PlanningWindows.AsNoTracking().SingleOrDefaultAsync(
+                x => x.Id == windowId && x.UserId == owner, cancellationToken)
+                ?? throw new ResourceNotFoundException("PlanningWindow", windowId);
+            if ((request.GoalId ?? continuing.GoalId) != continuing.GoalId ||
+                (request.ProjectId ?? continuing.ProjectId) != continuing.ProjectId)
+                throw new ArgumentException("A continuation plans the Goal or Project of its week.");
+            // Offered or still being answered; once decided, the next week is planned from its Goal or Project page.
+            if (previous is null && !PlanningContinuationRules.IsOffered(continuing, dates.Today))
+                throw new DomainRuleException("CONTINUATION_NOT_OFFERED", "The next week of this plan is not offered now.");
+            goalId = continuing.GoalId;
+            projectId = continuing.ProjectId;
+        }
+        var context = await contexts.BuildAsync(owner, goalId, projectId, cancellationToken, continuing);
 
         var now = dates.UtcNow;
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -152,7 +170,7 @@ public sealed partial class PlanningService(
         {
             Id = Guid.NewGuid(), UserId = owner, ClientAttemptId = request.ClientAttemptId,
             RequestHash = hash, Intention = intention, ContextGoalId = goalId,
-            ContextProjectId = projectId, GeneratorKey = generator.Key,
+            ContextProjectId = projectId, ContinuationOfWindowId = continuationId, GeneratorKey = generator.Key,
             ContextBuilderVersion = context.BuilderVersion, ContextFingerprint = context.Fingerprint,
             ContextManifestJson = PlanningContextBuilder.Manifest(context), CreatedAt = now, UpdatedAt = now,
             PreviousAttemptId = previous?.Id, ClarificationTurn = previous is null ? 0 : previous.ClarificationTurn + 1,
@@ -381,13 +399,16 @@ public sealed partial class PlanningService(
         var proposals = current.Proposals.Select(old =>
         {
             var edit = edits[old.DraftId];
+            // An existing Task is only dated or left out; its title, place and deadline stay its own.
+            if (old.ExistingTaskId is not null)
+                return old with { PlannedDate = edit.PlannedDate, Included = edit.Included };
             var reviewEdited = edit.ReviewDate != old.ReviewDate;
             var redefault = !reviewEdited && old.ReviewDateSource == ReviewDateSources.SystemDefault &&
                 edit.TargetDate != old.TargetDate;
             return old with
             {
                 Title = edit.Title, Description = edit.Description, ParentDraftId = edit.ParentDraftId,
-                UnderContext = edit.UnderContext, Included = edit.Included,
+                UnderContext = edit.UnderContext, ContextProjectId = edit.ContextProjectId, Included = edit.Included,
                 DesiredOutcome = edit.DesiredOutcome, CompletionMeaning = edit.CompletionMeaning,
                 TargetDate = edit.TargetDate,
                 ReviewDate = redefault ? null : edit.ReviewDate,
@@ -456,7 +477,7 @@ public sealed partial class PlanningService(
             PlanningDraftRevision = draft.CurrentRevision, ActionType = ApplyActionType,
             PreviewJson = JsonSerializer.Serialize(new StoredPreview(
                 built.Preview.Items.Select(x => new PlanningPreviewItemDto(x.DraftId, x.EntityType, x.Title,
-                    x.ParentDraftId, x.UnderContext)).ToArray(),
+                    x.ParentDraftId, x.UnderContext, x.ContextProjectId, x.ExistingTaskId)).ToArray(),
                 built.Preview.Facts.Select(x => new PlanningPreviewFactDto(x.DraftId, x.FactType, x.Strength)).ToArray(),
                 built.Preview.Warnings.Select(x => new PlanningWarningDto(x.WarningId, x.Code,
                     x.AffectedDraftIds, x.WarningHash)).ToArray(),
@@ -528,19 +549,36 @@ public sealed partial class PlanningService(
             if (built.Preview.Warnings.Any(x => !acknowledged.Contains((x.WarningId, x.WarningHash))))
                 throw new CommandRejectedException("WARNING_NOT_ACKNOWLEDGED");
 
-            var cascades = Apply(context, owner, draft.AttemptId, built, today, timezone, now);
+            // Work placed under an existing Project needs it still active in this Goal; it is never moved elsewhere.
+            var linked = built.Preview.Items.Where(x => x.ContextProjectId is not null)
+                .Select(x => x.ContextProjectId!.Value).Distinct().ToArray();
+            if (linked.Length > 0 && await context.Projects.CountAsync(x => linked.Contains(x.Id) && x.UserId == owner &&
+                    x.GoalId == built.Scope!.Id && x.Status == ParentStatuses.Active, ct) != linked.Length)
+                throw new CommandRejectedException("CONTEXT_PROJECT_UNAVAILABLE");
+            var (cascades, created) = Apply(context, owner, draft.AttemptId, built, today, timezone, now);
+            cascades.AddRange(await DateExistingAsync(context, owner, built, today, now, ct));
+            // The approved week of its Goal or Project, and, for a continuation, the decision on the week before (029 §3).
+            if (PlanningContinuationRules.WindowScope(built.Scope, created) is { } windowScope)
+            {
+                var continuing = await context.PlanningAttempts.AsNoTracking().Where(x => x.Id == draft.AttemptId)
+                    .Select(x => x.ContinuationOfWindowId).SingleAsync(ct);
+                var edited = await context.PlanningDraftRevisions.AnyAsync(
+                    x => x.DraftId == draft.Id && x.Origin == PlanningRevisionOrigins.UserEdit, ct);
+                cascades.AddRange(await PlanningWindows.OpenAsync(context, owner, windowScope,
+                    built.Content.WindowStart, built.Content.WindowEnd, draft.Id, continuing, edited, today, now, ct));
+            }
             confirmation.Status = ActionConfirmationStatuses.Resolved;
             confirmation.ResolvedAt = now;
             // The draft's job is done. Its lifecycle ends; the command result says what was created.
             draft.Status = PlanningDraftStatuses.Expired;
             draft.UpdatedAt = now;
             draft.Version++;
-            var items = built.Preview.Items;
+            var items = built.Preview.Items.Where(x => x.ExistingTaskId is null).ToArray();
             // Removed before accepting: proposals the user left out, and those left out with their parent.
             var excluded = built.Content.Proposals.Where(x =>
                 built.Evaluation.Proposals[x.DraftId].State == PlanningReviewStates.Excluded).ToList();
             return new CommandMutation("PlanningDraft", draft.Id, draft.Version,
-                PlanningEventTypes.DraftApplied, 2, JsonSerializer.Serialize(new
+                PlanningEventTypes.DraftApplied, 3, JsonSerializer.Serialize(new
                 {
                     goalCount = items.Count(x => x.EntityType == PlanningEntityTypes.Goal),
                     projectCount = items.Count(x => x.EntityType == PlanningEntityTypes.Project),
@@ -550,18 +588,23 @@ public sealed partial class PlanningService(
                     excludedGoalCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Goal),
                     excludedProjectCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Project),
                     excludedTaskCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Task),
-                    excludedRoutineCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Routine)
+                    excludedRoutineCount = excluded.Count(x => x.EntityType == PlanningEntityTypes.Routine),
+                    datedTaskCount = built.Preview.Items.Count(x => x.ExistingTaskId is not null)
                 }), now, cascades, confirmationId);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await ResultAsync(confirmationId, cancellationToken);
     }
 
-    /// <summary>Adds every approved entity and planning detail and returns one user event for each.</summary>
-    private static List<CascadeEvent> Apply(AppDbContext context, Guid owner, Guid attemptId, Built built,
-        DateOnly today, string timezone, DateTimeOffset now)
+    /// <summary>
+    /// Adds every approved entity and planning detail and returns one user event for each, with the
+    /// new id of every entity and whether it has no parent among them.
+    /// </summary>
+    private static (List<CascadeEvent> Cascades, List<(string EntityType, bool Root, Guid Id)> Created) Apply(
+        AppDbContext context, Guid owner, Guid attemptId, Built built, DateOnly today, string timezone, DateTimeOffset now)
     {
-        var items = built.Preview.Items;
+        // Existing Tasks are dated by DateExistingAsync; only new entities are made here.
+        var items = built.Preview.Items.Where(x => x.ExistingTaskId is null).ToArray();
         var ids = items.ToDictionary(x => x.DraftId, _ => Guid.NewGuid(), StringComparer.Ordinal);
         var types = items.ToDictionary(x => x.DraftId, x => x.EntityType, StringComparer.Ordinal);
         // A proposed sequence becomes one durable sequence of the approved Tasks, if two or more remain (025).
@@ -577,6 +620,7 @@ public sealed partial class PlanningService(
             if (item.ParentDraftId is { } parent)
                 return types[parent] == PlanningEntityTypes.Goal ? (ids[parent], null) : (null, ids[parent]);
             if (!item.UnderContext || scope is null) return (null, null);
+            if (item.ContextProjectId is { } existing) return (null, existing);
             return scope.Type == PlanningContextTypes.Goal ? (scope.Id, null) : (null, scope.Id);
         }
 
@@ -671,7 +715,7 @@ public sealed partial class PlanningService(
                 source = PlanningFactSources.UserConfirmedAiExtraction, scope = onGoal ? "GOAL" : "PROJECT"
             }));
         }
-        return cascades;
+        return (cascades, items.Select(x => (x.EntityType, x.ParentDraftId is null && !x.UnderContext, ids[x.DraftId])).ToList());
 
         static CascadeEvent Created(string aggregateType, Guid id, string eventType, object payload) =>
             new(aggregateType, id, 1, eventType, 1, JsonSerializer.Serialize(payload), EventActors.User);
@@ -679,16 +723,20 @@ public sealed partial class PlanningService(
 
     private async Task<PlanningApplyResultDto> ResultAsync(Guid confirmationId, CancellationToken cancellationToken)
     {
-        var created = await db.DomainEvents.AsNoTracking()
+        var events = await db.DomainEvents.AsNoTracking()
             .Where(x => x.UserId == currentUser.UserId && x.ConfirmationId == confirmationId &&
-                x.AggregateType != "PlanningDraft")
+                x.AggregateType != "PlanningDraft" && x.AggregateType != "PlanningWindow")
             .OrderBy(x => x.RecordedAt).ThenBy(x => x.EventId)
-            .Select(x => new { x.AggregateType, x.AggregateId }).ToListAsync(cancellationToken);
-        Guid[] Of(string type) => created.Where(x => x.AggregateType == type).Select(x => x.AggregateId).ToArray();
+            .Select(x => new { x.AggregateType, x.AggregateId, x.EventType }).ToListAsync(cancellationToken);
+        // Made by this approval, and existing Tasks it dated.
+        var dated = events.Where(x => x.AggregateType == "Task" && x.EventType != TaskEventTypes.TaskCreated)
+            .Select(x => x.AggregateId).ToArray();
+        Guid[] Of(string type) => events.Where(x => x.AggregateType == type && !dated.Contains(x.AggregateId))
+            .Select(x => x.AggregateId).ToArray();
         var goals = Of("Goal");
         return new PlanningApplyResultDto(confirmationId, ActionConfirmationStatuses.Resolved,
             goals.Length == 0 ? null : goals[0], Of("Project"), Of("Task"), Of("Routine"),
-            Of("PlanningFact").Length);
+            Of("PlanningFact").Length, dated);
     }
 
     // ---- Planning details ----
@@ -750,12 +798,63 @@ public sealed partial class PlanningService(
         var facts = scope is null
             ? []
             : await PlanningContextBuilder.ActiveFactsAsync(context, owner, scope, today, cancellationToken);
-        var evaluation = PlanningDraftRules.Evaluate(content, new PlanningRuleContext(today, scope?.Type, facts));
+        // The existing Tasks the draft dates that are still open in its scope, at their current version.
+        var named = content.Proposals.Where(x => x.ExistingTaskId is not null).Select(x => x.ExistingTaskId!.Value).ToArray();
+        var open = named.Length == 0 || scope is null
+            ? new Dictionary<Guid, long>()
+            : await OpenInScope(context.Tasks.AsNoTracking(), context, owner, scope)
+                .Where(x => named.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Version, cancellationToken);
+        var evaluation = PlanningDraftRules.Evaluate(content, new PlanningRuleContext(today, scope?.Type, facts,
+            named.Length == 0 ? null : open.Keys.ToHashSet()));
         var stamp = scope is null
             ? "NONE"
             : $"{scope.Type}:{scope.Id}:{scope.Version}:{scope.FactScopeType}:{scope.FactScopeId}";
+        // A Task changed after the preview changes the hash, so its approval is never applied to another state.
+        foreach (var (id, version) in open.OrderBy(x => x.Key)) stamp += $"|{id}:{version}";
         return new Built(content, scope, evaluation,
-            PlanningDraftRules.BuildPreview(draft.Id, draft.CurrentRevision, content, evaluation, stamp));
+            PlanningDraftRules.BuildPreview(draft.Id, draft.CurrentRevision, content, evaluation, stamp), open);
+    }
+
+    /// <summary>The scope's active Tasks: under the Goal or its active Projects, or under the Project.</summary>
+    private static IQueryable<TaskItem> OpenInScope(IQueryable<TaskItem> tasks, AppDbContext context, Guid owner,
+        PlanningScope scope) => scope.Type == PlanningContextTypes.Goal
+        ? tasks.Where(x => x.UserId == owner && x.Status == TaskStatuses.Active && (x.GoalId == scope.Id ||
+            context.Projects.Any(p => p.Id == x.ProjectId && p.GoalId == scope.Id && p.Status == ParentStatuses.Active)))
+        : tasks.Where(x => x.UserId == owner && x.Status == TaskStatuses.Active && x.ProjectId == scope.Id);
+
+    /// <summary>
+    /// Dates the approved existing Tasks (029 §3 follow-up), each locked and checked against the version
+    /// the preview was built on. A dated Task moved to its new day is a carry, as in Reconcile; an undated
+    /// one is given its first date. Nothing else about it changes.
+    /// </summary>
+    private static async Task<List<CascadeEvent>> DateExistingAsync(AppDbContext context, Guid owner, Built built,
+        DateOnly today, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var events = new List<CascadeEvent>();
+        foreach (var item in built.Preview.Items.Where(x => x.ExistingTaskId is not null).OrderBy(x => x.ExistingTaskId))
+        {
+            var id = item.ExistingTaskId!.Value;
+            var task = await context.Tasks.FromSqlInterpolated(
+                    $"SELECT * FROM \"Tasks\" WHERE \"Id\" = {id} AND \"UserId\" = {owner} FOR UPDATE")
+                .SingleOrDefaultAsync(cancellationToken);
+            if (task is null || task.Status != TaskStatuses.Active ||
+                !built.OpenTasks.TryGetValue(id, out var version) || version != task.Version)
+                throw new CommandConflictException("CONFIRMATION_STALE", "A Task the plan dates has changed.");
+            if (task.PlannedDate == item.PlannedDate) continue;
+            if (task.PlannedDate is not null)
+            {
+                var payload = TaskService.Carry(task, item.PlannedDate!.Value, today, now, TaskCarryScopes.Task);
+                events.Add(new CascadeEvent("Task", id, task.Version, TaskEventTypes.TaskCarried, 1, payload,
+                    EventActors.User));
+                continue;
+            }
+            task.PlannedDate = item.PlannedDate;
+            task.UpdatedAt = now;
+            task.Version++;
+            events.Add(new CascadeEvent("Task", id, task.Version, TaskEventTypes.TaskUpdated, 1,
+                JsonSerializer.Serialize(new { changedFields = new[] { "plannedDate" } }), EventActors.User));
+        }
+        return events;
     }
 
     private static async Task<PlanningDraftContent> ContentAsync(AppDbContext context, Guid draftId,
@@ -803,6 +902,10 @@ public sealed partial class PlanningService(
             ? PlanningDraftStatuses.Expired : draft.Status;
         var content = built.Content;
         var evaluation = built.Evaluation;
+        var continued = await db.PlanningAttempts.AsNoTracking().Where(x => x.Id == draft.AttemptId)
+            .Join(db.PlanningWindows, attempt => attempt.ContinuationOfWindowId, window => (Guid?)window.Id,
+                (_, window) => new { window.Id, window.Week })
+            .SingleOrDefaultAsync(cancellationToken);
         return new PlanningDraftDto(draft.Id, draft.AttemptId, status, draft.CurrentRevision, draft.ExpiresAt,
             built.Scope is { } scope ? new PlanningContextRefDto(scope.Type, scope.Id, scope.Title) : null,
             content.Summary, content.WindowStart, content.WindowEnd,
@@ -819,7 +922,15 @@ public sealed partial class PlanningService(
             }).ToArray(),
             content.Assumptions, content.UnresolvedQuestions, Issues(evaluation.DraftIssues),
             evaluation.FirstWeek.Select(x => new PlanningFirstWeekEntryDto(x.DraftId, x.Date)).ToArray(),
-            status == PlanningDraftStatuses.Reviewable && evaluation.CanApply, draft.LinkedConfirmationId, content.RemovedItems ?? []);
+            status == PlanningDraftStatuses.Reviewable && evaluation.CanApply, draft.LinkedConfirmationId, content.RemovedItems ?? [],
+            continued is null ? null : continued.Week + 1,
+            built.Scope is { Type: PlanningContextTypes.Goal } goalScope
+                ? await db.Projects.AsNoTracking()
+                    .Where(x => x.UserId == currentUser.UserId && x.GoalId == goalScope.Id && x.Status == ParentStatuses.Active)
+                    .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
+                    .Select(x => new PlanningContextProjectDto(x.Id, x.Title)).ToListAsync(cancellationToken)
+                : [],
+            continued?.Id);
 
         static PlanningIssueDto[] Issues(IReadOnlyList<PlanningIssue> issues) =>
             issues.Select(x => new PlanningIssueDto(x.Code, x.Severity, x.Origin)).ToArray();
@@ -847,7 +958,7 @@ public sealed partial class PlanningService(
         }
         return new PlanningAttemptDto(value.Id, value.ClientAttemptId, value.Status, value.Intention,
             value.ContextGoalId, value.ContextProjectId, value.FailureCode, value.DraftId, value.CreatedAt,
-            value.CompletedAt, value.Outcome, clarification);
+            value.CompletedAt, value.Outcome, clarification, value.ContinuationOfWindowId);
     }
 
     private static PlanningFactDto ToDto(PlanningFact value, DateOnly today)
@@ -863,7 +974,7 @@ public sealed partial class PlanningService(
     }
 
     private sealed record Built(PlanningDraftContent Content, PlanningScope? Scope,
-        PlanningEvaluation Evaluation, PlanningPreview Preview);
+        PlanningEvaluation Evaluation, PlanningPreview Preview, IReadOnlyDictionary<Guid, long> OpenTasks);
 
     private sealed record StoredPreview(IReadOnlyList<PlanningPreviewItemDto> Items,
         IReadOnlyList<PlanningPreviewFactDto> Facts, IReadOnlyList<PlanningWarningDto> Warnings,

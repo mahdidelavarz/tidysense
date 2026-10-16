@@ -22,6 +22,8 @@ export const issueLabels: Record<string, string> = {
   DATE_IN_PAST: 'تاریخ گذشته است.',
   DATE_AFTER_DEADLINE: 'تاریخ برنامه‌ریزی از مهلت می‌گذرد.',
   STANDALONE_TASK_NEEDS_DATE: 'کار مستقل باید تاریخ داشته باشد.',
+  EXISTING_TASK_NEEDS_DATE: 'برای این کار موجود روزی در همین هفته بگذارید، یا کنارش بگذارید.',
+  EXISTING_TASK_UNAVAILABLE: 'این کار دیگر باز نیست؛ آن را کنار بگذارید.',
   HARD_CONSTRAINT_CONFLICT: 'با یکی از محدودیت‌های ثبت‌شده برای این برنامه هم‌خوان نیست.',
   UNSUPPORTED_RECURRENCE: 'این نوع تکرار پشتیبانی نمی‌شود. تکرار را تغییر دهید یا این مورد را کنار بگذارید.',
   INVALID_TIMES: 'ساعت‌های روز معتبر نیست.',
@@ -58,6 +60,7 @@ export const startErrorLabels: Record<string, string> = {
   AI_RATE_LIMITED: 'تعداد درخواست‌های برنامه‌ریزی از حد مجاز گذشته است. چیزی تغییر نکرد؛ کمی بعد دوباره تلاش کنید یا دستی بسازید.',
   CLARIFICATION_ALREADY_ANSWERED: 'به این پرسش‌ها قبلاً پاسخ داده شده است.',
   CLARIFICATION_NOT_PENDING: 'این پرسش‌ها دیگر منتظر پاسخ نیستند.',
+  CONTINUATION_NOT_OFFERED: 'هفتهٔ بعدِ این برنامه دیگر پیشنهاد نمی‌شود. از صفحهٔ هدف یا پروژه می‌توانید برنامهٔ تازه‌ای بچینید.',
 }
 
 export const blockReasonLabels: Record<string, string> = {

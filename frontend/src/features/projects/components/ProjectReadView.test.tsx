@@ -12,7 +12,9 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('../../structure/services/progress-api', () => ({ getProgress: vi.fn() }))
 vi.mock('../../today/services/today-api', () => ({ getToday: vi.fn().mockResolvedValue({ localDate: '2026-10-14', tasks: [], completedTasks: [], routineOccurrences: [] }) }))
-vi.mock('../../planning/services/planning-api', () => ({ listPlanningFacts: vi.fn().mockResolvedValue([]), removePlanningFact: vi.fn() }))
+vi.mock('../../planning/services/planning-api', () => ({
+  listPlanningFacts: vi.fn().mockResolvedValue([]), removePlanningFact: vi.fn(), listPlanningContinuations: vi.fn().mockResolvedValue([]),
+}))
 vi.mock('../../goals/services/goals-api', () => ({ listGoals: vi.fn() }))
 vi.mock('../services/projects-api', () => ({
   getProject: vi.fn(), previewProjectTerminal: vi.fn(), terminateProject: vi.fn(), updateProject: vi.fn(),

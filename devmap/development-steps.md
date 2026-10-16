@@ -1256,7 +1256,7 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
   - The test persona's crude answers make it worse than a person would.
 - **The model prefers drafting to asking.** Moving assumed the end of Aban instead of asking the move date, which only the user knows.
 - **Later phases are thin:** one or two generic undated steps.
-- **The text of the one-week line promises STEP-24's continuation**, which is not built yet. STEP-12 depends on STEP-24, so the pilot will not run without it.
+- **The text of the one-week line promises STEP-24's continuation**, which was not built when this was written. It was built on 2026-10-16 (STEP-24).
 
 ---
 
@@ -1412,6 +1412,117 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
 
 **Completion criteria:** After an approved first week, the user can get, review and approve a second week built from the evidence, with one tap to start it.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE` — verified on 2026-10-16. Still owed: `./dev.ps1 check` and `./auth-e2e.ps1` on Windows. The reworded-repeats weakness found here was fixed by the owner-approved follow-up below.
 
-**Evidence:** None.
+**Evidence:**
+
+- **Where and when** (Mind Map implementation note in 029 §3, for the owner to confirm):
+  - The offer shows from a week's second-to-last day until seven days after it ends.
+  - It shows on Today (phone and desktop), at the end of Reconcile, and on its own Goal's or Project's page.
+  - The next week starts the day after the last one ends, or today once that has passed.
+  - Rules live only in [`PlanningContinuationRules`](../backend/Services/PlanningContinuation.cs); [tests](../backend.Tests/PlanningContinuationRulesTests.cs).
+- **Record:** `PlanningWindow` (migration `Step24PlanningWindows`, retention R1):
+  - one row per applied draft that planned a Goal or a standalone Project;
+  - the chain is linked by `PreviousWindowId`, with a unique filtered index on it.
+- **Decision**, recorded on the previous week in the 014 §4.5 vocabulary:
+  - `CONTINUE_AS_IS` when the next week is approved as proposed;
+  - `ADJUST` when it is approved after a user edit;
+  - `PAUSE_OR_STOP` for «فعلاً نه» (`POST /planning/continuations/{id}/decline`, with a version and an Idempotency-Key);
+  - `REPLANNED` when a new plan is made for the same scope.
+  - Events: `PLANNING_WINDOW_OPENED` and `PLANNING_CONTINUATION_DECIDED`. Approving and recording happen in the one apply command.
+- **One tap:**
+  - `GET /planning/continuations` lists the offers with their counts and generates nothing.
+  - «برنامهٔ هفتهٔ بعد» opens `/planning?continue=<windowId>`, which starts the attempt with `continuationOfWindowId` once.
+  - The draft goes through the ordinary review and confirmation.
+- **Evidence context** ([builder](../backend/Services/PlanningContextBuilder.cs), version `2026-10-16.2`), covering the previous week:
+  - completed, carried, dropped and left Tasks, the Tasks that wait in a sequence, and Routine slots done and missed;
+  - the days and times of each Routine;
+  - the Goal's active Projects as refs `P1…`. A new Task is placed under one with `contextProjectRef`, stored as `ContextProjectId`, and refused at apply if that Project is no longer active (`CONTEXT_PROJECT_UNAVAILABLE`).
+  - The gate drops a Task whose title repeats an open Task (`DROP_DUPLICATE_TASK`).
+- **Prompt `2026-10-16.2`.** The continuation rules are:
+  - no Goal, existing Project or existing Routine again;
+  - no open Task again in any wording;
+  - lighter after left work;
+  - never ask about availability, and at most one question.
+- **Tests:**
+  - [module test](../backend.Tests/PlanningModuleTests.cs) `An_approved_week_is_offered_near_its_end_and_its_next_week_is_planned_from_how_it_went`;
+  - the gate test for project refs and duplicates;
+  - the [renderer test](../backend.Tests/AiPlanningRuntimeTests.cs) for Routine times;
+  - [offer component tests](../frontend/src/features/planning/components/ContinuationOffer.test.tsx) and the `PlanningPage` continuation test;
+  - [browser test](../frontend/e2e/continuation.spec.ts): week one approved in the UI, one step done, brought to its last day, offered on Today, tapped, the week-two draft reviewed under the existing phase Project and approved; then week two offered on the Goal page at 1440px and declined.
+- **Week-two evaluation** ([`tools/planning-eval`](../tools/planning-eval/README.md) `--week2`, DeepSeek with thinking off, 8 long-horizon cases).
+  - Each case: approve week one, do about 40% of it, drop one Task, rewind to the week's end, tap the offer.
+  - `week2-a` (prompt `.1`):
+    - 8/8 approvable;
+    - 11 questions in 3 cases, mostly asking again for availability;
+    - 21 reworded repeats in 6 cases.
+  - `week2-b` (prompt `.2`):
+    - 8/8 approvable, offered and in the right week;
+    - 0 questions;
+    - 33/33 Tasks under an existing Project;
+    - no planned day outside the week, no second Goal, no exact repeat;
+    - 18 items dropped by the gate.
+  - The 32 first-week cases on prompt `.2` (`step24-all`): 32/32 approvable. Every 029 §10 measure passes.
+- **Known weakness: reworded repeats** (`week2-b`: 19 near repeats in 5 of 8 cases).
+  - The model wants to put an existing undated step into this week, for example «انجام آزمون آزمایشی…» for the open «حل یک آزمون آزمایشی…».
+  - A draft can only create, not date an existing Task. So the step comes back reworded, or it is dropped and the week is thin (python: 2 Tasks).
+  - The prompt rule did not fix it (21 → 19).
+  - The fix is a draft item that dates an existing Task, previewed and version-checked like any other change. **Built in the follow-up below.**
+- **Other limits:**
+  - The eval does not live Routine slots, so their counts are zero there.
+  - Week two cannot change or pause a Routine; it only names one in its assumptions.
+  - `CONTINUE_AS_IS` means approved as proposed, not "nothing changed".
+- **Verified on Linux, 2026-10-16:**
+  - 302 backend tests passed, 2 skipped (the real-provider runs);
+  - 124 frontend tests passed; typecheck, lint and build were clean;
+  - 30 browser scenarios passed on a fresh database, 1 opt-in skipped;
+  - the screenshots of the offer on a phone, the week-two review and the Goal-page offer at 1440px were inspected.
+
+**Follow-up, 2026-10-16 (owner decisions; Mind Map notes in 014, 023 and 029 §3):**
+
+- **A draft dates existing work instead of proposing it again.**
+  - The context names the scope's unfinished Tasks `T1…`, and the model gives one a day with `existingTaskRef`. It is stored as a TASK proposal with `ExistingTaskId`.
+  - Only its day and inclusion can change. Its title, owner, deadline and order come from the planner.
+  - The preview hash covers the Task's version. Apply locks the Task and refuses with `CONFIRMATION_STALE` if it changed.
+  - A dated Task moved to a new day is `TASK_CARRIED`; an undated one gets `TASK_UPDATED`.
+  - `PLANNING_DRAFT_APPLIED` v3 adds `datedTaskCount`, and the result adds `datedTaskIds`.
+  - Review issues: `EXISTING_TASK_NEEDS_DATE` and `EXISTING_TASK_UNAVAILABLE`.
+  - The screens mark the row «کار موجود؛ فقط روزش گذاشته می‌شود», edit only its day («روز کار موجود»), and list it apart in the confirmation («تأیید: ساخت N مورد و روز M کار»).
+- **The Goal's point reaches every week.** The scope carries its desired outcome or completion meaning, and its target date (context `2026-10-16.3`).
+- **What the user said is offered as planning details.** The prompt asks for their starting point, focus, tools, ruled-out ways and unavailable days. The raw intention and answers are still not kept (023).
+- **Gate rules for a next week** ([acceptance 13g](step-09-ai-planning-acceptance.md)):
+  - a Routine repeating an active one is dropped;
+  - a parent, a sequence or another Project on an existing Task is not read;
+  - at most one question, never about availability;
+  - no new Project beside active ones.
+- **Found while checking, fixed:** when today is a Friday, the user's «جمعه» falls just beyond the window. The calendar had no date for it, so the model wrote «جمعه ۳۰ مهر», which is a Thursday.
+  - On the same 10 date-sensitive cases, three runs each: the previous prompt made 5 date errors, and the new one 0.
+  - The calendar now also gives the seven days after the window, for text and targets only.
+- **Versions:** prompt `2026-10-16.6`, schema `2026-10-16.2`, repair policy `2026-10-16.7`, context builder `2026-10-16.3`.
+- **Tests:**
+  - [gate](../backend.Tests/PlanningOutputGateTests.cs) `An_open_task_is_dated_by_its_ref_keeping_its_own_title_place_and_deadline`, which also covers the Routine duplicate and the new-phase rule; the continuation question rule in `A_clarification_is_bounded_and_refused_when_no_more_questions_are_allowed`;
+  - [module](../backend.Tests/PlanningModuleTests.cs): the existing step is dated, a changed Task makes the approval stale, and the Task keeps its title and place;
+  - [renderer](../backend.Tests/AiPlanningRuntimeTests.cs): Routine times and `afterWindow`;
+  - [page](../frontend/src/features/planning/components/PlanningPage.test.tsx) `shows an existing Task the next week only dates apart…`;
+  - the [browser test](../frontend/e2e/continuation.spec.ts) now checks the dated step and that no copy of it was made.
+- **Evaluation** (DeepSeek, thinking off; [README](../tools/planning-eval/README.md)):
+
+  | | before (`week2-a`, `week2-b`) | after (`week2-c`, `week2-d`) |
+  |---|---|---|
+  | week-two drafts approvable | 8/8, 8/8 | 8/8, 8/8 |
+  | questions in week two | 11, then 0 | 1, 0 |
+  | existing Tasks dated | — | 36, 35 (every case) |
+  | items the gate had to drop | 15, 18 | 0, 0 |
+  | near repeats of open or existing work | 19 in 6 cases, 15 in 5 | 3 in 2, 5 in 1 |
+  | new Projects beside existing phases | 0, 0 | 0, 0 |
+
+  - Of the 8 remaining near repeats, by reading them: the 3 in `week2-c` are different steps that share words, and the 5 in `week2-d` are one thesis case splitting the open «نوشتن کامل پیش‌نویس فصل سه» into sections.
+  - **The 32 first-week cases** pass every 029 §10 measure in both final runs (`followup-all-a` and `-b`: 31/32 and 32/32 approvable, 0 date errors, median 9.8 s and 9.7 s).
+  - Planning details are now proposed in 7 and 8 of 32 drafts, against 3–4 in `final-a`, `final-b` and `step24-all`. Every draft that asked a question offers them (11 of 11), against 11 of 18 before.
+  - Intermediate runs on the way, before the date and gate fixes, failed the bar and are not kept.
+- **Limits that remain:**
+  - a decomposed open Task can still come back as parts (one case);
+  - the eval does not live Routine slots;
+  - `./dev.ps1 check` and `./auth-e2e.ps1` are still owed on Windows.
+- **Verified on Linux, 2026-10-16:** 303 backend tests passed, 2 skipped; 125 frontend tests passed, with typecheck, lint and build clean; 30 browser scenarios passed on a fresh database, 1 opt-in skipped. The week-two review screenshot was inspected.
+

@@ -18,6 +18,8 @@ This document owns the base `PlanningDraft` hierarchy, limits, review semantics,
 > - **§5:** Task proposals carry sequence membership and order (029 §9.1).
 > - **§9 and §11:** after validation, one regeneration with the list of issues; items still invalid are removed and named in one visible note; `GENERATION_FAILED` only when nothing valid is left. The user never sees a structural error the model produced (029 §8).
 
+> **Amendment (2026-10-16, decided by the owner, 029 §3 note):** a planning draft inside a Goal or Project may also **give an existing open Task of that scope a day in the detailed week**, instead of proposing it again as a new Task. The proposal names the Task. Only its planned day is proposed and reviewed: its title, owner, deadline and sequence stay its own, and the user can change the day or leave it out. Approval dates it inside the same confirmation, and only if the Task is still open and unchanged since the preview; otherwise nothing is applied. A dated Task moved to another day counts as a carry, as in Reconcile. §3 still holds: nothing else about existing entities is proposed or changed.
+
 Mahdi approved the final product decisions. Claude's final review found no blocking or important issue. Its final minor documentation finding was resolved by adding `BLOCKED_BY_ANCESTOR` to the canonical review-state enum.
 
 Related accepted discussions:
