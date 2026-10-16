@@ -118,6 +118,7 @@ builder.Services.AddHostedService<OtpRateCleanupService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<GoalService>();
 builder.Services.AddScoped<TaskService>();
+builder.Services.AddScoped<TaskSequenceService>();
 builder.Services.AddScoped<RoutineService>();
 builder.Services.AddScoped<TodayService>();
 builder.Services.AddScoped<ProgressService>();

@@ -39,3 +39,19 @@ public sealed record RestoreTaskRequest(
 public sealed record CarryTaskRequest(
     [Range(1, long.MaxValue)] long ExpectedVersion,
     DateOnly PlannedDate);
+
+/// <summary>A change to a Task's place in a sequence (029 §9.2): FOLLOW (with the Task to follow), MOVE_EARLIER, MOVE_LATER or LEAVE.</summary>
+public sealed record TaskSequenceRequest(
+    [Required] string Action,
+    Guid? PredecessorId);
+
+/// <summary>
+/// The change as previewed: the server applies it only while every Task the preview named is still at
+/// the version shown; otherwise the preview is stale and must be asked for again.
+/// </summary>
+public sealed record ChangeTaskSequenceRequest(
+    [Required] string Action,
+    Guid? PredecessorId,
+    [Required, MaxLength(200)] IReadOnlyList<TaskVersionRefDto> ExpectedMembers);
+
+public sealed record TaskVersionRefDto(Guid TaskId, [Range(1, long.MaxValue)] long Version);

@@ -310,6 +310,98 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
         Assert.Equal(new DateOnly(2026, 3, 21), service.Today);
     }
 
+    [Fact]
+    public async Task Two_existing_tasks_become_a_sequence_by_hand_that_moves_and_releases_only_as_previewed()
+    {
+        var owner = await CreateSessionAsync();
+        var other = await CreateSessionAsync();
+        using var client = Client(owner.Token);
+        using var otherClient = Client(other.Token);
+        var goal = await CreateGoalAsync(client, "manual-sequence-goal");
+        var first = await CreateTaskAsync(client, "manual-first", goalId: goal.Id);
+        var second = await CreateTaskAsync(client, "manual-second", goalId: goal.Id);
+        var third = await CreateTaskAsync(client, "manual-third", goalId: goal.Id);
+        var elsewhere = await CreateTaskAsync(client, "manual-elsewhere", goalId: (await CreateGoalAsync(client, "manual-other-goal")).Id);
+
+        async Task<TaskSequencePreviewDto> Preview(Guid id, string action, Guid? predecessorId = null, HttpClient? as_ = null)
+        {
+            var response = await SendAsync(as_ ?? client, HttpMethod.Post, $"/api/v1/tasks/{id}/sequence-preview",
+                new { action, predecessorId });
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<TaskSequencePreviewDto>())!;
+        }
+        Task<HttpResponseMessage> Change(Guid id, string action, Guid? predecessorId, IEnumerable<TaskVersionRefDto> expected,
+            string key) => SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{id}/sequence",
+            new { action, predecessorId, expectedMembers = expected }, key);
+
+        // «بعد از…» between two Tasks that had no order: the preview says who waits; nothing is stored.
+        var linking = await Preview(second.Id, TaskSequenceActions.Follow, first.Id);
+        Assert.Equal([first.Id, second.Id], linking.Steps.Select(x => x.TaskId));
+        Assert.Equal([false, true], linking.Steps.Select(x => x.Waits));
+        Assert.Null((await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{second.Id}"))!.SequenceId);
+
+        var linked = await Change(second.Id, TaskSequenceActions.Follow, first.Id, linking.ExpectedMembers, "manual-link");
+        var replay = await Change(second.Id, TaskSequenceActions.Follow, first.Id, linking.ExpectedMembers, "manual-link");
+        Assert.Equal(HttpStatusCode.OK, linked.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        var waiting = (await linked.Content.ReadFromJsonAsync<TaskDto>())!;
+        Assert.True(waiting.IsBlocked);
+        Assert.Equal(first.Id, Assert.Single(waiting.BlockedBy).Id);
+        var head = (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{first.Id}"))!;
+        Assert.Equal(waiting.SequenceId, head.SequenceId);
+        Assert.True(head.SequenceOrder < waiting.SequenceOrder);
+
+        // The third joins at the end, then moves before the second.
+        var joining = await Preview(third.Id, TaskSequenceActions.Follow, second.Id);
+        (await Change(third.Id, TaskSequenceActions.Follow, second.Id, joining.ExpectedMembers, "manual-join")).EnsureSuccessStatusCode();
+        var moving = await Preview(third.Id, TaskSequenceActions.MoveEarlier);
+        Assert.Equal([first.Id, third.Id, second.Id], moving.Steps.Select(x => x.TaskId));
+        (await Change(third.Id, TaskSequenceActions.MoveEarlier, null, moving.ExpectedMembers, "manual-move")).EnsureSuccessStatusCode();
+        var orders = new Dictionary<Guid, int?>();
+        foreach (var id in new[] { first.Id, second.Id, third.Id })
+            orders[id] = (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{id}"))!.SequenceOrder;
+        Assert.True(orders[first.Id] < orders[third.Id] && orders[third.Id] < orders[second.Id]);
+
+        // A preview is applied only to what it showed: a changed Task, or a Task that joined since, is refused.
+        var leaving = await Preview(first.Id, TaskSequenceActions.Leave);
+        var touched = await SendAsync(client, HttpMethod.Put, $"/api/v1/tasks/{second.Id}", new
+        {
+            title = "کار عوض‌شده", description = (string?)null, goalId = goal.Id, projectId = (Guid?)null,
+            plannedDate = (string?)null, deadline = (string?)null, sequenceId = waiting.SequenceId,
+            sequenceOrder = orders[second.Id], expectedVersion = (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{second.Id}"))!.Version
+        }, "manual-touch");
+        touched.EnsureSuccessStatusCode();
+        var stale = await Change(first.Id, TaskSequenceActions.Leave, null, leaving.ExpectedMembers, "manual-stale");
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        var partial = await Change(first.Id, TaskSequenceActions.Leave, null, leaving.ExpectedMembers.Take(1), "manual-partial");
+        Assert.Equal("SEQUENCE_PREVIEW_STALE", await ProblemCodeAsync(partial));
+
+        // Leaving: the Task stands alone and the rest keep their order; the next step no longer waits for it.
+        var fresh = await Preview(first.Id, TaskSequenceActions.Leave);
+        Assert.Equal([third.Id, second.Id], fresh.Steps.Select(x => x.TaskId));
+        (await Change(first.Id, TaskSequenceActions.Leave, null, fresh.ExpectedMembers, "manual-leave")).EnsureSuccessStatusCode();
+        Assert.Null((await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{first.Id}"))!.SequenceId);
+        Assert.False((await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{third.Id}"))!.IsBlocked);
+
+        // Another owner, another scope, and an unknown action.
+        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(otherClient, HttpMethod.Post,
+            $"/api/v1/tasks/{first.Id}/sequence-preview", new { action = TaskSequenceActions.Leave })).StatusCode);
+        var mismatch = await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{elsewhere.Id}/sequence-preview",
+            new { action = TaskSequenceActions.Follow, predecessorId = first.Id });
+        Assert.Equal("SEQUENCE_SCOPE_MISMATCH", await ProblemCodeAsync(mismatch));
+        Assert.Equal(HttpStatusCode.BadRequest, (await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/tasks/{first.Id}/sequence-preview", new { action = "SHUFFLE" })).StatusCode);
+
+        // Every re-placed Task has its own event; those the person saw in the preview are theirs.
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var linkEvents = await db.DomainEvents.AsNoTracking()
+            .Where(x => x.UserId == owner.UserId && x.EventType == "TASK_UPDATED" &&
+                (x.AggregateId == first.Id || x.AggregateId == second.Id))
+            .ToListAsync();
+        Assert.Contains(linkEvents, x => x.AggregateId == first.Id && x.Actor == "USER" && x.PayloadJson.Contains("sequenceId"));
+    }
+
     private HttpClient Client(string token)
     {
         var client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions

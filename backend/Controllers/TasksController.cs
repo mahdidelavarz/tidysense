@@ -11,8 +11,30 @@ namespace TidySense.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/tasks")]
-public sealed class TasksController(TaskService tasks) : ControllerBase
+public sealed class TasksController(TaskService tasks, TaskSequenceService sequences) : ControllerBase
 {
+    /// <summary>What a change to the Task's place in a sequence would do. Nothing is stored.</summary>
+    [HttpPost("{id:guid}/sequence-preview")]
+    [ProducesResponseType<TaskSequencePreviewDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<TaskSequencePreviewDto>> PreviewSequence(Guid id, TaskSequenceRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await sequences.PreviewAsync(id, request, cancellationToken));
+
+    /// <summary>Applies a previewed sequence change while every Task the preview named is unchanged.</summary>
+    [HttpPost("{id:guid}/sequence")]
+    [ProducesResponseType<TaskDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiProblemDto>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<TaskDto>> ChangeSequence(Guid id, ChangeTaskSequenceRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        Ok(await sequences.ChangeAsync(id, request, idempotencyKey, cancellationToken));
+
     [HttpGet]
     [ProducesResponseType<CursorPageDto<TaskDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<CursorPageDto<TaskDto>>> List(
