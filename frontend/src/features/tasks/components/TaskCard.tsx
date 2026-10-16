@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { CalendarDays, Check, ChevronLeft, CircleSlash, LoaderCircle, Lock, ShieldCheck } from '../../../shared/ui/icons'
-import { parseIsoDate } from '../../../shared/lib/date'
+import { addDays } from 'date-fns-jalali'
+import { parseIsoDate, toIsoDate } from '../../../shared/lib/date'
 import type { TaskDto } from '../types/task.types'
 import { TaskNote, TaskParent } from './TaskFacts'
 
@@ -17,10 +18,16 @@ export function taskGroup(task: Pick<TaskDto, 'status' | 'plannedDate'>, today: 
   return task.plannedDate < today ? 'earlier' : 'later'
 }
 
+/** Completed within the last seven days, today included: the reach of the list's «هفت روز اخیر». */
+export function doneInLastWeek(task: Pick<TaskDto, 'status' | 'completedForLocalDate'>, today: string) {
+  return task.status === 'COMPLETED' && task.completedForLocalDate != null &&
+    task.completedForLocalDate >= toIsoDate(addDays(parseIsoDate(today), -6))
+}
+
 /**
  * One Task on the Tasks timeline. The node completes it with one press (a
  * lock while it waits for earlier steps; how it ended once closed, a done tick
- * pressed again undoing it); the card
+ * of the last seven days pressed again undoing it, an older one from its page); the card
  * opens it. Beside the title: since when it has been waiting for an earlier
  * day, its date on a later one, or else how close its deadline is.
  */
@@ -39,6 +46,8 @@ export function TaskCard({ task, group, today, parentTitle, completing = false, 
   onUndo?: () => void
 }) {
   const closed = task.status !== 'ACTIVE'
+  // An older completion is undone from the Task's page (018 note).
+  const undoable = Boolean(onUndo) && doneInLastWeek(task, today)
   const planned = task.plannedDate ? dayMonth.format(parseIsoDate(task.plannedDate)) : null
   const note = group === 'earlier' && planned ? <DateNote text={`از ${planned}`} />
     : group === 'later' && planned && !task.deadline ? <DateNote text={planned} />
@@ -47,7 +56,7 @@ export function TaskCard({ task, group, today, parentTitle, completing = false, 
     <li className="timeline-row" data-selected={selected || undefined}>
       <div className="timeline-node">
         <span className="timeline-mark">
-          {task.status === 'COMPLETED' && onUndo ? (
+          {undoable ? (
             <button className="ring-button" type="button" aria-label={`لغو انجام: ${task.title}`} disabled={undoing} onClick={onUndo}>
               {undoing
                 ? <LoaderCircle size={20} className="animate-spin text-entity-task" aria-hidden="true" />

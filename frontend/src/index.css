@@ -1738,6 +1738,12 @@ select:not(:disabled),
     @apply flex size-6 items-center justify-center rounded-full bg-entity-task text-surface;
   }
 
+  /* The grip a step of a sequence is dragged by; on touch it drags instead of scrolling the page. */
+  .drag-handle {
+    @apply -my-2 -me-2 flex size-11 shrink-0 cursor-grab items-center justify-center rounded-full text-text-tertiary hover:text-text-secondary active:cursor-grabbing;
+    touch-action: none;
+  }
+
   /* A done tick stays pressable: pressed again, it undoes the completion. */
   .ring-button > .ring-done {
     @apply border-entity-task bg-entity-task;

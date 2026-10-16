@@ -11,6 +11,7 @@ const titles: Record<TaskSequenceAction, string> = {
   FOLLOW: 'بعد از کار دیگری',
   MOVE_EARLIER: 'یک قدم زودتر',
   MOVE_LATER: 'یک قدم دیرتر',
+  MOVE_TO: 'جابه‌جایی در ترتیب',
   LEAVE: 'بیرون از ترتیب',
 }
 
@@ -22,13 +23,15 @@ export function followCandidates(task: Pick<TaskDto, 'id' | 'goalId' | 'projectI
 
 /**
  * One change to a Task's place in a sequence (029 §9.2): «بعد از…», a step
- * earlier or later, or out of the order. The server previews what the change
+ * earlier or later, a place it was dragged to (`after`: the step it now
+ * follows, or null for the first), or out of the order. The server previews what the change
  * does, who will wait and whose place moves, and «تأیید» applies exactly
  * that preview; if anything changed meanwhile it is refused and previewed again.
  */
-export function TaskSequenceSheet({ task, action, onClose }: {
+export function TaskSequenceSheet({ task, action, after = null, onClose }: {
   task: TaskDto
   action: TaskSequenceAction
+  after?: Pick<TaskDto, 'id' | 'title'> | null
   onClose: () => void
 }) {
   const options = useTaskOptions()
@@ -38,12 +41,14 @@ export function TaskSequenceSheet({ task, action, onClose }: {
   const candidates = followCandidates(task, options.data?.items ?? [])
   const following = action === 'FOLLOW'
   const ask = preview.mutate
+  // The step a Task is placed after: the one chosen to follow, or the one it was dragged below.
+  const placedAfter = following ? predecessorId || null : action === 'MOVE_TO' ? after?.id ?? null : null
 
   // A move or a release is previewed at once; «بعد از…» once the Task to follow is chosen.
   useEffect(() => {
-    if (!following) ask({ action })
-    else if (predecessorId) ask({ action, predecessorId })
-  }, [action, following, predecessorId, ask])
+    if (!following) ask({ action, predecessorId: placedAfter })
+    else if (placedAfter) ask({ action, predecessorId: placedAfter })
+  }, [action, following, placedAfter, ask])
 
   const data = preview.data
   const steps = data?.steps ?? []
@@ -52,7 +57,9 @@ export function TaskSequenceSheet({ task, action, onClose }: {
     ? before ? `«${task.title}» بعد از «${before.title}» می‌آید و تا انجام آن منتظر می‌ماند.` : undefined
     : action === 'LEAVE'
       ? `«${task.title}» از این ترتیب بیرون می‌آید و مستقل می‌شود؛ ترتیب بقیه سر جایش می‌ماند.`
-      : `«${task.title}» یک قدم ${action === 'MOVE_EARLIER' ? 'زودتر' : 'دیرتر'} انجام می‌شود.`
+      : action === 'MOVE_TO'
+        ? after ? `«${task.title}» بعد از «${after.title}» انجام می‌شود.` : `«${task.title}» اولین مرحله‌ی این ترتیب می‌شود.`
+        : `«${task.title}» یک قدم ${action === 'MOVE_EARLIER' ? 'زودتر' : 'دیرتر'} انجام می‌شود.`
 
   return (
     <Sheet title={titles[action]} entity="task" onClose={onClose} locked={change.isPending}>
@@ -63,10 +70,10 @@ export function TaskSequenceSheet({ task, action, onClose }: {
         onSubmit={event => {
           event.preventDefault()
           if (!data) return
-          change.mutate({ ...data, predecessorId: following ? predecessorId : null }, {
+          change.mutate({ ...data, predecessorId: placedAfter }, {
             onSuccess: onClose,
             // A changed sequence is previewed again; the person confirms what is true now.
-            onError: () => ask(following ? { action, predecessorId } : { action }),
+            onError: () => ask({ action, predecessorId: placedAfter }),
           })
         }}
       >

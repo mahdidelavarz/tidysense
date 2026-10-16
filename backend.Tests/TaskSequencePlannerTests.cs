@@ -63,6 +63,33 @@ public sealed class TaskSequencePlannerTests
     }
 
     [Fact]
+    public void A_dragged_step_lands_after_the_chosen_one_but_never_among_the_completed_ones()
+    {
+        var first = Task("اول", 10, TaskStatuses.Completed);
+        var second = Task("دوم", 20, TaskStatuses.Completed);
+        var a = Task("الف", 30);
+        var b = Task("ب", 40);
+        var c = Task("ج", 50);
+        TaskSequenceMember[] chain = [first, second, a, b, c];
+
+        // To the front of the unresolved part: after the last completed step.
+        var front = Plan(TaskSequenceActions.MoveTo, c, second, chain);
+        Assert.Equal(["اول", "دوم", "ج", "الف", "ب"], front.Steps.Select(x => x.Member.Title));
+        Assert.DoesNotContain(front.Changes, x => x.TaskId == first.Id || x.TaskId == second.Id);
+        // To the end, past two steps at once.
+        Assert.Equal(["اول", "دوم", "ب", "ج", "الف"], Plan(TaskSequenceActions.MoveTo, a, c, chain).Steps.Select(x => x.Member.Title));
+
+        // Never between completed steps, never before them, never after itself or outside the sequence, never in place.
+        Assert.Equal("SEQUENCE_MOVE_UNAVAILABLE", Code(() => Plan(TaskSequenceActions.MoveTo, c, first, chain)));
+        Assert.Equal("SEQUENCE_MOVE_UNAVAILABLE", Code(() => Plan(TaskSequenceActions.MoveTo, c, null, chain)));
+        Assert.Equal("SEQUENCE_MOVE_UNAVAILABLE", Code(() => Plan(TaskSequenceActions.MoveTo, c, Task("بیرون", 10, sequence: Guid.NewGuid()), chain)));
+        Assert.Equal("SEQUENCE_SELF", Code(() => Plan(TaskSequenceActions.MoveTo, b, b, chain)));
+        Assert.Equal("NO_CHANGES", Code(() => Plan(TaskSequenceActions.MoveTo, b, a, chain)));
+        // With nothing done yet, no predecessor means first.
+        Assert.Equal(["ب", "الف"], Plan(TaskSequenceActions.MoveTo, b, null, a, b).Steps.Select(x => x.Member.Title));
+    }
+
+    [Fact]
     public void Leaving_takes_the_task_out_and_one_task_left_is_no_sequence()
     {
         var a = Task("الف", 10);

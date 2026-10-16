@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import {
   CalendarClock, CalendarDays, Check, ChevronLeft, CircleCheck, CircleDashed, CircleSlash, Flag, FolderKanban, History,
-  ListOrdered, LoaderCircle, Lock, Pencil, RotateCcw, ShieldCheck, StickyNote, Target, Trash2,
+  ListOrdered, LoaderCircle, Lock, Pencil, Reorder, RotateCcw, ShieldCheck, StickyNote, Target, Trash2,
 } from '../../../shared/ui/icons'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatLongDate, formatNumber, parseIsoDate, toIsoDate } from '../../../shared/lib/date'
 import { showToast } from '../../../shared/lib/ui-store'
@@ -48,7 +48,8 @@ export function TaskDetailView({ taskId, panel = false }: { taskId: string; pane
   const [editing, setEditing] = useState(false)
   const [carrying, setCarrying] = useState(false)
   const [confirmDrop, setConfirmDrop] = useState(false)
-  const [sequencing, setSequencing] = useState<TaskSequenceAction | null>(null)
+  // A change to a place in the sequence; `step` is the one dragged when it is not this Task.
+  const [sequencing, setSequencing] = useState<{ action: TaskSequenceAction; step?: TaskDto; after?: TaskDto | null } | null>(null)
 
   if (task.isPending) {
     return <div className={root}><BackLink to="/tasks" /><LoadingState text="در حال دریافت کار…" /></div>
@@ -176,9 +177,22 @@ export function TaskDetailView({ taskId, panel = false }: { taskId: string; pane
       </dl>
 
       {data.sequenceId
-        ? <SequenceCard task={data} onAction={setSequencing} />
-        : active && <NoSequenceCard task={data} onFollow={() => setSequencing('FOLLOW')} />}
-      {sequencing && <TaskSequenceSheet task={data} action={sequencing} onClose={() => setSequencing(null)} />}
+        ? (
+          <SequenceCard
+            task={data}
+            onAction={action => setSequencing({ action })}
+            onDrop={(step, after) => setSequencing({ action: 'MOVE_TO', step, after })}
+          />
+        )
+        : active && <NoSequenceCard task={data} onFollow={() => setSequencing({ action: 'FOLLOW' })} />}
+      {sequencing && (
+        <TaskSequenceSheet
+          task={sequencing.step ?? data}
+          action={sequencing.action}
+          after={sequencing.after}
+          onClose={() => setSequencing(null)}
+        />
+      )}
 
       <section className="card mt-5" aria-labelledby="task-description">
         <h2 className="flex items-center gap-2 font-extrabold" id="task-description">
@@ -312,14 +326,54 @@ function deadlineWords(deadline: string, today: string) {
  * Where the Task stands in its sequence: every step in order, done or
  * waiting, with this one marked, and what finishing it unlocks.
  */
-function SequenceCard({ task, onAction }: { task: TaskDto; onAction: (action: TaskSequenceAction) => void }) {
+/**
+ * The sequence with this step marked. A step of the unresolved part can be
+ * dragged by its grip to another place; the drop only proposes it, opening the
+ * same preview as «زودتر» and «دیرتر», and nothing changes until «تأیید»
+ * (025 §16). The buttons are the same move without dragging.
+ */
+function SequenceCard({ task, onAction, onDrop }: {
+  task: TaskDto
+  onAction: (action: TaskSequenceAction) => void
+  /** A step dropped in a new place: the step it now follows, or null for the first. */
+  onDrop: (step: TaskDto, after: TaskDto | null) => void
+}) {
   const options = useTaskOptions()
+  const rows = useRef(new Map<string, HTMLLIElement>())
+  const [drag, setDrag] = useState<{ from: number; to: number; middles: number[] } | null>(null)
   const steps = (options.data?.items ?? [])
     .filter(item => item.sequenceId === task.sequenceId)
     .sort((a, b) => Number(a.sequenceOrder ?? 0) - Number(b.sequenceOrder ?? 0))
   if (steps.length === 0) return null
   const position = steps.findIndex(step => step.id === task.id)
   const next = steps.slice(position + 1).find(step => step.status === 'ACTIVE')
+  // Only the unresolved part moves, never above a done step, and not while a dropped step waits for Reconcile.
+  const doneCount = steps.findIndex(step => step.status !== 'COMPLETED')
+  const movable = !steps.some(step => step.status === 'DROPPED') && steps.filter(step => step.status === 'ACTIVE').length >= 2
+  const shown = drag ? moved(steps, drag.from, drag.to) : steps
+
+  function start(event: React.PointerEvent<HTMLElement>, index: number) {
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const middles = steps.map(step => {
+      const box = rows.current.get(step.id)?.getBoundingClientRect()
+      return box ? box.top + box.height / 2 : 0
+    })
+    setDrag({ from: index, to: index, middles })
+  }
+  function follow(event: React.PointerEvent<HTMLElement>) {
+    if (!drag) return
+    const above = drag.middles.filter((middle, index) => index !== drag.from && middle < event.clientY).length
+    const to = Math.min(steps.length - 1, Math.max(doneCount, above))
+    if (to !== drag.to) setDrag({ ...drag, to })
+  }
+  function drop() {
+    if (!drag) return
+    setDrag(null)
+    if (drag.from === drag.to) return
+    const order = moved(steps, drag.from, drag.to)
+    onDrop(order[drag.to], drag.to > 0 ? order[drag.to - 1] : null)
+  }
   return (
     <section className="card mt-5" aria-labelledby="task-sequence">
       <div className="flex items-center justify-between gap-3">
@@ -332,11 +386,16 @@ function SequenceCard({ task, onAction }: { task: TaskDto; onAction: (action: Ta
         )}
       </div>
       <ol className="timeline mt-2">
-        {steps.map((step, index) => {
+        {shown.map((step, index) => {
           const self = step.id === task.id
           const state = step.status === 'COMPLETED' ? 'done' : step.status === 'DROPPED' ? 'dropped' : self ? 'self' : 'waiting'
+          const dragged = drag !== null && index === drag.to
           return (
-            <li key={step.id} className="timeline-row pb-1">
+            <li
+              key={step.id}
+              ref={row => { if (row) rows.current.set(step.id, row); else rows.current.delete(step.id) }}
+              className={`timeline-row pb-1 ${dragged ? 'rounded-xl bg-entity-task/10 shadow-md' : ''}`}
+            >
               <div className="timeline-node">
                 <span className="timeline-mark mt-1.5">
                   {state === 'done' && <span className="ring-done" role="img" aria-label="تکمیل‌شده"><Check size={14} /></span>}
@@ -360,11 +419,26 @@ function SequenceCard({ task, onAction }: { task: TaskDto; onAction: (action: Ta
                 <span className={`shrink-0 text-xs font-bold ${self ? 'text-entity-task' : 'text-text-secondary'}`}>
                   {self ? 'همین کار' : formatNumber(index + 1)}
                 </span>
+                {movable && step.status === 'ACTIVE' && (
+                  // Pointer only: «زودتر» and «دیرتر» are the same move for the keyboard and assistive technology.
+                  <span
+                    className="drag-handle"
+                    aria-hidden="true"
+                    data-testid={`drag-${step.id}`}
+                    onPointerDown={event => start(event, index)}
+                    onPointerMove={follow}
+                    onPointerUp={drop}
+                    onPointerCancel={() => setDrag(null)}
+                  >
+                    <Reorder size={18} />
+                  </span>
+                )}
               </div>
             </li>
           )
         })}
       </ol>
+      {movable && <p className="mt-1 text-xs text-text-secondary">برای جابه‌جایی، مرحله‌ی باز را از دستگیره‌اش بکشید.</p>}
       {task.status === 'ACTIVE' && (
         <p className="notice mt-3">
           {task.isBlocked
@@ -390,6 +464,14 @@ function SequenceCard({ task, onAction }: { task: TaskDto; onAction: (action: Ta
       )}
     </section>
   )
+}
+
+/** The steps with one moved from `from` to `to`. */
+function moved(steps: TaskDto[], from: number, to: number) {
+  const order = [...steps]
+  const [step] = order.splice(from, 1)
+  order.splice(to, 0, step)
+  return order
 }
 
 /** A Task that waits for nothing, and the way to make it follow another of the same owner (029 §9.2). */

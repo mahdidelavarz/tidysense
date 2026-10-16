@@ -10,10 +10,12 @@ public static class TaskSequenceActions
     public const string Follow = "FOLLOW";
     public const string MoveEarlier = "MOVE_EARLIER";
     public const string MoveLater = "MOVE_LATER";
+    /// <summary>A step dragged to another place: after the given step, within the unresolved part.</summary>
+    public const string MoveTo = "MOVE_TO";
     /// <summary>The Task leaves its order and stands on its own.</summary>
     public const string Leave = "LEAVE";
 
-    public static bool IsKnown(string? value) => value is Follow or MoveEarlier or MoveLater or Leave;
+    public static bool IsKnown(string? value) => value is Follow or MoveEarlier or MoveLater or MoveTo or Leave;
 }
 
 /// <summary>One Task as the planner sees it.</summary>
@@ -76,6 +78,21 @@ public static class TaskSequencePlanner
                 if (to < 0 || to >= chain.Count || chain[to].Status != TaskStatuses.Active)
                     throw Rejected("SEQUENCE_MOVE_UNAVAILABLE");
                 (chain[from], chain[to]) = (chain[to], chain[from]);
+                break;
+            case TaskSequenceActions.MoveTo:
+                sequenceId = target.SequenceId ?? throw Rejected("NOT_IN_SEQUENCE");
+                chain = Ordered(members, sequenceId);
+                RequireNoDropped(chain);
+                if (predecessor?.Id == target.Id) throw Rejected("SEQUENCE_SELF");
+                var rest = chain.Where(x => x.Id != target.Id).ToList();
+                var at = predecessor is null ? 0 : rest.FindIndex(x => x.Id == predecessor.Id) + 1;
+                // Not in this sequence, or before a completed step: the done part keeps its order (025 §16).
+                if ((at == 0 && predecessor is not null) ||
+                    at < rest.TakeWhile(x => x.Status == TaskStatuses.Completed).Count())
+                    throw Rejected("SEQUENCE_MOVE_UNAVAILABLE");
+                rest.Insert(at, target);
+                if (rest.Select(x => x.Id).SequenceEqual(chain.Select(x => x.Id))) throw Rejected("NO_CHANGES");
+                chain = rest;
                 break;
             default:
                 sequenceId = target.SequenceId ?? throw Rejected("NOT_IN_SEQUENCE");

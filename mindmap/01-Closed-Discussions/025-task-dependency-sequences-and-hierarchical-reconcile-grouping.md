@@ -478,7 +478,7 @@ If restoring a previously dropped Task creates a direct `sequenceOrder` collisio
 
 Restore-in-place preserves Task identity.
 
-> **Amendment (2026-10-16, decided by the owner, 018 note):** undoing a completed step's tick returns it to the unresolved part only while no later step of its sequence is completed, so the completed prefix stays a prefix; later active steps wait for it again, and the person is told so. Otherwise the undo is refused and nothing changes.
+> **Amendment (2026-10-16, decided by the owner, 018 note):** undoing a completed step's tick returns it to the unresolved part only while no later step of its sequence is completed, so the completed prefix stays a prefix; later active steps wait for it again, and the person is told so. Otherwise the undo is refused and nothing changes. A step of the unresolved part may also be dragged to any place within that part; the drop is a proposal shown in the same §16 preview and applied only on confirmation.
 
 ---
 

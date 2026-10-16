@@ -110,3 +110,45 @@ test('a new Task is made to follow an existing one from the create form', async 
   expect(created?.sequenceId).toBe(first?.sequenceId)
   expect(created?.isBlocked).toBe(true)
 })
+
+// A step is dragged by its grip to another place; the drop is previewed and applied only on «تأیید» (025 §16).
+for (const [layout, width] of [['phone', 390], ['desktop', 1440]] as const) {
+  test(`an open step is dragged to the front of a sequence, on ${layout}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.request.post('/api/v1/dev/test-session', { data: {}, headers: { Origin: origin } })
+    const n = String(Date.now()).slice(-6)
+    const goal = await post(page, 'goals', { title: `نقاشی خانه ${n}`, desiredOutcome: 'خانه‌ی تمیز', targetDate: null, reviewDate: null })
+    const sequenceId = randomUUID()
+    const step = (title: string, sequenceOrder: number) => post(page, 'tasks', { ...task(title, goal.id), sequenceId, sequenceOrder })
+    const paint = await step(`خرید رنگ ${n}`, 10)
+    const cover = await step(`پوشاندن مبل‌ها ${n}`, 20)
+    const empty = await step(`خالی کردن اتاق ${n}`, 30)
+
+    await page.goto(`/tasks/${paint.id}`)
+    const order = page.getByRole('region', { name: 'ترتیب انجام' })
+    await expect(order.getByText('برای جابه‌جایی، مرحله‌ی باز را از دستگیره‌اش بکشید.')).toBeVisible()
+    const grip = page.getByTestId(`drag-${empty.id}`)
+    const first = await order.getByRole('listitem').first().boundingBox()
+    const from = await grip.boundingBox()
+    if (!first || !from) throw new Error('the sequence is not laid out')
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(from.x + from.width / 2, first.y + 4, { steps: 8 })
+    await page.mouse.up()
+
+    const sheet = page.getByRole('dialog', { name: 'جابه‌جایی در ترتیب' })
+    await expect(sheet.getByText(`«${empty.title}» اولین مرحله‌ی این ترتیب می‌شود.`)).toBeVisible()
+    await expect(sheet.getByRole('listitem').first()).toContainText(empty.title)
+    await page.screenshot({ path: `test-results/sequence-drag-${layout}.png` })
+    // Nothing has moved until it is confirmed.
+    expect((await (await page.request.get(`/api/v1/tasks/${empty.id}`)).json()).sequenceOrder).toBe(30)
+    await sheet.getByRole('button', { name: 'تأیید' }).click()
+    await expect(sheet).toBeHidden()
+
+    const orders = await Promise.all([empty, paint, cover].map(async item =>
+      (await (await page.request.get(`/api/v1/tasks/${item.id}`)).json()).sequenceOrder as number))
+    expect(orders[0]).toBeLessThan(orders[1])
+    expect(orders[1]).toBeLessThan(orders[2])
+    await expect(order).toContainText(`منتظر «${empty.title}» است.`)
+  })
+}

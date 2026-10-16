@@ -132,9 +132,10 @@ public sealed class TaskSequenceService(
             throw new ArgumentException("predecessorId is required.");
         var target = unsaved ?? await Member(context, owner, id, cancellationToken)
             ?? throw new ResourceNotFoundException("Task", id);
-        var predecessor = action == TaskSequenceActions.Follow
-            ? await Member(context, owner, predecessorId!.Value, cancellationToken)
-                ?? throw new ResourceNotFoundException("Task", predecessorId.Value)
+        // «بعد از…» follows this Task; a dragged step is placed after it (none: first of the unresolved part).
+        var predecessor = action is TaskSequenceActions.Follow or TaskSequenceActions.MoveTo && predecessorId is { } after
+            ? await Member(context, owner, after, cancellationToken)
+                ?? throw new ResourceNotFoundException("Task", after)
             : null;
         var sequences = new[] { target.SequenceId, predecessor?.SequenceId }.OfType<Guid>().Distinct().ToArray();
         var members = await context.Tasks.AsNoTracking()

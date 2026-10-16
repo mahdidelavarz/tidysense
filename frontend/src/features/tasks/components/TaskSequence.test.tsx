@@ -6,6 +6,7 @@ import { listProjects } from '../../projects/services/projects-api'
 import { getToday } from '../../today/services/today-api'
 import { changeTaskSequence, getTask, listTasks, previewNewTaskSequence, previewTaskSequence } from '../services/tasks-api'
 import { TaskDetailView } from './TaskDetailView'
+import { TaskCard } from './TaskCard'
 import { TaskForm } from './TaskForm'
 
 vi.mock('@tanstack/react-router', () => ({
@@ -103,7 +104,7 @@ describe('A sequence built and changed by hand (029 §9.2)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'بیرون از ترتیب' }))
     const sheet = within(await screen.findByRole('dialog', { name: 'بیرون از ترتیب' }))
-    await waitFor(() => expect(previewTaskSequence).toHaveBeenCalledWith(id(2), 'LEAVE', undefined))
+    await waitFor(() => expect(previewTaskSequence).toHaveBeenCalledWith(id(2), 'LEAVE', null))
     expect(await sheet.findByText(/دیگر ترتیبی نمی‌ماند/)).toBeInTheDocument()
     fireEvent.click(sheet.getByRole('button', { name: 'تأیید' }))
     await waitFor(() => expect(changeTaskSequence).toHaveBeenCalledWith(id(2), 'LEAVE', null, leaving.expectedMembers))
@@ -159,5 +160,59 @@ describe('A sequence built and changed by hand (029 §9.2)', () => {
     const moved = await submitWithOwnerChange(true)
     expect(moved.follow).toBeUndefined()
     expect(moved.goalId).toBe(other)
+  })
+
+  it('drags an open step to another place, and only proposes it: the move is previewed and confirmed', async () => {
+    const steps = [
+      task(1, 'انجام‌شده', { status: 'COMPLETED', sequenceId: sequence, sequenceOrder: 10 }),
+      task(2, 'دوم', { sequenceId: sequence, sequenceOrder: 20 }),
+      task(3, 'سوم', { sequenceId: sequence, sequenceOrder: 30, isBlocked: true, blockedBy: [{ id: id(2), title: 'دوم' }] }),
+    ]
+    vi.mocked(listTasks).mockResolvedValue({ items: steps, page: { nextCursor: null } } as never)
+    vi.mocked(getTask).mockResolvedValue(steps[1] as never)
+    vi.mocked(previewTaskSequence).mockResolvedValue({
+      action: 'MOVE_TO', taskId: id(3), expectedMembers: steps.map(x => ({ taskId: x.id, version: 2 })),
+      steps: [
+        { taskId: id(1), title: 'انجام‌شده', status: 'COMPLETED', changed: false, waits: false },
+        { taskId: id(3), title: 'سوم', status: 'ACTIVE', changed: true, waits: false },
+        { taskId: id(2), title: 'دوم', status: 'ACTIVE', changed: true, waits: true },
+      ],
+    } as never)
+    // jsdom lays nothing out: each row is 50px tall, in list order.
+    const box = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const index = this.parentElement ? Array.from(this.parentElement.children).indexOf(this) : 0
+      return { top: index * 50, height: 50, bottom: index * 50 + 50, left: 0, right: 300, width: 300, x: 0, y: index * 50, toJSON: () => ({}) }
+    })
+    HTMLElement.prototype.setPointerCapture ??= () => {}
+    renderTask(id(2))
+
+    // The done step has no grip: it never moves.
+    const grip = await screen.findByTestId(`drag-${id(3)}`)
+    expect(screen.queryByTestId(`drag-${id(1)}`)).not.toBeInTheDocument()
+    fireEvent.pointerDown(grip, { pointerId: 1, clientY: 125 })
+    // Dragged above everything, it stops below the done step.
+    fireEvent.pointerMove(grip, { pointerId: 1, clientY: 0 })
+    fireEvent.pointerUp(grip, { pointerId: 1, clientY: 0 })
+    const sheet = within(await screen.findByRole('dialog', { name: 'جابه‌جایی در ترتیب' }))
+    await waitFor(() => expect(previewTaskSequence).toHaveBeenCalledWith(id(3), 'MOVE_TO', id(1)))
+    expect(sheet.getByText('«سوم» بعد از «انجام‌شده» انجام می‌شود.')).toBeInTheDocument()
+    expect(changeTaskSequence).not.toHaveBeenCalled()
+    box.mockRestore()
+  })
+
+  it('undoes a done tick in the list only for the last seven days; older ones are undone from their page', () => {
+    const done = (completedForLocalDate: string) => task(4, `کار ${completedForLocalDate}`, { status: 'COMPLETED', completedForLocalDate })
+    const onUndo = vi.fn()
+    const row = (item: ReturnType<typeof done>) => render(
+      <ol><TaskCard task={item as never} group="closed" today={day} onComplete={() => {}} onUndo={onUndo} /></ol>,
+    )
+    // Today is 16 October: the 10th is the seventh day back, the 9th is beyond it.
+    const recent = row(done('2026-10-10'))
+    fireEvent.click(screen.getByRole('button', { name: 'لغو انجام: کار 2026-10-10' }))
+    expect(onUndo).toHaveBeenCalledTimes(1)
+    recent.unmount()
+    row(done('2026-10-09'))
+    expect(screen.queryByRole('button', { name: /^لغو انجام/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'تکمیل‌شده' })).toBeInTheDocument()
   })
 })

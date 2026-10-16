@@ -357,6 +357,12 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
         var moving = await Preview(third.Id, TaskSequenceActions.MoveEarlier);
         Assert.Equal([first.Id, third.Id, second.Id], moving.Steps.Select(x => x.TaskId));
         (await Change(third.Id, TaskSequenceActions.MoveEarlier, null, moving.ExpectedMembers, "manual-move")).EnsureSuccessStatusCode();
+        // A drag puts the last step first, through the same preview and command.
+        var dragging = await Preview(second.Id, TaskSequenceActions.MoveTo);
+        Assert.Equal([second.Id, first.Id, third.Id], dragging.Steps.Select(x => x.TaskId));
+        (await Change(second.Id, TaskSequenceActions.MoveTo, null, dragging.ExpectedMembers, "manual-drag")).EnsureSuccessStatusCode();
+        var back = await Preview(second.Id, TaskSequenceActions.MoveTo, third.Id);
+        (await Change(second.Id, TaskSequenceActions.MoveTo, third.Id, back.ExpectedMembers, "manual-drag-back")).EnsureSuccessStatusCode();
         var orders = new Dictionary<Guid, int?>();
         foreach (var id in new[] { first.Id, second.Id, third.Id })
             orders[id] = (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{id}"))!.SequenceOrder;

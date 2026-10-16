@@ -1352,10 +1352,19 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
   - 119 frontend tests passed; typecheck, lint and build were clean;
   - 27 browser scenarios passed on a fresh database, 1 opt-in skipped. Three older scenarios asserted a read-only done tick and now assert the undo button.
 
+**Second follow-up, 2026-10-16 (owner decisions):**
+
+- **Drag to reorder.**
+  - On the Task page, each open step of a sequence has a grip. A drop is only a proposal: it opens the same preview, and nothing changes until «تأیید».
+  - The planner's new `MOVE_TO` places a step after a given one (none: first), never among the completed steps, outside the sequence, after itself, or in place.
+  - Tests: [planner](../backend.Tests/TaskSequencePlannerTests.cs) `A_dragged_step_lands_after_the_chosen_one_but_never_among_the_completed_ones`, the API drag in `Two_existing_tasks_become_a_sequence…`, the [component test](../frontend/src/features/tasks/components/TaskSequence.test.tsx), and the [browser test](../frontend/e2e/sequence.spec.ts) at 390px and 1440px with a real pointer drag.
+- **Undo window in the Tasks list:** the tick undoes only a completion of the last seven days (`doneInLastWeek`, the same reach as the list's «هفت روز اخیر»). An older one is undone from the Task's page. The server rule is unchanged.
+- **Verified on Linux, 2026-10-16:** 296 backend tests passed, 2 skipped; 121 frontend tests passed, with typecheck, lint and build clean; 29 browser scenarios passed on a fresh database, 1 opt-in skipped.
+
 **Known limits:**
 
-- **The control is a Task-page action.** There is no drag-and-drop or reorder in the list.
-- **Undoing a completion is not limited in time.** A Task completed long ago can still be reopened from the Tasks list. It returns to its old planned date, which may be overdue, and Reconcile then picks it up.
+- **Dragging is pointer only.** The keyboard and assistive technology move a step with «زودتر» and «دیرتر» on that step's own page, one place at a time.
+- **There is no reorder in the Tasks list itself**, which is grouped by date, not by sequence.
 
 ---
 

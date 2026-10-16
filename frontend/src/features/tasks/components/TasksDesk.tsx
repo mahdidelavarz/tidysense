@@ -21,7 +21,7 @@ import { useProjectOptions } from '../../projects/hooks/project-hooks'
 import { useToday } from '../../today/hooks/today-hooks'
 import { useCompleteTask, useTaskParentTitle, useTasks, useUndoCompleteTask } from '../hooks/task-hooks'
 import type { TaskDto } from '../types/task.types'
-import { TaskCard, type TaskGroup, taskGroup } from './TaskCard'
+import { doneInLastWeek, TaskCard, type TaskGroup, taskGroup } from './TaskCard'
 import { TaskDetailView } from './TaskDetailView'
 
 /** A way of narrowing the list: by when, or by what the Task belongs to. */
@@ -88,8 +88,7 @@ export function TasksDesk({ selectedId }: { selectedId?: string }) {
   }
   const count = (current: View) => items.filter(task => matches(task, current)).length
   const shown = items.filter(task => matches(task, view))
-  const doneThisWeek = items.filter(task => task.status === 'COMPLETED' && task.completedForLocalDate
-    && task.completedForLocalDate >= toIsoDate(addDays(parseIsoDate(today), -6))).length
+  const doneThisWeek = items.filter(task => doneInLastWeek(task, today)).length
 
   const dates: Partial<Record<TaskGroup, string>> = { today: formatLongDate(today), tomorrow: formatLongDate(tomorrow) }
   const activeProjects = (projects.data?.items ?? []).filter(project => project.status === 'ACTIVE')
