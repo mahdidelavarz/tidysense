@@ -20,9 +20,10 @@ import { useToday } from '../../today/hooks/today-hooks'
 import {
   useCarryTask, useCompleteTask, useDropTask, useRestoreTask, useTask, useTaskOptions, useTaskParentTitle, useUpdateTask,
 } from '../hooks/task-hooks'
-import type { TaskDto, UpdateTaskRequest } from '../types/task.types'
+import type { TaskDto, TaskSequenceAction, UpdateTaskRequest } from '../types/task.types'
 import { TaskCarrySheet } from './TaskCarrySheet'
 import { TaskForm } from './TaskForm'
+import { TaskSequenceSheet, followCandidates } from './TaskSequenceSheet'
 
 /**
  * Task detail page: the Task with its owner, one big action to complete it
@@ -45,6 +46,7 @@ export function TaskDetailView({ taskId, panel = false }: { taskId: string; pane
   const [editing, setEditing] = useState(false)
   const [carrying, setCarrying] = useState(false)
   const [confirmDrop, setConfirmDrop] = useState(false)
+  const [sequencing, setSequencing] = useState<TaskSequenceAction | null>(null)
 
   if (task.isPending) {
     return <div className={root}><BackLink to="/tasks" /><LoadingState text="در حال دریافت کار…" /></div>
@@ -156,7 +158,10 @@ export function TaskDetailView({ taskId, panel = false }: { taskId: string; pane
         )}
       </dl>
 
-      {data.sequenceId && <SequenceCard task={data} />}
+      {data.sequenceId
+        ? <SequenceCard task={data} onAction={setSequencing} />
+        : active && <NoSequenceCard task={data} onFollow={() => setSequencing('FOLLOW')} />}
+      {sequencing && <TaskSequenceSheet task={data} action={sequencing} onClose={() => setSequencing(null)} />}
 
       <section className="card mt-5" aria-labelledby="task-description">
         <h2 className="flex items-center gap-2 font-extrabold" id="task-description">
@@ -290,7 +295,7 @@ function deadlineWords(deadline: string, today: string) {
  * Where the Task stands in its sequence: every step in order, done or
  * waiting, with this one marked, and what finishing it unlocks.
  */
-function SequenceCard({ task }: { task: TaskDto }) {
+function SequenceCard({ task, onAction }: { task: TaskDto; onAction: (action: TaskSequenceAction) => void }) {
   const options = useTaskOptions()
   const steps = (options.data?.items ?? [])
     .filter(item => item.sequenceId === task.sequenceId)
@@ -350,6 +355,40 @@ function SequenceCard({ task }: { task: TaskDto }) {
             : next ? `پیش‌نیازها انجام شده‌اند. با انجام این کار، «${next.title}» باز می‌شود.` : 'این آخرین مرحله‌ی این ترتیب است.'}
         </p>
       )}
+      {task.status === 'ACTIVE' && position >= 0 && (
+        // Only the unresolved part moves: a step never passes a done one (025 §16). The server decides; this only hides a move that cannot be.
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button className="secondary-button min-h-10 px-3 text-sm" type="button"
+            disabled={steps[position - 1]?.status !== 'ACTIVE'} onClick={() => onAction('MOVE_EARLIER')}>
+            زودتر
+          </button>
+          <button className="secondary-button min-h-10 px-3 text-sm" type="button"
+            disabled={steps[position + 1]?.status !== 'ACTIVE'} onClick={() => onAction('MOVE_LATER')}>
+            دیرتر
+          </button>
+          <button className="secondary-button min-h-10 px-3 text-sm" type="button" onClick={() => onAction('LEAVE')}>
+            بیرون از ترتیب
+          </button>
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** A Task that waits for nothing, and the way to make it follow another of the same owner (029 §9.2). */
+function NoSequenceCard({ task, onFollow }: { task: TaskDto; onFollow: () => void }) {
+  const others = followCandidates(task, useTaskOptions().data?.items ?? [])
+  if (others.length === 0) return null
+  return (
+    <section className="card mt-5" aria-labelledby="task-no-sequence">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 font-extrabold" id="task-no-sequence">
+          <ListOrdered size={18} className="text-text-secondary" aria-hidden="true" />
+          ترتیب انجام
+        </h2>
+        <button className="secondary-button min-h-10 px-3 text-sm" type="button" onClick={onFollow}>بعد از…</button>
+      </div>
+      <p className="mt-2 text-sm text-text-secondary">این کار منتظر کار دیگری نیست. اگر باید بعد از کاری انجام شود، «بعد از…» را بزنید.</p>
     </section>
   )
 }

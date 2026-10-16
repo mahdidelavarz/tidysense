@@ -13,11 +13,12 @@ import type { CreateTaskRequest, TaskDto, UpdateTaskRequest } from '../types/tas
 import { ParentChoice } from './ParentChoice'
 import { TaskParentSelect } from './TaskParentSelect'
 import { TaskSequenceSelect } from './TaskSequenceSelect'
+import { followCandidates } from './TaskSequenceSheet'
 
 /**
- * Create/edit form for a Task, rendered as the body of a Sheet. Sequence
- * placement is offered only on create; an existing Task's position is
- * immutable here. On create, the day and the owner are one-press choices and
+ * Create/edit form for a Task, rendered as the body of a Sheet. On create a
+ * Task may be set to follow another («بعد از…»); an existing Task's place in a
+ * sequence is changed from its page, not here. On create, the day and the owner are one-press choices and
  * the day starts at today, so a title alone is a Task for today; a title with
  * no date and no owner is not yet a Task: it is handed to `onCapture` and
  * saved as a quick capture.
@@ -33,7 +34,8 @@ export function TaskForm({ task, today, parentScope, goals, projects, tasks = []
   tasks?: TaskDto[]
   pending: boolean
   error: unknown
-  onSubmit: (request: CreateTaskRequest | UpdateTaskRequest) => void
+  /** `followAfter` is the Task a new Task should follow, applied once it exists. */
+  onSubmit: (request: CreateTaskRequest | UpdateTaskRequest, followAfter?: string) => void
   onCapture?: (title: string) => void
   onCancel: () => void
 }) {
@@ -59,7 +61,11 @@ export function TaskForm({ task, today, parentScope, goals, projects, tasks = []
     }
     const sequence = task
       ? { sequenceId: task.sequenceId, sequenceOrder: task.sequenceOrder }
-      : parseSequence(values.sequenceChoice)
+      : { sequenceId: null, sequenceOrder: null }
+    // Followed only while it is still a Task of the chosen owner: changing the owner leaves it unchosen.
+    const chosen = values.sequenceChoice.startsWith('after:') ? values.sequenceChoice.slice(6) : undefined
+    const owner = { id: '', goalId: scope === 'goal' ? parentId : null, projectId: scope === 'project' ? parentId : null }
+    const followAfter = !task && chosen && followCandidates(owner, tasks).some(item => item.id === chosen) ? chosen : undefined
     onSubmit({
       title: values.title,
       description: emptyToNull(values.description),
@@ -70,7 +76,7 @@ export function TaskForm({ task, today, parentScope, goals, projects, tasks = []
       ...sequence,
       isProtected: values.isProtected,
       ...(task ? { expectedVersion: task.version } : {}),
-    })
+    }, followAfter)
   })
 
   return (
@@ -150,13 +156,4 @@ function submitLabel(plannedDate: string, today?: string) {
   if (today && plannedDate === today) return 'افزودن به امروز'
   if (today && plannedDate && plannedDate === toIsoDate(addDays(parseIsoDate(today), 1))) return 'افزودن به فردا'
   return 'ساخت کار'
-}
-
-function parseSequence(value: string): Pick<CreateTaskRequest, 'sequenceId' | 'sequenceOrder'> {
-  if (value === 'new') return { sequenceId: crypto.randomUUID(), sequenceOrder: 10 }
-  if (value.startsWith('sequence:')) {
-    const [, sequenceId, order] = value.split(':')
-    return { sequenceId, sequenceOrder: Number(order) }
-  }
-  return { sequenceId: null, sequenceOrder: null }
 }

@@ -1294,9 +1294,51 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
 
 **Completion criteria:** A user can link two existing Tasks, reorder the unresolved part and remove a Task from its order, all on the phone and on desktop.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE` — verified on 2026-10-16. Still owed: `./dev.ps1 check` and `./auth-e2e.ps1` on Windows.
 
-**Evidence:** None.
+**Evidence:**
+
+- **One command, a preview that is not stored.** This is the second exception to the stored `ActionConfirmation` convention ([active conventions](context/active-conventions.md)).
+  - `POST /api/v1/tasks/{id}/sequence-preview` returns:
+    - the order after the change;
+    - who will wait;
+    - the id and version of every Task it read.
+  - `POST /api/v1/tasks/{id}/sequence` (`CHANGE_TASK_SEQUENCE`, with an Idempotency-Key) sends them back. Under the sequence lock it plans again, then refuses:
+    - `SEQUENCE_PREVIEW_STALE` if the set of Tasks differs;
+    - `CONFLICT_STALE_VERSION` if a version differs.
+  - Other Tasks it re-places are cascade events with actor `USER`.
+  - Existing create and update commands were kept; only this one was added.
+- **Rules** ([planner](../backend/Services/TaskSequencePlanner.cs), [service](../backend/Services/TaskSequenceService.cs)), per 025 §2–§4 and §16:
+  - «بعد از…» needs an active Task without a sequence and an undropped Task of the same Goal, Project or none (`SEQUENCE_SCOPE_MISMATCH`, `SEQUENCE_ALREADY_SET`, `PREDECESSOR_NOT_AVAILABLE`). It starts a sequence when that Task has none.
+  - A move swaps with an active neighbour, never past a completed step (`SEQUENCE_MOVE_UNAVAILABLE`).
+  - Leaving clears the Task, and also the last one left.
+  - A sequence with a dropped step is refused with `SEQUENCE_NEEDS_RECONCILE` and resolved in Reconcile.
+  - Order values are kept where they still fit. A new value is never one another member holds, so the unique index is never hit mid-write.
+- **Tests:**
+  - [planner tests](../backend.Tests/TaskSequencePlannerTests.cs), five;
+  - [command test](../backend.Tests/TaskTodayModuleTests.cs) `Two_existing_tasks_become_a_sequence_by_hand_that_moves_and_releases_only_as_previewed`: link, replay, joining a sequence, move, stale version 409, a partial preview, leave, another owner's Task 404, scope mismatch, unknown action 400, and the `USER` cascade event.
+- **Frontend:**
+  - [Task page](../frontend/src/features/tasks/components/TaskDetailView.tsx): «بعد از…» on an active Task without a sequence, when a same-owner Task exists. A sequence has «زودتر», «دیرتر» and «بیرون از ترتیب»; a move that is not possible is disabled.
+  - [sheet](../frontend/src/features/tasks/components/TaskSequenceSheet.tsx): previews at once, or once the Task to follow is chosen. It shows the order with «منتظر می‌ماند». «تأیید» sends exactly the preview, and a refusal previews again.
+  - [New Task](../frontend/src/features/tasks/components/TaskSequenceSelect.tsx): «مستقل، منتظر کاری نیست» or «بعد از «…»» in place of «شروع دنبالهٔ جدید». The Task is made, then follows through the same command.
+    - If following fails, the Task stays on its own and a toast says so.
+    - A choice no longer of the chosen owner is not sent.
+  - [component tests](../frontend/src/features/tasks/components/TaskSequence.test.tsx), three.
+- **Verified on Linux, 2026-10-16:**
+  - 292 backend tests passed, 2 skipped (the real-provider runs);
+  - 118 frontend tests passed; typecheck, lint and build were clean;
+  - all browser scenarios passed on a fresh database, the opt-in time-to-draft one skipped. [`sequence.spec.ts`](../frontend/e2e/sequence.spec.ts):
+    - two existing Tasks linked, moved and released on 390 px and 1440 px;
+    - a new Task made to follow from the create form;
+  - the phone and desktop screenshots of the sheet and the sequence card were inspected.
+
+**Known limits:**
+
+- **Create and follow are two requests.** If the second is refused, the Task exists without its order; it is said, not hidden.
+- **Crossing the desktop breakpoint closes an open sheet** on a Task page, because the page swaps its layout. This holds for every sheet there, not only this one.
+  - It is found because a full-page screenshot briefly resizes the window to 1×1.
+  - The browser test now takes viewport screenshots.
+- **The control is a Task-page action.** There is no drag-and-drop or reorder in the list.
 
 ---
 

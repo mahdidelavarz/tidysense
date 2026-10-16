@@ -97,7 +97,7 @@ Each entity has one form component (`GoalForm`, `ProjectForm`, `TaskForm`, `Rout
 
 A create form shows only what is needed to save, title first, focused and `prominent`, and puts everything optional in `MoreFields`. A label ending in "(اختیاری)" is passed as one string; `LabelText` sets that ending quieter without changing the label's accessible name. Hints sit under the field. Chips for a few choices or shortcuts use `.choice-chip`: a pill outline that fills with the sun tint when chosen, or with the item's own colour inside a sheet that makes one kind of item.
 
-The quick create forms (New Task, New Routine) ask a question as the title label («چه کاری باید انجام شود؟», «چه کاری تکرار می‌شود؟»), then give the day (`DayChoice`, starting at today) and the owner (`ParentChoice`) as chips, so a title alone is enough to save. Edit forms keep the plain fields.
+The quick create forms (New Task, New Routine) ask a question as the title label («چه کاری باید انجام شود؟», «چه کاری تکرار می‌شود؟»), then give the day (`DayChoice`, starting at today) and the owner (`ParentChoice`) as chips, so a title alone is enough to save. Under «جزئیات بیشتر», New Task offers «بعد از «…»» for an active Task of the same owner: the Task is created first, then follows it through the ordinary sequence command (029 §9.2); if that fails the Task stays, standing on its own, and a toast says so. Edit forms keep the plain fields.
 
 `DateField` expands its calendar inline rather than floating, so it is never clipped inside a scrolling sheet. Each day button carries `data-date` with its ISO date for tests.
 
