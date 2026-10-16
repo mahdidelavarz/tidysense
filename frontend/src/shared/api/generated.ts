@@ -5605,6 +5605,8 @@ export interface components {
             /** Format: int32 */
             continuationWeek?: null | number | string;
             contextProjects?: null | components["schemas"]["PlanningContextProjectDto"][];
+            /** Format: uuid */
+            continuationOfWindowId?: null | string;
         };
         PlanningDraftRevisionRequest: {
             /** Format: int32 */

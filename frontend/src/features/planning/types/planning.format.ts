@@ -58,6 +58,7 @@ export const startErrorLabels: Record<string, string> = {
   AI_RATE_LIMITED: 'تعداد درخواست‌های برنامه‌ریزی از حد مجاز گذشته است. چیزی تغییر نکرد؛ کمی بعد دوباره تلاش کنید یا دستی بسازید.',
   CLARIFICATION_ALREADY_ANSWERED: 'به این پرسش‌ها قبلاً پاسخ داده شده است.',
   CLARIFICATION_NOT_PENDING: 'این پرسش‌ها دیگر منتظر پاسخ نیستند.',
+  CONTINUATION_NOT_OFFERED: 'هفتهٔ بعدِ این برنامه دیگر پیشنهاد نمی‌شود. از صفحهٔ هدف یا پروژه می‌توانید برنامهٔ تازه‌ای بچینید.',
 }
 
 export const blockReasonLabels: Record<string, string> = {

@@ -19,6 +19,7 @@ import { groupByRoutine, ListHeading, PlannedDay, TodayCarrySheet, TodayDropDial
 import { TodayDesk } from './TodayDesk'
 import { TodayRoutineGroup } from './TodayRoutineGroup'
 import { TodayTaskCard } from './TodayTaskCard'
+import { ContinuationOffers } from '../../planning/components/ContinuationOffer'
 
 /** Today page: the phone layout below 1024px, the desktop board from there (same queries, same actions). */
 export function TodayView() {
@@ -84,6 +85,8 @@ function TodayPhone() {
       </PhotoHero>
 
       <DayStrip today={localDate} selected={selected} onSelect={day => setChosenDay(day === localDate ? null : day)} />
+      {/* The next week of a planned Goal or Project, near the end of its week (029 §3); never in the way of today. */}
+      {selected === localDate && <ContinuationOffers today={localDate} className="mb-5" />}
 
       {selected !== localDate ? (
         <PlannedDay date={selected} today={localDate} parentTitle={parentTitle} onCarry={setCarrying} onDrop={setDropping} />

@@ -841,9 +841,9 @@ public sealed partial class PlanningService(
             ? PlanningDraftStatuses.Expired : draft.Status;
         var content = built.Content;
         var evaluation = built.Evaluation;
-        var continuedWeek = await db.PlanningAttempts.AsNoTracking().Where(x => x.Id == draft.AttemptId)
+        var continued = await db.PlanningAttempts.AsNoTracking().Where(x => x.Id == draft.AttemptId)
             .Join(db.PlanningWindows, attempt => attempt.ContinuationOfWindowId, window => (Guid?)window.Id,
-                (_, window) => (int?)window.Week)
+                (_, window) => new { window.Id, window.Week })
             .SingleOrDefaultAsync(cancellationToken);
         return new PlanningDraftDto(draft.Id, draft.AttemptId, status, draft.CurrentRevision, draft.ExpiresAt,
             built.Scope is { } scope ? new PlanningContextRefDto(scope.Type, scope.Id, scope.Title) : null,
@@ -862,13 +862,14 @@ public sealed partial class PlanningService(
             content.Assumptions, content.UnresolvedQuestions, Issues(evaluation.DraftIssues),
             evaluation.FirstWeek.Select(x => new PlanningFirstWeekEntryDto(x.DraftId, x.Date)).ToArray(),
             status == PlanningDraftStatuses.Reviewable && evaluation.CanApply, draft.LinkedConfirmationId, content.RemovedItems ?? [],
-            continuedWeek + 1,
+            continued is null ? null : continued.Week + 1,
             built.Scope is { Type: PlanningContextTypes.Goal } goalScope
                 ? await db.Projects.AsNoTracking()
                     .Where(x => x.UserId == currentUser.UserId && x.GoalId == goalScope.Id && x.Status == ParentStatuses.Active)
                     .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
                     .Select(x => new PlanningContextProjectDto(x.Id, x.Title)).ToListAsync(cancellationToken)
-                : []);
+                : [],
+            continued?.Id);
 
         static PlanningIssueDto[] Issues(IReadOnlyList<PlanningIssue> issues) =>
             issues.Select(x => new PlanningIssueDto(x.Code, x.Severity, x.Origin)).ToArray();

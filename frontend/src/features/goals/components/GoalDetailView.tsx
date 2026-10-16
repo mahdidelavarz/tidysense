@@ -19,6 +19,7 @@ import { useGoal, useGoalTerminal, useUpdateGoal } from '../hooks/goal-hooks'
 import type { UpdateGoalRequest } from '../types/goal.types'
 import { GoalForm } from './GoalForm'
 import { GoalTerminalDialog } from './GoalTerminalDialog'
+import { ContinuationOffers } from '../../planning/components/ContinuationOffer'
 
 /**
  * Goal detail page: what it means, how far it has come, what is under it,
@@ -107,6 +108,7 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
         </section>
       )}
 
+      <ContinuationOffers today={today} scopeId={data.id} className="mt-5" />
       {work && work.work.nextTasks.length > 0 && (
         <section className="card mt-5 p-4 sm:p-5" aria-labelledby="goal-next">
           <div className="flex items-center justify-between">

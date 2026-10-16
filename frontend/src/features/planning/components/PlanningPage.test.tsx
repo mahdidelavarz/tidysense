@@ -608,4 +608,28 @@ describe('PlanningPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ساخت دستی' }))
     expect(useUiStore.getState().createTarget).toBe('menu')
   })
+
+  it('plans the next week of a planned one with the tap that opened the page, and resumes it rather than asking twice', async () => {
+    const windowId = '00000000-0000-0000-0000-000000000501'
+    const client = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: null, sampleGenerator: true })
+    vi.mocked(startPlanningAttempt).mockResolvedValue(attempt('QUEUED', { continuationOfWindowId: windowId, goalId }))
+    vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('QUEUED', { continuationOfWindowId: windowId, goalId }))
+    const first = render(<QueryClientProvider client={client()}><PlanningPage continuationOf={windowId} /></QueryClientProvider>)
+    await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(startPlanningAttempt).mock.calls[0][1]).toEqual({
+      intention: 'برنامهٔ هفتهٔ بعد', replaceActive: false, continuationOfWindowId: windowId,
+    })
+    first.unmount()
+
+    // A draft of that week already waiting is offered to continue, not generated again.
+    vi.mocked(startPlanningAttempt).mockClear()
+    const waiting = draft({ continuationOfWindowId: windowId, continuationWeek: 2, context: { type: 'GOAL', id: goalId, title: 'یادگیری زبان' } })
+    vi.mocked(getPlanningActive).mockResolvedValue({ attempt: null, draft: waiting, sampleGenerator: true })
+    vi.mocked(getPlanningDraft).mockResolvedValue(waiting)
+    render(<QueryClientProvider client={client()}><PlanningPage continuationOf={windowId} /></QueryClientProvider>)
+    fireEvent.click(await screen.findByRole('button', { name: 'ادامه پیش‌نویس قبلی' }))
+    expect(await screen.findByText(/هفتهٔ دوم را دقیق چیدیم/)).toBeInTheDocument()
+    expect(startPlanningAttempt).not.toHaveBeenCalled()
+  })
 })

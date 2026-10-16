@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight, CircleCheck, CircleSlash, FileClock, Sparkles, X } from '../../../shared/ui/icons'
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'
 import { formatNumber } from '../../../shared/lib/date'
 import { useUiStore } from '../../../shared/lib/ui-store'
@@ -43,9 +43,11 @@ const steps = ['نوشتن', 'پرسش‌ها', 'مرور', 'تأیید'] as con
  * created until the user confirms the server's preview. Manual creation stays
  * available at every step, and every failure leaves the user's input intact.
  */
-export function PlanningPage({ goalId, projectId, initialIntention = '' }: PlanningScopeInput & {
+export function PlanningPage({ goalId, projectId, continuationOf, initialIntention = '' }: PlanningScopeInput & {
   /** Text written before arriving here (First Entry); it only prefills the form. */
   initialIntention?: string
+  /** «برنامهٔ هفتهٔ بعد»: the planned week whose next week this page plans at once (029 §3). */
+  continuationOf?: string
 }) {
   const active = usePlanningActive()
   const start = useStartPlanningAttempt()
@@ -94,10 +96,13 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
     apply.cancel()
     apply.clearResult()
   }
-  const begin = (text: string) => {
+  /** Starts an attempt: for the intention written, or for the next week of a planned one (`continuationOfWindowId`). */
+  const begin = (text: string, continuationOfWindowId?: string) => {
     setIntention(text)
     const replaced = replace ? replacing ?? active.data?.draft?.id ?? null : null
-    start.mutate({ intention: text, goalId: scope.goalId, projectId: scope.projectId, replaceActive: replace }, {
+    start.mutate(continuationOfWindowId
+      ? { intention: text, replaceActive: replace, continuationOfWindowId }
+      : { intention: text, goalId: scope.goalId, projectId: scope.projectId, replaceActive: replace }, {
       onSuccess: data => {
         if (replaced) setEndedDraftId(replaced)
         setAttemptId(data.id)
@@ -116,6 +121,19 @@ export function PlanningPage({ goalId, projectId, initialIntention = '' }: Plann
       },
     })
   }
+
+  // «برنامهٔ هفتهٔ بعد» is the one tap (029 §3): the next week is asked for once on arrival, unless the
+  // unfinished flow already plans that week, which is then resumed instead.
+  const continued = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: begin is the page's own starter; this runs once per arrival.
+  useEffect(() => {
+    if (!continuationOf || continued.current || active.isPending) return
+    continued.current = true
+    const flow = active.data
+    if ([flow?.attempt, flow?.clarification].some(x => x?.continuationOfWindowId === continuationOf) ||
+        flow?.draft?.continuationOfWindowId === continuationOf) return
+    begin('برنامهٔ هفتهٔ بعد', continuationOf)
+  }, [continuationOf, active.isPending])
 
   /** Answers the questions of an attempt, or asks for a draft without answering them. */
   const answer = (asked: PlanningAttemptDto, answers: PlanningAnswer[], draftNow: boolean) => {

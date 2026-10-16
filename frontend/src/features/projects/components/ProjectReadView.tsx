@@ -19,6 +19,7 @@ import { useProject, useProjectTerminal, useUpdateProject } from '../hooks/proje
 import type { UpdateProjectRequest } from '../types/project.types'
 import { ProjectForm } from './ProjectForm'
 import { ProjectTerminalDialog } from './ProjectTerminalDialog'
+import { ContinuationOffers } from '../../planning/components/ContinuationOffer'
 
 /**
  * Project detail page: what finishing it means, its Goal, how far it has
@@ -100,6 +101,7 @@ export function ProjectReadView({ projectId }: { projectId: string }) {
         </div>
       </div>
 
+      <ContinuationOffers today={today} scopeId={data.id} className="mt-5" />
       {work && (active || work.nextTasks.length > 0) && (
         <section className="card mt-5 p-4 sm:p-5" aria-labelledby="project-next">
           <div className="flex items-center justify-between">

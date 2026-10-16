@@ -104,7 +104,9 @@ public sealed record PlanningDraftDto(
     // For a continuation, the number of the week this draft plans (2 after the first week, …).
     int? ContinuationWeek = null,
     // The scope's active Projects a proposal may sit under (its ContextProjectId).
-    IReadOnlyList<PlanningContextProjectDto>? ContextProjects = null);
+    IReadOnlyList<PlanningContextProjectDto>? ContextProjects = null,
+    // The planned week this draft continues.
+    Guid? ContinuationOfWindowId = null);
 
 public sealed record PlanningContextProjectDto(Guid Id, string Title);
 

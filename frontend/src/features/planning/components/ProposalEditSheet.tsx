@@ -35,6 +35,8 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
     item.draftId !== proposal.draftId &&
     (type === 'PROJECT' ? item.entityType === 'GOAL' : type !== 'GOAL' && (item.entityType === 'GOAL' || item.entityType === 'PROJECT')))
   const contextAllowed = draft.context !== null && type !== 'GOAL' && !(type === 'PROJECT' && draft.context.type === 'PROJECT')
+  // A Task or Routine of a Goal plan may also go under one of the Goal's existing Projects.
+  const existingProjects = draft.context?.type === 'GOAL' && (type === 'TASK' || type === 'ROUTINE') ? draft.contextProjects ?? [] : []
 
   const form = useForm<ProposalFields>({
     resolver: zodResolver(proposalFieldsSchema),
@@ -42,7 +44,9 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
       entityType: type,
       title: proposal.title,
       description: proposal.description ?? '',
-      parent: proposal.parentDraftId ? `draft:${proposal.parentDraftId}` : proposal.underContext ? 'context' : 'none',
+      parent: proposal.parentDraftId ? `draft:${proposal.parentDraftId}`
+        : proposal.contextProjectId ? `project:${proposal.contextProjectId}`
+        : proposal.underContext ? 'context' : 'none',
       desiredOutcome: proposal.desiredOutcome ?? '',
       completionMeaning: proposal.completionMeaning ?? '',
       targetDate: proposal.targetDate ?? '',
@@ -64,7 +68,8 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
     title: values.title,
     description: emptyToNull(values.description),
     parentDraftId: values.parent.startsWith('draft:') ? values.parent.slice('draft:'.length) : null,
-    underContext: values.parent === 'context',
+    underContext: values.parent === 'context' || values.parent.startsWith('project:'),
+    contextProjectId: values.parent.startsWith('project:') ? values.parent.slice('project:'.length) : null,
     desiredOutcome: type === 'GOAL' ? values.desiredOutcome : null,
     completionMeaning: type === 'PROJECT' ? emptyToNull(values.completionMeaning) : null,
     targetDate: isParent ? emptyToNull(values.targetDate) : null,
@@ -122,6 +127,7 @@ export function ProposalEditSheet({ proposal, draft, pending, error, onSubmit, o
                 options={[
                   { value: 'none', label: 'مستقل' },
                   ...(contextAllowed && draft.context ? [{ value: 'context', label: `زیر «${draft.context.title}»` }] : []),
+                  ...existingProjects.map(project => ({ value: `project:${project.id}`, label: `زیر «${project.title}»` })),
                   ...parents.map(item => ({ value: `draft:${item.draftId}`, label: `زیر «${item.title}»` })),
                 ]}
               />

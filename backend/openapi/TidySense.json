@@ -9676,6 +9676,13 @@
             "items": {
               "$ref": "#/components/schemas/PlanningContextProjectDto"
             }
+          },
+          "continuationOfWindowId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

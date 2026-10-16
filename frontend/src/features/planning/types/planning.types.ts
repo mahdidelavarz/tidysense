@@ -32,7 +32,13 @@ export type PlanningAttemptInput = PlanningScopeInput & {
   previousAttemptId?: string
   answers?: PlanningAnswer[]
   draftNow?: boolean
+  /** «برنامهٔ هفتهٔ بعد»: the planned week this attempt continues (029 §3). */
+  continuationOfWindowId?: string
 }
+
+/** A planned week whose next week can be planned now, with how it went. */
+export type PlanningContinuationDto = components['schemas']['PlanningContinuationDto']
+export type PlanningContextProjectDto = components['schemas']['PlanningContextProjectDto']
 
 /** The edited item lists of one revision, sent back whole. */
 export type PlanningDraftEdit = { proposals: PlanningProposal[]; facts: PlanningFactProposal[] }
