@@ -1,5 +1,14 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react'
-import heroPhoto from '../assets/sunset.webp'
+// import heroPhoto from '../assets/sunset.webp'
+import wal1 from '../assets/wal.jpg'
+import wal2 from '../assets/wal2.jpg'
+import day from '../assets/day.jpg'
+import wal4 from '../assets/wal4.jpg'
+import wal5 from '../assets/wal5.jpg'
+import wal6 from '../assets/wal6.jpg'
+import wal7 from '../assets/wal7.jpg'
+import wal8 from '../assets/wal8.jpg'
+import night from '../assets/night.jpg'
 
 /**
  * How far the photograph has folded, from 0 (open) to 1 (the band), following
@@ -59,7 +68,7 @@ export function PhotoHero({ title, subtitle, end, below, children }: {
   const collapsed = useFold(header)
   return (
     <header ref={header} className="hero" data-collapsed={collapsed}>
-      <img className="hero-photo" src={heroPhoto} alt="" decoding="async" />
+      <img className="hero-photo" src={night} alt="" decoding="async" />
       <div className="hero-veil" aria-hidden="true" />
       <div className="hero-inner">
         <div className="min-w-0">

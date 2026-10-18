@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import photo from '../../../shared/assets/sunset.webp'
+import photo from '../../../shared/assets/night.jpg'
 import { FolderKanban, ShieldCheck, Sun, Target } from '../../../shared/ui/icons'
 import { useEffect, useState } from 'react'
 import { toApiError } from '../../../shared/api/http'

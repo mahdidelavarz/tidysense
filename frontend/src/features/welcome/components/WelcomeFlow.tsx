@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import photo from '../../../shared/assets/sunset.webp'
+import photo from '../../../shared/assets/night.jpg'
 import {
   CalendarDays, Check, ChevronLeft, ChevronRight, FolderKanban, History, Hourglass, Pencil, Repeat, Sparkles, Sun, Target,
 } from '../../../shared/ui/icons'

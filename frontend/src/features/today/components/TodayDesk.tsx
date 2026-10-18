@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { type FormEvent, useState } from 'react'
-import heroPhoto from '../../../shared/assets/sunset.webp'
+import heroPhoto from '../../../shared/assets/night.jpg'
 import { formatDayMonth, formatLongDate, formatNumber, formatTime, parseIsoDate } from '../../../shared/lib/date'
 import { showToast, useUiStore } from '../../../shared/lib/ui-store'
 import { EntityMark } from '../../../shared/ui/EntityUi'
