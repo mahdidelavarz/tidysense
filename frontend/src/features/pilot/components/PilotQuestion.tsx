@@ -20,7 +20,7 @@ export function PilotQuestion({ instrument, subjectId }: { instrument: PilotInst
   }
   return (
     <section className="card mt-6 rounded-3xl text-start" aria-labelledby={titleId}>
-      <p className="text-xs text-text-secondary">یک پرسش اختیاری برای بهتر شدن تایدی‌سنس</p>
+      <p className="text-xs text-text-secondary">یک پرسش اختیاری برای بهتر شدن TidySense</p>
       <h2 className="mt-1 font-bold" id={titleId}>{copy.question}</h2>
       {/* biome-ignore lint/a11y/useSemanticElements: a fieldset would add an unwanted visible legend/border here. */}
       <div className="mt-4 grid grid-cols-5 gap-2" role="group" aria-labelledby={titleId}>

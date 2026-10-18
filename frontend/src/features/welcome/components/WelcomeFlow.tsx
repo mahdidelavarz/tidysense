@@ -63,7 +63,7 @@ export function WelcomeFlow() {
         <div className="welcome-veil" aria-hidden="true" />
         <div className="relative flex flex-col items-center gap-2.5 pt-14 text-white">
           <span className="welcome-mark" aria-hidden="true">ت</span>
-          <h1 className="text-xl font-extrabold" style={{ textShadow: '0 2px 14px rgb(0 0 0 / 0.35)' }}>تایدی‌سنس</h1>
+          <h1 className="text-xl font-extrabold" style={{ textShadow: '0 2px 14px rgb(0 0 0 / 0.35)' }}>TidySense</h1>
         </div>
         <button className="welcome-start" type="button" onClick={() => setStep(1)}>
           شروع

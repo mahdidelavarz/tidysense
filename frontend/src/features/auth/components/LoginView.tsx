@@ -100,8 +100,8 @@ export function LoginView() {
         <div className="login-veil" aria-hidden="true" />
         <div className="login-intro">
           <span className="flex items-center gap-2.5">
-            <span className="login-mark" aria-hidden="true">ت</span>
-            <span className="text-xl font-extrabold">تایدی‌سنس</span>
+            <span className="login-mark" aria-hidden="true">T</span>
+            <span className="text-xl font-extrabold">TidySense</span>
           </span>
           <p className="mt-1.5 font-display text-[1.6875rem] font-bold leading-[1.55] lg:text-[2.25rem]">برنامه‌ای که با زندگی واقعی شما کنار می‌آید.</p>
           <ul className="space-y-2">
