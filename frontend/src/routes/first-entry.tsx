@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { type FormEvent, useRef, useState } from 'react'
-import photo from '../shared/assets/sunset.webp'
+import photo from '../shared/assets/night.jpg'
 import { type CreateTarget, useUiStore } from '../shared/lib/ui-store'
 import { type EntityKind, EntityIcon, EntityLabel } from '../shared/ui/EntityUi'
 import { ChevronLeft, ShieldCheck, Sparkles } from '../shared/ui/icons'
