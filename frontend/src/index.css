@@ -1714,7 +1714,7 @@ select:not(:disabled),
   }
 
   .timeline-parent {
-    @apply mt-0.75 inline-flex max-w-full items-center gap-1.25 text-[0.71875rem] font-bold leading-[1.125rem] text-text-secondary;
+    @apply mt-0.75 inline-flex max-w-50 sm:max-w-80 md:max-w-full items-center gap-1.25 text-[0.71875rem] font-bold leading-[1.125rem] text-text-secondary;
   }
 
   .timeline-parent.entity-ink {
