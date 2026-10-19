@@ -353,6 +353,12 @@ public sealed class AiPlanningRuntimeTests
         Assert.DoesNotContain(existing.Id.ToString(), prompt.User);
         // The correction stays inside the one data block.
         Assert.Equal(1, prompt.User.Split(PlanningPromptRenderer.DataClose).Length - 1);
+
+        // Another version gets only the previous titles, so it is not copied.
+        var again = PlanningPromptRenderer.Render(request with { Redo = new PlanningRedo(previous, null, []) }, int.MaxValue)!;
+        Assert.Contains("\"previousTitles\":[", again.User);
+        Assert.DoesNotContain("\"previousDraft\"", again.User);
+        Assert.DoesNotContain("\"plannedDate\"", again.User[again.User.IndexOf("\"redo\"")..again.User.IndexOf("\"today\"")]);
     }
 
     [Fact]
