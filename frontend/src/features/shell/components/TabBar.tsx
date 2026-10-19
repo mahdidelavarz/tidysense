@@ -1,10 +1,10 @@
 import { Plus } from "../../../shared/ui/icons";
 import { useUiStore } from "../../../shared/lib/ui-store";
 import {
-  AttentionCount,
+  // AttentionCount,
   PlaceLink,
   places,
-  useAttentionCount,
+  // useAttentionCount,
 } from "./Navigation";
 
 /**
@@ -14,7 +14,7 @@ import {
  */
 export function TabBar() {
   const openCreate = useUiStore((state) => state.openCreate);
-  const attention = useAttentionCount();
+  // const attention = useAttentionCount();
   if (useUiStore((state) => state.focused)) return null;
 
   return (
