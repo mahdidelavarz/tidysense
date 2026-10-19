@@ -1526,3 +1526,17 @@ Order: STEP-22 first. STEP-23 may run beside it. STEP-24 comes after STEP-22.
   - `./dev.ps1 check` and `./auth-e2e.ps1` are still owed on Windows.
 - **Verified on Linux, 2026-10-16:** 303 backend tests passed, 2 skipped; 125 frontend tests passed, with typecheck, lint and build clean; 30 browser scenarios passed on a fresh database, 1 opt-in skipped. The week-two review screenshot was inspected.
 
+
+## Owner fixes after trying the pilot (2026-10-19)
+
+Not a numbered step: six fixes the owner asked for, with owner decisions recorded in the Mind Map (012 §4, 013 §10, 015 §9, 024 and day-0 notes).
+
+- **A stopped Routine leaves Today at once.** Its pending slots from today on are deleted; done ones stay ([module test](../backend.Tests/RoutineModuleTests.cs) `Stop_takes_a_pending_slot_off_today…`).
+- **Stopping a Goal or Project ends everything open under it** (`ParentLifecycle`). The preview lists each Project stopped, Task dropped and Routine stopped; a change in between makes it stale. Goal «رها کردن» is now «توقف هدف» ([module test](../backend.Tests/GoalProjectModuleTests.cs) `Stopping_a_goal_or_project_ends_everything_open_under_it_exactly_as_previewed`; browser test in `parents.spec.ts`).
+- **A Project completes by its Tasks, never by hand.** It completes itself with no open and one done Task, stops its Routines, and reopens with an open Task again. Every Task command, Reconcile and capture settle the Projects they touch, parents locked first. Routines stopped at completion stay stopped after a reopen ([module test](../backend.Tests/GoalProjectModuleTests.cs) `A_project_completes_by_its_tasks_never_by_hand…`).
+- **Progress shows a percentage** of done Tasks (dropped left out, Routines not counted) on the Goal and Project pages and cards.
+- **An existing account signs in to Today**; first entry is the first sign-in only.
+- **A draft can be made again from the review**: «اصلاح» with a correction or «نسخهٔ دیگر» ([acceptance 32a](step-09-ai-planning-acceptance.md)). The draft stays until the new one exists. Migration `PlanningDraftRedo`; prompt `2026-10-19.2`. Evaluation in the [eval README](../tools/planning-eval/README.md): a correction works (29 of 31 lighter, 31/32 approvable); another version copied the first draft on `2026-10-19.1` and its fix is **not yet measured** (provider balance ran out).
+- **Found while checking, fixed:** the planning input cap (12000 estimated tokens) was 98% used by ordinary first drafts; it is now 20000.
+- **Limits that remain:** a completed Project's Routines are not restarted when it reopens; one date error in a first-draft assumption in 64 drafts; `./dev.ps1 check` and `./auth-e2e.ps1` still owed on Windows.
+- **Verified on Linux, 2026-10-19:** 306 backend tests passed, 2 skipped; 128 frontend tests passed, typecheck, lint and build clean; 31 browser scenarios passed on a fresh database, 1 opt-in skipped. The stop preview, the completed Project and the redo sheet (desktop and phone) screenshots were inspected.
