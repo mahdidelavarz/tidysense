@@ -245,19 +245,19 @@ select:not(:disabled),
   }
 
   .tab-item[aria-current="page"] .tab-icon {
-    @apply bg-accent-tint;
+    @apply text-teal-300;
   }
 
   /* Planning sits in the middle as the moonstone tile, raised out of the dock. */
   .tab-ai {
-    @apply -mt-5 flex size-14 items-center justify-center rounded-[1.25rem];
+    @apply -mt-6 flex size-12 items-center justify-center rounded-[1.25rem];
     background: var(--ai-fill);
     color: var(--color-ai-icon);
     box-shadow: var(--ai-shadow);
   }
 
   .tab-item[aria-current="page"] .tab-ai {
-    box-shadow: var(--ai-shadow), 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-ai-ink);
+    box-shadow: var(--ai-shadow), 0 0 0 2px var(--color-surface), 0 0 0 3px var(--color-ai-ink);
   }
 
   /* A small count on an icon, in the moon of "yesterday". */
