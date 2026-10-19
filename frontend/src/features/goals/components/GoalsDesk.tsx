@@ -151,7 +151,7 @@ export function GoalsDesk() {
 function closedDetail(closed: GoalDto[]) {
   return [
     closed.some(goal => goal.status === 'ACHIEVED') && `${formatNumber(closed.filter(goal => goal.status === 'ACHIEVED').length)} محقق‌شده`,
-    closed.some(goal => goal.status === 'ABANDONED') && `${formatNumber(closed.filter(goal => goal.status === 'ABANDONED').length)} رهاشده`,
+    closed.some(goal => goal.status === 'ABANDONED') && `${formatNumber(closed.filter(goal => goal.status === 'ABANDONED').length)} متوقف‌شده`,
   ].filter(Boolean).join('، ')
 }
 

@@ -59,10 +59,18 @@ public sealed partial class PlanningService(
             .Where(x => x.Text is not null || x.Options.Count > 0).ToArray();
         if (answers.Any(x => x.Text is { Length: > PlanningClarificationRules.AnswerLength }))
             throw new ArgumentException("An answer is too long.");
+        var redo = request.Redo;
+        // An empty correction is the same as none: another version of the same flow.
+        var correction = string.IsNullOrWhiteSpace(redo?.Correction) ? null
+            : ParentCommandSupport.RequiredText(redo.Correction, PlanningRedoRules.CorrectionLength, "correction");
+        if (redo is not null && (request.PreviousAttemptId is not null || answers.Length > 0 || request.DraftNow ||
+                request.ContinuationOfWindowId is not null))
+            throw new ArgumentException("A redo makes its draft's own flow again; it answers no questions.");
         var hash = CommandExecutionRequest.HashCanonicalRequest(JsonSerializer.SerializeToUtf8Bytes(new
         {
             intention, request.GoalId, request.ProjectId, request.ReplaceActive, fixture,
-            request.PreviousAttemptId, answers, request.DraftNow, request.ContinuationOfWindowId
+            request.PreviousAttemptId, answers, request.DraftNow, request.ContinuationOfWindowId,
+            redoOf = redo?.DraftId, redoRevision = redo?.ExpectedRevision, correction
         }));
 
         var existing = await db.PlanningAttempts.AsNoTracking().SingleOrDefaultAsync(
@@ -100,6 +108,22 @@ public sealed partial class PlanningService(
         }
         else if (answers.Length > 0)
             throw new ArgumentException("Answers need the attempt whose questions they answer.");
+        PlanningRedo? redoing = null;
+        if (redo is not null)
+        {
+            // The draft is made again from its own flow: the same intention, answers and planning context.
+            var redone = await OwnedDraftAsync(redo.DraftId, cancellationToken);
+            if (ReviewableError(redone, dates.UtcNow) is { } error) throw new CommandRejectedException(error);
+            VersionGuard.RequireMatch(redone.Id, redo.ExpectedRevision, redone.CurrentRevision);
+            var drafted = await OwnedAttemptAsync(redone.AttemptId, cancellationToken);
+            intention = drafted.Intention;
+            goalId = drafted.ContextGoalId;
+            projectId = drafted.ContextProjectId;
+            continuationId = drafted.ContinuationOfWindowId;
+            (turns, var earlier) = await FlowOfAsync(drafted, cancellationToken);
+            redoing = new PlanningRedo(await ContentAsync(db, redone.Id, redone.CurrentRevision, cancellationToken),
+                correction, earlier);
+        }
 
         // A switched-off AI path is said plainly before anything is stored; manual creation is unaffected.
         var settings = ai.CurrentValue;
@@ -115,7 +139,7 @@ public sealed partial class PlanningService(
                 (request.ProjectId ?? continuing.ProjectId) != continuing.ProjectId)
                 throw new ArgumentException("A continuation plans the Goal or Project of its week.");
             // Offered or still being answered; once decided, the next week is planned from its Goal or Project page.
-            if (previous is null && !PlanningContinuationRules.IsOffered(continuing, dates.Today))
+            if (previous is null && redo is null && !PlanningContinuationRules.IsOffered(continuing, dates.Today))
                 throw new DomainRuleException("CONTINUATION_NOT_OFFERED", "The next week of this plan is not offered now.");
             goalId = continuing.GoalId;
             projectId = continuing.ProjectId;
@@ -140,7 +164,15 @@ public sealed partial class PlanningService(
             cancellationToken);
         var draft = await db.PlanningDrafts.SingleOrDefaultAsync(x => x.UserId == owner &&
             x.Status == PlanningDraftStatuses.Reviewable, cancellationToken);
-        if (running is not null || draft is not null)
+        if (redo is not null)
+        {
+            // The draft being made again stays reviewable until the new one is stored (the runner replaces it).
+            if (draft is null || draft.Id != redo.DraftId) throw new CommandRejectedException("DRAFT_NOT_REVIEWABLE");
+            VersionGuard.RequireMatch(draft.Id, redo.ExpectedRevision, draft.CurrentRevision);
+            if (running is not null)
+                throw new CommandConflictException("PLANNING_DRAFT_ACTIVE", "A planning attempt is already running.");
+        }
+        else if (running is not null || draft is not null)
         {
             // An unfinished flow is never replaced silently; the user chooses to discard it.
             if (!request.ReplaceActive)
@@ -175,7 +207,8 @@ public sealed partial class PlanningService(
             ContextManifestJson = PlanningContextBuilder.Manifest(context), CreatedAt = now, UpdatedAt = now,
             PreviousAttemptId = previous?.Id, ClarificationTurn = previous is null ? 0 : previous.ClarificationTurn + 1,
             DraftNow = request.DraftNow,
-            AnswersJson = previous is null ? null : PlanningJson.Serialize(answers)
+            AnswersJson = previous is null ? null : PlanningJson.Serialize(answers),
+            RedoOfDraftId = redo?.DraftId, Correction = correction
         };
         db.PlanningAttempts.Add(attempt);
         if (previous is not null)
@@ -195,8 +228,10 @@ public sealed partial class PlanningService(
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         // The turn budget and "draft now" both end the questions: the next result must be a draft or a blocked input.
+        // A redo goes straight to a draft: the user has seen one and said what to change.
         queue.Enqueue(new PlanningWorkItem(attempt.Id, owner, intention, context, fixture, turns,
-            !request.DraftNow && attempt.ClarificationTurn < PlanningClarificationRules.MaxTurns));
+            redo is null && !request.DraftNow && attempt.ClarificationTurn < PlanningClarificationRules.MaxTurns,
+            redoing));
         return ToDto(attempt);
     }
 
@@ -213,6 +248,34 @@ public sealed partial class PlanningService(
             answers = PlanningJson.Deserialize<PlanningAnswer[]>(asking.AnswersJson ?? "[]");
             asking = await OwnedAttemptAsync(earlier, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// The clarification turns of the flow a draft came from, and the corrections it was already made
+    /// again with, oldest first. A redo of a redo goes back through each redone draft to the attempt
+    /// that started the flow or answered its questions.
+    /// </summary>
+    private async Task<(IReadOnlyList<PlanningTurn> Turns, IReadOnlyList<string> Corrections)> FlowOfAsync(
+        PlanningAttempt drafted, CancellationToken cancellationToken)
+    {
+        var corrections = new List<string>();
+        var attempt = drafted;
+        while (attempt.RedoOfDraftId is { } redone)
+        {
+            if (attempt.Correction is { } said) corrections.Insert(0, said);
+            var draft = await db.PlanningDrafts.AsNoTracking().SingleOrDefaultAsync(
+                x => x.Id == redone && x.UserId == attempt.UserId, cancellationToken);
+            var earlier = draft is null ? null : await db.PlanningAttempts.AsNoTracking().SingleOrDefaultAsync(
+                x => x.Id == draft.AttemptId && x.UserId == attempt.UserId, cancellationToken);
+            // Purged history ends the walk; the redo still has the draft the user saw.
+            if (earlier is null) return ([], corrections.TakeLast(PlanningRedoRules.MaxEarlierCorrections).ToArray());
+            attempt = earlier;
+        }
+        var turns = attempt.PreviousAttemptId is { } asked
+            ? await TurnsAsync(await OwnedAttemptAsync(asked, cancellationToken),
+                PlanningJson.Deserialize<PlanningAnswer[]>(attempt.AnswersJson ?? "[]"), cancellationToken)
+            : [];
+        return (turns, corrections.TakeLast(PlanningRedoRules.MaxEarlierCorrections).ToArray());
     }
 
     /// <summary>Limits distinct work per user. A replay of the same attempt never reaches this check.</summary>
@@ -958,7 +1021,7 @@ public sealed partial class PlanningService(
         }
         return new PlanningAttemptDto(value.Id, value.ClientAttemptId, value.Status, value.Intention,
             value.ContextGoalId, value.ContextProjectId, value.FailureCode, value.DraftId, value.CreatedAt,
-            value.CompletedAt, value.Outcome, clarification, value.ContinuationOfWindowId);
+            value.CompletedAt, value.Outcome, clarification, value.ContinuationOfWindowId, value.RedoOfDraftId);
     }
 
     private static PlanningFactDto ToDto(PlanningFact value, DateOnly today)

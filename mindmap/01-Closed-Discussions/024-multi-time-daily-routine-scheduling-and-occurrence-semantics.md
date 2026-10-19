@@ -1,5 +1,7 @@
 # Discussion 024 — Multi-Time Daily Routine Scheduling and Occurrence Semantics
 
+> **Amendment (2026-10-19, decided by the owner):** stopping a Routine, by hand or with its Project or Goal, removes its pending occurrences from that local day on, so they leave Today at once; they are not kept to become `MISSED`. Done and missed occurrences and their history stay. No occurrence state is added.
+
 ## Status
 
 **CLOSED — accepted after GPT × Claude review.**

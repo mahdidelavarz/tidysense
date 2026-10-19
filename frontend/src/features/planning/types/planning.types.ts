@@ -34,6 +34,8 @@ export type PlanningAttemptInput = PlanningScopeInput & {
   draftNow?: boolean
   /** «برنامهٔ هفتهٔ بعد»: the planned week this attempt continues (029 §3). */
   continuationOfWindowId?: string
+  /** «اصلاح» or «نسخهٔ دیگر» on the review: the draft and revision seen, and what to change (none: another version). */
+  redo?: { draftId: string; expectedRevision: number; correction: string | null }
 }
 
 /** A planned week whose next week can be planned now, with how it went. */

@@ -19,6 +19,7 @@ public static class RoutineStopCauses
 {
     public const string User = "USER";
     public const string ProjectTerminal = "PROJECT_TERMINAL";
+    public const string GoalTerminal = "GOAL_TERMINAL";
 }
 
 public static class RoutineEventSchemas
@@ -30,7 +31,7 @@ public static class RoutineEventSchemas
     private static readonly HashSet<string> RecurrenceTypes = new(StringComparer.Ordinal)
         { "DAILY", "SPECIFIC_WEEKDAYS", "MONTHLY_ON_DAY" };
     private static readonly HashSet<string> StopCauses = new(StringComparer.Ordinal)
-        { RoutineStopCauses.User, RoutineStopCauses.ProjectTerminal };
+        { RoutineStopCauses.User, RoutineStopCauses.ProjectTerminal, RoutineStopCauses.GoalTerminal };
     private static readonly HashSet<string> ResolvedStatuses = new(StringComparer.Ordinal)
         { "DONE", "MISSED" };
     private static readonly HashSet<string> CorrectedStatuses = new(StringComparer.Ordinal)

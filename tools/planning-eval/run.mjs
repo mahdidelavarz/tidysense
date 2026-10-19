@@ -3,8 +3,11 @@
 // questions the way the case's persona would, and stores what was asked and what was drafted.
 //
 // Usage: node run.mjs --base https://127.0.0.1:7077 --out results/name.json [--only id,id] [--label text] [--week2]
+//        [--redo "<correction>"]
 // --week2 (STEP-24): each first week is approved, lived through crudely and brought to its end, and
 // the next week is then planned from the continuation offer, the way «برنامهٔ هفتهٔ بعد» does.
+// --redo (013 §10): each first draft is made again from the review with this correction, the way
+// «اصلاح یا نسخهٔ دیگر» does; `--redo true` asks for another version without a correction.
 // The backend must run in Development on loopback (the test-session endpoint), with the planning
 // provider and generous rate limits configured. See README.md.
 import { randomUUID } from 'node:crypto'
@@ -14,7 +17,7 @@ import { dirname } from 'node:path'
 const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, arg, index, all) =>
   arg.startsWith('--') ? [...pairs, [arg.slice(2), all[index + 1]?.startsWith('--') ? true : all[index + 1] ?? true]] : pairs, []))
 if (!args.base || !args.out) {
-  console.error('usage: node run.mjs --base <backend url> --out <results.json> [--only id,id] [--label text] [--week2]')
+  console.error('usage: node run.mjs --base <backend url> --out <results.json> [--only id,id] [--label text] [--week2] [--redo text]')
   process.exit(2)
 }
 // The local backend uses a development certificate.
@@ -142,12 +145,30 @@ async function secondWeek(record, item) {
     continuationOfWindowId: offer.windowId })
 }
 
+/** 013 §10: the draft made again from its own flow with the correction, as «اصلاح» on the review does. */
+async function redo(record) {
+  const first = record.draft
+  const correction = args.redo === true ? null : args.redo
+  record.redo = { correction, startedAt: Date.now() }
+  const attempt = await settle((await call('POST', '/planning/attempts', {
+    clientAttemptId: randomUUID().replaceAll('-', ''), intention: record.intention, replaceActive: false,
+    redo: { draftId: first.id, expectedRevision: first.revision, correction }
+  })).id)
+  record.redo.final = { status: attempt.status, outcome: attempt.outcome, failureCode: attempt.failureCode,
+    clarification: attempt.clarification }
+  if (attempt.draftId) record.redo.draft = await call('GET', `/planning/drafts/${attempt.draftId}`)
+  record.redo.ms = Date.now() - record.redo.startedAt
+}
+
 await call('POST', '/dev/test-session', {})
 const results = []
 for (const item of cases) {
   const record = { id: item.id, intention: item.intention, turns: [], attemptIds: [], startedAt: Date.now() }
   try {
     await plan(record, item, { intention: item.intention, goalId: null, projectId: null, replaceActive: true })
+    if (args.redo && record.draft) {
+      try { await redo(record) } catch (error) { record.redo = { ...record.redo, error: String(error.message ?? error) } }
+    }
     if (args.week2) {
       record.week2 = { turns: [], attemptIds: [], startedAt: Date.now() }
       try { await secondWeek(record, item) } catch (error) { record.week2.error = String(error.message ?? error) }
@@ -164,7 +185,10 @@ for (const item of cases) {
     draft ? `canApply=${draft.canApply} items=${draft.proposals.length}` : '',
     record.week2 ? `| week 2 ${Math.round(record.week2.ms / 1000)}s turns ${record.week2.turns.length} ` +
       (record.week2.draft ? `canApply=${record.week2.draft.canApply} items=${record.week2.draft.proposals.length}`
-        : record.week2.skipped ?? record.week2.final?.failureCode ?? record.week2.error?.slice(0, 120)) : '')
+        : record.week2.skipped ?? record.week2.final?.failureCode ?? record.week2.error?.slice(0, 120)) : '',
+    record.redo ? `| redo ${Math.round((record.redo.ms ?? 0) / 1000)}s ` + (record.redo.draft
+      ? `canApply=${record.redo.draft.canApply} items=${record.redo.draft.proposals.length}`
+      : record.redo.final?.outcome ?? record.redo.final?.failureCode ?? record.redo.error?.slice(0, 120)) : '')
   mkdirSync(dirname(args.out), { recursive: true })
   writeFileSync(args.out, JSON.stringify({ label: args.label ?? null, base: args.base, ranAt: new Date().toISOString(), results }, null, 1))
 }

@@ -24,7 +24,9 @@ import { ContinuationOffers } from '../../planning/components/ContinuationOffer'
 /**
  * Project detail page: what finishing it means, its Goal, how far it has
  * come, its next Tasks (and a new one made in it), what is under it, and the
- * explicit complete/stop flow at the foot. Editing is the pencil at the top.
+ * stop flow at the foot. A Project is never completed by hand: it completes
+ * itself when its Tasks are done (owner decision 2026-10-19). Editing is the
+ * pencil at the top.
  */
 export function ProjectReadView({ projectId }: { projectId: string }) {
   const project = useProject(projectId)
@@ -148,24 +150,24 @@ export function ProjectReadView({ projectId }: { projectId: string }) {
 
       {active && (
         <div className="mt-6 flex flex-col items-center gap-3">
-          <button
-            className="positive-button"
-            type="button"
-            disabled={terminal.previewPending}
-            onClick={() => terminal.requestPreview({ status: 'COMPLETED', version })}
-          >
-            <CircleCheck size={20} aria-hidden="true" />
-            {terminal.previewPending ? 'در حال آماده‌سازی…' : 'این پروژه تمام شد'}
-          </button>
+          <p className="max-w-sm text-center text-xs leading-6 text-text-secondary">
+            وقتی همه‌ی کارهای این پروژه انجام شود، پروژه خودش «تکمیل‌شده» می‌شود.
+          </p>
           <button
             className="ghost-button text-attention"
             type="button"
             disabled={terminal.previewPending}
             onClick={() => terminal.requestPreview({ status: 'STOPPED', version })}
           >
-            توقف پروژه
+            {terminal.previewPending ? 'در حال آماده‌سازی…' : 'توقف پروژه'}
           </button>
         </div>
+      )}
+      {data.status === 'COMPLETED' && (
+        <p className="notice mt-6 flex items-start gap-2">
+          <CircleCheck size={17} className="mt-1 shrink-0 text-positive" aria-hidden="true" />
+          <span>همه‌ی کارهای این پروژه انجام شده و پروژه خودش تکمیل شد. اگر کاری را برگردانید یا کار تازه‌ای به آن بدهید، دوباره فعال می‌شود.</span>
+        </p>
       )}
 
       {editing && (

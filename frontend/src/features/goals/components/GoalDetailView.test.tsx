@@ -55,8 +55,8 @@ describe('GoalDetailView', () => {
 
   it('shows how far the Goal has come, what is under it and its next steps', async () => {
     renderGoal()
-    expect(await screen.findByText('از ۱۳ کار انجام شد')).toBeInTheDocument()
-    expect(screen.getByText('۸')).toBeInTheDocument()
+    expect(await screen.findByText(/از ۱۳ کار انجام شد/)).toBeInTheDocument()
+    expect(screen.getByText('۶۲٪')).toBeInTheDocument()
     expect(screen.getByText('۶ روز مانده')).toBeInTheDocument()
     const under = within(screen.getByRole('region', { name: 'زیر این هدف' }))
     expect(under.getByText('تمرین مکالمه')).toBeInTheDocument()
@@ -90,15 +90,20 @@ describe('GoalDetailView', () => {
   it('requires a fresh preview before an explicit terminal command', async () => {
     vi.mocked(previewGoalTerminal).mockResolvedValue({
       entityId: goal.id, entityType: 'Goal', currentStatus: 'ACTIVE', targetStatus: 'ABANDONED',
-      expectedVersion: 1, canApply: true, blockers: [], cascades: [], previewHash: 'c'.repeat(64),
+      expectedVersion: 1, canApply: true, blockers: [],
+      cascades: [{ resourceType: 'Project', resourceId: '00000000-0000-0000-0000-000000000050', title: 'پروژه زیر هدف', resultingStatus: 'STOPPED', version: 1 }],
+      previewHash: 'c'.repeat(64),
     })
     vi.mocked(terminateGoal).mockResolvedValue({ ...goal, status: 'ABANDONED', version: 2 })
     renderGoal()
-    fireEvent.click(await screen.findByRole('button', { name: 'رها کردن هدف' }))
-    const dialog = within(await screen.findByRole('dialog', { name: 'رها کردن هدف' }))
-    expect(dialog.getByText('رها کردن شکست نیست؛ یعنی جایش را به چیز مهم‌تری دادید.')).toBeInTheDocument()
-    fireEvent.click(dialog.getByRole('button', { name: 'رها کردن هدف' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'توقف هدف' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'توقف هدف' }))
+    expect(dialog.getByText('توقف شکست نیست؛ یعنی جایش را به چیز مهم‌تری دادید.')).toBeInTheDocument()
+    // The Projects (and Tasks and Routines) the stop ends under the Goal are listed before confirming.
+    expect(dialog.getByText('این پروژه‌ها با تأیید شما متوقف می‌شوند:')).toBeInTheDocument()
+    expect(dialog.getByText('پروژه زیر هدف')).toBeInTheDocument()
+    fireEvent.click(dialog.getByRole('button', { name: 'تأیید توقف هدف' }))
     await waitFor(() => expect(terminateGoal).toHaveBeenCalledWith(goal.id, expect.objectContaining({ previewHash: 'c'.repeat(64) })))
-    expect(await screen.findByText('رهاشده')).toBeInTheDocument()
+    expect(await screen.findByText('متوقف‌شده')).toBeInTheDocument()
   })
 })

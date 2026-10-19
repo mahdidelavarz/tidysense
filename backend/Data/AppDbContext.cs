@@ -507,6 +507,7 @@ public sealed class AppDbContext(
             entity.Property(x => x.Outcome).HasMaxLength(16);
             entity.Property(x => x.ClarificationJson).HasColumnType("jsonb");
             entity.Property(x => x.AnswersJson).HasColumnType("jsonb");
+            entity.Property(x => x.Correction).HasMaxLength(Services.PlanningRedoRules.CorrectionLength);
             // A clarification is answered by at most one following attempt.
             entity.HasIndex(x => x.PreviousAttemptId).IsUnique().HasFilter("\"PreviousAttemptId\" IS NOT NULL");
             entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
@@ -521,6 +522,8 @@ public sealed class AppDbContext(
                 // Only a draft outcome has a draft; a clarification or a blocked input has its questions or reason instead.
                 t.HasCheckConstraint("CK_PlanningAttempts_Outcome", "(\"Status\" = 'SUCCEEDED') = (\"Outcome\" IS NOT NULL) AND (COALESCE(\"Outcome\", '') = 'DRAFT') = (\"DraftId\" IS NOT NULL) AND (COALESCE(\"Outcome\", '') IN ('CLARIFICATION', 'INPUT_BLOCKED')) = (\"ClarificationJson\" IS NOT NULL) AND (\"Status\" = 'FAILED') = (\"FailureCode\" IS NOT NULL)");
                 t.HasCheckConstraint("CK_PlanningAttempts_OutcomeValue", "\"Outcome\" IS NULL OR \"Outcome\" IN ('DRAFT', 'CLARIFICATION', 'INPUT_BLOCKED')");
+                // A redo makes a draft again; it answers no questions and only it carries a correction.
+                t.HasCheckConstraint("CK_PlanningAttempts_Redo", "(\"RedoOfDraftId\" IS NULL OR \"PreviousAttemptId\" IS NULL) AND (\"Correction\" IS NULL OR \"RedoOfDraftId\" IS NOT NULL)");
                 t.HasCheckConstraint("CK_PlanningAttempts_ClarificationTurn", "\"ClarificationTurn\" BETWEEN 0 AND 3 AND (\"ClarificationTurn\" > 0) = (\"PreviousAttemptId\" IS NOT NULL)");
             });
         });

@@ -66,6 +66,13 @@ public sealed class DeterministicPlanningGenerator : IPlanningGenerator
                     .Select(x => Step($"t{x}", $"کار {x}", context.WindowStart)).ToArray()),
             _ => Default(request.Intention, context)
         };
+        // A redo keeps the same plan and says what was asked, so a draft made again is visibly the new one.
+        if (request.Redo is { } redo)
+            draft = draft with
+            {
+                Summary = string.Concat((redo.Correction is { } correction
+                    ? $"{draft.Summary} — اصلاح‌شده: {correction}" : $"{draft.Summary} — نسخهٔ دیگر").Take(PlanningLimits.SummaryLength))
+            };
         return Task.FromResult(new PlanningGenerationResult(draft,
             request.Fixture == PlanningFixtures.WrongContext ? new string('0', 64) : context.Fingerprint));
     }

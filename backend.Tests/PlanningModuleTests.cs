@@ -772,6 +772,117 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         Assert.Equal(1, draftPayload.RootElement.GetProperty("clarificationTurns").GetInt32());
     }
 
+    /// <summary>Hands each request to the sample generator and keeps it, so a test can see what reached the model.</summary>
+    private sealed class CapturingGenerator : IPlanningGenerator
+    {
+        private readonly DeterministicPlanningGenerator _inner = new();
+        public System.Collections.Concurrent.ConcurrentQueue<PlanningGenerationRequest> Requests { get; } = new();
+        public string Key => _inner.Key;
+
+        public Task<PlanningGenerationResult> GenerateAsync(PlanningGenerationRequest request, CancellationToken cancellationToken)
+        {
+            Requests.Enqueue(request);
+            return _inner.GenerateAsync(request, cancellationToken);
+        }
+    }
+
+    // «اصلاح» and «نسخهٔ دیگر» on the review (owner decision 2026-10-19, 013 §10).
+    [Fact]
+    public async Task A_draft_is_made_again_from_its_own_flow_with_the_correction_and_replaced_only_when_the_new_one_exists()
+    {
+        PinLocal(Day);
+        var owner = await CreateSessionAsync();
+        var other = await CreateSessionAsync();
+        var generator = new CapturingGenerator();
+        using var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IPlanningGenerator>();
+            services.AddSingleton<IPlanningGenerator>(generator);
+        }));
+        using var client = Client(owner.Token, host);
+        using var otherClient = Client(other.Token, host);
+
+        // A flow with one answered question, then a draft the user edited.
+        var asked = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(
+            await StartAsync(client, Body("redo-ask"), PlanningFixtures.Clarify))).Id);
+        var answered = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(await StartAsync(client, new
+        {
+            clientAttemptId = "attempt-redo-answer", intention = Intention, replaceActive = false,
+            previousAttemptId = asked.Id, answers = new[] { new { questionId = "q3", text = "شنبه و دوشنبه" } }
+        }, PlanningFixtures.Clarify))).Id);
+        var first = await DraftAsync(client, answered.DraftId!.Value);
+        var dropped = first.Proposals.First(x => x.Proposal.EntityType == "TASK" && x.Proposal.ExistingTaskId is null).Proposal;
+        var edited = await ReviseAsync(client, first, x => x.DraftId == dropped.DraftId ? x with { Included = false } : x);
+        Assert.Equal(2, edited.Revision);
+
+        object Redo(string id, PlanningDraftDto draft, int revision, string? correction) => new
+        {
+            clientAttemptId = $"attempt-{id}", intention = "متنی که نادیده گرفته می‌شود", replaceActive = false,
+            redo = new { draftId = draft.Id, expectedRevision = revision, correction }
+        };
+        // Another user's draft is not found; a revision the user did not see is refused; a redo answers no questions.
+        Assert.Equal(HttpStatusCode.NotFound, (await StartAsync(otherClient, Redo("redo-other", edited, 2, "سبک‌تر"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await StartAsync(client, Redo("redo-stale", edited, 1, "سبک‌تر"))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await StartAsync(client, new
+        {
+            clientAttemptId = "attempt-redo-mixed", intention = Intention, replaceActive = false, previousAttemptId = asked.Id,
+            answers = new[] { new { questionId = "q1", text = "x" } }, redo = new { draftId = edited.Id, expectedRevision = 2, correction = (string?)null }
+        })).StatusCode);
+
+        // A failed redo leaves the draft the user had.
+        var failed = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(
+            await StartAsync(client, Redo("redo-fail", edited, 2, null), PlanningFixtures.ProviderError))).Id);
+        Assert.Equal("FAILED", failed.Status);
+        Assert.Equal(edited.Id, failed.RedoOfDraftId);
+        Assert.Equal("REVIEWABLE", (await DraftAsync(client, edited.Id)).Status);
+
+        // A correction goes straight to a draft (the clarify fixture would otherwise ask), from the same flow.
+        var corrected = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(
+            await StartAsync(client, Redo("redo-correct", edited, 2, "  کارها را سبک‌تر کن  "), PlanningFixtures.Clarify))).Id);
+        Assert.Equal("SUCCEEDED", corrected.Status);
+        Assert.Equal("DRAFT", corrected.Outcome);
+        Assert.Equal(Intention, corrected.Intention);
+        var second = await DraftAsync(client, corrected.DraftId!.Value);
+        Assert.Equal("REVIEWABLE", second.Status);
+        Assert.EndsWith("اصلاح‌شده: کارها را سبک‌تر کن", second.Summary);
+        Assert.Equal("SUPERSEDED", (await DraftAsync(client, edited.Id)).Status);
+        var sent = generator.Requests.Last();
+        Assert.False(sent.AllowClarification);
+        Assert.Equal("شنبه و دوشنبه", Assert.Single(Assert.Single(sent.Turns).Answers).Text);
+        Assert.Equal("کارها را سبک‌تر کن", sent.Redo!.Correction);
+        Assert.Empty(sent.Redo.EarlierCorrections);
+        // The revision the user saw, with their edit, is what is made again.
+        Assert.False(sent.Redo.PreviousDraft.Proposals.Single(x => x.DraftId == dropped.DraftId).Included);
+
+        // «نسخهٔ دیگر» of the corrected draft: the same flow again, with the earlier correction still in force.
+        var retried = await WaitAsync(client, (await ReadAsync<PlanningAttemptDto>(
+            await StartAsync(client, Redo("redo-again", second, 1, "   ")))).Id);
+        var third = await DraftAsync(client, retried.DraftId!.Value);
+        Assert.EndsWith("نسخهٔ دیگر", third.Summary);
+        var again = generator.Requests.Last();
+        Assert.Null(again.Redo!.Correction);
+        Assert.Equal(["کارها را سبک‌تر کن"], again.Redo.EarlierCorrections);
+        Assert.Single(again.Turns);
+        var active = (await client.GetFromJsonAsync<PlanningActiveDto>("/api/v1/planning/active"))!;
+        Assert.Equal(third.Id, active.Draft!.Id);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await db.PlanningAttempts.AsNoTracking().SingleAsync(x => x.Id == corrected.Id);
+        Assert.Equal(edited.Id, stored.RedoOfDraftId);
+        Assert.Equal("کارها را سبک‌تر کن", stored.Correction);
+        Assert.Null(stored.PreviousAttemptId);
+        // Why each draft ended is measured; what the user wrote is not.
+        var ended = await db.DomainEvents.AsNoTracking().Where(x => x.UserId == owner.UserId &&
+                x.EventType == PlanningEventTypes.DraftCancelled)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal([PlanningDraftEndReasons.Corrected, PlanningDraftEndReasons.Retried],
+            ended.OrderBy(x => x.AggregateId == edited.Id ? 0 : 1)
+                .Select(x => JsonDocument.Parse(x.PayloadJson).RootElement.GetProperty("reason").GetString()));
+        Assert.All(ended, x => Assert.DoesNotContain("سبک", x.PayloadJson));
+        Assert.Equal(0, await db.Goals.CountAsync(x => x.UserId == owner.UserId));
+    }
+
     [Fact]
     public async Task Clarification_stops_after_three_turns_or_when_the_user_asks_for_a_draft_now()
     {
@@ -928,8 +1039,10 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         });
         using var client = Client(session.Token, host);
         var output = PlanningOutputGateTests.Valid();
+        // Not a Friday: the fixture's HARD detail rules Fridays out, and the run date must not decide the outcome.
+        var planned = Day.AddDays(1).DayOfWeek == DayOfWeek.Friday ? Day.AddDays(2) : Day.AddDays(1);
         output["draft"]!["proposals"]![2]!["plannedDate"] =
-            Day.AddDays(1).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            planned.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         HttpResponseMessage Completion(string content) => new(HttpStatusCode.OK)
         {
             Content = JsonContent.Create(new

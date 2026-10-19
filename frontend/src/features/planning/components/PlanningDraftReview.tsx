@@ -2,7 +2,8 @@ import { type ReactNode, useId, useRef, useState } from 'react'
 import { formatDayMonth, formatLocalDate, formatLongDate, formatNumber, parseIsoDate, toIsoDate } from '../../../shared/lib/date'
 import { EntityLabel, type EntityKind } from '../../../shared/ui/EntityUi'
 import { FormError } from '../../../shared/ui/FormUi'
-import { ChevronDown, CircleAlert, CircleDashed, FolderKanban, Pencil, Plus, StickyNote, Target, X } from '../../../shared/ui/icons'
+import { ChevronDown, CircleAlert, CircleDashed, FolderKanban, Pencil, Plus, Sparkles, StickyNote, Target, X } from '../../../shared/ui/icons'
+import { Sheet } from '../../../shared/ui/Sheet'
 import { slotsLabel } from '../../routines/types/routine.format'
 import {
   entityKinds,
@@ -36,6 +37,10 @@ type ReviewProps = {
   onEdit: (edit: PlanningDraftEdit, onStored?: () => void) => void
   onApprove: () => void
   onCancel: () => void
+  /** «اصلاح» with what to change, or «نسخهٔ دیگر» (null): the same flow made again (013 §10). */
+  onRedo: (correction: string | null) => void
+  redoPending: boolean
+  redoError: unknown
 }
 
 /**
@@ -45,7 +50,8 @@ type ReviewProps = {
  * Review states and every consequence come from the server; this screen only
  * shows them and sends edits back.
  */
-export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onApprove, onCancel }: ReviewProps) {
+export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onApprove, onCancel, onRedo, redoPending, redoError }: ReviewProps) {
+  const [redoing, setRedoing] = useState(false)
   const [editing, setEditing] = useState<PlanningProposal | null>(null)
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
   const tree = useRef<HTMLDivElement>(null)
@@ -271,7 +277,13 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
           )}
           <button className="secondary-button min-h-13.5 rounded-[1.125rem] px-5" type="button" disabled={busy} onClick={onCancel}>لغو</button>
         </div>
+        <button className="ghost-button mx-auto mt-2 flex min-h-11 items-center gap-1.5 text-sm" type="button" disabled={busy} onClick={() => setRedoing(true)}>
+          <Sparkles size={17} aria-hidden="true" />
+          اصلاح یا نسخهٔ دیگر
+        </button>
       </div>
+
+      {redoing && <RedoSheet pending={redoPending} error={redoError} onRedo={onRedo} onClose={() => setRedoing(false)} />}
 
       {editing?.existingTaskId && (
         <ExistingTaskDateSheet
@@ -575,5 +587,49 @@ function FirstWeek({ draft }: { draft: PlanningDraftDto }) {
       </ol>
       <p className="mt-3 text-xs leading-6 text-text-secondary">{sentence}.</p>
     </section>
+  )
+}
+
+/**
+ * «اصلاح یا نسخهٔ دیگر»: says what to change, or asks for another version, and
+ * the same flow (what was written, the answers, and the edits made here) is
+ * planned again. This draft stays until the new one is ready.
+ */
+function RedoSheet({ pending, error, onRedo, onClose }: {
+  pending: boolean
+  error: unknown
+  onRedo: (correction: string | null) => void
+  onClose: () => void
+}) {
+  const [correction, setCorrection] = useState('')
+  const id = useId()
+  return (
+    <Sheet
+      title="اصلاح یا نسخهٔ دیگر"
+      description="همین برنامه با همان نوشته، پاسخ‌ها و ویرایش‌های شما دوباره ساخته می‌شود. تا پیش‌نویس تازه آماده نشود، همین پیش‌نویس سر جایش می‌ماند."
+      onClose={onClose}
+      locked={pending}
+    >
+      <div className="form-stack">
+        <label className="field-label" htmlFor={id}>چه چیزی عوض شود؟</label>
+        <textarea
+          id={id}
+          className="intent-input min-h-28"
+          maxLength={1000}
+          placeholder="مثلاً: جمعه‌ها را خالی بگذار و روز اول را سبک‌تر کن"
+          value={correction}
+          disabled={pending}
+          onChange={event => setCorrection(event.target.value)}
+        />
+        <FormError error={error} />
+        <div className="sheet-actions flex-wrap">
+          <button className="ghost-button" type="button" disabled={pending} onClick={onClose}>انصراف</button>
+          <button className="secondary-button" type="button" disabled={pending} onClick={() => onRedo(null)}>یک نسخهٔ دیگر بساز</button>
+          <button className="primary-button basis-full whitespace-nowrap sm:basis-0 sm:flex-1" type="button" disabled={pending || correction.trim() === ''} onClick={() => onRedo(correction.trim())}>
+            {pending ? 'در حال ارسال…' : 'اصلاح کن'}
+          </button>
+        </div>
+      </div>
+    </Sheet>
   )
 }

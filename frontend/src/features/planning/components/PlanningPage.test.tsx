@@ -315,6 +315,61 @@ describe('PlanningPage', () => {
     expect(screen.queryByText('ساخت پیش‌نویس انجام نشد')).not.toBeInTheDocument()
   })
 
+  it('makes the draft again with a correction, and goes back to the old draft when that fails', async () => {
+    vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('SUCCEEDED'))
+    await openDraft(draft({ revision: 2 }))
+    // A resumed draft still quotes what was written, from the attempt that made it.
+    expect(await screen.findByText(`«${intention}»`)).toBeInTheDocument()
+    const redoId = '00000000-0000-0000-0000-000000000a02'
+    const newDraftId = '00000000-0000-0000-0000-000000000d02'
+    vi.mocked(startPlanningAttempt).mockResolvedValueOnce(attempt('RUNNING', { id: redoId, redoOfDraftId: draftId }))
+    vi.mocked(getPlanningAttempt).mockImplementation(async id => id === redoId
+      ? attempt('FAILED', { id: redoId, redoOfDraftId: draftId, failureCode: 'PROVIDER_ERROR', draftId: null })
+      : attempt('SUCCEEDED'))
+    fireEvent.click(screen.getByRole('button', { name: 'اصلاح یا نسخهٔ دیگر' }))
+    const sheet = within(await screen.findByRole('dialog', { name: 'اصلاح یا نسخهٔ دیگر' }))
+    expect(sheet.getByRole('button', { name: 'اصلاح کن' })).toBeDisabled()
+    fireEvent.change(sheet.getByLabelText('چه چیزی عوض شود؟'), { target: { value: '  جمعه‌ها خالی بماند ' } })
+    fireEvent.click(sheet.getByRole('button', { name: 'اصلاح کن' }))
+    await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      intention, replaceActive: false, redo: { draftId, expectedRevision: 2, correction: 'جمعه‌ها خالی بماند' },
+    })))
+
+    // The old draft was kept: a failed redo offers it back, and sends the same correction again on retry.
+    expect(await screen.findByText('ساخت دوباره‌ی پیش‌نویس انجام نشد')).toBeInTheDocument()
+    expect(screen.getByText(/پیش‌نویس قبلی‌تان دست‌نخورده مانده است/)).toBeInTheDocument()
+    const retryId = '00000000-0000-0000-0000-000000000a04'
+    vi.mocked(startPlanningAttempt).mockResolvedValueOnce(attempt('RUNNING', { id: retryId, redoOfDraftId: draftId }))
+    vi.mocked(getPlanningAttempt).mockImplementation(async id => id === retryId
+      ? attempt('SUCCEEDED', { id: retryId, redoOfDraftId: draftId, draftId: newDraftId })
+      : attempt('SUCCEEDED'))
+    vi.mocked(getPlanningDraft).mockImplementation(async id => id === newDraftId
+      ? draft({ id: newDraftId, summary: 'پیش‌نویس اصلاح‌شده' }) : draft({ revision: 2 }))
+    fireEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }))
+    await waitFor(() => expect(startPlanningAttempt).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({
+      redo: { draftId, expectedRevision: 2, correction: 'جمعه‌ها خالی بماند' },
+    })))
+    expect(await screen.findByText('پیش‌نویس اصلاح‌شده')).toBeInTheDocument()
+  })
+
+  it('asks for another version without a correction and returns to the draft when the redo is cancelled', async () => {
+    vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('SUCCEEDED'))
+    await openDraft(draft())
+    const redoId = '00000000-0000-0000-0000-000000000a03'
+    vi.mocked(startPlanningAttempt).mockResolvedValueOnce(attempt('RUNNING', { id: redoId, redoOfDraftId: draftId }))
+    vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('RUNNING', { id: redoId, redoOfDraftId: draftId }))
+    vi.mocked(cancelPlanningAttempt).mockResolvedValue(attempt('CANCELLED', { id: redoId, redoOfDraftId: draftId }))
+    fireEvent.click(screen.getByRole('button', { name: 'اصلاح یا نسخهٔ دیگر' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'اصلاح یا نسخهٔ دیگر' })).getByRole('button', { name: 'یک نسخهٔ دیگر بساز' }))
+    await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      redo: { draftId, expectedRevision: 1, correction: null },
+    })))
+    fireEvent.click(await screen.findByRole('button', { name: 'لغو' }))
+    await waitFor(() => expect(cancelPlanningAttempt).toHaveBeenCalledWith(redoId))
+    expect(await screen.findByRole('heading', { name: 'ساختار پیشنهادی' })).toBeInTheDocument()
+    expect(screen.queryByText('برنامه‌ریزی لغو شد.')).not.toBeInTheDocument()
+  })
+
   it('stores an edit as a new revision and shows the server result, including an excluded subtree', async () => {
     await openDraft(draft())
     vi.mocked(revisePlanningDraft).mockResolvedValueOnce(draft({

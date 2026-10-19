@@ -151,26 +151,26 @@ public sealed class ProjectService(
         return await GetByIdAsync(id, cancellationToken);
     }
 
+    /// <summary>
+    /// What stopping the Project would do: every open Task under it dropped and every Routine stopped
+    /// (owner decision 2026-10-19). A Project is never completed by hand; it completes by its Tasks.
+    /// </summary>
     public async Task<TerminalPreviewDto> PreviewTerminalAsync(Guid id, TerminalPreviewRequest request,
         CancellationToken cancellationToken)
     {
-        RequireProjectTerminal(request.TargetStatus);
+        RequireProjectStop(request.TargetStatus);
         var project = await OwnedAsync(id, cancellationToken);
         VersionGuard.RequireMatch(id, request.ExpectedVersion, project.Version);
         if (project.Status != ParentStatuses.Active)
             throw new DomainRuleException("RESOURCE_NOT_ACTIVE", "Project is not active.");
-        var blockers = await ProjectBlockersAsync(db, id, currentUser.UserId, cancellationToken);
-        var routines = await db.Routines.AsNoTracking()
-            .Where(x => x.ProjectId == id && x.UserId == currentUser.UserId &&
-                x.Status == RoutineStatuses.Active)
-            .ToListAsync(cancellationToken);
-        return Preview(project, request.TargetStatus, blockers, routines);
+        return Preview(project, request.TargetStatus,
+            await ParentLifecycle.StopCascadesAsync(db, currentUser.UserId, null, id, cancellationToken));
     }
 
     public async Task<ProjectDto> TerminalAsync(Guid id, TerminalCommandRequest request, string idempotencyKey,
         CancellationToken cancellationToken)
     {
-        RequireProjectTerminal(request.TargetStatus);
+        RequireProjectStop(request.TargetStatus);
         var now = dates.UtcNow;
         var today = dates.Today;
         var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "TERMINATE_PROJECT",
@@ -186,31 +186,18 @@ public sealed class ProjectService(
             VersionGuard.RequireMatch(id, request.ExpectedVersion, project.Version);
             if (project.Status != ParentStatuses.Active)
                 throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
-            var blockers = await ProjectBlockersAsync(context, id, owner, ct);
-            // Both terminal statuses stop the Project's active Routines in this same transaction.
-            var routines = await context.Routines.FromSqlInterpolated($"SELECT * FROM \"Routines\" WHERE \"ProjectId\" = {id} AND \"UserId\" = {owner} AND \"Status\" = 'ACTIVE' ORDER BY \"Id\" FOR UPDATE")
-                .ToListAsync(ct);
-            var currentPreview = Preview(project, request.TargetStatus, blockers, routines);
+            var stop = await ParentLifecycle.StopCascadesAsync(context, owner, null, id, ct);
             if (!CryptographicOperations.FixedTimeEquals(
-                    Convert.FromHexString(currentPreview.PreviewHash), Convert.FromHexString(request.PreviewHash)))
+                    Convert.FromHexString(Preview(project, request.TargetStatus, stop).PreviewHash),
+                    Convert.FromHexString(request.PreviewHash)))
                 throw new CommandConflictException("CONFIRMATION_STALE", "The terminal preview changed.");
-            if (blockers.Count > 0)
-                throw new CommandRejectedException("PARENT_HAS_ACTIVE_CHILDREN");
-            project.Status = request.TargetStatus;
+            var cascades = await ParentLifecycle.ApplyStopAsync(context, owner, stop, today, now, ct);
+            project.Status = ParentStatuses.Stopped;
             project.TerminalAt = now;
             project.UpdatedAt = now;
             project.Version++;
-            var eventType = request.TargetStatus == ParentStatuses.Completed
-                ? ParentEventTypes.ProjectCompleted : ParentEventTypes.ProjectStopped;
-            var cascades = new List<CascadeEvent>();
-            foreach (var routine in routines)
-            {
-                RoutineService.Stop(routine, today, now);
-                cascades.Add(new CascadeEvent("Routine", routine.Id, routine.Version,
-                    RoutineEventTypes.RoutineStopped, 1,
-                    RoutineService.StoppedPayload(RoutineStopCauses.ProjectTerminal)));
-            }
-            return new CommandMutation("Project", id, project.Version, eventType, 1, "{}", now, cascades);
+            return new CommandMutation("Project", id, project.Version, ParentEventTypes.ProjectStopped, 2,
+                JsonSerializer.Serialize(new { cause = ParentEndCauses.User }), now, cascades);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
@@ -226,27 +213,16 @@ public sealed class ProjectService(
         await context.Projects.FromSqlInterpolated($"SELECT * FROM \"Projects\" WHERE \"Id\" = {id} AND \"UserId\" = {userId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken) ?? throw new ResourceNotFoundException("Project", id);
 
-    private static Task<List<TerminalBlockerDto>> ProjectBlockersAsync(AppDbContext context,
-        Guid id, Guid userId, CancellationToken cancellationToken) => context.Tasks.AsNoTracking()
-        .Where(x => x.ProjectId == id && x.UserId == userId && x.Status == TaskStatuses.Active)
-        .OrderBy(x => x.Id)
-        .Select(x => new TerminalBlockerDto("Task", x.Id, x.Title, x.Status, x.Version))
-        .ToListAsync(cancellationToken);
+    private static TerminalPreviewDto Preview(Project project, string target, IReadOnlyList<TerminalCascadeDto> cascades) =>
+        new(project.Id, "Project", project.Status, target, project.Version, true, [], cascades,
+            ParentCommandSupport.PreviewHash(project.Id, "Project", project.Status, target, project.Version, [], cascades));
 
-    private static TerminalPreviewDto Preview(Project project, string target,
-        IReadOnlyList<TerminalBlockerDto> blockers, IReadOnlyList<Routine> activeRoutines)
+    /// <summary>Only a stop is asked for: a Project completes itself when its Tasks are done (owner decision 2026-10-19).</summary>
+    private static void RequireProjectStop(string status)
     {
-        var cascades = activeRoutines.OrderBy(x => x.Id)
-            .Select(x => new TerminalCascadeDto("Routine", x.Id, x.Title, RoutineStatuses.Stopped, x.Version))
-            .ToArray();
-        return new TerminalPreviewDto(project.Id, "Project", project.Status, target, project.Version,
-            blockers.Count == 0, blockers, cascades, ParentCommandSupport.PreviewHash(project.Id,
-                "Project", project.Status, target, project.Version, blockers, cascades));
-    }
-
-    private static void RequireProjectTerminal(string status)
-    {
-        if (!ParentStatuses.IsProjectTerminal(status)) throw new ArgumentException("targetStatus is invalid.");
+        if (status == ParentStatuses.Completed)
+            throw new DomainRuleException("PROJECT_COMPLETES_BY_PROGRESS", "A Project completes itself when its Tasks are done.");
+        if (status != ParentStatuses.Stopped) throw new ArgumentException("targetStatus is invalid.");
     }
 
     private static ProjectDto ToDto(Project value) => new(value.Id, value.GoalId, value.Title,

@@ -208,7 +208,7 @@ public sealed class RoutineService(
             VersionGuard.RequireMatch(id, request.ExpectedVersion, item.Version);
             if (item.Status != RoutineStatuses.Active)
                 throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
-            Stop(item, today, now);
+            await StopAsync(context, item, today, now, ct);
             return new CommandMutation("Routine", id, item.Version, RoutineEventTypes.RoutineStopped, 1,
                 StoppedPayload(RoutineStopCauses.User), now);
         }, cancellationToken);
@@ -217,17 +217,23 @@ public sealed class RoutineService(
     }
 
     /// <summary>
-    /// Stops a locked Routine. Its final eligible local date is today, so an occurrence that
-    /// already belongs to today stays resolvable and nothing later is ever generated.
+    /// Stops a locked Routine. It leaves Today at once (owner decision 2026-10-19, 015 Scenario F
+    /// note): its final eligible local date is yesterday, and its slots from today on that are still
+    /// pending are removed. A slot already done or missed stays as history; nothing later is generated.
     /// </summary>
-    internal static void Stop(Routine routine, DateOnly today, DateTimeOffset now)
+    internal static async Task StopAsync(AppDbContext context, Routine routine, DateOnly today, DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
         routine.Status = RoutineStatuses.Stopped;
         routine.StoppedAt = now;
-        routine.EffectiveUntilLocalDate = today >= routine.EffectiveFromLocalDate
-            ? today : routine.EffectiveFromLocalDate.AddDays(-1);
+        routine.EffectiveUntilLocalDate = (today >= routine.EffectiveFromLocalDate ? today : routine.EffectiveFromLocalDate)
+            .AddDays(-1);
         routine.UpdatedAt = now;
         routine.Version++;
+        // The status is re-checked by the delete itself, so a slot ticked done meanwhile is never removed.
+        await context.RoutineOccurrences
+            .Where(x => x.RoutineId == routine.Id && x.ScheduledLocalDate >= today && x.Status == OccurrenceStatuses.Pending)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     internal static string StoppedPayload(string cause) => JsonSerializer.Serialize(new { cause });

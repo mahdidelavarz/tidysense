@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { AxiosError } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { listGoals } from '../../goals/services/goals-api'
@@ -53,25 +53,40 @@ describe('ProjectReadView', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('پروژه پیدا نشد')
   })
 
-  it('previews and explicitly confirms project completion', async () => {
+  it('offers no manual completion and stops the project with everything open under it, as previewed', async () => {
     vi.mocked(getProject).mockResolvedValue(project)
     vi.mocked(previewProjectTerminal).mockResolvedValue({
-      entityId: project.id, entityType: 'Project', currentStatus: 'ACTIVE', targetStatus: 'COMPLETED',
+      entityId: project.id, entityType: 'Project', currentStatus: 'ACTIVE', targetStatus: 'STOPPED',
       expectedVersion: 1, canApply: true, blockers: [],
-      cascades: [{ resourceType: 'Routine', resourceId: '00000000-0000-0000-0000-000000000040', title: 'مرور هفتگی', resultingStatus: 'STOPPED', version: 1 }],
+      cascades: [
+        { resourceType: 'Task', resourceId: '00000000-0000-0000-0000-000000000041', title: 'نوشتن فصل دو', resultingStatus: 'DROPPED', version: 1 },
+        { resourceType: 'Routine', resourceId: '00000000-0000-0000-0000-000000000040', title: 'مرور هفتگی', resultingStatus: 'STOPPED', version: 1 },
+      ],
       previewHash: 'a'.repeat(64),
     })
-    vi.mocked(terminateProject).mockResolvedValue({ ...project, status: 'COMPLETED', version: 2 })
+    vi.mocked(terminateProject).mockResolvedValue({ ...project, status: 'STOPPED', version: 2 })
     renderProject()
     expect(await screen.findByRole('heading', { name: 'پروژه آزمایشی' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'این پروژه تمام شد' }))
-    expect(await screen.findByRole('dialog', { name: 'تمام شدن پروژه' })).toBeInTheDocument()
-    // The Routines this confirmation will stop are shown, by name, before the user decides.
-    expect(screen.getByText('این روتین‌ها با تأیید شما متوقف می‌شوند:')).toBeInTheDocument()
-    expect(screen.getByText('مرور هفتگی')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'تأیید تکمیل پروژه' }))
-    await waitFor(() => expect(terminateProject).toHaveBeenCalled())
-    expect(await screen.findByText('تکمیل‌شده')).toBeInTheDocument()
+    // A Project completes itself when its Tasks are done; it is never completed by hand.
+    expect(screen.queryByRole('button', { name: 'این پروژه تمام شد' })).not.toBeInTheDocument()
+    expect(screen.getByText('وقتی همه‌ی کارهای این پروژه انجام شود، پروژه خودش «تکمیل‌شده» می‌شود.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'توقف پروژه' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'توقف پروژه' }))
+    // What the stop ends by itself is shown, by name, before the user decides.
+    expect(dialog.getByText('این کارهای باز کنار گذاشته می‌شوند (هر کدام را بعداً می‌شود برگرداند):')).toBeInTheDocument()
+    expect(dialog.getByText('نوشتن فصل دو')).toBeInTheDocument()
+    expect(dialog.getByText('این روتین‌ها با تأیید شما متوقف می‌شوند:')).toBeInTheDocument()
+    expect(dialog.getByText('مرور هفتگی')).toBeInTheDocument()
+    fireEvent.click(dialog.getByRole('button', { name: 'تأیید توقف پروژه' }))
+    await waitFor(() => expect(terminateProject).toHaveBeenCalledWith(project.id, expect.objectContaining({ previewHash: 'a'.repeat(64) })))
+    expect(await screen.findByText('متوقف‌شده')).toBeInTheDocument()
+  })
+
+  it('says a completed project completed itself and offers no stop', async () => {
+    vi.mocked(getProject).mockResolvedValue({ ...project, status: 'COMPLETED', version: 3 })
+    renderProject()
+    expect(await screen.findByText(/همه‌ی کارهای این پروژه انجام شده و پروژه خودش تکمیل شد/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'توقف پروژه' })).not.toBeInTheDocument()
   })
 
   it('submits an edit with the authoritative version', async () => {

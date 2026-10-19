@@ -17,7 +17,8 @@ public sealed record PlanningWorkItem(
     PlanningContext Context,
     string? Fixture,
     IReadOnlyList<PlanningTurn> Turns,
-    bool AllowClarification);
+    bool AllowClarification,
+    PlanningRedo? Redo = null);
 
 /// <summary>
 /// Lets a cancellation reach the generation that is running for an attempt, so a provider call is
@@ -126,7 +127,8 @@ public sealed class PlanningAttemptRunner(
             var result = await generator.GenerateAsync(
                 new PlanningGenerationRequest(item.AttemptId, item.Intention, item.Context, item.Fixture)
                 {
-                    Turns = item.Turns, AllowClarification = item.AllowClarification, UserId = item.UserId
+                    Turns = item.Turns, AllowClarification = item.AllowClarification, UserId = item.UserId,
+                    Redo = item.Redo
                 }, running.Token);
             outcome = result.Outcome;
             if (result.ContextFingerprint != item.Context.Fingerprint) failure = PlanningFailureCodes.ContextIntegrity;
@@ -237,6 +239,31 @@ public sealed class PlanningAttemptRunner(
                     .SetProperty(d => d.Status, PlanningDraftStatuses.Expired)
                     .SetProperty(d => d.UpdatedAt, now)
                     .SetProperty(d => d.Version, d => d.Version + 1), cancellationToken);
+            // A redo replaces its draft only now that the new one exists, so a failed or cancelled
+            // redo leaves the user the draft they had.
+            if (attempt.RedoOfDraftId is { } redone)
+            {
+                var old = await db.PlanningDrafts.FromSqlInterpolated(
+                        $"SELECT * FROM \"PlanningDrafts\" WHERE \"Id\" = {redone} AND \"UserId\" = {attempt.UserId} FOR UPDATE")
+                    .SingleOrDefaultAsync(cancellationToken);
+                if (old is { Status: PlanningDraftStatuses.Reviewable })
+                {
+                    old.Status = PlanningDraftStatuses.Superseded;
+                    old.UpdatedAt = now;
+                    old.Version++;
+                    await db.ActionConfirmations
+                        .Where(x => x.PlanningDraftId == old.Id && x.Status == ActionConfirmationStatuses.Created)
+                        .ExecuteUpdateAsync(x => x.SetProperty(c => c.Status, ActionConfirmationStatuses.Cancelled),
+                            cancellationToken);
+                    PlanningEvents.Add(db, attempt.UserId, EventActors.User, "PlanningDraft", old.Id, old.Version,
+                        PlanningEventTypes.DraftCancelled, JsonSerializer.Serialize(new
+                        {
+                            reason = attempt.Correction is null ? PlanningDraftEndReasons.Retried : PlanningDraftEndReasons.Corrected
+                        }), now);
+                    // The one-reviewable-draft index is checked per statement, so the old draft is closed first.
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+            }
             if (await db.PlanningDrafts.AsNoTracking().AnyAsync(x => x.UserId == attempt.UserId &&
                     x.Status == PlanningDraftStatuses.Reviewable, cancellationToken)) failure = "DRAFT_COLLISION";
         }

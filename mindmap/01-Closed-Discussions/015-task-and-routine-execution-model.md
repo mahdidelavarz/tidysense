@@ -1,5 +1,7 @@
 # Discussion 015 — Task and Routine Execution Model
 
+> **Amendment (2026-10-19, decided by the owner):** §9 and the §17.3 terminal flows — stopping a Project, or stopping (abandoning) a Goal, no longer waits for the active children to be resolved one by one. Confirming the stop ends everything open under it in the same command: the Goal's active Projects stop, the open Tasks under them and directly under the Goal are dropped (each can be restored on its own later), and their Routines stop. Done Tasks stay done. The confirmation lists exactly what will be dropped and stopped, and a change under the Goal or Project after the list was shown makes it stale, so nothing is applied. A Project completes only by its Tasks (012 §4 note); achieving a Goal by hand still needs no active child. Scenario F: a stopped Routine's pending slots from that day on leave Today at once; a slot already done stays done (024 note).
+
 > **Canonical amendment (2026-09-19):** Discussions 024–026 supersede Backlog, Task review dates, single-daily Routine identity and dependency deferral.
 
 ## Status

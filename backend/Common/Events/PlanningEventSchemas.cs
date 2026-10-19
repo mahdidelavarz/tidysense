@@ -20,6 +20,9 @@ public static class PlanningDraftEndReasons
 {
     public const string User = "USER";
     public const string Superseded = "SUPERSEDED";
+    // Made again from the review (013 §10): with a correction, or as another version.
+    public const string Corrected = "CORRECTED";
+    public const string Retried = "RETRIED";
 }
 
 /// <summary>Planning payloads carry classifications and counts only: never an intention, a title or a fact value.</summary>
@@ -28,7 +31,10 @@ public static class PlanningEventSchemas
     private static readonly HashSet<string> ContextScopes = new(StringComparer.Ordinal)
         { "NONE", "GOAL", "PROJECT" };
     private static readonly HashSet<string> EndReasons = new(StringComparer.Ordinal)
-        { PlanningDraftEndReasons.User, PlanningDraftEndReasons.Superseded };
+    {
+        PlanningDraftEndReasons.User, PlanningDraftEndReasons.Superseded, PlanningDraftEndReasons.Corrected,
+        PlanningDraftEndReasons.Retried
+    };
     private static readonly HashSet<string> FactTypes = new(StringComparer.Ordinal)
     {
         "UNAVAILABLE_WEEKDAY", "UNAVAILABLE_DATE", "UNAVAILABLE_DATE_RANGE", "AVAILABLE_DEVICE",

@@ -80,8 +80,9 @@ public sealed class CaptureService(
             }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
         {
+            // A completed Project takes new work and becomes active again (owner decision 2026-10-19).
             await ParentCommandSupport.LockParentsAsync(context, owner,
-                [(request.GoalId, request.ProjectId)], request.GoalId, request.ProjectId, ct);
+                [(request.GoalId, request.ProjectId)], request.GoalId, request.ProjectId, ct, allowCompletedProject: true);
             var capture = await LockUnresolvedAsync(context, id, owner, request.ExpectedVersion, ct);
             context.Tasks.Add(new TaskItem
             {
@@ -91,11 +92,12 @@ public sealed class CaptureService(
                 CreatedAt = now, UpdatedAt = now
             });
             Resolve(capture, CaptureStatuses.Resolved, now);
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner, [request.ProjectId], dates.Today, now, ct);
             return new CommandMutation("Capture", id, capture.Version, CaptureEventTypes.CaptureResolved,
                 1, JsonSerializer.Serialize(new { resolvedAs = "TASK" }), now,
                 [new CascadeEvent("Task", taskId, 1, TaskEventTypes.TaskCreated, 1,
                     TaskService.CreatedPayload(request.GoalId, request.ProjectId, request.PlannedDate, null),
-                    EventActors.User)]);
+                    EventActors.User), ..settled]);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return new CaptureResolutionDto(ToDto(await OwnedAsync(id, cancellationToken)),

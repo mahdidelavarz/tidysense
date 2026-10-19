@@ -16,7 +16,7 @@ public sealed record PlanningPrompt(string System, string User, string ContextRe
 /// </summary>
 public static class PlanningPromptRenderer
 {
-    public const string PromptVersion = "2026-10-16.6";
+    public const string PromptVersion = "2026-10-19.1";
     public const string DataOpen = "<planning_request_data>";
     public const string DataClose = "</planning_request_data>";
 
@@ -86,6 +86,7 @@ public static class PlanningPromptRenderer
                 }).ToArray()
             }).ToArray(),
             clarificationAllowed = request.AllowClarification,
+            redo = Redo(request.Redo, context),
             today = context.Today,
             timezone = context.Timezone,
             calendar = Calendar(context),
@@ -133,6 +134,43 @@ public static class PlanningPromptRenderer
             }
         };
         return $"{DataOpen}\n{JsonSerializer.Serialize(data, DataOptions)}\n{DataClose}";
+    }
+
+    /// <summary>
+    /// The draft the user asked to be made again, in the output's own shape so it can be kept where
+    /// the correction does not touch it. Existing items are named by this request's refs, never by id.
+    /// </summary>
+    private static object? Redo(PlanningRedo? redo, PlanningContext context)
+    {
+        if (redo is null) return null;
+        var draft = redo.PreviousDraft;
+        return new
+        {
+            correction = redo.Correction,
+            earlierCorrections = redo.EarlierCorrections,
+            previousDraft = new
+            {
+                summary = draft.Summary,
+                proposals = draft.Proposals.Select(x => new
+                {
+                    draftId = x.DraftId, entityType = x.EntityType, title = x.Title, description = x.Description,
+                    parentDraftId = x.ParentDraftId, underContext = x.UnderContext,
+                    contextProjectRef = context.Projects.FirstOrDefault(p => p.Id == x.ContextProjectId)?.Ref,
+                    existingTaskRef = context.UnfinishedTasks.FirstOrDefault(t => t.Id == x.ExistingTaskId)?.Ref,
+                    included = x.Included, desiredOutcome = x.DesiredOutcome, completionMeaning = x.CompletionMeaning,
+                    targetDate = x.TargetDate, plannedDate = x.PlannedDate, deadline = x.Deadline,
+                    recurrence = x.Recurrence,
+                    timesOfDay = x.TimesOfDay is { Count: > 0 } times ? times.Select(t => t.ToString("HH:mm")).ToArray() : null,
+                    effectiveFromLocalDate = x.EffectiveFromLocalDate,
+                    sequenceKey = x.SequenceKey, sequenceOrder = x.SequenceOrder
+                }).ToArray(),
+                facts = draft.Facts.Select(x => new
+                {
+                    draftId = x.DraftId, factType = x.FactType, strength = x.Strength, value = x.Value,
+                    scopeDraftId = x.ScopeDraftId, included = x.Included
+                }).ToArray()
+            }
+        };
     }
 
     private static readonly PersianCalendar Persian = new();
@@ -310,6 +348,14 @@ public static class PlanningPromptRenderer
         - A Task that "waitsFor" unfinished steps is not repeated, and new steps after it are dated after them.
         - Draft at once. Never ask about availability (days, hours, times): keep last week's rhythm, the days and times of activeRoutines and of last week's Tasks, and say so in "assumptions". Ask at most one question, and only when the evidence leaves a choice only the user can make.
         - "summary" says in one or two sentences what last week achieved and what this week focuses on.
+
+        REDO
+        When "redo" is not null, the user already reviewed redo.previousDraft (with their own edits) and asked for it to be made again. clarificationAllowed is false: return a DRAFT, or INPUT_BLOCKED only when the correction itself cannot be planned.
+        - When redo.correction is not null, it is what the user wants changed. Apply it fully and keep everything else of previousDraft as it is (its items, titles, parents, dates, rhythms and facts) unless the correction implies changing them. redo.earlierCorrections were asked for before, oldest first, and still hold unless the latest correction says otherwise.
+        - When redo.correction is null, the user wants another version: keep the intention, the answers and the facts, but propose a noticeably different plan (another structure, other first steps or another rhythm), never the same items reworded.
+        - A proposal or fact with "included": false was switched off by the user: do not propose it again unless the correction asks for it.
+        - previousDraft names existing items with this input's own "contextProjectRef" and "existingTaskRef". You may reuse its draftIds.
+        - Every rule above still holds for the new draft. A correction never permits breaking one, such as a "plannedDate" outside the window or a Task on a date a HARD planning detail rules out; when it asks for that, do the nearest valid thing and say so in "assumptions".
 
         PLANNING DETAILS ("facts")
         Planning details are how later weeks remember what the user said, so capture what they stated: for each thing the user stated in the intention or in clarificationTurns that later planning needs and that has no field of its own, propose one fact: their starting point or current level (CURRENT_LEVEL), what they want to focus on or what is weakest (LEARNING_FOCUS), a device or tool they have or lack (AVAILABLE_DEVICE), a way they ruled out (EXCLUDED_PATH), days or dates they cannot (UNAVAILABLE_*). Write the "text" in the user's own terms, short. Never a fact for something you assumed, for anything sensitive, or for availability hours (a Routine's days and times hold those). UNAVAILABLE_WEEKDAY uses "weekdays" (one or more different ISO numbers 1-7), UNAVAILABLE_DATE uses "localDate", UNAVAILABLE_DATE_RANGE uses "startLocalDate" with an "endLocalDate" that is not earlier; these three are HARD or SOFT, never INFORMATIONAL. The other types use "text" (1 to 120 characters) and are SOFT or INFORMATIONAL, never HARD. Every fact has its own "draftId" and a "value" object. "scopeDraftId" is the draftId of a proposed GOAL or of a proposed PROJECT without a parent; it is null only when planningContext is not null. When there is no planningContext and no such GOAL or PROJECT, propose no fact and put it in "assumptions" instead. Do not repeat anything in confirmedPlanningDetails. Respect every HARD detail: never plan a Task on a date, or a Routine on a weekday, that it rules out.

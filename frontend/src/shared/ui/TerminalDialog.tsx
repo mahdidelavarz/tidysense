@@ -10,6 +10,13 @@ const kinds = {
   Routine: { label: 'روتین', entity: 'routine', icon: Repeat },
 } as const
 
+/** What confirming does to each kind of child it lists, in the order the server applies it. */
+const cascadeGroups = [
+  { kind: 'Project', heading: 'این پروژه‌ها با تأیید شما متوقف می‌شوند:' },
+  { kind: 'Task', heading: 'این کارهای باز کنار گذاشته می‌شوند (هر کدام را بعداً می‌شود برگرداند):' },
+  { kind: 'Routine', heading: 'این روتین‌ها با تأیید شما متوقف می‌شوند:' },
+] as const
+
 /** Opens the page of one item that stands in the way, so it can be finished or set aside there. */
 function OpenLink({ item }: { item: TerminalItem }) {
   const label = `باز کن: ${item.title}`
@@ -34,10 +41,11 @@ function ItemRow({ item, action }: { item: TerminalItem; action?: React.ReactNod
 
 /**
  * Confirmation of an explicit terminal transition (a Goal achieved or
- * abandoned, a Project completed or stopped). While active children stand
- * in the way it lists them, each with a way to open it, and offers only
- * "later"; once nothing does, it says what confirming will change, including
- * the Routines it will stop by itself, then asks.
+ * stopped, a Project stopped). While active children stand in the way it
+ * lists them, each with a way to open it, and offers only "later"; once
+ * nothing does, it says what confirming will change, including every child
+ * it ends by itself (Projects stopped, open Tasks dropped, Routines stopped),
+ * then asks.
  */
 export function TerminalDialog({ entity, entityTitle, title, tone, confirmLabel, pending, canApply, blockers, cascades = [], notes, onCancel, onConfirm }: {
   entity: 'goal' | 'project'
@@ -48,7 +56,7 @@ export function TerminalDialog({ entity, entityTitle, title, tone, confirmLabel,
   pending: boolean
   canApply: boolean
   blockers: TerminalItem[]
-  /** Children the transition will change by itself, shown so the decision is informed. */
+  /** Children the transition ends by itself, listed exactly as the server will apply them. */
   cascades?: TerminalItem[]
   /** What confirming means, a line each. */
   notes: string[]
@@ -100,12 +108,15 @@ export function TerminalDialog({ entity, entityTitle, title, tone, confirmLabel,
           ))}
         </ul>
       )}
-      {cascades.length > 0 && (
-        <div className="mt-3">
-          <p className="text-[0.8125rem] font-bold">این روتین‌ها با تأیید شما متوقف می‌شوند:</p>
-          <ul className="mt-2 space-y-2">{cascades.map(item => <ItemRow key={item.id} item={item} />)}</ul>
-        </div>
-      )}
+      {cascadeGroups.map(group => {
+        const items = cascades.filter(item => item.kind === group.kind)
+        return items.length > 0 && (
+          <div key={group.kind} className="mt-3">
+            <p className="text-[0.8125rem] font-bold">{group.heading}</p>
+            <ul className="mt-2 space-y-2">{items.map(item => <ItemRow key={item.id} item={item} />)}</ul>
+          </div>
+        )
+      })}
     </ConfirmationDialog>
   )
 }

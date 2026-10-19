@@ -95,6 +95,7 @@ Frozen with the instrument on 2026-10-14. They are recorded or derivable now, so
 | Reconcile decisions applied on tap, and reverted ones (027 §5 "decision mix, reverted decisions") | `TASK_COMPLETED` and `TASK_CARRIED` events with a `ReconcileSessionId` and no `ConfirmationId` are one-tap decisions of that session; `TASK_COMPLETION_UNDONE` and `TASK_CARRY_UNDONE` are their reversals, each pointing at the reversed event through `CausationId`. R1 events, from STEP-19 (2026-10-14). |
 | Internal account | `Operations:OperatorPhones` and `Operations:InternalPhones`, as for every metric above. Seeded, demo and QA accounts must be listed before collection. |
 | Clarification question kind and answer type | `PLANNING_CLARIFICATION_ASKED` (kinds, option counts, `multiple`) and `PLANNING_CLARIFICATION_ANSWERED` (per question asked: `kind`, `chosen` positions, `other`; nothing chosen and `other` false is `UNANSWERED`; `draftNow`), joined by `flowId` to `PLANNING_DRAFT_CREATED` version 2 and from there to the draft's disposition. Asked and never answered is an ASKED without an ANSWERED. R1 events, from STEP-18 (2026-10-14); flows before it have no kinds. No label or answer text is recorded. |
+| Drafts made again from the review (013 §10) | `PLANNING_DRAFT_CANCELLED` with reason `CORRECTED` (with a correction) or `RETRIED` (another version), written when the new draft replaces it; a failed or cancelled redo writes nothing. R1 events, from 2026-10-19. The correction text is never recorded. |
 
 ## Product insights (Discussion 027 §5, STEP-20)
 

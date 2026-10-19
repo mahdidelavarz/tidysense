@@ -14,6 +14,16 @@ public static class ParentEventTypes
     public const string ProjectStopped = "PROJECT_STOPPED";
     public const string GoalContinuationResolved = "GOAL_CONTINUATION_RESOLVED";
     public const string ProjectReviewResolved = "PROJECT_REVIEW_RESOLVED";
+    // A completed Project with open work again (owner decision 2026-10-19: Projects complete by their Tasks).
+    public const string ProjectReopened = "PROJECT_REOPENED";
+}
+
+/// <summary>Why a Project ended (version 2 of its end events).</summary>
+public static class ParentEndCauses
+{
+    public const string User = "USER";
+    public const string GoalStopped = "GOAL_STOPPED";
+    public const string Progress = "PROGRESS";
 }
 
 public static class ReviewDecisions
@@ -33,6 +43,9 @@ public static class ParentEventSchemas
         { "GOAL", "STANDALONE" };
     private static readonly HashSet<string> GoalFields = new(StringComparer.Ordinal)
         { "title", "desiredOutcome", "targetDate", "reviewDate" };
+    private static readonly HashSet<string> CompletedCauses = new(StringComparer.Ordinal) { ParentEndCauses.Progress };
+    private static readonly HashSet<string> StoppedCauses = new(StringComparer.Ordinal)
+        { ParentEndCauses.User, ParentEndCauses.GoalStopped };
     private static readonly HashSet<string> ProjectFields = new(StringComparer.Ordinal)
         { "title", "completionMeaning", "goalId", "targetDate", "reviewDate" };
 
@@ -46,6 +59,12 @@ public static class ParentEventSchemas
         yield return Updated(ParentEventTypes.ProjectUpdated, ProjectFields);
         yield return new EventPayloadSchema(ParentEventTypes.ProjectCompleted, 1);
         yield return new EventPayloadSchema(ParentEventTypes.ProjectStopped, 1);
+        // Version 2 (2026-10-19): a Project completes only by its Tasks, and is stopped by the user or with its Goal.
+        yield return new EventPayloadSchema(ParentEventTypes.ProjectCompleted, 2,
+            new EventPayloadFieldPolicy("cause", true, x => IsAllowedString(x, CompletedCauses)));
+        yield return new EventPayloadSchema(ParentEventTypes.ProjectStopped, 2,
+            new EventPayloadFieldPolicy("cause", true, x => IsAllowedString(x, StoppedCauses)));
+        yield return new EventPayloadSchema(ParentEventTypes.ProjectReopened, 1);
         yield return Reviewed(ParentEventTypes.GoalContinuationResolved,
             [ReviewDecisions.Continue, ReviewDecisions.ReviewLater]);
         yield return Reviewed(ParentEventTypes.ProjectReviewResolved,

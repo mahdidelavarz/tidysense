@@ -147,7 +147,7 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
             disabled={terminal.previewPending}
             onClick={() => terminal.requestPreview({ status: 'ABANDONED', version })}
           >
-            رها کردن هدف
+            توقف هدف
           </button>
         </div>
       )}

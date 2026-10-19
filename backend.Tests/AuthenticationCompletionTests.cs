@@ -72,6 +72,8 @@ public sealed class AuthenticationCompletionTests : IClassFixture<PostgresWebApp
         var verified = await PostAsync(client, "/api/v1/auth/otp/verify",
             new { phoneNumber = phone, code = firstCode, purpose = "LOGIN" });
         Assert.Equal(HttpStatusCode.OK, verified.StatusCode);
+        // The first sign-in of a new account goes to first entry.
+        Assert.False((await verified.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("setupComplete").GetBoolean());
         client.DefaultRequestHeaders.Add("Cookie", verified.Headers.GetValues("Set-Cookie").Single().Split(';')[0]);
         Assert.Equal(HttpStatusCode.NoContent,
             (await PostAsync(client, "/api/v1/auth/logout", new { })).StatusCode);
@@ -81,9 +83,11 @@ public sealed class AuthenticationCompletionTests : IClassFixture<PostgresWebApp
             (await PostAsync(afterLogout, "/api/v1/auth/otp/request",
                 new { phoneNumber = phone, purpose = "LOGIN" })).StatusCode);
         var nextCode = await CodeAsync(afterLogout, phone);
-        Assert.Equal(HttpStatusCode.OK,
-            (await PostAsync(afterLogout, "/api/v1/auth/otp/verify",
-                new { phoneNumber = phone, code = nextCode, purpose = "LOGIN" })).StatusCode);
+        var again = await PostAsync(afterLogout, "/api/v1/auth/otp/verify",
+            new { phoneNumber = phone, code = nextCode, purpose = "LOGIN" });
+        Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        // An account that already existed signs in to Today, not to first entry again.
+        Assert.True((await again.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("setupComplete").GetBoolean());
 
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

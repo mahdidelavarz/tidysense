@@ -39,6 +39,7 @@ export async function startPlanningAttempt(clientAttemptId: string, input: Plann
     answers: input.answers ?? null,
     draftNow: input.draftNow ?? false,
     continuationOfWindowId: input.continuationOfWindowId ?? null,
+    redo: input.redo ?? null,
   })
   return response.data
 }

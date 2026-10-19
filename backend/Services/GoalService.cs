@@ -139,8 +139,12 @@ public sealed class GoalService(
         var goal = await OwnedAsync(id, cancellationToken);
         VersionGuard.RequireMatch(id, request.ExpectedVersion, goal.Version);
         if (goal.Status != ParentStatuses.Active) throw new DomainRuleException("RESOURCE_NOT_ACTIVE", "Goal is not active.");
+        // Stopping ends everything open under it (owner decision 2026-10-19); achieving it still needs its work resolved.
+        if (request.TargetStatus == ParentStatuses.Abandoned)
+            return Preview(goal, request.TargetStatus, [],
+                await ParentLifecycle.StopCascadesAsync(db, currentUser.UserId, id, null, cancellationToken));
         var blockers = await GoalBlockersAsync(id, currentUser.UserId, cancellationToken);
-        return Preview(goal, request.TargetStatus, blockers);
+        return Preview(goal, request.TargetStatus, blockers, []);
     }
 
     public async Task<GoalDto> TerminalAsync(Guid id, TerminalCommandRequest request, string idempotencyKey,
@@ -148,6 +152,7 @@ public sealed class GoalService(
     {
         RequireGoalTerminal(request.TargetStatus);
         var now = dates.UtcNow;
+        var today = dates.Today;
         var identity = ParentCommandSupport.Command(currentUser.UserId, idempotencyKey, "TERMINATE_GOAL",
             new { id, request.TargetStatus, request.ExpectedVersion, request.PreviewHash }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
@@ -156,20 +161,23 @@ public sealed class GoalService(
             VersionGuard.RequireMatch(id, request.ExpectedVersion, goal.Version);
             if (goal.Status != ParentStatuses.Active)
                 throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
-            var blockers = await GoalBlockersAsync(context, id, owner, ct);
-            var currentPreview = Preview(goal, request.TargetStatus, blockers);
+            var stopping = request.TargetStatus == ParentStatuses.Abandoned;
+            var blockers = stopping ? [] : await GoalBlockersAsync(context, id, owner, ct);
+            var stop = stopping ? await ParentLifecycle.StopCascadesAsync(context, owner, id, null, ct) : [];
+            var currentPreview = Preview(goal, request.TargetStatus, blockers, stop);
             if (!CryptographicOperations.FixedTimeEquals(
                     Convert.FromHexString(currentPreview.PreviewHash), Convert.FromHexString(request.PreviewHash)))
                 throw new CommandConflictException("CONFIRMATION_STALE", "The terminal preview changed.");
             if (blockers.Count > 0)
                 throw new CommandRejectedException("PARENT_HAS_ACTIVE_CHILDREN");
+            var cascades = await ParentLifecycle.ApplyStopAsync(context, owner, stop, today, now, ct);
             goal.Status = request.TargetStatus;
             goal.TerminalAt = now;
             goal.UpdatedAt = now;
             goal.Version++;
             var eventType = request.TargetStatus == ParentStatuses.Achieved
                 ? ParentEventTypes.GoalAchieved : ParentEventTypes.GoalAbandoned;
-            return new CommandMutation("Goal", id, goal.Version, eventType, 1, "{}", now);
+            return new CommandMutation("Goal", id, goal.Version, eventType, 1, "{}", now, cascades);
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
@@ -209,9 +217,10 @@ public sealed class GoalService(
         return projects.Concat(tasks).Concat(routines).ToList();
     }
 
-    private static TerminalPreviewDto Preview(Goal goal, string target, IReadOnlyList<TerminalBlockerDto> blockers) =>
-        new(goal.Id, "Goal", goal.Status, target, goal.Version, blockers.Count == 0, blockers, [],
-            ParentCommandSupport.PreviewHash(goal.Id, "Goal", goal.Status, target, goal.Version, blockers, []));
+    private static TerminalPreviewDto Preview(Goal goal, string target, IReadOnlyList<TerminalBlockerDto> blockers,
+        IReadOnlyList<TerminalCascadeDto> cascades) =>
+        new(goal.Id, "Goal", goal.Status, target, goal.Version, blockers.Count == 0, blockers, cascades,
+            ParentCommandSupport.PreviewHash(goal.Id, "Goal", goal.Status, target, goal.Version, blockers, cascades));
 
     private static void RequireGoalTerminal(string status)
     {

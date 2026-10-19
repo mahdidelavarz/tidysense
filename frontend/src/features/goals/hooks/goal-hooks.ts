@@ -109,10 +109,11 @@ export function useGoalTerminal(goalId: string) {
     onSuccess: async data => {
       client.setQueryData(goalKeys.detail(goalId), data)
       setPreview(null)
-      await Promise.all([
-        client.invalidateQueries({ queryKey: goalKeys.list }),
-        client.invalidateQueries({ queryKey: goalKeys.options }),
-      ])
+      // A stop drops the open Tasks and stops the Routines (and a Goal's Projects) under it in the
+      // same command, so Today, Tasks, Routines, Projects, progress and Reconcile all change.
+      // The detail was just set from the command's answer, so only it is left alone.
+      const detail = JSON.stringify(goalKeys.detail(goalId))
+      await client.invalidateQueries({ predicate: query => JSON.stringify(query.queryKey) !== detail })
     },
   })
 

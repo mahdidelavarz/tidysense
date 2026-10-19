@@ -1,8 +1,9 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useGoalOptions } from '../../goals/hooks/goal-hooks'
-import { useProjectOptions } from '../../projects/hooks/project-hooks'
+import { projectKeys, useProjectOptions } from '../../projects/hooks/project-hooks'
 import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
+import { routineKeys } from '../../routines/hooks/routine-hooks'
 import { progressKey } from '../../structure/hooks/progress-hooks'
 import { todayKey } from '../../today/hooks/today-hooks'
 import {
@@ -52,6 +53,13 @@ export function useTask(id: string) {
   return useQuery({ queryKey: taskKeys.detail(id), queryFn: () => getTask(id) })
 }
 
+/**
+ * A Task change can complete its Project or make it active again, and a
+ * completing Project stops its Routines (owner decision 2026-10-19), so every
+ * Task mutation also refreshes Projects, Routines and progress.
+ */
+const parentKeys = [projectKeys.all, routineKeys.all, progressKey]
+
 /** Creates a Task and refreshes the Task lists and Today (a new dated Task may appear there). */
 export function useCreateTask() {
   const client = useQueryClient()
@@ -64,6 +72,7 @@ export function useCreateTask() {
         client.invalidateQueries({ queryKey: taskKeys.all }),
         client.invalidateQueries({ queryKey: todayKey }),
         client.invalidateQueries({ queryKey: reconcileKeys.all }),
+        ...parentKeys.map(queryKey => client.invalidateQueries({ queryKey })),
       ])
     },
   })
@@ -84,7 +93,7 @@ function useTaskCacheSync() {
       client.invalidateQueries({ queryKey: taskKeys.options }),
       client.invalidateQueries({ queryKey: todayKey }),
       client.invalidateQueries({ queryKey: reconcileKeys.all }),
-      client.invalidateQueries({ queryKey: progressKey }),
+      ...parentKeys.map(queryKey => client.invalidateQueries({ queryKey })),
     ])
   }, [client])
 }

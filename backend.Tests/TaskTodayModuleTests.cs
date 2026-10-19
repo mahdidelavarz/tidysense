@@ -114,7 +114,7 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
     }
 
     [Fact]
-    public async Task Parent_terminal_preview_blocks_on_dated_or_undated_tasks_and_restore_revalidates_parent()
+    public async Task Stopping_a_project_drops_its_open_tasks_as_previewed_and_restore_revalidates_parent()
     {
         var session = await CreateSessionAsync();
         using var client = Client(session.Token);
@@ -123,28 +123,19 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
         var task = await CreateTaskAsync(client, "project-undated-task",
             projectId: project.Id, plannedDate: null);
 
-        var blockedPreview = await PreviewAsync(client, "projects", project.Id, "COMPLETED", project.Version);
-        Assert.False(blockedPreview.CanApply);
-        var blocker = Assert.Single(blockedPreview.Blockers);
-        Assert.Equal("Task", blocker.ResourceType);
-        Assert.Equal(task.Id, blocker.ResourceId);
-        Assert.Equal(task.Title, blocker.Title);
+        // A stop is never blocked: the preview names each open Task it drops (owner decision 2026-10-19).
+        var preview = await PreviewAsync(client, "projects", project.Id, "STOPPED", project.Version);
+        Assert.True(preview.CanApply);
+        Assert.Empty(preview.Blockers);
+        var cascade = Assert.Single(preview.Cascades);
+        Assert.Equal(("Task", task.Id, task.Title, "DROPPED"),
+            (cascade.ResourceType, cascade.ResourceId, cascade.Title, cascade.ResultingStatus));
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/projects/{project.Id}/terminal",
+            new { targetStatus = "STOPPED", expectedVersion = project.Version, previewHash = preview.PreviewHash },
+            "stop-project-with-task")).EnsureSuccessStatusCode();
 
-        var droppedResponse = await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{task.Id}/drop",
-            new { expectedVersion = task.Version }, "drop-project-task");
-        droppedResponse.EnsureSuccessStatusCode();
-        var dropped = await droppedResponse.Content.ReadFromJsonAsync<TaskDto>();
-        Assert.Equal("DROPPED", dropped!.Status);
-        Assert.Equal(2, dropped.Version);
-
-        var ready = await PreviewAsync(client, "projects", project.Id, "COMPLETED", project.Version);
-        Assert.True(ready.CanApply);
-        var terminalResponse = await SendAsync(client, HttpMethod.Post,
-            $"/api/v1/projects/{project.Id}/terminal",
-            new { targetStatus = "COMPLETED", expectedVersion = project.Version, previewHash = ready.PreviewHash },
-            "complete-project-after-task");
-        terminalResponse.EnsureSuccessStatusCode();
-
+        var dropped = (await client.GetFromJsonAsync<TaskDto>($"/api/v1/tasks/{task.Id}"))!;
+        Assert.Equal(("DROPPED", 2L), (dropped.Status, dropped.Version));
         var restore = await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{task.Id}/restore",
             new { expectedVersion = dropped.Version, plannedDate = (string?)null }, "restore-under-terminal-parent");
         Assert.Equal(HttpStatusCode.UnprocessableEntity, restore.StatusCode);
@@ -282,11 +273,11 @@ public sealed class TaskTodayModuleTests(PostgresWebApplicationFactory factory)
         using var firstClient = Client(session.Token);
         using var secondClient = Client(session.Token);
         var project = await CreateProjectAsync(firstClient, null, "task-race-project");
-        var preview = await PreviewAsync(firstClient, "projects", project.Id, "COMPLETED", project.Version);
+        var preview = await PreviewAsync(firstClient, "projects", project.Id, "STOPPED", project.Version);
 
         var terminalCall = SendAsync(firstClient, HttpMethod.Post,
             $"/api/v1/projects/{project.Id}/terminal",
-            new { targetStatus = "COMPLETED", expectedVersion = project.Version, previewHash = preview.PreviewHash },
+            new { targetStatus = "STOPPED", expectedVersion = project.Version, previewHash = preview.PreviewHash },
             "task-race-terminal");
         var createCall = CreateTaskResponseAsync(secondClient, "task-race-create",
             projectId: project.Id, plannedDate: null);

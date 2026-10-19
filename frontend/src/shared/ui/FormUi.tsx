@@ -158,6 +158,7 @@ export function ValidationSummary({ messages }: { messages: Array<string | undef
 const refusals: Record<string, string> = {
   SEQUENCE_LATER_STEP_DONE: 'مرحله‌ی بعدیِ این ترتیب انجام شده است؛ اول آن را برگردانید.',
   PARENT_NOT_ACTIVE: 'هدف یا پروژه‌ی این مورد به پایان رسیده است و دیگر کار فعال نمی‌پذیرد.',
+  PROJECT_COMPLETES_BY_PROGRESS: 'پروژه را دستی تمام نمی‌کنید؛ وقتی همه‌ی کارهایش انجام شود خودش تکمیل می‌شود. فقط می‌شود آن را متوقف کرد.',
   SEQUENCE_NEEDS_RECONCILE: 'یکی از کارهای این ترتیب کنار گذاشته شده است؛ اول در «بازبینی» تکلیفش را روشن کنید.',
   SEQUENCE_SCOPE_MISMATCH: 'فقط کاری از همین هدف یا پروژه را می‌شود انتخاب کرد.',
   SEQUENCE_ORDER_FULL: 'جای خالی برای این مرحله نماند؛ یکی از کارهای ترتیب را جابه‌جا کنید و دوباره امتحان کنید.',

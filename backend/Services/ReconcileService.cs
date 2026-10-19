@@ -223,6 +223,8 @@ public sealed class ReconcileService(
             var snapshot = await context.Tasks.AsNoTracking().SingleOrDefaultAsync(
                 x => x.Id == request.TaskId && x.UserId == owner, ct)
                 ?? throw new ResourceNotFoundException("Task", request.TaskId);
+            // Parents first: done here may complete the Task's Project (owner decision 2026-10-19).
+            await ParentCommandSupport.LockParentsAsync(context, owner, [(snapshot.GoalId, snapshot.ProjectId)], null, null, ct);
             if (snapshot.SequenceId is { } sequenceId) await TaskService.LockSequencesAsync(context, [sequenceId], ct);
             var task = await TaskService.LockOwnedAsync(context, request.TaskId, owner, ct);
             VersionGuard.RequireMatch(task.Id, request.ExpectedVersion, task.Version);
@@ -258,8 +260,9 @@ public sealed class ReconcileService(
                 ActionType = request.ActionType, PreviousPlannedDate = complete ? null : previous,
                 ResultingVersion = task.Version, AppliedEventId = eventId, CreatedAt = now
             });
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner, [task.ProjectId], today, now, ct);
             return new CommandMutation("Task", task.Id, task.Version, eventType, 1, payload, now,
-                ReconcileSessionId: sessionId, EventId: eventId);
+                ReconcileSessionId: sessionId, EventId: eventId) { CascadeEvents = settled };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetSessionAsync(sessionId, cancellationToken);
@@ -288,6 +291,7 @@ public sealed class ReconcileService(
             if (tracked.Status != ReconcileQuickActionStatuses.Applied)
                 throw new CommandRejectedException("QUICK_ACTION_ALREADY_UNDONE");
             var snapshot = await context.Tasks.AsNoTracking().SingleAsync(x => x.Id == tracked.TaskId && x.UserId == owner, ct);
+            await ParentCommandSupport.LockParentsAsync(context, owner, [(snapshot.GoalId, snapshot.ProjectId)], null, null, ct);
             if (snapshot.SequenceId is { } sequenceId) await TaskService.LockSequencesAsync(context, [sequenceId], ct);
             var task = await TaskService.LockOwnedAsync(context, tracked.TaskId, owner, ct);
             // Undo restores the state the action found only if nothing has happened to the Task since.
@@ -319,8 +323,9 @@ public sealed class ReconcileService(
             tracked.Status = ReconcileQuickActionStatuses.Undone;
             tracked.UndoneAt = now;
             tracked.UndoEventId = eventId;
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner, [task.ProjectId], dates.Today, now, ct);
             return new CommandMutation("Task", task.Id, task.Version, eventType, 1, "{}", now,
-                ReconcileSessionId: session.Id, EventId: eventId, CausationId: tracked.AppliedEventId);
+                ReconcileSessionId: session.Id, EventId: eventId, CausationId: tracked.AppliedEventId) { CascadeEvents = settled };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetSessionAsync(action.SessionId, cancellationToken);
@@ -419,11 +424,15 @@ public sealed class ReconcileService(
                 throw new CommandRejectedException("WARNING_NOT_ACKNOWLEDGED");
 
             var cascades = Apply(action, built, today, now);
+            var affectedCount = cascades.Count;
+            // A drop that leaves a Project only done work completes it (owner decision 2026-10-19).
+            cascades.AddRange(await ParentLifecycle.SettleProjectsAsync(context, owner,
+                built.Tasks.Select(x => x.ProjectId), today, now, ct));
             confirmation.Status = ActionConfirmationStatuses.Resolved;
             confirmation.ResolvedAt = now;
             return new CommandMutation("ActionConfirmation", confirmationId, 1,
                 ReconcileEventTypes.ActionConfirmed, 1,
-                JsonSerializer.Serialize(new { actionType = action.ActionType, affectedCount = cascades.Count }),
+                JsonSerializer.Serialize(new { actionType = action.ActionType, affectedCount }),
                 now, cascades, confirmationId, confirmation.ReconcileSessionId);
         }, cancellationToken);
         // Succeeded, conflicted or refused: the recommendation points at whatever the command answered.
@@ -530,6 +539,9 @@ public sealed class ReconcileService(
 
         if (forUpdate)
         {
+            // Parents first, in the order every Task command locks them.
+            await ParentCommandSupport.LockParentsAsync(context, owner,
+                tasks.Select(x => (x.GoalId, x.ProjectId)), null, null, cancellationToken);
             await TaskService.LockSequencesAsync(context,
                 tasks.Select(x => x.SequenceId).OfType<Guid>(), cancellationToken);
             var ids = tasks.Select(x => x.Id).ToArray();
