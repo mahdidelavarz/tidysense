@@ -31,7 +31,8 @@ public class AiFamilyOptions
     /// <summary>The single controlled retry of a transient provider failure.</summary>
     public bool RetryEnabled { get; set; } = true;
 
-    public int MaxInputTokens { get; set; } = 12000;
+    // An estimate of about twice the real tokens: 20000 is about 11000 real ones (measured 2026-10-19).
+    public int MaxInputTokens { get; set; } = 20000;
     public int MaxOutputTokens { get; set; } = 4000;
     public int ConnectionTimeoutSeconds { get; set; } = 10;
     public int InvocationTimeoutSeconds { get; set; } = 45;

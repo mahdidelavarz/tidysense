@@ -44,7 +44,8 @@ test('new user login, invalid code, reload, logout, and immediate login again', 
   const freshCode = await codeFromToast(page)
   await page.getByLabel('کد تأیید').fill(freshCode)
   await page.getByRole('button', { name: 'ورود' }).click()
-  await expect(page).toHaveURL(/first-entry/)
+  // First entry is the first sign-in only (017): an account that already exists signs in to Today.
+  await expect(page).toHaveURL(/today/)
 })
 
 test('returning login and logout-all revoke another browser', async ({ browser, page, request }) => {

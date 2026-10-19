@@ -5499,6 +5499,8 @@ export interface components {
             clarification?: null | components["schemas"]["PlanningClarificationDto"];
             /** Format: uuid */
             continuationOfWindowId?: null | string;
+            /** Format: uuid */
+            redoOfDraftId?: null | string;
         };
         PlanningClarificationDto: {
             questions: components["schemas"]["PlanningQuestion"][];
@@ -5740,6 +5742,13 @@ export interface components {
             daysOfWeek: null | (number | string)[];
             /** Format: int32 */
             dayOfMonth: null | number | string;
+        };
+        PlanningRedoRequest: {
+            /** Format: uuid */
+            draftId: string;
+            /** Format: int32 */
+            expectedRevision: number | string;
+            correction: null | string;
         };
         PlanningRemovedItem: {
             entityType: string;
@@ -6164,6 +6173,7 @@ export interface components {
             draftNow: boolean;
             /** Format: uuid */
             continuationOfWindowId?: null | string;
+            redo?: null | components["schemas"]["PlanningRedoRequest"];
         };
         StopRoutineRequest: {
             /** Format: int64 */

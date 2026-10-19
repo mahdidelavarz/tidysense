@@ -80,6 +80,7 @@
 30. A flow has at most three clarification turns. On the fourth request, or with `draftNow`, the generator is told not to ask; a question returned anyway fails the attempt with `DRAFT_INVALID`.
 31. Questions that are the user's latest planning activity and less than 24 hours old are returned by `GET /planning/active` as `clarification`. They do not block a new flow; starting one abandons them.
 32. `GET /planning/active` also returns `sampleGenerator`, so the client never presents a sample draft as model output and says when text is sent to an AI service.
+32a. A reviewable draft can be made again (013 §10 note, 2026-10-19): an attempt with `redo { draftId, expectedRevision, correction }`. It takes the intention, the planning context and the clarification turns from the draft's own flow, whatever the request sends; a redo of a redo walks back through each redone draft. The generator gets the revision the user saw (`409` on another revision), the trimmed correction (at most 1000 characters; none asks for another version) and up to four earlier corrections of the flow, and is told not to ask. A redo cannot answer questions, draft now or start a continuation (`400`). The draft stays reviewable while the redo runs, so the attempt and the draft coexist; the runner supersedes it only when the new draft is stored, with `PLANNING_DRAFT_CANCELLED` reason `CORRECTED` or `RETRIED`. A failed or cancelled redo leaves it untouched. The attempt stores `RedoOfDraftId` and `Correction` (R3, purged with it); `PlanningAttemptDto.redoOfDraftId` lets the client go back to the draft.
 
 ### Record
 
@@ -112,6 +113,7 @@ Statements 27a–28c below keep their STEP-18 wording otherwise.
 - `POST /api/v1/planning/attempts` additionally accepts `previousAttemptId`, `answers[] { questionId, text }` and `draftNow`, and may return `429` and `503`.
 - `PlanningAttemptDto` adds `outcome` and `clarification { questions[], blockReason, message, turn }`.
 - `PlanningActiveDto` adds `clarification` and `sampleGenerator`.
+- 2026-10-19: `POST /api/v1/planning/attempts` accepts `redo { draftId, expectedRevision, correction }`; `PlanningAttemptDto` adds `redoOfDraftId`.
 - STEP-18: `PlanningQuestion` adds `reason`, `kind`, `options`, `multiple`; `answers[]` items add `options` (positions) and `text` becomes optional.
 
 Persian UI terms: the questions screen is «سه پرسش کوتاه» (by count, up to «چهار پرسش کوتاه»), draft now is «بدون پاسخ بساز» (STEP-18; before, «همین حالا پیش‌نویس بساز»), the own-words answer is «خودت بنویس» (STEP-22; before, «چیز دیگر…»).

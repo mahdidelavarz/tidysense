@@ -1,5 +1,7 @@
 # Discussion 012 — Core Product Model
 
+> **Amendment (2026-10-19, decided by the owner):** §4 — a Project is never completed by hand; it can only be stopped. It completes itself when it has no open Task left and at least one done Task: it becomes `COMPLETED` and its Routines stop, as below. Undoing a tick, restoring a dropped Task or adding a Task makes a completed Project `ACTIVE` again; the Routines stopped at its completion stay stopped. A Project's progress is its done Tasks over its done and open Tasks: dropped Tasks are left out and Routines are not progress. A Goal is still achieved by hand. Stopping a Goal or Project ends everything open under it (015 §9 note).
+
 ## Status
 
 Accepted and closed after GPT × Claude review.

@@ -9246,6 +9246,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "redoOfDraftId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -10272,6 +10279,34 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "PlanningRedoRequest": {
+        "required": [
+          "draftId",
+          "expectedRevision",
+          "correction"
+        ],
+        "type": "object",
+        "properties": {
+          "draftId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "correction": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -12040,6 +12075,16 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "redo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlanningRedoRequest"
+              }
+            ]
           }
         }
       },

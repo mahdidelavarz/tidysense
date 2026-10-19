@@ -208,6 +208,52 @@ if (weekTwo.length) {
   }
 }
 
+// ---- Made again from the review (013 §10, --redo) ----
+const datedTasks = draft => (draft?.proposals ?? []).map(x => x.proposal)
+  .filter(x => x.entityType === 'TASK' && x.included && x.plannedDate && !x.existingTaskId).length
+const redone = run.results.filter(record => record.redo).map(record => {
+  const draft = record.redo.draft
+  const proposals = draft?.proposals?.map(x => x.proposal) ?? []
+  const childOf = id => proposals.filter(x => x.parentDraftId === id)
+  const hasWork = id => childOf(id).some(x => ['TASK', 'ROUTINE'].includes(x.entityType) || hasWork(x.draftId))
+  return {
+    id: record.id,
+    seconds: Math.round((record.redo.ms ?? 0) / 100) / 10,
+    failure: draft ? null : record.redo.error ?? record.redo.final?.failureCode ?? record.redo.final?.outcome ?? 'NO_DRAFT',
+    approvable: Boolean(draft?.canApply),
+    before: datedTasks(record.draft),
+    after: datedTasks(draft),
+    goalsBefore: (record.draft?.proposals ?? []).filter(x => x.proposal.entityType === 'GOAL').length,
+    goalsAfter: proposals.filter(x => x.entityType === 'GOAL').length,
+    emptyParents: proposals.filter(x => ['GOAL', 'PROJECT'].includes(x.entityType) && !hasWork(x.draftId)).map(x => x.title),
+    dateErrors: [draft?.summary, ...proposals.map(x => x.title)].flatMap(dateErrors)
+  }
+})
+if (redone.length) {
+  const n = redone.length
+  const drafted = redone.filter(x => !x.failure)
+  const lighter = drafted.filter(x => x.after < x.before).length
+  const bar3 = [
+    ['Made again as a draft, never a question', drafted.length, n, drafted.length === n],
+    ['Approvable without a blocking issue ≥ 95%', redone.filter(x => x.approvable).length, n, redone.filter(x => x.approvable).length / n >= 0.95],
+    ['The structure kept (same number of Goals)', drafted.filter(x => x.goalsAfter === x.goalsBefore).length, drafted.length,
+      drafted.every(x => x.goalsAfter === x.goalsBefore)],
+    ['No empty Goal or Project', drafted.reduce((t, x) => t + x.emptyParents.length, 0), null, drafted.every(x => x.emptyParents.length === 0)],
+    ['Persian date errors = 0', drafted.reduce((t, x) => t + x.dateErrors.length, 0), null, drafted.every(x => x.dateErrors.length === 0)]
+  ]
+  console.log(`\nMade again (013 §10): ${run.results.find(x => x.redo)?.redo.correction ?? 'another version'}`)
+  for (const [name, value, of, pass] of bar3) console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}: ${value}${of !== null ? ` of ${of}` : ''}`)
+  console.log(`Report: fewer dated Tasks in the week after the correction in ${lighter} of ${drafted.length} cases ` +
+    `(${drafted.reduce((t, x) => t + x.before, 0)} → ${drafted.reduce((t, x) => t + x.after, 0)})`)
+  console.log('')
+  console.log('case               sec  dated before→after apply  problems')
+  for (const x of redone) {
+    const problems = [x.failure, ...x.emptyParents.map(t => `EMPTY:${t}`), ...x.dateErrors.map(d => `DATE:${d}`),
+      x.goalsAfter !== x.goalsBefore ? `GOALS:${x.goalsBefore}→${x.goalsAfter}` : null].filter(Boolean)
+    console.log(`${x.id.padEnd(18)} ${String(x.seconds).padStart(5)}  ${`${x.before}→${x.after}`.padEnd(18)} ${x.approvable ? 'yes' : 'no '}   ${problems.join(', ')}`)
+  }
+}
+
 // ---- Digest for a person to judge usefulness ----
 if (flag === '--digest' && digestPath) {
   const lines = [`# Planning evaluation digest`, '', `Run \`${file}\`${run.label ? ` — ${run.label}` : ''}, ${run.ranAt}.`, '']
@@ -227,6 +273,11 @@ if (flag === '--digest' && digestPath) {
     if (!draft) { lines.push(record.error ?? record.final?.failureCode ?? 'no draft', ''); continue }
     printDraft(lines, draft)
     if (record.week2) printWeekTwo(lines, record.week2)
+    if (record.redo) {
+      lines.push('', `### Made again: ${record.redo.correction ?? 'another version'}`, '')
+      if (record.redo.draft) printDraft(lines, record.redo.draft)
+      else lines.push(record.redo.error ?? record.redo.final?.failureCode ?? 'no draft')
+    }
     lines.push('')
   }
   writeFileSync(digestPath, lines.join('\n'))

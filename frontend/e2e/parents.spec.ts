@@ -88,7 +88,8 @@ test('stopping a Goal stops its Project, drops its open Tasks and stops its Rout
   for (const title of [project.title, open.title, direct.title, routine.title]) await expect(dialog.getByText(title)).toBeVisible()
   await page.screenshot({ path: 'test-results/goal-stop-preview.png' })
   await dialog.getByRole('button', { name: 'تأیید توقف هدف' }).click()
-  await expect(page.getByText('متوقف‌شده').first()).toBeVisible()
+  await expect(dialog).toBeHidden()
+  await expect.poll(async () => (await (await page.request.get(`/api/v1/goals/${goal.id}`)).json()).status).toBe('ABANDONED')
 
   expect((await (await page.request.get(`/api/v1/projects/${project.id}`)).json()).status).toBe('STOPPED')
   expect((await (await page.request.get(`/api/v1/tasks/${open.id}`)).json()).status).toBe('DROPPED')

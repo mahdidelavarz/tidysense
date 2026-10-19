@@ -21,7 +21,18 @@ public sealed record StartPlanningAttemptRequest(
     [MaxLength(PlanningClarificationRules.MaxQuestions)] IReadOnlyList<PlanningAnswer>? Answers = null,
     bool DraftNow = false,
     // «برنامهٔ هفتهٔ بعد»: plan the week after this planned one, in its Goal or Project (029 §3).
-    Guid? ContinuationOfWindowId = null);
+    Guid? ContinuationOfWindowId = null,
+    // «اصلاح» or «نسخهٔ دیگر» on a reviewable draft (013 §10): the same flow made again.
+    PlanningRedoRequest? Redo = null);
+
+/// <summary>
+/// Makes a reviewable draft again from its own flow (intention, answers and context), the revision the
+/// user saw and, when given, what they want changed. Without a correction it asks for another version.
+/// </summary>
+public sealed record PlanningRedoRequest(
+    Guid DraftId,
+    [Range(1, int.MaxValue)] int ExpectedRevision,
+    [StringLength(PlanningRedoRules.CorrectionLength)] string? Correction);
 
 /// <summary>Questions to answer, or the reason the input cannot be planned and what to change.</summary>
 public sealed record PlanningClarificationDto(
@@ -48,7 +59,9 @@ public sealed record PlanningAttemptDto(
     string? Outcome = null,
     PlanningClarificationDto? Clarification = null,
     // The planned week this attempt continues (029 §3).
-    Guid? ContinuationOfWindowId = null);
+    Guid? ContinuationOfWindowId = null,
+    // The draft this attempt makes again (013 §10); it stays reviewable until the new one is stored.
+    Guid? RedoOfDraftId = null);
 
 /// <summary>
 /// The unfinished planning flow, if any: a running attempt, an unapproved draft, or questions

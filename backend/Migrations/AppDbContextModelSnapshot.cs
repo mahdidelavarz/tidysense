@@ -925,6 +925,10 @@ namespace TidySense.Migrations
                     b.Property<Guid?>("ContinuationOfWindowId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Correction")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -953,6 +957,9 @@ namespace TidySense.Migrations
                         .HasColumnType("character varying(16)");
 
                     b.Property<Guid?>("PreviousAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RedoOfDraftId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("RequestHash")
@@ -1005,6 +1012,8 @@ namespace TidySense.Migrations
                             t.HasCheckConstraint("CK_PlanningAttempts_Outcome", "(\"Status\" = 'SUCCEEDED') = (\"Outcome\" IS NOT NULL) AND (COALESCE(\"Outcome\", '') = 'DRAFT') = (\"DraftId\" IS NOT NULL) AND (COALESCE(\"Outcome\", '') IN ('CLARIFICATION', 'INPUT_BLOCKED')) = (\"ClarificationJson\" IS NOT NULL) AND (\"Status\" = 'FAILED') = (\"FailureCode\" IS NOT NULL)");
 
                             t.HasCheckConstraint("CK_PlanningAttempts_OutcomeValue", "\"Outcome\" IS NULL OR \"Outcome\" IN ('DRAFT', 'CLARIFICATION', 'INPUT_BLOCKED')");
+
+                            t.HasCheckConstraint("CK_PlanningAttempts_Redo", "(\"RedoOfDraftId\" IS NULL OR \"PreviousAttemptId\" IS NULL) AND (\"Correction\" IS NULL OR \"RedoOfDraftId\" IS NOT NULL)");
 
                             t.HasCheckConstraint("CK_PlanningAttempts_Status", "\"Status\" IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED')");
                         });

@@ -22,7 +22,7 @@ import {
 } from '../hooks/planning-hooks'
 import { blockReasonLabels, failureLabels } from '../types/planning.format'
 import { planningPhase } from '../types/planning.phase'
-import type { PlanningAnswer, PlanningApplyResultDto, PlanningAttemptDto, PlanningScopeInput } from '../types/planning.types'
+import type { PlanningAnswer, PlanningApplyResultDto, PlanningAttemptDto, PlanningAttemptInput, PlanningScopeInput } from '../types/planning.types'
 import { PlanningApplyDialog } from './PlanningApplyDialog'
 import { PlanningClarification } from './PlanningClarification'
 import { PlanningDraftReview } from './PlanningDraftReview'
@@ -74,6 +74,8 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
   const [endedDraftId, setEndedDraftId] = useState<string | null>(null)
   // The attempt being made answers questions, so the «پرسش‌ها» step is behind it.
   const [answered, setAnswered] = useState(false)
+  // The last «اصلاح» or «نسخهٔ دیگر» asked for, so a failed one can be sent again as it was.
+  const [lastRedo, setLastRedo] = useState<NonNullable<PlanningAttemptInput['redo']> | null>(null)
 
   const found = detached ? undefined : active.data
   // Unanswered questions are resumed like a running attempt: by the id of the attempt that asked them.
@@ -81,6 +83,8 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
   const attempt = usePlanningAttempt(currentAttemptId)
   const currentDraftId = draftId ?? (attempt.data?.status === 'SUCCEEDED' ? attempt.data.draftId : null)
   const draft = usePlanningDraft(currentDraftId)
+  // A draft resumed by its id: the attempt that made it says what was written.
+  const origin = usePlanningAttempt(currentAttemptId === null ? draft.data?.attemptId ?? null : null)
   const apply = usePlanningApply(currentDraftId)
 
   const manual = () => openCreate('menu')
@@ -149,6 +153,30 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
         setDetached(true)
       },
     })
+  }
+
+  /**
+   * Makes the draft under review again from its own flow (013 §10). The draft stays reviewable
+   * until the new one is stored, so a failed or cancelled redo goes back to it.
+   */
+  const redo = (input: NonNullable<PlanningAttemptInput['redo']>, written: string) => {
+    setLastRedo(input)
+    setAnswered(true)
+    start.mutate({ intention: written, replaceActive: false, redo: input }, {
+      onSuccess: data => {
+        setAttemptId(data.id)
+        setDraftId(null)
+        setDetached(true)
+      },
+    })
+  }
+  /** Back to the draft a redo was making again, after it failed or was cancelled. */
+  const backToDraft = (id: string) => {
+    start.reset()
+    cancelAttempt.reset()
+    setAttemptId(null)
+    setDraftId(id)
+    setDetached(true)
   }
 
   const phase = planningPhase({
@@ -283,7 +311,10 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
             className="secondary-button mt-4"
             type="button"
             disabled={cancelAttempt.isPending}
-            onClick={() => cancelAttempt.mutate(currentAttemptId)}
+            onClick={() => cancelAttempt.mutate(currentAttemptId, {
+              // A cancelled redo leaves the draft it was making again; the user is taken back to it.
+              onSuccess: () => { if (attempt.data?.redoOfDraftId) backToDraft(attempt.data.redoOfDraftId) },
+            })}
           >
             {cancelAttempt.isPending ? 'در حال لغو…' : 'لغو'}
           </button>
@@ -293,6 +324,27 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
       answered ? 2 : 1,
       () => { setIntention(attempt.data?.intention ?? intention); restart() },
       manualButton,
+    )
+  }
+
+  if (phase === 'attemptFailed' && attempt.data?.redoOfDraftId) {
+    const failed = attempt.data
+    const previous = attempt.data.redoOfDraftId
+    return frame(
+      <section className="card" aria-labelledby="planning-failed">
+        <h2 className="font-bold" id="planning-failed" role="alert">ساخت دوباره‌ی پیش‌نویس انجام نشد</h2>
+        <p className="mt-1 text-sm text-text-secondary">
+          {failureLabels[failed.failureCode ?? ''] ?? 'ساخت پیش‌نویس با خطا روبه‌رو شد.'} پیش‌نویس قبلی‌تان دست‌نخورده مانده است.
+        </p>
+        <PlanningStartError error={start.error} />
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {lastRedo?.draftId === previous && (
+            <button className="primary-button" type="button" disabled={start.isPending} onClick={() => redo(lastRedo, failed.intention)}>تلاش دوباره</button>
+          )}
+          <button className="secondary-button" type="button" onClick={() => backToDraft(previous)}>برگشت به پیش‌نویس</button>
+          <button className="ghost-button" type="button" onClick={manual}>خودم دستی می‌سازم</button>
+        </div>
+      </section>,
     )
   }
 
@@ -379,7 +431,7 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
 
   if (draft.data) {
     const current = draft.data
-    const written = attempt.data?.intention ?? intention
+    const written = attempt.data?.intention ?? origin.data?.intention ?? intention
     return flow(
       <>
         <PlanningDraftReview
@@ -390,6 +442,10 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
           onEdit={(edit, onStored) => revise.mutate({ draft: current, edit }, { onSuccess: onStored })}
           onApprove={() => apply.request(Number(current.revision))}
           onCancel={() => cancelDraft.mutate(current, { onSuccess: () => setEndedDraftId(current.id) })}
+          // The server plans the draft's own flow again; the text only fills the request's required field.
+          onRedo={correction => redo({ draftId: current.id, expectedRevision: Number(current.revision), correction }, written || current.summary)}
+          redoPending={start.isPending}
+          redoError={start.error}
         />
         <PlanningApplyDialog flow={apply} draft={current} />
       </>,

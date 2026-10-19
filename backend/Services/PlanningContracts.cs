@@ -281,6 +281,22 @@ public sealed record PlanningAnswer(string QuestionId, string? Text = null)
 public sealed record PlanningTurn(IReadOnlyList<PlanningQuestion> Questions, IReadOnlyList<PlanningAnswer> Answers);
 
 /// <summary>
+/// A draft made again (013 §10): the revision the user saw, with their edits, and what they want
+/// changed; no correction asks for another version. Earlier corrections of the same flow come first,
+/// so a later one never silently undoes an earlier one.
+/// </summary>
+public sealed record PlanningRedo(PlanningDraftContent PreviousDraft, string? Correction,
+    IReadOnlyList<string> EarlierCorrections);
+
+public static class PlanningRedoRules
+{
+    public const int CorrectionLength = 1000;
+
+    /// <summary>The corrections of one flow handed to the generator, newest kept.</summary>
+    public const int MaxEarlierCorrections = 4;
+}
+
+/// <summary>
 /// The questions of a clarification, or the reason the input cannot be planned. The message is
 /// the boundary or the blocking ambiguity in the user's language; it never proposes work.
 /// </summary>
@@ -406,6 +422,9 @@ public sealed record PlanningGenerationRequest(
 
     /// <summary>False once the turn budget is spent or the user chose to draft now.</summary>
     public bool AllowClarification { get; init; }
+
+    /// <summary>Set when the user asked for their draft to be made again; a redo never asks questions.</summary>
+    public PlanningRedo? Redo { get; init; }
 
     public Guid UserId { get; init; }
 }

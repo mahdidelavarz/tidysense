@@ -32,6 +32,13 @@ public sealed class PlanningAttempt
     public Guid? DraftId { get; set; }
     /// <summary>The planned week this attempt continues (029 §3); null for any other planning.</summary>
     public Guid? ContinuationOfWindowId { get; set; }
+    /// <summary>
+    /// The reviewable draft this attempt makes again (owner decision 2026-10-19, 013 §10): with the
+    /// user's <see cref="Correction"/>, or as another version when it is null. The draft stays until
+    /// the new one is stored.
+    /// </summary>
+    public Guid? RedoOfDraftId { get; set; }
+    public string? Correction { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }

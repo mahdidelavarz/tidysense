@@ -141,6 +141,15 @@ test('clarifying questions are answered before a draft exists', async ({ page })
 
   await expect(page.getByRole('heading', { name: 'ساختار پیشنهادی' })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByRole('article', { name: intention, exact: true })).toBeVisible()
+
+  // «اصلاح» (013 §10): the same flow made again with what to change; it drafts at once, asking nothing.
+  await page.getByRole('button', { name: 'اصلاح یا نسخهٔ دیگر' }).click()
+  const redo = page.getByRole('dialog', { name: 'اصلاح یا نسخهٔ دیگر' })
+  await redo.getByLabel('چه چیزی عوض شود؟').fill('جمعه‌ها را خالی بگذار')
+  await page.screenshot({ path: 'test-results/planning-redo-sheet.png', fullPage: true })
+  await redo.getByRole('button', { name: 'اصلاح کن' }).click()
+  await expect(page.getByText(/اصلاح‌شده: جمعه‌ها را خالی بگذار/)).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('heading', { name: 'چهار پرسش کوتاه' })).toBeHidden()
   const after = await activeFlow()
   expect(after.clarification).toBeNull()
   if (!after.draft) throw new Error('The answered questions did not lead to a draft.')
