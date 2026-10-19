@@ -98,11 +98,13 @@ public sealed class OtpService(AppDbContext db, IOptions<OtpOptions> options, IS
                             Convert.FromHexString(Hash(phone + "LOGIN" + code))))
                     {
                         challenge.UsedAt = now;
-                        await db.Database.ExecuteSqlInterpolatedAsync(
+                        var created = await db.Database.ExecuteSqlInterpolatedAsync(
                             $"INSERT INTO \"Users\" (\"Id\", \"PhoneNumber\", \"IsActive\", \"SessionEpoch\", \"SetupComplete\", \"CreatedAt\") VALUES ({Guid.NewGuid()}, {phone}, {true}, {0}, {false}, {now}) ON CONFLICT (\"PhoneNumber\") DO NOTHING",
-                            cancellationToken);
+                            cancellationToken) == 1;
                         user = await db.Users.SingleAsync(x => x.PhoneNumber == phone, cancellationToken);
                         if (!user.IsActive) user = null;
+                        // First entry is the first sign-in only (017): an account that already existed signs in to Today.
+                        else if (!created && !user.SetupComplete) user.SetupComplete = true;
                     }
                     else challenge.AttemptCount++;
                 }

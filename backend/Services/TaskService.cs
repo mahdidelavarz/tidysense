@@ -100,8 +100,9 @@ public sealed class TaskService(
             }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
         {
+            // A completed Project takes new work and becomes active again (owner decision 2026-10-19).
             await LockParentsAsync(context, owner, [(request.GoalId, request.ProjectId)],
-                request.GoalId, request.ProjectId, ct);
+                request.GoalId, request.ProjectId, ct, allowCompletedProject: true);
             var (sequenceId, sequenceOrder) = (request.SequenceId, request.SequenceOrder);
             IReadOnlyList<CascadeEvent> cascades = [];
             if (request.SequenceId is { } requested)
@@ -134,9 +135,10 @@ public sealed class TaskService(
                 CreatedAt = now,
                 UpdatedAt = now
             });
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner, [request.ProjectId], dates.Today, now, ct);
             return new CommandMutation("Task", id, 1, TaskEventTypes.TaskCreated, 1,
                 CreatedPayload(request.GoalId, request.ProjectId, request.PlannedDate, sequenceId), now)
-                { CascadeEvents = cascades };
+                { CascadeEvents = [..cascades, ..settled] };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(result.AggregateId!.Value, cancellationToken);
@@ -164,7 +166,7 @@ public sealed class TaskService(
                 ?? throw new ResourceNotFoundException("Task", id);
             await LockParentsAsync(context, owner,
                 [(snapshot.GoalId, snapshot.ProjectId), (request.GoalId, request.ProjectId)],
-                request.GoalId, request.ProjectId, ct);
+                request.GoalId, request.ProjectId, ct, allowCompletedProject: true);
             await LockSequencesAsync(context,
                 new[] { snapshot.SequenceId, request.SequenceId }.OfType<Guid>(), ct);
             var item = await LockOwnedAsync(context, id, owner, ct);
@@ -193,8 +195,11 @@ public sealed class TaskService(
             if (changed.Count == 0) throw new CommandRejectedException("NO_CHANGES");
             item.Version++;
             item.UpdatedAt = now;
+            // Moving open work out of a Project may complete it; moving it into a completed one reopens it.
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner,
+                [snapshot.ProjectId, request.ProjectId], dates.Today, now, ct);
             return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskUpdated, 1,
-                JsonSerializer.Serialize(new { changedFields = changed }), now);
+                JsonSerializer.Serialize(new { changedFields = changed }), now) { CascadeEvents = settled };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
@@ -213,6 +218,8 @@ public sealed class TaskService(
             var snapshot = await context.Tasks.AsNoTracking().SingleOrDefaultAsync(
                 x => x.Id == id && x.UserId == owner, ct)
                 ?? throw new ResourceNotFoundException("Task", id);
+            // Parents first: the last open Task of a Project completes it (owner decision 2026-10-19).
+            await LockParentsAsync(context, owner, [(snapshot.GoalId, snapshot.ProjectId)], null, null, ct);
             if (snapshot.SequenceId is { } sequenceId)
                 await LockSequencesAsync(context, [sequenceId], ct);
             var item = await LockOwnedAsync(context, id, owner, ct);
@@ -226,8 +233,9 @@ public sealed class TaskService(
             item.TerminalAt = now;
             item.UpdatedAt = now;
             item.Version++;
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner, [item.ProjectId], dates.Today, now, ct);
             return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskCompleted, 1,
-                "{}", now);
+                "{}", now) { CascadeEvents = settled };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
@@ -249,8 +257,9 @@ public sealed class TaskService(
             var snapshot = await context.Tasks.AsNoTracking().SingleOrDefaultAsync(
                 x => x.Id == id && x.UserId == owner, ct)
                 ?? throw new ResourceNotFoundException("Task", id);
+            // A Project completed by this Task is active again once it is undone; a stopped one stays closed.
             await LockParentsAsync(context, owner, [(snapshot.GoalId, snapshot.ProjectId)],
-                snapshot.GoalId, snapshot.ProjectId, ct);
+                snapshot.GoalId, snapshot.ProjectId, ct, allowCompletedProject: true);
             if (snapshot.SequenceId is { } sequenceId)
                 await LockSequencesAsync(context, [sequenceId], ct);
             var item = await LockOwnedAsync(context, id, owner, ct);
@@ -266,8 +275,9 @@ public sealed class TaskService(
             item.TerminalAt = null;
             item.UpdatedAt = now;
             item.Version++;
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner, [item.ProjectId], dates.Today, now, ct);
             return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskCompletionUndone, 1,
-                "{}", now);
+                "{}", now) { CascadeEvents = settled };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
@@ -281,13 +291,19 @@ public sealed class TaskService(
             new { id, request.ExpectedVersion }, now);
         var result = await commands.ExecuteAsync(identity, async (context, owner, ct) =>
         {
+            var snapshot = await context.Tasks.AsNoTracking().SingleOrDefaultAsync(
+                x => x.Id == id && x.UserId == owner, ct)
+                ?? throw new ResourceNotFoundException("Task", id);
+            // Dropping the last open Task of a Project whose others are done completes it.
+            await LockParentsAsync(context, owner, [(snapshot.GoalId, snapshot.ProjectId)], null, null, ct);
             var item = await LockOwnedAsync(context, id, owner, ct);
             VersionGuard.RequireMatch(id, request.ExpectedVersion, item.Version);
             if (item.Status != TaskStatuses.Active)
                 throw new CommandRejectedException("RESOURCE_NOT_ACTIVE");
             Drop(item, now);
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner, [item.ProjectId], dates.Today, now, ct);
             return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskDropped, 1,
-                "{}", now);
+                "{}", now) { CascadeEvents = settled };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
@@ -367,7 +383,7 @@ public sealed class TaskService(
             ValidateShape(snapshot.GoalId, snapshot.ProjectId, request.PlannedDate, snapshot.Deadline,
                 snapshot.SequenceId, snapshot.SequenceOrder, true);
             await LockParentsAsync(context, owner, [(snapshot.GoalId, snapshot.ProjectId)],
-                snapshot.GoalId, snapshot.ProjectId, ct);
+                snapshot.GoalId, snapshot.ProjectId, ct, allowCompletedProject: true);
             if (snapshot.SequenceId is { } sequenceId)
                 await LockSequencesAsync(context, [sequenceId], ct);
             var item = await LockOwnedAsync(context, id, owner, ct);
@@ -388,8 +404,9 @@ public sealed class TaskService(
                 parentScope = Scope(item.GoalId, item.ProjectId),
                 hasPlannedDate = item.PlannedDate is not null
             });
+            var settled = await ParentLifecycle.SettleProjectsAsync(context, owner, [item.ProjectId], dates.Today, now, ct);
             return new CommandMutation("Task", id, item.Version, TaskEventTypes.TaskRestored, 1,
-                payload, now);
+                payload, now) { CascadeEvents = settled };
         }, cancellationToken);
         ParentCommandSupport.RequireSuccess(result);
         return await GetByIdAsync(id, cancellationToken);
@@ -454,9 +471,9 @@ public sealed class TaskService(
 
     private static Task LockParentsAsync(AppDbContext context, Guid owner,
         IEnumerable<(Guid? GoalId, Guid? ProjectId)> scopes, Guid? requestedGoalId,
-        Guid? requestedProjectId, CancellationToken cancellationToken) =>
+        Guid? requestedProjectId, CancellationToken cancellationToken, bool allowCompletedProject = false) =>
         ParentCommandSupport.LockParentsAsync(context, owner, scopes, requestedGoalId,
-            requestedProjectId, cancellationToken);
+            requestedProjectId, cancellationToken, allowCompletedProject);
 
     internal static async Task LockSequencesAsync(AppDbContext context, IEnumerable<Guid> sequenceIds,
         CancellationToken cancellationToken)

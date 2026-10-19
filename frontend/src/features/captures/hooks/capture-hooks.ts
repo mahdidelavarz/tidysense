@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { projectKeys } from '../../projects/hooks/project-hooks'
 import { reconcileKeys } from '../../reconcile/hooks/reconcile-hooks'
 import { routineKeys } from '../../routines/hooks/routine-hooks'
+import { progressKey } from '../../structure/hooks/progress-hooks'
 import { taskKeys } from '../../tasks/hooks/task-hooks'
 import { todayKey } from '../../today/hooks/today-hooks'
 import { createCapture, discardCapture, resolveCaptureToRoutine, resolveCaptureToTask } from '../services/captures-api'
@@ -15,7 +17,7 @@ export function useCreateCapture() {
   })
 }
 
-/** Turns a capture into a new Task and refreshes every list the new Task can appear in. */
+/** Turns a capture into a new Task and refreshes every list the new Task can appear in; it may reopen a completed Project. */
 export function useResolveCaptureToTask() {
   const client = useQueryClient()
   return useMutation({
@@ -26,6 +28,8 @@ export function useResolveCaptureToTask() {
         client.invalidateQueries({ queryKey: reconcileKeys.all }),
         client.invalidateQueries({ queryKey: taskKeys.all }),
         client.invalidateQueries({ queryKey: todayKey }),
+        client.invalidateQueries({ queryKey: projectKeys.all }),
+        client.invalidateQueries({ queryKey: progressKey }),
       ])
     },
   })

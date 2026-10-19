@@ -81,7 +81,7 @@ internal static class ParentCommandSupport
     /// </summary>
     public static async Task LockParentsAsync(AppDbContext context, Guid owner,
         IEnumerable<(Guid? GoalId, Guid? ProjectId)> scopes, Guid? requestedGoalId,
-        Guid? requestedProjectId, CancellationToken cancellationToken)
+        Guid? requestedProjectId, CancellationToken cancellationToken, bool allowCompletedProject = false)
     {
         var scopeList = scopes.Distinct().ToArray();
         var projectIds = scopeList.Select(x => x.ProjectId).OfType<Guid>().Distinct().Order().ToArray();
@@ -102,8 +102,10 @@ internal static class ParentCommandSupport
             lockedProjects[projectId] = await ProjectService.LockOwnedAsync(context, projectId, owner, cancellationToken);
         if (requestedGoalId is { } requestedGoal && lockedGoals[requestedGoal].Status != ParentStatuses.Active)
             throw new CommandRejectedException("PARENT_NOT_ACTIVE");
+        // A completed Project may take Task work again, which reopens it; a stopped one never does.
         if (requestedProjectId is { } requestedProject &&
-            lockedProjects[requestedProject].Status != ParentStatuses.Active)
+            lockedProjects[requestedProject].Status != ParentStatuses.Active &&
+            !(allowCompletedProject && lockedProjects[requestedProject].Status == ParentStatuses.Completed))
             throw new CommandRejectedException("PARENT_NOT_ACTIVE");
     }
 

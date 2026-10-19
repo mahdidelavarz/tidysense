@@ -109,7 +109,7 @@ function GoalsPhone() {
                     label="پایان‌یافته"
                     detail={[
                       closed.some(goal => goal.status === 'ACHIEVED') && `${formatNumber(closed.filter(goal => goal.status === 'ACHIEVED').length)} محقق‌شده`,
-                      closed.some(goal => goal.status === 'ABANDONED') && `${formatNumber(closed.filter(goal => goal.status === 'ABANDONED').length)} رهاشده`,
+                      closed.some(goal => goal.status === 'ABANDONED') && `${formatNumber(closed.filter(goal => goal.status === 'ABANDONED').length)} متوقف‌شده`,
                     ].filter(Boolean).join('، ')}
                   />
                   <ul className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2" id="goals-closed" hidden={!showClosed}>

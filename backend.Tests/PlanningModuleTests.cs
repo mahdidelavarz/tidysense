@@ -928,8 +928,10 @@ public sealed class PlanningModuleTests(PostgresWebApplicationFactory factory)
         });
         using var client = Client(session.Token, host);
         var output = PlanningOutputGateTests.Valid();
+        // Not a Friday: the fixture's HARD detail rules Fridays out, and the run date must not decide the outcome.
+        var planned = Day.AddDays(1).DayOfWeek == DayOfWeek.Friday ? Day.AddDays(2) : Day.AddDays(1);
         output["draft"]!["proposals"]![2]!["plannedDate"] =
-            Day.AddDays(1).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            planned.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         HttpResponseMessage Completion(string content) => new(HttpStatusCode.OK)
         {
             Content = JsonContent.Create(new

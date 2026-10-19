@@ -135,6 +135,10 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
         var weekly = await CreateRoutineAsync(client, "week-once",
             recurrence: new { type = "SPECIFIC_WEEKDAYS", daysOfWeek = new[] { weekday } });
         var stopped = await CreateRoutineAsync(client, "week-stopped");
+        // Its slot today is done before it stops, so it stays as history.
+        var stoppedSlot = (await TodayAsync(client)).RoutineOccurrences.Single(x => x.RoutineId == stopped.Id);
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/routine-occurrences/{stoppedSlot.Id}/done",
+            new { expectedVersion = stoppedSlot.Version }, "week-stopped-done")).EnsureSuccessStatusCode();
         (await SendAsync(client, HttpMethod.Post, $"/api/v1/routines/{stopped.Id}/stop",
             new { expectedVersion = stopped.Version }, "week-stop")).EnsureSuccessStatusCode();
         var nine = (await TodayAsync(client)).RoutineOccurrences.Single(x => x.RoutineId == twice.Id &&
@@ -174,8 +178,9 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
         var stoppedWeeks = Assert.Single(month.Routines);
         Assert.Equal(stopped.Id, stoppedWeeks.RoutineId);
         Assert.Equal(28, stoppedWeeks.Days.Count);
-        // Its slot today still stands; nothing is scheduled after it stopped.
-        Assert.Equal(1, stoppedWeeks.Days.Single(x => x.LocalDate == Day).Scheduled);
+        // Its slot done today still stands as history; nothing is scheduled after it stopped.
+        Assert.Equal((1, 1), (stoppedWeeks.Days.Single(x => x.LocalDate == Day).Scheduled,
+            stoppedWeeks.Days.Single(x => x.LocalDate == Day).Done));
         Assert.All(stoppedWeeks.Days.Where(x => x.LocalDate > Day), x => Assert.Equal(0, x.Scheduled));
         Assert.Equal(HttpStatusCode.BadRequest,
             (await client.GetAsync("/api/v1/routines/week?weeks=5")).StatusCode);
@@ -361,7 +366,7 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
     }
 
     [Fact]
-    public async Task Stop_keeps_todays_occurrence_ends_generation_and_resume_creates_one_continuation()
+    public async Task Stop_takes_a_pending_slot_off_today_ends_generation_and_resume_creates_one_continuation()
     {
         PinLocal(Day, 10, 0);
         var session = await CreateSessionAsync();
@@ -382,8 +387,10 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
         stopResponse.EnsureSuccessStatusCode();
         var stopped = await stopResponse.Content.ReadFromJsonAsync<RoutineDto>();
         Assert.Equal("STOPPED", stopped!.Status);
-        Assert.Equal(Day, stopped.EffectiveUntilLocalDate);
+        // It leaves Today at once (owner decision, 015 Scenario F note): its last day is yesterday.
+        Assert.Equal(Day.AddDays(-1), stopped.EffectiveUntilLocalDate);
         Assert.NotNull(stopped.StoppedAt);
+        Assert.DoesNotContain((await TodayAsync(client)).RoutineOccurrences, x => x.RoutineId == routine.Id);
         Assert.Equal(2, stopped.Version);
 
         // Stopping a stopped Routine is a no-op success, even with a stale version and a new key.
@@ -396,10 +403,10 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
         Assert.Equal(HttpStatusCode.UnprocessableEntity, edit.StatusCode);
         Assert.Equal("RESOURCE_NOT_ACTIVE", await ProblemCodeAsync(edit));
 
-        // An occurrence that already belonged to today remains resolvable after the stop.
+        // Today's pending slot went with the stop; it cannot be ticked or later count as missed.
         var done = await SendAsync(client, HttpMethod.Post, $"/api/v1/routine-occurrences/{occurrence.Id}/done",
             new { expectedVersion = occurrence.Version }, "done-after-stop");
-        done.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.NotFound, done.StatusCode);
 
         PinLocal(Day.AddDays(3), 10, 0);
         Assert.Empty((await TodayAsync(client)).RoutineOccurrences);
@@ -426,7 +433,8 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
 
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal(1, await db.RoutineOccurrences.CountAsync(x => x.RoutineId == routine.Id));
+        // Its only slot was pending today, so the stop left it none.
+        Assert.Equal(0, await db.RoutineOccurrences.CountAsync(x => x.RoutineId == routine.Id));
         Assert.Equal(1, await db.DomainEvents.CountAsync(x =>
             x.AggregateId == routine.Id && x.EventType == "ROUTINE_STOPPED"));
         Assert.Equal(1, await db.DomainEvents.CountAsync(x =>
@@ -498,7 +506,7 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
         var standalone = await CreateRoutineAsync(client, "standalone-routine");
         Assert.Equal(2, (await TodayAsync(client)).RoutineOccurrences.Count);
 
-        var preview = await PreviewAsync(client, "projects", project.Id, "COMPLETED", project.Version);
+        var preview = await PreviewAsync(client, "projects", project.Id, "STOPPED", project.Version);
         Assert.True(preview.CanApply);
         Assert.Empty(preview.Blockers);
         var cascade = Assert.Single(preview.Cascades);
@@ -508,16 +516,16 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
 
         var second = await CreateRoutineAsync(client, "project-routine-2", projectId: project.Id);
         var stale = await SendAsync(client, HttpMethod.Post, $"/api/v1/projects/{project.Id}/terminal",
-            new { targetStatus = "COMPLETED", expectedVersion = project.Version, previewHash = preview.PreviewHash },
+            new { targetStatus = "STOPPED", expectedVersion = project.Version, previewHash = preview.PreviewHash },
             "terminal-stale-cascade");
         Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
         Assert.Equal("CONFIRMATION_STALE", await ProblemCodeAsync(stale));
         Assert.Equal("ACTIVE", (await client.GetFromJsonAsync<RoutineDto>($"/api/v1/routines/{first.Id}"))!.Status);
 
-        var current = await PreviewAsync(client, "projects", project.Id, "COMPLETED", project.Version);
+        var current = await PreviewAsync(client, "projects", project.Id, "STOPPED", project.Version);
         Assert.Equal(2, current.Cascades.Count);
         var terminal = await SendAsync(client, HttpMethod.Post, $"/api/v1/projects/{project.Id}/terminal",
-            new { targetStatus = "COMPLETED", expectedVersion = project.Version, previewHash = current.PreviewHash },
+            new { targetStatus = "STOPPED", expectedVersion = project.Version, previewHash = current.PreviewHash },
             "terminal-with-cascade");
         terminal.EnsureSuccessStatusCode();
 
@@ -525,13 +533,13 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
         {
             var stopped = await client.GetFromJsonAsync<RoutineDto>($"/api/v1/routines/{id}");
             Assert.Equal("STOPPED", stopped!.Status);
-            Assert.Equal(Day, stopped.EffectiveUntilLocalDate);
+            Assert.Equal(Day.AddDays(-1), stopped.EffectiveUntilLocalDate);
             Assert.Equal(2, stopped.Version);
         }
         Assert.Equal("ACTIVE",
             (await client.GetFromJsonAsync<RoutineDto>($"/api/v1/routines/{standalone.Id}"))!.Status);
-        // The occurrence that already belonged to today is still listed and resolvable.
-        Assert.Contains((await TodayAsync(client)).RoutineOccurrences, x => x.RoutineId == first.Id);
+        // Their pending slots left Today with them.
+        Assert.DoesNotContain((await TodayAsync(client)).RoutineOccurrences, x => x.RoutineId == first.Id);
 
         var underTerminal = await CreateRoutineResponseAsync(client, "under-terminal-project", projectId: project.Id);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, underTerminal.StatusCode);
@@ -550,7 +558,7 @@ public sealed class RoutineModuleTests(PostgresWebApplicationFactory factory)
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var parentEvent = await db.DomainEvents.AsNoTracking().SingleAsync(x =>
-            x.AggregateId == project.Id && x.EventType == "PROJECT_COMPLETED");
+            x.AggregateId == project.Id && x.EventType == "PROJECT_STOPPED");
         var childEvents = await db.DomainEvents.AsNoTracking()
             .Where(x => x.EventType == "ROUTINE_STOPPED" && x.TransactionId == parentEvent.TransactionId)
             .ToListAsync();

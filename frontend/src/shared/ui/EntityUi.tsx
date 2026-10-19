@@ -43,7 +43,7 @@ export function EntityMark({ entity }: { entity: EntityKind }) {
 const statusLabels: Record<string, string> = {
   ACTIVE: 'فعال',
   ACHIEVED: 'محقق‌شده',
-  ABANDONED: 'رهاشده',
+  ABANDONED: 'متوقف‌شده',
   COMPLETED: 'تکمیل‌شده',
   DROPPED: 'کنار گذاشته‌شده',
   STOPPED: 'متوقف‌شده',

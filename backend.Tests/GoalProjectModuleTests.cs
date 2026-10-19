@@ -102,60 +102,146 @@ public sealed class GoalProjectModuleTests(PostgresWebApplicationFactory factory
     }
 
     [Fact]
-    public async Task Terminal_flow_blocks_goal_until_project_is_resolved_and_never_infers_goal_status()
+    public async Task A_project_completes_by_its_tasks_never_by_hand_reopens_with_open_work_and_never_infers_the_goal()
     {
+        // Owner decision 2026-10-19: a Project's state follows its Tasks; achieving a Goal stays the user's call.
         var session = await CreateSessionAsync();
         using var client = Client(session.Token);
         var goal = await CreateGoalAsync(client, "terminal-goal-create");
         var project = await CreateProjectAsync(client, goal.Id, "terminal-project-create");
+        var today = (await client.GetFromJsonAsync<JsonElement>("/api/v1/today")).GetProperty("localDate").GetString();
+        async Task<JsonElement> TaskAsync(string key) => await (await SendAsync(client, HttpMethod.Post, "/api/v1/tasks", new
+        {
+            title = key, description = (string?)null, goalId = (Guid?)null, projectId = project.Id, plannedDate = (string?)null,
+            deadline = (string?)null, sequenceId = (Guid?)null, sequenceOrder = (int?)null, isProtected = false
+        }, key)).Content.ReadFromJsonAsync<JsonElement>();
+        async Task<JsonElement> ActAsync(JsonElement task, string action, string key, object? extra = null)
+        {
+            var response = await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{task.GetProperty("id").GetGuid()}/{action}",
+                extra ?? new { expectedVersion = task.GetProperty("version").GetInt64() }, key);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<JsonElement>();
+        }
+        async Task<string> StatusAsync() => (await client.GetFromJsonAsync<ProjectDto>($"/api/v1/projects/{project.Id}"))!.Status;
 
         var blockedPreview = await PreviewAsync(client, "goals", goal.Id, "ACHIEVED", goal.Version);
         Assert.False(blockedPreview.CanApply);
-        Assert.Single(blockedPreview.Blockers);
-        Assert.Equal(project.Id, blockedPreview.Blockers[0].ResourceId);
-        var blocked = await SendAsync(client, HttpMethod.Post, $"/api/v1/goals/{goal.Id}/terminal",
-            new { targetStatus = "ACHIEVED", expectedVersion = goal.Version, previewHash = blockedPreview.PreviewHash },
-            "blocked-goal-terminal");
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, blocked.StatusCode);
-        Assert.Equal("PARENT_HAS_ACTIVE_CHILDREN",
-            (await blocked.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        Assert.Equal(project.Id, Assert.Single(blockedPreview.Blockers).ResourceId);
 
-        var projectPreview = await PreviewAsync(client, "projects", project.Id, "COMPLETED", project.Version);
-        var completedResponse = await SendAsync(client, HttpMethod.Post, $"/api/v1/projects/{project.Id}/terminal",
-            new { targetStatus = "COMPLETED", expectedVersion = project.Version, previewHash = projectPreview.PreviewHash },
-            "complete-project");
-        completedResponse.EnsureSuccessStatusCode();
-        var completed = await completedResponse.Content.ReadFromJsonAsync<ProjectDto>();
-        Assert.Equal("COMPLETED", completed!.Status);
+        // Never completed by hand.
+        var byHand = await SendAsync(client, HttpMethod.Post, $"/api/v1/projects/{project.Id}/terminal-preview",
+            new { targetStatus = "COMPLETED", expectedVersion = project.Version }, "complete-by-hand-preview");
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, byHand.StatusCode);
+        Assert.Equal("PROJECT_COMPLETES_BY_PROGRESS",
+            (await byHand.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await SendAsync(client, HttpMethod.Post,
+            $"/api/v1/projects/{project.Id}/terminal", new { targetStatus = "COMPLETED", expectedVersion = project.Version,
+                previewHash = new string('A', 64) }, "complete-by-hand")).StatusCode);
+        Assert.Equal("ACTIVE", await StatusAsync());
 
-        var stillActive = await client.GetFromJsonAsync<GoalDto>($"/api/v1/goals/{goal.Id}");
-        Assert.Equal("ACTIVE", stillActive!.Status);
+        // Its last open Task done: it completes itself. Undone: active again.
+        var first = await TaskAsync("project-task-1");
+        var done = await ActAsync(first, "complete", "complete-1",
+            new { expectedVersion = first.GetProperty("version").GetInt64(), completedForLocalDate = today });
+        Assert.Equal("COMPLETED", await StatusAsync());
+        Assert.Equal("ACTIVE", (await client.GetFromJsonAsync<GoalDto>($"/api/v1/goals/{goal.Id}"))!.Status);
+        var undone = await ActAsync(done, "undo-complete", "undo-1");
+        Assert.Equal("ACTIVE", await StatusAsync());
+        await ActAsync(undone, "complete", "complete-1-again",
+            new { expectedVersion = undone.GetProperty("version").GetInt64(), completedForLocalDate = today });
+        Assert.Equal("COMPLETED", await StatusAsync());
 
-        var stalePreview = await SendAsync(client, HttpMethod.Post, $"/api/v1/goals/{goal.Id}/terminal",
-            new { targetStatus = "ACHIEVED", expectedVersion = goal.Version, previewHash = blockedPreview.PreviewHash },
-            "stale-goal-preview");
-        Assert.Equal(HttpStatusCode.Conflict, stalePreview.StatusCode);
-        Assert.Equal("CONFIRMATION_STALE",
-            (await stalePreview.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        // New work reopens it; dropping that work leaves only done work, so it completes again.
+        var second = await TaskAsync("project-task-2");
+        Assert.Equal("ACTIVE", await StatusAsync());
+        await ActAsync(second, "drop", "drop-2");
+        Assert.Equal("COMPLETED", await StatusAsync());
 
+        // A completed Project does not block achieving its Goal, and the Goal is still achieved by hand.
         var ready = await PreviewAsync(client, "goals", goal.Id, "ACHIEVED", goal.Version);
         Assert.True(ready.CanApply);
         var achievedResponse = await SendAsync(client, HttpMethod.Post, $"/api/v1/goals/{goal.Id}/terminal",
             new { targetStatus = "ACHIEVED", expectedVersion = goal.Version, previewHash = ready.PreviewHash },
             "achieve-goal");
         achievedResponse.EnsureSuccessStatusCode();
-        var achieved = await achievedResponse.Content.ReadFromJsonAsync<GoalDto>();
-        Assert.Equal("ACHIEVED", achieved!.Status);
-        Assert.Equal(2, achieved.Version);
+        Assert.Equal("ACHIEVED", (await achievedResponse.Content.ReadFromJsonAsync<GoalDto>())!.Status);
 
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var events = await db.DomainEvents.AsNoTracking().Where(x => x.UserId == session.UserId)
-            .OrderBy(x => x.OccurredAt).ToListAsync();
-        Assert.Equal(4, events.Count);
-        Assert.Contains(events, x => x.EventType == "PROJECT_COMPLETED");
-        Assert.Contains(events, x => x.EventType == "GOAL_ACHIEVED");
-        Assert.All(events, x => Assert.DoesNotContain(goal.Title, x.PayloadJson));
+        var events = await db.DomainEvents.AsNoTracking().Where(x => x.UserId == session.UserId && x.AggregateId == project.Id)
+            .OrderBy(x => x.RecordedAt).Select(x => new { x.EventType, x.EventVersion, x.PayloadJson }).ToListAsync();
+        Assert.Equal(["PROJECT_CREATED", "PROJECT_COMPLETED", "PROJECT_REOPENED", "PROJECT_COMPLETED", "PROJECT_REOPENED",
+            "PROJECT_COMPLETED"], events.Select(x => x.EventType));
+        Assert.All(events.Where(x => x.EventType == "PROJECT_COMPLETED"),
+            x => Assert.Equal((2, "PROGRESS"), (x.EventVersion, JsonDocument.Parse(x.PayloadJson).RootElement.GetProperty("cause").GetString())));
+    }
+
+    [Fact]
+    public async Task Stopping_a_goal_or_project_ends_everything_open_under_it_exactly_as_previewed()
+    {
+        // Owner decision 2026-10-19: open Tasks are dropped, Routines and Projects stop, done work stays done.
+        var session = await CreateSessionAsync();
+        using var client = Client(session.Token);
+        var goal = await CreateGoalAsync(client, "stop-goal-create");
+        var phase = await CreateProjectAsync(client, goal.Id, "stop-phase-create");
+        var today = (await client.GetFromJsonAsync<JsonElement>("/api/v1/today")).GetProperty("localDate").GetString();
+        async Task<JsonElement> TaskAsync(string key, Guid? goalId, Guid? projectId) => await (await SendAsync(client,
+            HttpMethod.Post, "/api/v1/tasks", new
+            {
+                title = key, description = (string?)null, goalId, projectId, plannedDate = today, deadline = (string?)null,
+                sequenceId = (Guid?)null, sequenceOrder = (int?)null, isProtected = false
+            }, key)).Content.ReadFromJsonAsync<JsonElement>();
+        async Task<JsonElement> RoutineAsync(string key, Guid? goalId, Guid? projectId) => await (await SendAsync(client,
+            HttpMethod.Post, "/api/v1/routines", new
+            {
+                title = key, description = (string?)null, goalId, projectId,
+                recurrence = new { type = "DAILY" }, timesOfDay = Array.Empty<string>(), effectiveFromLocalDate = (string?)null
+            }, key)).Content.ReadFromJsonAsync<JsonElement>();
+        var direct = await TaskAsync("goal-task", goal.Id, null);
+        var inPhase = await TaskAsync("phase-task", null, phase.Id);
+        var finished = await TaskAsync("phase-done", null, phase.Id);
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/tasks/{finished.GetProperty("id").GetGuid()}/complete",
+            new { expectedVersion = finished.GetProperty("version").GetInt64(), completedForLocalDate = today }, "phase-done-complete"))
+            .EnsureSuccessStatusCode();
+        var habit = await RoutineAsync("goal-routine", goal.Id, null);
+        var phaseHabit = await RoutineAsync("phase-routine", null, phase.Id);
+
+        // The preview names every child the stop ends; nothing blocks it.
+        var preview = await PreviewAsync(client, "goals", goal.Id, "ABANDONED", goal.Version);
+        Assert.True(preview.CanApply);
+        Assert.Empty(preview.Blockers);
+        Assert.Equal(
+            new[] { ("Project", phase.Id, "STOPPED"), ("Task", direct.GetProperty("id").GetGuid(), "DROPPED"),
+                ("Task", inPhase.GetProperty("id").GetGuid(), "DROPPED"), ("Routine", habit.GetProperty("id").GetGuid(), "STOPPED"),
+                ("Routine", phaseHabit.GetProperty("id").GetGuid(), "STOPPED") }.OrderBy(x => x.Item1).ThenBy(x => x.Item2),
+            preview.Cascades.Select(x => (x.ResourceType, x.ResourceId, x.ResultingStatus)).OrderBy(x => x.ResourceType).ThenBy(x => x.ResourceId));
+
+        // A child changed after the preview makes it stale; nothing is applied.
+        var late = await TaskAsync("late-task", goal.Id, null);
+        var stale = await SendAsync(client, HttpMethod.Post, $"/api/v1/goals/{goal.Id}/terminal",
+            new { targetStatus = "ABANDONED", expectedVersion = goal.Version, previewHash = preview.PreviewHash }, "stop-goal-stale");
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        Assert.Equal("ACTIVE", (await client.GetFromJsonAsync<ProjectDto>($"/api/v1/projects/{phase.Id}"))!.Status);
+
+        var fresh = await PreviewAsync(client, "goals", goal.Id, "ABANDONED", goal.Version);
+        Assert.Equal(6, fresh.Cascades.Count);
+        (await SendAsync(client, HttpMethod.Post, $"/api/v1/goals/{goal.Id}/terminal",
+            new { targetStatus = "ABANDONED", expectedVersion = goal.Version, previewHash = fresh.PreviewHash }, "stop-goal"))
+            .EnsureSuccessStatusCode();
+
+        Assert.Equal("ABANDONED", (await client.GetFromJsonAsync<GoalDto>($"/api/v1/goals/{goal.Id}"))!.Status);
+        Assert.Equal("STOPPED", (await client.GetFromJsonAsync<ProjectDto>($"/api/v1/projects/{phase.Id}"))!.Status);
+        async Task<string> TaskStatus(JsonElement task) => (await client.GetFromJsonAsync<JsonElement>(
+            $"/api/v1/tasks/{task.GetProperty("id").GetGuid()}")).GetProperty("status").GetString()!;
+        Assert.Equal(["DROPPED", "DROPPED", "DROPPED", "COMPLETED"],
+            [await TaskStatus(direct), await TaskStatus(inPhase), await TaskStatus(late), await TaskStatus(finished)]);
+        async Task<string> RoutineStatus(JsonElement routine) => (await client.GetFromJsonAsync<JsonElement>(
+            $"/api/v1/routines/{routine.GetProperty("id").GetGuid()}")).GetProperty("status").GetString()!;
+        Assert.Equal(["STOPPED", "STOPPED"], [await RoutineStatus(habit), await RoutineStatus(phaseHabit)]);
+        // Nothing of it is left on Today.
+        var day = await client.GetFromJsonAsync<JsonElement>("/api/v1/today");
+        Assert.Equal(0, day.GetProperty("tasks").GetArrayLength());
+        Assert.Equal(0, day.GetProperty("routineOccurrences").GetArrayLength());
     }
 
     [Fact]

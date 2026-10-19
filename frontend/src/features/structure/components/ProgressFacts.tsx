@@ -4,7 +4,11 @@ import { formatNumber, parseIsoDate } from '../../../shared/lib/date'
 const dayMonth = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long' })
 const daysBetween = (from: string, to: string) => Math.round((parseIsoDate(to).getTime() - parseIsoDate(from).getTime()) / 86_400_000)
 
-/** «X از Y کار انجام شد» over a bar in the item's own colour. */
+/**
+ * «۶۰٪ · X از Y کار انجام شد» over a bar in the item's own colour. The share
+ * counts Tasks only: dropped ones are left out and Routines are not progress
+ * (owner decision 2026-10-19).
+ */
 export function ProgressBar({ done, total, large = false }: { done: number; total: number; large?: boolean }) {
   const share = total > 0 ? Math.round((done / total) * 100) : 0
   return (
@@ -12,11 +16,11 @@ export function ProgressBar({ done, total, large = false }: { done: number; tota
       <p className={large ? 'flex items-baseline gap-1.5' : 'text-xs font-bold text-text-secondary'}>
         {large ? (
           <>
-            <b className="entity-ink font-display text-[1.875rem] leading-none">{formatNumber(done)}</b>
-            <span className="text-sm font-bold text-text-secondary">از {formatNumber(total)} کار انجام شد</span>
+            <b className="entity-ink font-display text-[1.875rem] leading-none">{formatNumber(share)}٪</b>
+            <span className="text-sm font-bold text-text-secondary">{formatNumber(done)} از {formatNumber(total)} کار انجام شد</span>
           </>
         ) : (
-          <><b className="entity-ink">{formatNumber(done)}</b> از {formatNumber(total)} کار انجام شد</>
+          <><b className="entity-ink">{formatNumber(share)}٪</b> · {formatNumber(done)} از {formatNumber(total)} کار انجام شد</>
         )}
       </p>
       <div
@@ -26,6 +30,7 @@ export function ProgressBar({ done, total, large = false }: { done: number; tota
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={done}
+        aria-valuetext={`${formatNumber(share)}٪`}
         style={{ '--share': `${share}%` } as React.CSSProperties}
       />
     </div>

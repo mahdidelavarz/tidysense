@@ -201,7 +201,7 @@ export function RoutineDetailView({ routineId, panel = false }: { routineId: str
       {confirmStop && (
         <ConfirmationDialog
           title="توقف روتین"
-          description="این روتین از فردا دیگر اجرا نمی‌شود. نوبت‌های امروز و سابقه آن باقی می‌ماند و بعداً می‌توانید آن را با یک روتین تازه از سر بگیرید."
+          description="این روتین از همین حالا متوقف می‌شود و نوبت‌های باز امروزش از «امروز» برداشته می‌شوند. نوبت‌های انجام‌شده و سابقه‌اش باقی می‌ماند و بعداً می‌توانید آن را با یک روتین تازه از سر بگیرید."
           onClose={() => setConfirmStop(false)}
           pending={stop.isPending}
           actions={(
