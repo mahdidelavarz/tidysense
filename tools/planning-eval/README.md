@@ -129,3 +129,14 @@ Prompt `2026-10-16.6`, repair policy `2026-10-16.7`, context `2026-10-16.3`.
 | `followup-all-a`, `followup-all-b` | The 32 first-week cases: 31/32 and 32/32 approvable. Every 029 §10 measure passes, with 0 date errors. Planning details in 7 and 8 drafts. |
 
 On the way, a full run of an earlier build had 3–4 date errors. They were traced to a calendar without the days after the window, which was fixed. On 10 date-sensitive cases × 3, the previous prompt then had 5 errors and the fixed one 0. Those intermediate runs are not kept.
+
+## Made again from the review (2026-10-19)
+
+`--redo "<correction>"` makes each first draft again with that correction, as «اصلاح» does; `--redo` alone asks for another version, as «نسخهٔ دیگر» does. `score.mjs` adds a section: drafted without a question (≥ 95%), approvable (≥ 95%), the same number of Goals, no empty parent, no date error, and how many dated Tasks and Task titles changed. Another version keeps at most a third of the first draft's Task titles.
+
+| File | What it measured |
+|---|---|
+| `redo-correct-1` | Prompt `2026-10-19.1`, «کارهای این هفته را کمتر و سبک‌تر کن» on the 32 cases. 31/32 made again and approvable (one `DRAFT_INVALID`: the model's answer was not one JSON object, twice). Fewer dated Tasks in 29 of 31 (152 → 83), Goals kept in all, 0 date errors in the redone drafts. One first draft wrote «پنجشنبه ۱ آبان ۱۴۰۵», a Friday, in an assumption. |
+| `redo-again-1` | Prompt `2026-10-19.1`, another version. 32/32 approvable, but 172 of 220 Task titles were kept: given the whole draft, the model copied it. Prompt `2026-10-19.2` gives another version only the titles and allows at most a third of them; **it is not measured yet**, because the provider balance ran out (re-run `--redo` on a fresh database). |
+
+Before these runs the input cap was 12000 estimated tokens. First drafts already used 11150–11980 of it (about 6000 real tokens: the estimate is about 1.85× the real count), and a redo did not fit at all (`CONTEXT_TOO_LARGE`). The cap is now 20000.
