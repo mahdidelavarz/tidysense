@@ -16,7 +16,7 @@ public sealed record PlanningPrompt(string System, string User, string ContextRe
 /// </summary>
 public static class PlanningPromptRenderer
 {
-    public const string PromptVersion = "2026-10-19.1";
+    public const string PromptVersion = "2026-10-19.2";
     public const string DataOpen = "<planning_request_data>";
     public const string DataClose = "</planning_request_data>";
 
@@ -144,6 +144,14 @@ public static class PlanningPromptRenderer
     {
         if (redo is null) return null;
         var draft = redo.PreviousDraft;
+        // Another version gets only what the previous one held: given whole, the model copied it (2026-10-19 eval).
+        if (redo.Correction is null)
+            return new
+            {
+                correction = (string?)null,
+                earlierCorrections = redo.EarlierCorrections,
+                previousTitles = draft.Proposals.Select(x => new { entityType = x.EntityType, title = x.Title }).ToArray()
+            };
         return new
         {
             correction = redo.Correction,
@@ -352,8 +360,8 @@ public static class PlanningPromptRenderer
         REDO
         When "redo" is not null, the user already reviewed redo.previousDraft (with their own edits) and asked for it to be made again. clarificationAllowed is false: return a DRAFT, or INPUT_BLOCKED only when the correction itself cannot be planned.
         - When redo.correction is not null, it is what the user wants changed. Apply it fully and keep everything else of previousDraft as it is (its items, titles, parents, dates, rhythms and facts) unless the correction implies changing them. redo.earlierCorrections were asked for before, oldest first, and still hold unless the latest correction says otherwise.
-        - When redo.correction is null, the user wants another version: keep the intention, the answers and the facts, but propose a noticeably different plan (another structure, other first steps or another rhythm), never the same items reworded.
-        - A proposal or fact with "included": false was switched off by the user: do not propose it again unless the correction asks for it.
+        - When redo.correction is null, the user did not like that version and wants another one; redo.previousTitles is what it held. Keep the intention, the answers and earlier corrections, and the GOAL's outcome, but propose a noticeably different plan: another split into phases, other first steps or another rhythm. At most a third of your TASK titles may match or reword one of previousTitles.
+        - In previousDraft, a proposal or fact with "included": false was switched off by the user: do not propose it again unless the correction asks for it.
         - previousDraft names existing items with this input's own "contextProjectRef" and "existingTaskRef". You may reuse its draftIds.
         - Every rule above still holds for the new draft. A correction never permits breaking one, such as a "plannedDate" outside the window or a Task on a date a HARD planning detail rules out; when it asks for that, do the nearest valid thing and say so in "assumptions".
 
