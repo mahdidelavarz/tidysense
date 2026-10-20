@@ -526,7 +526,7 @@ public sealed class AiPlanningRuntimeTests
                 {
                     BaseUrl = Environment.GetEnvironmentVariable("TIDYSENSE_AI_SMOKE_BASEURL") ?? "https://api.deepseek.com",
                     ApiKey = key!,
-                    Model = Environment.GetEnvironmentVariable("TIDYSENSE_AI_SMOKE_MODEL") ?? "deepseek-v4-flash",
+                    Model = Environment.GetEnvironmentVariable("TIDYSENSE_AI_SMOKE_MODEL") ?? "deepseek-flash",
                     DisableThinking = true
                 }
             }
