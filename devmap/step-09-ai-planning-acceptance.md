@@ -122,7 +122,7 @@ Persian UI terms: the questions screen is «سه پرسش کوتاه» (by count
 
 Confirmed with the owner on 2026-10-03 unless marked otherwise.
 
-- **Provider:** DeepSeek V4 Flash through its OpenAI-compatible endpoint. Model id and base URL are configuration (`deepseek-v4-flash`, `https://api.deepseek.com`).
+- **Provider:** DeepSeek V4 Flash through its OpenAI-compatible endpoint. Model id and base URL are configuration (`deepseek-flash`, `https://api.deepseek.com`; until 2026-10-19 `deepseek-v4-flash`, which the provider now routes to `deepseek-flash`, V4.1 Flash).
 - **Thinking mode is switched off** for DeepSeek (`Ai:Providers:deepseek:DisableThinking`, sent as `thinking: disabled`). The field is sent only for a provider configured that way. *(Chosen during the smoke run on 2026-10-08.)*
 - **JSON mode, not schema-constrained output.** The provider guarantees syntactically valid JSON only, so the local gate is the only schema authority.
 - **Provider safeguards.** The provider has no separate moderation endpoint. Its content filter is honoured: a filtered answer is unusable. Product boundaries (no diagnosis, treatment, legal or financial strategy) are stated in the system prompt and are not otherwise enforced on the text of a draft.

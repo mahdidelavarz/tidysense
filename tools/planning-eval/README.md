@@ -137,6 +137,12 @@ On the way, a full run of an earlier build had 3–4 date errors. They were trac
 | File | What it measured |
 |---|---|
 | `redo-correct-1` | Prompt `2026-10-19.1`, «کارهای این هفته را کمتر و سبک‌تر کن» on the 32 cases. 31/32 made again and approvable (one `DRAFT_INVALID`: the model's answer was not one JSON object, twice). Fewer dated Tasks in 29 of 31 (152 → 83), Goals kept in all, 0 date errors in the redone drafts. One first draft wrote «پنجشنبه ۱ آبان ۱۴۰۵», a Friday, in an assumption. |
-| `redo-again-1` | Prompt `2026-10-19.1`, another version. 32/32 approvable, but 172 of 220 Task titles were kept: given the whole draft, the model copied it. Prompt `2026-10-19.2` gives another version only the titles and allows at most a third of them; **it is not measured yet**, because the provider balance ran out (re-run `--redo` on a fresh database). |
+| `redo-again-1` | Prompt `2026-10-19.1`, another version. 32/32 approvable, but 172 of 220 Task titles were kept: given the whole draft, the model copied it. Prompt `2026-10-19.2` gives another version only the titles and allows at most a third of them (`redo-again-2`). |
+
+| `redo-correct-2` | Prompt `2026-10-19.2`, model `deepseek-flash`, the same correction. Every bar passes: 32/32 made again and approvable, fewer dated Tasks in 30 of 32 (168 → 90), Goals kept, 0 date errors (first drafts included). |
+| `redo-again-2` | Prompt `2026-10-19.2`, `deepseek-flash`, another version. Every first-week bar passes, 32/32 made again and approvable, but 97 of 241 Task titles were kept (40%, against 78% before): above the third. Most cases change nearly everything (0 kept in 8 cases); a few fixed procedures keep all their steps (`thesis` 9/9, `job-hunt` 8/8, `tax-filing` 6/6). |
+| `pro-5` | `deepseek-v4-pro` on five first-week cases, capped at 5 attempts (6 calls used). 5/5 approvable, but smaller and flatter plans: `konkur`, a year away, got one Project instead of phases (Flash: three), and fewer, vaguer Tasks. Not better than Flash for this prompt, and dearer. |
+
+On 2026-10-20 the provider accepts only `deepseek-flash` (V4.1 Flash) and `deepseek-v4-pro`; `deepseek-v4-flash` is routed to `deepseek-flash`, so every run before was already on V4.1 Flash. The configuration now names `deepseek-flash`. The three runs together cost about $0.35.
 
 Before these runs the input cap was 12000 estimated tokens. First drafts already used 11150–11980 of it (about 6000 real tokens: the estimate is about 1.85× the real count), and a redo did not fit at all (`CONTEXT_TOO_LARGE`). The cap is now 20000.

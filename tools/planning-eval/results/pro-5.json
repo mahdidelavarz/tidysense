@@ -1,0 +1,1728 @@
+{
+ "label": "deepseek-v4-pro, prompt 2026-10-19.2, five cases, at most 10 calls",
+ "base": "https://127.0.0.1:7133",
+ "ranAt": "2026-10-20T03:47:52.727Z",
+ "results": [
+  {
+   "id": "konkur",
+   "intention": "برای کنکور تجربی برنامه بده، یک سال مونده",
+   "turns": [],
+   "attemptIds": [
+    "459308ce-9b2d-4add-9322-9da9ac26d8ef"
+   ],
+   "startedAt": 1792467974986,
+   "final": {
+    "status": "SUCCEEDED",
+    "outcome": "DRAFT",
+    "failureCode": null,
+    "clarification": null
+   },
+   "draft": {
+    "id": "bc10550f-4acb-4659-8721-812a05242a60",
+    "attemptId": "459308ce-9b2d-4add-9322-9da9ac26d8ef",
+    "status": "REVIEWABLE",
+    "revision": 1,
+    "expiresAt": "2026-10-21T03:46:32.262457+00:00",
+    "context": null,
+    "summary": "برای موفقیت در کنکور تجربی که یک سال دیگر برگزار می‌شود، هدف اصلی کسب رتبه‌ی خوب است. این هفته با شروع مطالعه‌ی دروس پایه و برنامه‌ریزی هفتگی آغاز می‌شود.",
+    "windowStart": "2026-10-20",
+    "windowEnd": "2026-10-26",
+    "proposals": [
+     {
+      "proposal": {
+       "draftId": "goal1",
+       "entityType": "GOAL",
+       "title": "موفقیت در کنکور تجربی",
+       "description": "کسب رتبه‌ی خوب در کنکور سراسری رشته‌ی تجربی",
+       "parentDraftId": null,
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": "کسب رتبه‌ی خوب در کنکور تجربی",
+       "completionMeaning": null,
+       "targetDate": "2027-07-02",
+       "reviewDate": "2027-01-18",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": [
+       {
+        "code": "ASSUMED_DATES",
+        "severity": "INFO",
+        "origin": "GENERATOR"
+       }
+      ]
+     },
+     {
+      "proposal": {
+       "draftId": "project1",
+       "entityType": "PROJECT",
+       "title": "برنامه‌ریزی و شروع مطالعه دروس پایه",
+       "description": "ایجاد برنامه‌ی هفتگی و شروع مطالعه‌ی دروس پایه‌ی دهم و یازدهم",
+       "parentDraftId": "goal1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": "2026-12-21",
+       "reviewDate": "2026-11-19",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "routine1",
+       "entityType": "ROUTINE",
+       "title": "مطالعه‌ی روزانه‌ی زیست‌شناسی",
+       "description": "مطالعه‌ی منظم زیست‌شناسی به عنوان درس اصلی",
+       "parentDraftId": "project1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": {
+        "type": "DAILY",
+        "daysOfWeek": null,
+        "dayOfMonth": null
+       },
+       "timesOfDay": [
+        "17:00:00"
+       ],
+       "effectiveFromLocalDate": "2026-10-20",
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task1",
+       "entityType": "TASK",
+       "title": "مرور فصل اول زیست‌شناسی دهم",
+       "description": "مرور کامل فصل اول زیست‌شناسی دهم",
+       "parentDraftId": "project1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-20",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": "s1",
+       "sequenceOrder": 1,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task2",
+       "entityType": "TASK",
+       "title": "حل تست‌های فصل اول زیست‌شناسی دهم",
+       "description": "حل تست‌های مرتبط با فصل اول زیست‌شناسی دهم",
+       "parentDraftId": "project1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-22",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": "s1",
+       "sequenceOrder": 2,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task3",
+       "entityType": "TASK",
+       "title": "مرور فصل اول شیمی دهم",
+       "description": null,
+       "parentDraftId": "project1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-24",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task4",
+       "entityType": "TASK",
+       "title": "مرور فصل اول ریاضی دهم",
+       "description": null,
+       "parentDraftId": "project1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-25",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task5",
+       "entityType": "TASK",
+       "title": "تهیه‌ی برنامه‌ی هفتگی مطالعه",
+       "description": "تنظیم برنامه‌ی هفتگی با توجه به زمان‌های آزاد",
+       "parentDraftId": "project1",
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-20",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     }
+    ],
+    "facts": [
+     {
+      "fact": {
+       "draftId": "fact1",
+       "factType": "LEARNING_FOCUS",
+       "strength": "SOFT",
+       "value": {
+        "weekdays": null,
+        "localDate": null,
+        "startLocalDate": null,
+        "endLocalDate": null,
+        "text": "تمرکز روی دروس پایه"
+       },
+       "scopeDraftId": "goal1",
+       "included": true
+      },
+      "category": "PREFERENCE",
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     }
+    ],
+    "assumptions": [
+     {
+      "draftId": null,
+      "text": "شروع مطالعه از دروس پایه‌ی دهم و یازدهم."
+     },
+     {
+      "draftId": null,
+      "text": "برنامه‌ی هفتگی از این هفته آغاز می‌شود."
+     }
+    ],
+    "unresolvedQuestions": [],
+    "draftIssues": [],
+    "firstWeek": [
+     {
+      "draftId": "routine1",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "task1",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "task5",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "routine1",
+      "date": "2026-10-21"
+     },
+     {
+      "draftId": "routine1",
+      "date": "2026-10-22"
+     },
+     {
+      "draftId": "task2",
+      "date": "2026-10-22"
+     },
+     {
+      "draftId": "routine1",
+      "date": "2026-10-23"
+     },
+     {
+      "draftId": "routine1",
+      "date": "2026-10-24"
+     },
+     {
+      "draftId": "task3",
+      "date": "2026-10-24"
+     },
+     {
+      "draftId": "routine1",
+      "date": "2026-10-25"
+     },
+     {
+      "draftId": "task4",
+      "date": "2026-10-25"
+     },
+     {
+      "draftId": "routine1",
+      "date": "2026-10-26"
+     }
+    ],
+    "canApply": true,
+    "linkedConfirmationId": null,
+    "removedItems": [],
+    "continuationWeek": null,
+    "contextProjects": [],
+    "continuationOfWindowId": null
+   },
+   "ms": 17726
+  },
+  {
+   "id": "thesis",
+   "intention": "پایان‌نامه‌ی ارشدم رو باید تا چهار ماه دیگه دفاع کنم، فصل سه و چهار مونده",
+   "turns": [],
+   "attemptIds": [
+    "bb1e72a6-2d5c-4ed7-ac29-eda21c38c01b"
+   ],
+   "startedAt": 1792467992722,
+   "final": {
+    "status": "SUCCEEDED",
+    "outcome": "DRAFT",
+    "failureCode": null,
+    "clarification": null
+   },
+   "draft": {
+    "id": "7d968543-4e37-4d23-8402-d4680fc3a04f",
+    "attemptId": "bb1e72a6-2d5c-4ed7-ac29-eda21c38c01b",
+    "status": "REVIEWABLE",
+    "revision": 1,
+    "expiresAt": "2026-10-21T03:47:04.524784+00:00",
+    "context": null,
+    "summary": "پایان‌نامه‌ات تا چهار ماه دیگر باید دفاع شود. این هفته بر فصل سوم تمرکز می‌کنیم: بازبینی داده‌های موجود، مشخص کردن شکاف‌ها و شروع نگارش بخش‌های اصلی.",
+    "windowStart": "2026-10-20",
+    "windowEnd": "2026-10-26",
+    "proposals": [
+     {
+      "proposal": {
+       "draftId": "g1",
+       "entityType": "GOAL",
+       "title": "دفاع از پایان‌نامه ارشد",
+       "description": null,
+       "parentDraftId": null,
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": "پایان‌نامه کامل شده و دفاع موفق",
+       "completionMeaning": null,
+       "targetDate": "2027-02-20",
+       "reviewDate": "2027-01-18",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": [
+       {
+        "code": "ASSUMED_DATES",
+        "severity": "INFO",
+        "origin": "GENERATOR"
+       }
+      ]
+     },
+     {
+      "proposal": {
+       "draftId": "p1",
+       "entityType": "PROJECT",
+       "title": "تکمیل فصل سوم",
+       "description": null,
+       "parentDraftId": "g1",
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": "متن فصل سوم نوشته شده و جداول و نمودارها کامل است",
+       "targetDate": "2026-12-20",
+       "reviewDate": "2026-11-19",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task1",
+       "entityType": "TASK",
+       "title": "بازبینی داده‌های موجود برای فصل سوم",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-20",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task2",
+       "entityType": "TASK",
+       "title": "مشخص کردن شکاف‌های داده و تصمیم برای جمع‌آوری بیشتر",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-22",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task3",
+       "entityType": "TASK",
+       "title": "نوشتن طرح کلی فصل سوم (عناوین بخش‌ها)",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-24",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task4",
+       "entityType": "TASK",
+       "title": "نوشتن بخش اول فصل سه (مقدمه و مرور مبانی نظری)",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "LOW",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-25",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "routine_writing",
+       "entityType": "ROUTINE",
+       "title": "زمان ثابت روزانه برای نوشتن پایان‌نامه",
+       "description": null,
+       "parentDraftId": "g1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": {
+        "type": "DAILY",
+        "daysOfWeek": null,
+        "dayOfMonth": null
+       },
+       "timesOfDay": [
+        "20:00:00"
+       ],
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     }
+    ],
+    "facts": [
+     {
+      "fact": {
+       "draftId": "fact1",
+       "factType": "CURRENT_LEVEL",
+       "strength": "INFORMATIONAL",
+       "value": {
+        "weekdays": null,
+        "localDate": null,
+        "startLocalDate": null,
+        "endLocalDate": null,
+        "text": "فصل‌های یک و دو کامل شده است"
+       },
+       "scopeDraftId": "g1",
+       "included": true
+      },
+      "category": "STARTING_STATE",
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "fact": {
+       "draftId": "fact2",
+       "factType": "CURRENT_LEVEL",
+       "strength": "INFORMATIONAL",
+       "value": {
+        "weekdays": null,
+        "localDate": null,
+        "startLocalDate": null,
+        "endLocalDate": null,
+        "text": "فصل‌های سه و چهار باقی مانده است"
+       },
+       "scopeDraftId": "g1",
+       "included": true
+      },
+      "category": "STARTING_STATE",
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     }
+    ],
+    "assumptions": [
+     {
+      "draftId": null,
+      "text": "فرض می‌کنیم تمرکز این هفته روی فصل سوم است، چون اولین فصل باقی‌مانده است."
+     },
+     {
+      "draftId": "g1",
+      "text": "تاریخ هدف دفاع ۲۰ فوریه ۲۰۲۷ در نظر گرفته شد (حدود چهار ماه دیگر)."
+     },
+     {
+      "draftId": "routine_writing",
+      "text": "ساعت ۲۰:۰۰ به عنوان زمان ثابت نوشتن انتخاب شد؛ می‌توانید آن را تغییر دهید."
+     }
+    ],
+    "unresolvedQuestions": [],
+    "draftIssues": [],
+    "firstWeek": [
+     {
+      "draftId": "task1",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "routine_writing",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "routine_writing",
+      "date": "2026-10-21"
+     },
+     {
+      "draftId": "task2",
+      "date": "2026-10-22"
+     },
+     {
+      "draftId": "routine_writing",
+      "date": "2026-10-22"
+     },
+     {
+      "draftId": "routine_writing",
+      "date": "2026-10-23"
+     },
+     {
+      "draftId": "task3",
+      "date": "2026-10-24"
+     },
+     {
+      "draftId": "routine_writing",
+      "date": "2026-10-24"
+     },
+     {
+      "draftId": "task4",
+      "date": "2026-10-25"
+     },
+     {
+      "draftId": "routine_writing",
+      "date": "2026-10-25"
+     },
+     {
+      "draftId": "routine_writing",
+      "date": "2026-10-26"
+     }
+    ],
+    "canApply": true,
+    "linkedConfirmationId": null,
+    "removedItems": [
+     {
+      "entityType": "PROJECT",
+      "title": "تکمیل فصل چهارم"
+     }
+    ],
+    "continuationWeek": null,
+    "contextProjects": [],
+    "continuationOfWindowId": null
+   },
+   "ms": 32094
+  },
+  {
+   "id": "moving",
+   "intention": "ماه بعد اسباب‌کشی دارم، کارهاش رو برام بچین",
+   "turns": [],
+   "attemptIds": [
+    "e0bccfdb-809e-4cc8-a69e-8eeb02ee74eb"
+   ],
+   "startedAt": 1792468024817,
+   "final": {
+    "status": "SUCCEEDED",
+    "outcome": "DRAFT",
+    "failureCode": null,
+    "clarification": null
+   },
+   "draft": {
+    "id": "68dd880d-d0e8-46cc-8c56-dc95adaceb4d",
+    "attemptId": "e0bccfdb-809e-4cc8-a69e-8eeb02ee74eb",
+    "status": "REVIEWABLE",
+    "revision": 1,
+    "expiresAt": "2026-10-21T03:47:14.75998+00:00",
+    "context": null,
+    "summary": "برای اسباب‌کشی ماه بعد، این هفته کارهای اولیه مثل گرفتن کارتن از مغازه‌ها، تهیه لیست و تفکیک وسایل را انجام می‌دهیم.",
+    "windowStart": "2026-10-20",
+    "windowEnd": "2026-10-26",
+    "proposals": [
+     {
+      "proposal": {
+       "draftId": "move_project",
+       "entityType": "PROJECT",
+       "title": "اسباب‌کشی ماه بعد",
+       "description": null,
+       "parentDraftId": null,
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": "انتقال کامل وسایل به خانه جدید و تحویل خانه قبلی",
+       "targetDate": "2026-11-30",
+       "reviewDate": "2026-11-19",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": [
+       {
+        "code": "ASSUMED_DATES",
+        "severity": "INFO",
+        "origin": "GENERATOR"
+       }
+      ]
+     },
+     {
+      "proposal": {
+       "draftId": "t_boxes",
+       "entityType": "TASK",
+       "title": "تهیه ۳۰ کارتن از مغازه‌های محلی",
+       "description": null,
+       "parentDraftId": "move_project",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-20",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "t_list",
+       "entityType": "TASK",
+       "title": "تهیه لیست وسایل و دسته‌بندی آن‌ها",
+       "description": null,
+       "parentDraftId": "move_project",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-21",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "t_sort",
+       "entityType": "TASK",
+       "title": "تفکیک وسایل: وسایل بلااستفاده را جدا کنید",
+       "description": null,
+       "parentDraftId": "move_project",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-22",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "t_change_address",
+       "entityType": "TASK",
+       "title": "پیگیری تغییر آدرس در مراکز اداری",
+       "description": null,
+       "parentDraftId": "move_project",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-23",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     }
+    ],
+    "facts": [],
+    "assumptions": [
+     {
+      "draftId": "move_project",
+      "text": "تاریخ اسباب‌کشی دقیق مشخص نیست؛ فرض کردیم تا ۳۰ آبان انجام می‌شود."
+     },
+     {
+      "draftId": "t_boxes",
+      "text": "برای شروع، تهیه کارتن را اولین قدم قرار دادیم."
+     }
+    ],
+    "unresolvedQuestions": [],
+    "draftIssues": [],
+    "firstWeek": [
+     {
+      "draftId": "t_boxes",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "t_list",
+      "date": "2026-10-21"
+     },
+     {
+      "draftId": "t_sort",
+      "date": "2026-10-22"
+     },
+     {
+      "draftId": "t_change_address",
+      "date": "2026-10-23"
+     }
+    ],
+    "canApply": true,
+    "linkedConfirmationId": null,
+    "removedItems": [],
+    "continuationWeek": null,
+    "contextProjects": [],
+    "continuationOfWindowId": null
+   },
+   "ms": 10188
+  },
+  {
+   "id": "job-hunt",
+   "intention": "دنبال کار جدید در حوزه‌ی طراحی محصول هستم، تا سه ماه دیگه می‌خوام جابه‌جا بشم",
+   "turns": [],
+   "attemptIds": [
+    "a3b421f4-edc9-48dd-be58-e04e2d8ead8f"
+   ],
+   "startedAt": 1792468035007,
+   "final": {
+    "status": "SUCCEEDED",
+    "outcome": "DRAFT",
+    "failureCode": null,
+    "clarification": null
+   },
+   "draft": {
+    "id": "77d34c1c-80df-48ff-89eb-653702818e3d",
+    "attemptId": "a3b421f4-edc9-48dd-be58-e04e2d8ead8f",
+    "status": "REVIEWABLE",
+    "revision": 1,
+    "expiresAt": "2026-10-21T03:47:40.106332+00:00",
+    "context": null,
+    "summary": "برنامه‌ی سه‌ماهه برای جابه‌جایی شغلی به حوزه‌ی طراحی محصول؛ این هفته با به‌روزرسانی رزومه و نمونه‌کار و برنامه‌ریزی یادگیری شروع می‌شود.",
+    "windowStart": "2026-10-20",
+    "windowEnd": "2026-10-26",
+    "proposals": [
+     {
+      "proposal": {
+       "draftId": "goal-product-design",
+       "entityType": "GOAL",
+       "title": "جابه‌جایی به شغل طراحی محصول",
+       "description": "پیدا کردن شغل جدید در حوزه‌ی طراحی محصول تا سه ماه آینده.",
+       "parentDraftId": null,
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": "استخدام در یک موقعیت طراحی محصول",
+       "completionMeaning": null,
+       "targetDate": "2027-01-20",
+       "reviewDate": "2027-01-18",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": [
+       {
+        "code": "ASSUMED_DATES",
+        "severity": "INFO",
+        "origin": "GENERATOR"
+       }
+      ]
+     },
+     {
+      "proposal": {
+       "draftId": "project-update-portfolio",
+       "entityType": "PROJECT",
+       "title": "به‌روزرسانی رزومه و نمونه‌کار",
+       "description": "بازبینی و بهبود کامل رزومه و پورتفولیو برای موقعیت‌های طراحی محصول.",
+       "parentDraftId": "goal-product-design",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": "2026-11-20",
+       "reviewDate": "2026-11-19",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "project-skill-gap",
+       "entityType": "PROJECT",
+       "title": "پر کردن شکاف مهارتی طراحی محصول",
+       "description": "یادگیری یا تقویت مهارت‌های لازم طراحی محصول مانند ابزارها، پژوهش کاربر یا پروتوتایپ.",
+       "parentDraftId": "goal-product-design",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": "2026-12-20",
+       "reviewDate": "2026-11-19",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "project-job-search",
+       "entityType": "PROJECT",
+       "title": "جست‌وجوی فعال شغل",
+       "description": "ارسال درخواست و شبکه‌سازی برای موقعیت‌های طراحی محصول.",
+       "parentDraftId": "goal-product-design",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": "2027-01-20",
+       "reviewDate": "2026-11-19",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "routine-learn-design",
+       "entityType": "ROUTINE",
+       "title": "یادگیری روزانه‌ی مهارت طراحی محصول",
+       "description": "هر روز زمانی کوتاه به مطالعه یا تمرین مهارت طراحی محصول اختصاص داده شود.",
+       "parentDraftId": "goal-product-design",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": {
+        "type": "DAILY",
+        "daysOfWeek": null,
+        "dayOfMonth": null
+       },
+       "timesOfDay": [
+        "20:00:00"
+       ],
+       "effectiveFromLocalDate": "2026-10-20",
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task-review-resume",
+       "entityType": "TASK",
+       "title": "بازبینی اولیه‌ی رزومه و فهرست کردن بخش‌های نیازمند تغییر",
+       "description": "رزومه‌ی فعلی را مرور کرده و نقاط ضعف آن را مشخص کنید.",
+       "parentDraftId": "project-update-portfolio",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-20",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": "s1",
+       "sequenceOrder": 1,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task-update-resume",
+       "entityType": "TASK",
+       "title": "بازنویسی رزومه بر اساس موارد مشخص‌شده",
+       "description": "تغییرات لازم را در رزومه اعمال کنید.",
+       "parentDraftId": "project-update-portfolio",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-21",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": "s1",
+       "sequenceOrder": 2,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task-select-portfolio-pieces",
+       "entityType": "TASK",
+       "title": "انتخاب ۳ تا ۵ نمونه‌ی مناسب برای پورتفولیوی طراحی محصول",
+       "description": "پروژه‌هایی را که بیشترین ارتباط را با موقعیت‌های هدف دارند انتخاب کنید.",
+       "parentDraftId": "project-update-portfolio",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-23",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task-assess-skills",
+       "entityType": "TASK",
+       "title": "فهرست کردن مهارت‌های لازم طراحی محصول و ارزیابی سطح فعلی",
+       "description": "مهارت‌های کلیدی مانند ابزارهای طراحی، پژوهش کاربر، تست کاربردپذیری را مرور کنید.",
+       "parentDraftId": "project-skill-gap",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-24",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task-choose-course",
+       "entityType": "TASK",
+       "title": "انتخاب یک دوره یا منبع برای یادگیری اولین مهارت",
+       "description": "بر اساس ارزیابی، یک دوره‌ی آنلاین یا کتاب مناسب انتخاب کنید.",
+       "parentDraftId": "project-skill-gap",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "LOW",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-25",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task-prepare-job-list",
+       "entityType": "TASK",
+       "title": "تهیه‌ی فهرست ۱۰ شرکت هدف برای موقعیت طراحی محصول",
+       "description": "شرکت‌هایی که زمینه‌ی کاری مناسب دارند را شناسایی کنید.",
+       "parentDraftId": "project-job-search",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-26",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "task-study-basics",
+       "entityType": "TASK",
+       "title": "مطالعه‌ی مقدماتی در مورد اصول طراحی محصول",
+       "description": "برای شروع یادگیری، مفاهیم پایه را از منبع انتخابی مرور کنید.",
+       "parentDraftId": "project-skill-gap",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-22",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     }
+    ],
+    "facts": [
+     {
+      "fact": {
+       "draftId": "fact-deadline",
+       "factType": "UNAVAILABLE_DATE",
+       "strength": "HARD",
+       "value": {
+        "weekdays": null,
+        "localDate": "2027-01-20",
+        "startLocalDate": null,
+        "endLocalDate": null,
+        "text": null
+       },
+       "scopeDraftId": "goal-product-design",
+       "included": true
+      },
+      "category": "AVAILABILITY",
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     }
+    ],
+    "assumptions": [
+     {
+      "draftId": null,
+      "text": "فرض شده که کاربر تجربه‌ی طراحی محصول دارد و هدف جابه‌جایی است نه تغییر کامل حوزه."
+     },
+     {
+      "draftId": null,
+      "text": "برای شروع، تمرکز روی به‌روزرسانی مدارک و یک برنامه‌ی یادگیری سبک گذاشته شده است."
+     },
+     {
+      "draftId": null,
+      "text": "زمان یادگیری روزانه حدود نیم ساعت در ساعت ۲۰ در نظر گرفته شده است."
+     }
+    ],
+    "unresolvedQuestions": [],
+    "draftIssues": [],
+    "firstWeek": [
+     {
+      "draftId": "routine-learn-design",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "task-review-resume",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "routine-learn-design",
+      "date": "2026-10-21"
+     },
+     {
+      "draftId": "task-update-resume",
+      "date": "2026-10-21"
+     },
+     {
+      "draftId": "routine-learn-design",
+      "date": "2026-10-22"
+     },
+     {
+      "draftId": "task-study-basics",
+      "date": "2026-10-22"
+     },
+     {
+      "draftId": "routine-learn-design",
+      "date": "2026-10-23"
+     },
+     {
+      "draftId": "task-select-portfolio-pieces",
+      "date": "2026-10-23"
+     },
+     {
+      "draftId": "routine-learn-design",
+      "date": "2026-10-24"
+     },
+     {
+      "draftId": "task-assess-skills",
+      "date": "2026-10-24"
+     },
+     {
+      "draftId": "routine-learn-design",
+      "date": "2026-10-25"
+     },
+     {
+      "draftId": "task-choose-course",
+      "date": "2026-10-25"
+     },
+     {
+      "draftId": "routine-learn-design",
+      "date": "2026-10-26"
+     },
+     {
+      "draftId": "task-prepare-job-list",
+      "date": "2026-10-26"
+     }
+    ],
+    "canApply": true,
+    "linkedConfirmationId": null,
+    "removedItems": [],
+    "continuationWeek": null,
+    "contextProjects": [],
+    "continuationOfWindowId": null
+   },
+   "ms": 25458
+  },
+  {
+   "id": "renovate-kitchen",
+   "intention": "آشپزخونه رو می‌خوام بازسازی کنم",
+   "turns": [],
+   "attemptIds": [
+    "889e4ba0-d7f9-4f4a-be67-49647f65dff9"
+   ],
+   "startedAt": 1792468060466,
+   "final": {
+    "status": "SUCCEEDED",
+    "outcome": "DRAFT",
+    "failureCode": null,
+    "clarification": null
+   },
+   "draft": {
+    "id": "ce0d1100-56f0-4e11-a454-0618c8d275ed",
+    "attemptId": "889e4ba0-d7f9-4f4a-be67-49647f65dff9",
+    "status": "REVIEWABLE",
+    "revision": 1,
+    "expiresAt": "2026-10-21T03:47:52.199843+00:00",
+    "context": null,
+    "summary": "این هفته روی شناخت بهتر فضای آشپزخانه و تصمیم‌گیری اولیه کار می‌کنیم تا مسیر بازسازی روشن شود.",
+    "windowStart": "2026-10-20",
+    "windowEnd": "2026-10-26",
+    "proposals": [
+     {
+      "proposal": {
+       "draftId": "p1",
+       "entityType": "PROJECT",
+       "title": "بازسازی آشپزخانه",
+       "description": null,
+       "parentDraftId": null,
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": "2026-11-19",
+       "reviewDateSource": "SYSTEM_DEFAULT",
+       "plannedDate": null,
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "t1",
+       "entityType": "TASK",
+       "title": "اندازه‌گیری دقیق ابعاد آشپزخانه و یادداشت آن",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-20",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": "s1",
+       "sequenceOrder": 1,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "t2",
+       "entityType": "TASK",
+       "title": "تهیه فهرست نیازها و خواسته‌ها برای آشپزخانه جدید",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-21",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": "s1",
+       "sequenceOrder": 2,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "t3",
+       "entityType": "TASK",
+       "title": "بررسی تصاویر یا نمونه‌های مورد علاقه برای سبک کابینت و رنگ",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "EXPLICIT",
+       "confidence": "HIGH",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-22",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": "s1",
+       "sequenceOrder": 3,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "t4",
+       "entityType": "TASK",
+       "title": "جست‌وجو و تماس با دو تعمیرکار یا کابینت‌ساز برای برآورد هزینه",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-24",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     },
+     {
+      "proposal": {
+       "draftId": "t5",
+       "entityType": "TASK",
+       "title": "تعیین حداکثر بودجه برای بازسازی آشپزخانه",
+       "description": null,
+       "parentDraftId": "p1",
+       "underContext": false,
+       "source": "INFERRED",
+       "confidence": "MEDIUM",
+       "included": true,
+       "desiredOutcome": null,
+       "completionMeaning": null,
+       "targetDate": null,
+       "reviewDate": null,
+       "reviewDateSource": null,
+       "plannedDate": "2026-10-25",
+       "deadline": null,
+       "recurrence": null,
+       "timesOfDay": null,
+       "effectiveFromLocalDate": null,
+       "sequenceKey": null,
+       "sequenceOrder": null,
+       "contextProjectId": null,
+       "existingTaskId": null
+      },
+      "state": "INCLUDED",
+      "excludedByAncestor": false,
+      "issues": []
+     }
+    ],
+    "facts": [],
+    "assumptions": [
+     {
+      "draftId": "p1",
+      "text": "هنوز مرحله برنامه‌ریزی است؛ بنابراین روی جمع‌آوری اطلاعات و تصمیم‌گیری اولیه تمرکز می‌کنیم."
+     },
+     {
+      "draftId": "t4",
+      "text": "تماس با تعمیرکاران برای برآورد هزینه به‌عنوان یک قدم منطقی به‌جای اجرای فوری کار در نظر گرفته شده است."
+     }
+    ],
+    "unresolvedQuestions": [
+     {
+      "draftId": "p1",
+      "text": "چه سبکی برای آشپزخانه جدید می‌پسندید؟"
+     },
+     {
+      "draftId": "p1",
+      "text": "بودجه تقریبی برای بازسازی چقدر است؟"
+     }
+    ],
+    "draftIssues": [],
+    "firstWeek": [
+     {
+      "draftId": "t1",
+      "date": "2026-10-20"
+     },
+     {
+      "draftId": "t2",
+      "date": "2026-10-21"
+     },
+     {
+      "draftId": "t3",
+      "date": "2026-10-22"
+     },
+     {
+      "draftId": "t4",
+      "date": "2026-10-24"
+     },
+     {
+      "draftId": "t5",
+      "date": "2026-10-25"
+     }
+    ],
+    "canApply": true,
+    "linkedConfirmationId": null,
+    "removedItems": [],
+    "continuationWeek": null,
+    "contextProjects": [],
+    "continuationOfWindowId": null
+   },
+   "ms": 12261
+  }
+ ]
+}
