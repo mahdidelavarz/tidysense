@@ -1,10 +1,14 @@
 // Scores a run of run.mjs against the bar of Discussion 029 §10 and writes a readable digest.
-// Usage: node score.mjs results/name.json [--digest results/name.md]
+// Usage: node score.mjs results/name.json [--digest results/name.md] [--different]
+// --different: a made-again run whose correction asks for a different plan («روش دیگر») is held to the
+// another-version bar.
 import { readFileSync, writeFileSync } from 'node:fs'
 
-const [file, flag, digestPath] = process.argv.slice(2)
+const argv = process.argv.slice(2)
+const different = argv.includes('--different')
+const [file, flag, digestPath] = argv.filter(x => x !== '--different')
 if (!file) {
-  console.error('usage: node score.mjs <results.json> [--digest <digest.md>]')
+  console.error('usage: node score.mjs <results.json> [--digest <digest.md>] [--different]')
   process.exit(2)
 }
 const run = JSON.parse(readFileSync(file, 'utf8'))
@@ -212,6 +216,7 @@ if (weekTwo.length) {
 const datedTasks = draft => (draft?.proposals ?? []).map(x => x.proposal)
   .filter(x => x.entityType === 'TASK' && x.included && x.plannedDate && !x.existingTaskId).length
 const taskTitles = draft => (draft?.proposals ?? []).filter(x => x.proposal.entityType === 'TASK').map(x => titleKey(x.proposal.title))
+const rawTaskTitles = draft => (draft?.proposals ?? []).filter(x => x.proposal.entityType === 'TASK').map(x => x.proposal.title)
 const redone = run.results.filter(record => record.redo).map(record => {
   const draft = record.redo.draft
   const firstTitles = new Set(taskTitles(record.draft))
@@ -230,7 +235,9 @@ const redone = run.results.filter(record => record.redo).map(record => {
     emptyParents: proposals.filter(x => ['GOAL', 'PROJECT'].includes(x.entityType) && !hasWork(x.draftId)).map(x => x.title),
     dateErrors: [draft?.summary, ...proposals.map(x => x.title)].flatMap(dateErrors),
     tasks: taskTitles(draft).length,
-    keptTitles: taskTitles(draft).filter(x => firstTitles.has(x)).length
+    keptTitles: taskTitles(draft).filter(x => firstTitles.has(x)).length,
+    // Reworded titles of the first draft: the same step said again is not a different plan.
+    rewordedTitles: rawTaskTitles(draft).filter(x => !firstTitles.has(titleKey(x)) && rawTaskTitles(record.draft).some(t => near(x, t))).length
   }
 })
 if (redone.length) {
@@ -246,11 +253,13 @@ if (redone.length) {
     ['Persian date errors = 0', drafted.reduce((t, x) => t + x.dateErrors.length, 0), null, drafted.every(x => x.dateErrors.length === 0)]
   ]
   const kept = drafted.reduce((t, x) => t + x.keptTitles, 0)
+  const reworded = drafted.reduce((t, x) => t + x.rewordedTitles, 0)
   const tasks = drafted.reduce((t, x) => t + x.tasks, 0)
-  // Another version is a different plan: at most a third of its Tasks keep a title of the first draft.
-  if (run.results.find(x => x.redo)?.redo.correction == null)
-    bar3.push(['Another version: Task titles kept from the first draft ≤ 1/3', kept, tasks, kept <= tasks / 3])
-  else console.log(`Report: Task titles kept from the first draft ${kept} of ${tasks}`)
+  // Another version is a different plan: at most a third of its Tasks keep or reword a title of the first draft.
+  // Counting only exact titles let a reworded copy pass (redo-again-2: 40% exact, about 76% with rewordings).
+  if (different || run.results.find(x => x.redo)?.redo.correction == null)
+    bar3.push(['A different plan: Task titles kept or reworded from the first draft ≤ 1/3', kept + reworded, tasks, kept + reworded <= tasks / 3])
+  else console.log(`Report: Task titles kept from the first draft ${kept}, reworded ${reworded}, of ${tasks}`)
   console.log(`\nMade again (013 §10): ${run.results.find(x => x.redo)?.redo.correction ?? 'another version'}`)
   for (const [name, value, of, pass] of bar3) console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}: ${value}${of !== null ? ` of ${of}` : ''}`)
   console.log(`Report: fewer dated Tasks in the week after the correction in ${lighter} of ${drafted.length} cases ` +
@@ -260,7 +269,7 @@ if (redone.length) {
   for (const x of redone) {
     const problems = [x.failure, ...x.emptyParents.map(t => `EMPTY:${t}`), ...x.dateErrors.map(d => `DATE:${d}`),
       x.goalsAfter !== x.goalsBefore ? `GOALS:${x.goalsBefore}→${x.goalsAfter}` : null].filter(Boolean)
-    console.log(`${x.id.padEnd(18)} ${String(x.seconds).padStart(5)}  ${`${x.before}→${x.after}`.padEnd(18)} ${x.approvable ? 'yes' : 'no '}   kept ${x.keptTitles}/${x.tasks}  ${problems.join(', ')}`)
+    console.log(`${x.id.padEnd(18)} ${String(x.seconds).padStart(5)}  ${`${x.before}→${x.after}`.padEnd(18)} ${x.approvable ? 'yes' : 'no '}   kept ${x.keptTitles}+${x.rewordedTitles}/${x.tasks}  ${problems.join(', ')}`)
   }
 }
 

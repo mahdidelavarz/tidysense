@@ -326,10 +326,12 @@ describe('PlanningPage', () => {
     vi.mocked(getPlanningAttempt).mockImplementation(async id => id === redoId
       ? attempt('FAILED', { id: redoId, redoOfDraftId: draftId, failureCode: 'PROVIDER_ERROR', draftId: null })
       : attempt('SUCCEEDED'))
-    fireEvent.click(screen.getByRole('button', { name: 'اصلاح یا نسخهٔ دیگر' }))
-    const sheet = within(await screen.findByRole('dialog', { name: 'اصلاح یا نسخهٔ دیگر' }))
+    fireEvent.click(screen.getByRole('button', { name: 'اصلاح برنامه' }))
+    const sheet = within(await screen.findByRole('dialog', { name: 'اصلاح برنامه' }))
     expect(sheet.getByRole('button', { name: 'اصلاح کن' })).toBeDisabled()
-    fireEvent.change(sheet.getByLabelText('چه چیزی عوض شود؟'), { target: { value: '  جمعه‌ها خالی بماند ' } })
+    // A version with no direction copied the plan in other words, so it is not offered.
+    expect(sheet.queryByRole('button', { name: 'یک نسخهٔ دیگر بساز' })).not.toBeInTheDocument()
+    fireEvent.change(sheet.getByLabelText('یا بنویسید چه چیزی عوض شود'), { target: { value: '  جمعه‌ها خالی بماند ' } })
     fireEvent.click(sheet.getByRole('button', { name: 'اصلاح کن' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
       intention, replaceActive: false, redo: { draftId, expectedRevision: 2, correction: 'جمعه‌ها خالی بماند' },
@@ -352,17 +354,17 @@ describe('PlanningPage', () => {
     expect(await screen.findByText('پیش‌نویس اصلاح‌شده')).toBeInTheDocument()
   })
 
-  it('asks for another version without a correction and returns to the draft when the redo is cancelled', async () => {
+  it('sends a direction as the correction and returns to the draft when the redo is cancelled', async () => {
     vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('SUCCEEDED'))
     await openDraft(draft())
     const redoId = '00000000-0000-0000-0000-000000000a03'
     vi.mocked(startPlanningAttempt).mockResolvedValueOnce(attempt('RUNNING', { id: redoId, redoOfDraftId: draftId }))
     vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('RUNNING', { id: redoId, redoOfDraftId: draftId }))
     vi.mocked(cancelPlanningAttempt).mockResolvedValue(attempt('CANCELLED', { id: redoId, redoOfDraftId: draftId }))
-    fireEvent.click(screen.getByRole('button', { name: 'اصلاح یا نسخهٔ دیگر' }))
-    fireEvent.click(within(await screen.findByRole('dialog', { name: 'اصلاح یا نسخهٔ دیگر' })).getByRole('button', { name: 'یک نسخهٔ دیگر بساز' }))
+    fireEvent.click(screen.getByRole('button', { name: 'اصلاح برنامه' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'اصلاح برنامه' })).getByRole('button', { name: 'سبک‌تر' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-      redo: { draftId, expectedRevision: 1, correction: null },
+      redo: { draftId, expectedRevision: 1, correction: 'کارهای این هفته را کمتر و سبک‌تر کن' },
     })))
     fireEvent.click(await screen.findByRole('button', { name: 'لغو' }))
     await waitFor(() => expect(cancelPlanningAttempt).toHaveBeenCalledWith(redoId))

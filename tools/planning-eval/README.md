@@ -145,4 +145,14 @@ On the way, a full run of an earlier build had 3–4 date errors. They were trac
 
 On 2026-10-20 the provider accepts only `deepseek-flash` (V4.1 Flash) and `deepseek-v4-pro`; `deepseek-v4-flash` is routed to `deepseek-flash`, so every run before was already on V4.1 Flash. The configuration now names `deepseek-flash`. The three runs together cost about $0.35.
 
+## Directions instead of another version (2026-10-21)
+
+The exact-title count let a reworded copy pass. `score.mjs` now also counts a Task title as reworded when it is near a first-draft title (the week-two heuristic), and the another-version bar counts both. Re-scored, `redo-again-2` keeps or rewords 177 of 241 titles (73%), not 97 (40%): ielts and garden, for example, are the same steps in other words. The review no longer offers another version without a direction. Its three directions are corrections:
+
+| Direction | Correction sent | Score with |
+|---|---|---|
+| «سبک‌تر» | `کارهای این هفته را کمتر و سبک‌تر کن` (the `redo-correct-2` correction) | `score.mjs` |
+| «فشرده‌تر» | `برنامه را فشرده‌تر کن: این هفته کارهای بیشتری بگذار تا هدف زودتر پیش برود` | `score.mjs`, expect more dated Tasks |
+| «روش دیگر» | `با روشی متفاوت به همین هدف برس: ترتیب و نوع کارها عوض شود، نه فقط کلمه‌هایشان` | `score.mjs --different` |
+
 Before these runs the input cap was 12000 estimated tokens. First drafts already used 11150–11980 of it (about 6000 real tokens: the estimate is about 1.85× the real count), and a redo did not fit at all (`CONTEXT_TOO_LARGE`). The cap is now 20000.
