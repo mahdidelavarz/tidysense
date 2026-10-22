@@ -37,8 +37,8 @@ type ReviewProps = {
   onEdit: (edit: PlanningDraftEdit, onStored?: () => void) => void
   onApprove: () => void
   onCancel: () => void
-  /** «اصلاح» with what to change, or «نسخهٔ دیگر» (null): the same flow made again (013 §10). */
-  onRedo: (correction: string | null) => void
+  /** «اصلاح برنامه» with what to change, a direction or the user's words: the same flow made again (013 §10). */
+  onRedo: (correction: string, differentWay: boolean) => void
   redoPending: boolean
   redoError: unknown
 }
@@ -279,11 +279,11 @@ export function PlanningDraftReview({ draft, intention, busy, error, onEdit, onA
         </div>
         <button className="ghost-button mx-auto mt-2 flex min-h-11 items-center gap-1.5 text-sm" type="button" disabled={busy} onClick={() => setRedoing(true)}>
           <Sparkles size={17} aria-hidden="true" />
-          اصلاح یا نسخهٔ دیگر
+          اصلاح برنامه
         </button>
       </div>
 
-      {redoing && <RedoSheet pending={redoPending} error={redoError} onRedo={onRedo} onClose={() => setRedoing(false)} />}
+      {redoing && <RedoSheet pending={redoPending} error={redoError} tasks={included('TASK') + dated} onRedo={onRedo} onClose={() => setRedoing(false)} />}
 
       {editing?.existingTaskId && (
         <ExistingTaskDateSheet
@@ -591,27 +591,51 @@ function FirstWeek({ draft }: { draft: PlanningDraftDto }) {
 }
 
 /**
- * «اصلاح یا نسخهٔ دیگر»: says what to change, or asks for another version, and
- * the same flow (what was written, the answers, and the edits made here) is
- * planned again. This draft stays until the new one is ready.
+ * The directions offered on «اصلاح برنامه», each sent as a correction. A version with no direction
+ * reworded the same plan (redo-again-2: about three quarters of its Tasks kept or reworded), so
+ * there is none. «سبک‌تر» is the correction measured in redo-correct-2.
+ * «فشرده‌تر» on a plan of one or two Tasks invented work around them («زنگ به بانک» became four
+ * Tasks in redo-denser-1..3), so it is offered only above that. «روش دیگر» asks the model to reason
+ * first: without it the other way was the same steps reworded (redo-different-2 against -3).
  */
-function RedoSheet({ pending, error, onRedo, onClose }: {
+const REDO_DIRECTIONS = [
+  { label: 'سبک‌تر', correction: 'کارهای این هفته را کمتر و سبک‌تر کن', minTasks: 0, differentWay: false },
+  { label: 'فشرده‌تر', correction: 'برنامه را فشرده‌تر کن: این هفته کارهای بیشتری بگذار تا هدف زودتر پیش برود', minTasks: 3, differentWay: false },
+  { label: 'روش دیگر', correction: 'با روشی متفاوت به همین هدف برس: ترتیب و نوع کارها عوض شود، نه فقط کلمه‌هایشان', minTasks: 0, differentWay: true },
+]
+
+/**
+ * «اصلاح برنامه»: a direction, or what to change in words, and the same flow
+ * (what was written, the answers, and the edits made here) is planned again.
+ * This draft stays until the new one is ready.
+ */
+function RedoSheet({ pending, error, tasks, onRedo, onClose }: {
   pending: boolean
   error: unknown
-  onRedo: (correction: string | null) => void
+  /** The Tasks the draft holds now, new and dated. */
+  tasks: number
+  onRedo: (correction: string, differentWay: boolean) => void
   onClose: () => void
 }) {
   const [correction, setCorrection] = useState('')
   const id = useId()
   return (
     <Sheet
-      title="اصلاح یا نسخهٔ دیگر"
+      title="اصلاح برنامه"
       description="همین برنامه با همان نوشته، پاسخ‌ها و ویرایش‌های شما دوباره ساخته می‌شود. تا پیش‌نویس تازه آماده نشود، همین پیش‌نویس سر جایش می‌ماند."
       onClose={onClose}
       locked={pending}
     >
       <div className="form-stack">
-        <label className="field-label" htmlFor={id}>چه چیزی عوض شود؟</label>
+        <fieldset className="flex flex-wrap gap-2">
+          <legend className="field-label mb-2">یک جهت انتخاب کنید</legend>
+          {REDO_DIRECTIONS.filter(direction => tasks >= direction.minTasks).map(direction => (
+            <button key={direction.label} className="secondary-button" type="button" disabled={pending} onClick={() => onRedo(direction.correction, direction.differentWay)}>
+              {direction.label}
+            </button>
+          ))}
+        </fieldset>
+        <label className="field-label" htmlFor={id}>یا بنویسید چه چیزی عوض شود</label>
         <textarea
           id={id}
           className="intent-input min-h-28"
@@ -624,8 +648,7 @@ function RedoSheet({ pending, error, onRedo, onClose }: {
         <FormError error={error} />
         <div className="sheet-actions flex-wrap">
           <button className="ghost-button" type="button" disabled={pending} onClick={onClose}>انصراف</button>
-          <button className="secondary-button" type="button" disabled={pending} onClick={() => onRedo(null)}>یک نسخهٔ دیگر بساز</button>
-          <button className="primary-button basis-full whitespace-nowrap sm:basis-0 sm:flex-1" type="button" disabled={pending || correction.trim() === ''} onClick={() => onRedo(correction.trim())}>
+          <button className="primary-button basis-full whitespace-nowrap sm:basis-0 sm:flex-1" type="button" disabled={pending || correction.trim() === ''} onClick={() => onRedo(correction.trim(), false)}>
             {pending ? 'در حال ارسال…' : 'اصلاح کن'}
           </button>
         </div>

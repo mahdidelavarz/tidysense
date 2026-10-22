@@ -12,6 +12,9 @@ public sealed record AiPrompt(string System, string User, string ContextReductio
 
     /// <summary>A deliberately high estimate: Persian text rarely needs more than one token per two characters.</summary>
     public int EstimatedTokens => (System.Length + User.Length + 1) / 2;
+
+    /// <summary>The model reasons before it answers, within the family's thinking limits.</summary>
+    public bool Think { get; init; }
 }
 
 /// <summary>What identifies one logical operation in its records. The versions are pinned for the whole operation.</summary>
@@ -99,14 +102,18 @@ public sealed class AiOperationRunner(
         var first = prompt;
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(settings.OperationDeadlineSeconds));
+        // Reasoning spends output tokens and time before the answer, so it has limits of its own.
+        var maxOutputTokens = prompt.Think ? settings.ThinkingMaxOutputTokens : settings.MaxOutputTokens;
+        var invocationTimeout = prompt.Think ? settings.ThinkingInvocationTimeoutSeconds : settings.InvocationTimeoutSeconds;
+        deadline.CancelAfter(TimeSpan.FromSeconds(
+            prompt.Think ? settings.ThinkingOperationDeadlineSeconds : settings.OperationDeadlineSeconds));
         string? retryReason = null;
         // The gate's reduced result of a rejected answer, used if no better answer comes.
         (T Value, int Sequence)? kept = null;
         for (var sequence = 1; ; sequence++)
         {
             var estimatedTokens = prompt.EstimatedTokens;
-            var estimatedCost = Cost(provider, estimatedTokens, settings.MaxOutputTokens);
+            var estimatedCost = Cost(provider, estimatedTokens, maxOutputTokens);
             var startedAt = time.GetUtcNow();
             if (await BlockedAsync(spec.Family, family, providerKey, circuit, estimatedCost, startedAt) is { } blocked)
             {
@@ -131,9 +138,9 @@ public sealed class AiOperationRunner(
                 try
                 {
                     using var call = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
-                    call.CancelAfter(TimeSpan.FromSeconds(settings.InvocationTimeoutSeconds));
+                    call.CancelAfter(TimeSpan.FromSeconds(invocationTimeout));
                     result = await client.CompleteAsync(providerKey,
-                        new AiCompletionRequest(model, prompt.System, prompt.User, settings.MaxOutputTokens),
+                        new AiCompletionRequest(model, prompt.System, prompt.User, maxOutputTokens) { Think = prompt.Think },
                         call.Token);
                 }
                 catch (OperationCanceledException) when (!deadline.IsCancellationRequested)
@@ -172,7 +179,7 @@ public sealed class AiOperationRunner(
                 row.InputTokens = result!.InputTokens;
                 row.OutputTokens = result.OutputTokens;
                 row.EstimatedCostMicros = Cost(provider, result.InputTokens ?? estimatedTokens,
-                    result.OutputTokens ?? settings.MaxOutputTokens);
+                    result.OutputTokens ?? maxOutputTokens);
                 // A rejected answer is sent for once more with what the gate rejected, while a call is left.
                 var resend = verdict.Value is null && sequence < MaxInvocations && verdict.Correction is { } correction &&
                     family(options.CurrentValue).RetryEnabled ? correct?.Invoke(first, correction) : null;
@@ -236,7 +243,7 @@ public sealed class AiOperationRunner(
                 ContextBuilderVersion = spec.ContextBuilderVersion,
                 RepairPolicyVersion = spec.RepairPolicyVersion, Sequence = sequence,
                 StartedAt = startedAt, CompletedAt = startedAt, EstimatedInputTokens = inputEstimate,
-                MaxOutputTokens = settings.MaxOutputTokens, EstimatedCostMicros = cost, ContextReduction = reduction
+                MaxOutputTokens = prompt?.Think == true ? settings.ThinkingMaxOutputTokens : settings.MaxOutputTokens, EstimatedCostMicros = cost, ContextReduction = reduction
             };
     }
 

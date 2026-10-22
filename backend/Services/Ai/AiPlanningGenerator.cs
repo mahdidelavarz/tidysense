@@ -36,7 +36,10 @@ public sealed class AiPlanningGenerator(
         try
         {
             var gate = await _runner.RunAsync(spec, x => x.Planning,
-                rendered is null ? null : new AiPrompt(rendered.System, rendered.User, rendered.ContextReduction),
+                rendered is null ? null : new AiPrompt(rendered.System, rendered.User, rendered.ContextReduction)
+                {
+                    Think = request.Redo?.DifferentWay == true
+                },
                 result =>
                 {
                     var evaluated = PlanningOutputGate.Evaluate(result.Text, result.FinishReason, request.Context,

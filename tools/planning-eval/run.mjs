@@ -3,11 +3,12 @@
 // questions the way the case's persona would, and stores what was asked and what was drafted.
 //
 // Usage: node run.mjs --base https://127.0.0.1:7077 --out results/name.json [--only id,id] [--label text] [--week2]
-//        [--redo "<correction>"]
+//        [--redo "<correction>"] [--different-way]
 // --week2 (STEP-24): each first week is approved, lived through crudely and brought to its end, and
 // the next week is then planned from the continuation offer, the way «برنامهٔ هفتهٔ بعد» does.
 // --redo (013 §10): each first draft is made again from the review with this correction, the way
 // «اصلاح یا نسخهٔ دیگر» does; `--redo true` asks for another version without a correction.
+// --different-way sends the redo as «روش دیگر» does: the model reasons before it drafts.
 // The backend must run in Development on loopback (the test-session endpoint), with the planning
 // provider and generous rate limits configured. See README.md.
 import { randomUUID } from 'node:crypto'
@@ -17,7 +18,7 @@ import { dirname } from 'node:path'
 const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, arg, index, all) =>
   arg.startsWith('--') ? [...pairs, [arg.slice(2), all[index + 1]?.startsWith('--') ? true : all[index + 1] ?? true]] : pairs, []))
 if (!args.base || !args.out) {
-  console.error('usage: node run.mjs --base <backend url> --out <results.json> [--only id,id] [--label text] [--week2] [--redo text]')
+  console.error('usage: node run.mjs --base <backend url> --out <results.json> [--only id,id] [--label text] [--week2] [--redo text] [--different-way]')
   process.exit(2)
 }
 // The local backend uses a development certificate.
@@ -152,7 +153,7 @@ async function redo(record) {
   record.redo = { correction, startedAt: Date.now() }
   const attempt = await settle((await call('POST', '/planning/attempts', {
     clientAttemptId: randomUUID().replaceAll('-', ''), intention: record.intention, replaceActive: false,
-    redo: { draftId: first.id, expectedRevision: first.revision, correction }
+    redo: { draftId: first.id, expectedRevision: first.revision, correction, differentWay: Boolean(args['different-way']) }
   })).id)
   record.redo.final = { status: attempt.status, outcome: attempt.outcome, failureCode: attempt.failureCode,
     clarification: attempt.clarification }

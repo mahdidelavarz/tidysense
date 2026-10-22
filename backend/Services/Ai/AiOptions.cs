@@ -37,6 +37,10 @@ public class AiFamilyOptions
     public int ConnectionTimeoutSeconds { get; set; } = 10;
     public int InvocationTimeoutSeconds { get; set; } = 45;
     public int OperationDeadlineSeconds { get; set; } = 100;
+    // For a request that reasons first (AiPrompt.Think). The deadline stays under the planning runner's 120 s.
+    public int ThinkingMaxOutputTokens { get; set; } = 16000;
+    public int ThinkingInvocationTimeoutSeconds { get; set; } = 90;
+    public int ThinkingOperationDeadlineSeconds { get; set; } = 115;
     public int MaxConcurrentInvocations { get; set; } = 4;
     public decimal DailyBudgetUsd { get; set; } = 2m;
     public int CircuitFailureThreshold { get; set; } = 5;

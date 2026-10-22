@@ -286,7 +286,11 @@ public sealed record PlanningTurn(IReadOnlyList<PlanningQuestion> Questions, IRe
 /// so a later one never silently undoes an earlier one.
 /// </summary>
 public sealed record PlanningRedo(PlanningDraftContent PreviousDraft, string? Correction,
-    IReadOnlyList<string> EarlierCorrections);
+    IReadOnlyList<string> EarlierCorrections)
+{
+    /// <summary>The user asked for another way to the same goal; the model reasons before it drafts.</summary>
+    public bool DifferentWay { get; init; }
+}
 
 public static class PlanningRedoRules
 {

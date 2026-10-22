@@ -10307,6 +10307,10 @@
               "null",
               "string"
             ]
+          },
+          "differentWay": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

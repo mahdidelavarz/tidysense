@@ -24,6 +24,25 @@ public sealed class AiPlanningRuntimeTests
     private const string Intention = "می‌خواهم زبان انگلیسی را منظم یاد بگیرم";
 
     [Fact]
+    public async Task Another_way_reasons_first_within_the_thinking_limits()
+    {
+        // «روش دیگر» without reasoning reworded the same steps (redo-different-2); with it, it changed the method.
+        var harness = new Harness(x => x.Providers[Provider].DisableThinking = true);
+        harness.Provider.Reply(Completion(PlanningOutputGateTests.Valid().ToJsonString()));
+        var previous = new PlanningDraftContent("خلاصهٔ قبلی", harness.Context.WindowStart, harness.Context.WindowEnd,
+            [], [], [], [], []);
+
+        await harness.Generator.GenerateAsync(new PlanningGenerationRequest(Guid.NewGuid(), Intention, harness.Context, null)
+        {
+            Redo = new PlanningRedo(previous, "با روشی متفاوت به همین هدف برس", []) { DifferentWay = true }
+        }, TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(harness.Provider.Calls.Single().Body);
+        Assert.False(body.RootElement.TryGetProperty("thinking", out _));
+        Assert.Equal(new AiPlanningOptions().ThinkingMaxOutputTokens, body.RootElement.GetProperty("max_tokens").GetInt32());
+    }
+
+    [Fact]
     public async Task A_valid_answer_becomes_a_draft_from_one_tool_free_call_and_leaves_only_metadata()
     {
         var harness = new Harness();

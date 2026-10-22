@@ -74,7 +74,7 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
   const [endedDraftId, setEndedDraftId] = useState<string | null>(null)
   // The attempt being made answers questions, so the «پرسش‌ها» step is behind it.
   const [answered, setAnswered] = useState(false)
-  // The last «اصلاح» or «نسخهٔ دیگر» asked for, so a failed one can be sent again as it was.
+  // The last «اصلاح برنامه» asked for, so a failed one can be sent again as it was.
   const [lastRedo, setLastRedo] = useState<NonNullable<PlanningAttemptInput['redo']> | null>(null)
 
   const found = detached ? undefined : active.data
@@ -443,7 +443,7 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
           onApprove={() => apply.request(Number(current.revision))}
           onCancel={() => cancelDraft.mutate(current, { onSuccess: () => setEndedDraftId(current.id) })}
           // The server plans the draft's own flow again; the text only fills the request's required field.
-          onRedo={correction => redo({ draftId: current.id, expectedRevision: Number(current.revision), correction }, written || current.summary)}
+          onRedo={(correction, differentWay) => redo({ draftId: current.id, expectedRevision: Number(current.revision), correction, differentWay }, written || current.summary)}
           redoPending={start.isPending}
           redoError={start.error}
         />

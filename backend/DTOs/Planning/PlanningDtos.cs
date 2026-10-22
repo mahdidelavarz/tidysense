@@ -32,7 +32,10 @@ public sealed record StartPlanningAttemptRequest(
 public sealed record PlanningRedoRequest(
     Guid DraftId,
     [Range(1, int.MaxValue)] int ExpectedRevision,
-    [StringLength(PlanningRedoRules.CorrectionLength)] string? Correction);
+    [StringLength(PlanningRedoRules.CorrectionLength)] string? Correction,
+    // «روش دیگر»: the model reasons before it drafts. Without it the other way was the same steps
+    // reworded (redo-different-2: 39% of Tasks kept or reworded; with reasoning, redo-different-3: 16%).
+    bool DifferentWay = false);
 
 /// <summary>Questions to answer, or the reason the input cannot be planned and what to change.</summary>
 public sealed record PlanningClarificationDto(
