@@ -39,6 +39,7 @@ Do not rescan the full repository or Mind Map for a focused task unless behavior
 | canonical module loop | [`04-module-implementation-loop.md`](04-module-implementation-loop.md) |
 | backend rules | [`backend/README.md`](backend/README.md) |
 | frontend rules | [`frontend/README.md`](frontend/README.md) |
+| mobile app (React Native) stack and MOB steps | [`mobile/README.md`](mobile/README.md), [`mobile/development-steps.md`](mobile/development-steps.md) |
 | contracts, naming, and dates | [`shared/README.md`](shared/README.md) |
 | operational workflows | [`workflows/README.md`](workflows/README.md) |
 | quality gates | [`quality/README.md`](quality/README.md) |

@@ -10,7 +10,9 @@ None. Documentation conflicts `CON-001` through `CON-013` are resolved. Prototyp
 
 ## Open / deferred decisions
 
-None. `DEC-011` was resolved on 2026-10-09 (see "Resolved decisions").
+- `DEC-016` — native client authentication. Proposed in [ADR-008](ADR-008-native-client-authentication.md) (bearer header for the app, browser cookie and Origin check unchanged); accepted or replaced in MOB-01.
+
+`DEC-011` was resolved on 2026-10-09 (see "Resolved decisions").
 
 ## Resolved conflicts
 

@@ -10,6 +10,8 @@ When asked to **Start Step N**, read that step, verify all dependencies are `DON
 
 Status values: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`. Scaffolding alone never qualifies as `DONE`.
 
+The React Native app has its own track, `MOB-00` to `MOB-12`, in [`mobile/development-steps.md`](mobile/development-steps.md) (added 2026-10-22). It neither blocks nor is blocked by STEP-12.
+
 ---
 
 ## STEP-01 — Local and Technical Baseline Stabilization
