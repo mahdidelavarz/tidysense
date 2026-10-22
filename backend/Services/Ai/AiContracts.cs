@@ -27,7 +27,11 @@ public static class AiFailureClasses
 }
 
 /// <summary>One complete, non-streamed completion. It carries no tool, function or connector definition.</summary>
-public sealed record AiCompletionRequest(string Model, string SystemPrompt, string UserContent, int MaxOutputTokens);
+public sealed record AiCompletionRequest(string Model, string SystemPrompt, string UserContent, int MaxOutputTokens)
+{
+    /// <summary>Reason before answering, even when the provider has thinking disabled by default.</summary>
+    public bool Think { get; init; }
+}
 
 public sealed record AiCompletionResult(string Text, string FinishReason, int? InputTokens, int? OutputTokens);
 

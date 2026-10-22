@@ -334,7 +334,7 @@ describe('PlanningPage', () => {
     fireEvent.change(sheet.getByLabelText('یا بنویسید چه چیزی عوض شود'), { target: { value: '  جمعه‌ها خالی بماند ' } })
     fireEvent.click(sheet.getByRole('button', { name: 'اصلاح کن' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-      intention, replaceActive: false, redo: { draftId, expectedRevision: 2, correction: 'جمعه‌ها خالی بماند' },
+      intention, replaceActive: false, redo: { draftId, expectedRevision: 2, correction: 'جمعه‌ها خالی بماند', differentWay: false },
     })))
 
     // The old draft was kept: a failed redo offers it back, and sends the same correction again on retry.
@@ -349,12 +349,12 @@ describe('PlanningPage', () => {
       ? draft({ id: newDraftId, summary: 'پیش‌نویس اصلاح‌شده' }) : draft({ revision: 2 }))
     fireEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({
-      redo: { draftId, expectedRevision: 2, correction: 'جمعه‌ها خالی بماند' },
+      redo: { draftId, expectedRevision: 2, correction: 'جمعه‌ها خالی بماند', differentWay: false },
     })))
     expect(await screen.findByText('پیش‌نویس اصلاح‌شده')).toBeInTheDocument()
   })
 
-  it('sends a direction as the correction and returns to the draft when the redo is cancelled', async () => {
+  it('sends a direction as the correction, offers «فشرده‌تر» only above two Tasks, and returns to the draft when the redo is cancelled', async () => {
     vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('SUCCEEDED'))
     await openDraft(draft())
     const redoId = '00000000-0000-0000-0000-000000000a03'
@@ -362,9 +362,14 @@ describe('PlanningPage', () => {
     vi.mocked(getPlanningAttempt).mockResolvedValue(attempt('RUNNING', { id: redoId, redoOfDraftId: draftId }))
     vi.mocked(cancelPlanningAttempt).mockResolvedValue(attempt('CANCELLED', { id: redoId, redoOfDraftId: draftId }))
     fireEvent.click(screen.getByRole('button', { name: 'اصلاح برنامه' }))
-    fireEvent.click(within(await screen.findByRole('dialog', { name: 'اصلاح برنامه' })).getByRole('button', { name: 'سبک‌تر' }))
+    const sheet = within(await screen.findByRole('dialog', { name: 'اصلاح برنامه' }))
+    // One Task is not made denser: the model invented work around it (redo-denser-1..3).
+    expect(sheet.getByRole('button', { name: 'سبک‌تر' })).toBeInTheDocument()
+    expect(sheet.queryByRole('button', { name: 'فشرده‌تر' })).not.toBeInTheDocument()
+    // «روش دیگر» asks the model to reason first.
+    fireEvent.click(sheet.getByRole('button', { name: 'روش دیگر' }))
     await waitFor(() => expect(startPlanningAttempt).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-      redo: { draftId, expectedRevision: 1, correction: 'کارهای این هفته را کمتر و سبک‌تر کن' },
+      redo: { draftId, expectedRevision: 1, correction: 'با روشی متفاوت به همین هدف برس: ترتیب و نوع کارها عوض شود، نه فقط کلمه‌هایشان', differentWay: true },
     })))
     fireEvent.click(await screen.findByRole('button', { name: 'لغو' }))
     await waitFor(() => expect(cancelPlanningAttempt).toHaveBeenCalledWith(redoId))

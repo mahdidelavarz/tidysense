@@ -443,7 +443,7 @@ export function PlanningPage({ goalId, projectId, continuationOf, initialIntenti
           onApprove={() => apply.request(Number(current.revision))}
           onCancel={() => cancelDraft.mutate(current, { onSuccess: () => setEndedDraftId(current.id) })}
           // The server plans the draft's own flow again; the text only fills the request's required field.
-          onRedo={correction => redo({ draftId: current.id, expectedRevision: Number(current.revision), correction }, written || current.summary)}
+          onRedo={(correction, differentWay) => redo({ draftId: current.id, expectedRevision: Number(current.revision), correction, differentWay }, written || current.summary)}
           redoPending={start.isPending}
           redoError={start.error}
         />

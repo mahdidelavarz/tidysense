@@ -70,7 +70,8 @@ public sealed partial class PlanningService(
         {
             intention, request.GoalId, request.ProjectId, request.ReplaceActive, fixture,
             request.PreviousAttemptId, answers, request.DraftNow, request.ContinuationOfWindowId,
-            redoOf = redo?.DraftId, redoRevision = redo?.ExpectedRevision, correction
+            redoOf = redo?.DraftId, redoRevision = redo?.ExpectedRevision, correction,
+            differentWay = redo?.DifferentWay
         }));
 
         var existing = await db.PlanningAttempts.AsNoTracking().SingleOrDefaultAsync(
@@ -122,7 +123,7 @@ public sealed partial class PlanningService(
             continuationId = drafted.ContinuationOfWindowId;
             (turns, var earlier) = await FlowOfAsync(drafted, cancellationToken);
             redoing = new PlanningRedo(await ContentAsync(db, redone.Id, redone.CurrentRevision, cancellationToken),
-                correction, earlier);
+                correction, earlier) { DifferentWay = redo.DifferentWay };
         }
 
         // A switched-off AI path is said plainly before anything is stored; manual creation is unaffected.

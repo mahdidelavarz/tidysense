@@ -153,6 +153,18 @@ The exact-title count let a reworded copy pass. `score.mjs` now also counts a Ta
 |---|---|---|
 | «سبک‌تر» | `کارهای این هفته را کمتر و سبک‌تر کن` (the `redo-correct-2` correction) | `score.mjs` |
 | «فشرده‌تر» | `برنامه را فشرده‌تر کن: این هفته کارهای بیشتری بگذار تا هدف زودتر پیش برود` | `score.mjs`, expect more dated Tasks |
-| «روش دیگر» | `با روشی متفاوت به همین هدف برس: ترتیب و نوع کارها عوض شود، نه فقط کلمه‌هایشان` | `score.mjs --different` |
+| «روش دیگر» | `با روشی متفاوت به همین هدف برس: ترتیب و نوع کارها عوض شود، نه فقط کلمه‌هایشان`, run with `--different-way` | `score.mjs --different` |
+
+Measured on 2026-10-21 and 2026-10-22 with `deepseek-flash` (about $0.6 in all):
+
+| File | What it measured |
+|---|---|
+| `redo-different-1` | «روش دیگر», prompt `2026-10-19.2`. 32/32 approvable, but 104 of 245 Task titles kept or reworded (42%): above the third, 15 of 32 cases within it. Learning goals changed method (`konkur`: a diagnostic test and a mistake notebook first); fixed procedures came back reworded (`thesis` 9/9, `renovate-kitchen` 9/10, `party` 5/6). |
+| `redo-denser-1` | «فشرده‌تر», the same prompt. Dated Tasks 152 → 230, more in 30 of 32. A small goal got invented work: `one-task` («زنگ به بانک») 1 → 4 Tasks, `precise` 0 → 6. |
+| `redo-different-2`, `redo-denser-2` | A trial prompt with two rules (change the method, not the words, or say there is no other way; add no invented work to a small goal). 95 of 246 kept or reworded (39%), no case said there was no other way; `one-task` 2 → 5. Not kept. |
+| `redo-different-3` | «روش دیگر» with reasoning on (the trial prompt). 43 of 275 kept or reworded (16%), 26 of 32 within a third, every bar passes. The plans really change (`ielts` starts from writing and speaking, `job-hunt` from talking to people in the field, `tax-filing` from the pre-filled return). Redo median about 35 s against 10 s, first drafts 55 s against 17 s, about 2.4× the cost. |
+| `redo-denser-3` | «فشرده‌تر» with reasoning on, 10 cases. Small goals still padded (`one-task` 1 → 4, `sleep` 0 → 5). |
+
+So only «روش دیگر» reasons (`differentWay` in the redo request; `ThinkingMaxOutputTokens`, `ThinkingInvocationTimeoutSeconds` and `ThinkingOperationDeadlineSeconds` bound it), and the review offers «فشرده‌تر» only from three Tasks. The trial prompt rules are not kept; prompt `2026-10-19.2` is unchanged.
 
 Before these runs the input cap was 12000 estimated tokens. First drafts already used 11150–11980 of it (about 6000 real tokens: the estimate is about 1.85× the real count), and a redo did not fit at all (`CONTEXT_TOO_LARGE`). The cap is now 20000.

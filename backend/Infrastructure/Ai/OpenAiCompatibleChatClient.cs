@@ -40,7 +40,7 @@ public sealed class OpenAiCompatibleChatClient(HttpClient httpClient, IOptionsMo
             ["max_tokens"] = request.MaxOutputTokens,
             ["stream"] = false
         };
-        if (provider.DisableThinking) payload["thinking"] = new { type = "disabled" };
+        if (provider.DisableThinking && !request.Think) payload["thinking"] = new { type = "disabled" };
         message.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
         try

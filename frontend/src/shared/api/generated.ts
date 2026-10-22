@@ -5749,6 +5749,8 @@ export interface components {
             /** Format: int32 */
             expectedRevision: number | string;
             correction: null | string;
+            /** @default false */
+            differentWay: boolean;
         };
         PlanningRemovedItem: {
             entityType: string;
