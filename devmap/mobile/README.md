@@ -98,7 +98,7 @@ A web deploy replaces every client at once; an installed app does not. From the 
 | Risk | Why it is real | What the steps do about it |
 |---|---|---|
 | The core is still moving | The pilot runs on the web (since before 2026-10-25); planning changes found in it land twice. | Planning (MOB-10) is the last feature step. The app reaches the pilot cohort only after the observation window (030 §6). |
-| Testing against the pilot server | The pilot server is live; development must not create test data in the pilot's database. | MOB-00 requires a separate staging host or database before MOB-04. |
+| Testing against the pilot server | The pilot server is live; development must not create test data in the pilot's database. | Until MOB-10 the app uses the backend on the development machine over LAN; a separate staging VPS is part of MOB-12. |
 | iOS distribution from Iran | Apple's developer program is generally not available to residents of sanctioned countries. | Android first. iOS only when an account exists; the code stays cross-platform. |
 | Expo cloud services from Iran | EAS Build/Update/Push are US services; availability for an Iranian account must be checked, not assumed. | MOB-00 checks it. Fallback: local builds (`expo prebuild` + Gradle), self-hosted update manifest or store updates only, local notifications only. |
 | Push delivery in Iran | FCM is unreliable on many Iranian networks and devices without Google services. | No server push. The three approved reminders (030 §4) are local schedules computed on the device. |

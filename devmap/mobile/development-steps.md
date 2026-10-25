@@ -24,7 +24,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 - Owner decisions, recorded on 2026-10-25 in [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md): Android only; Cafe Bazaar only; the pilot runs on the web and the app waits for the end of the observation window; `CUT-06` lifted for three local reminders; dock with four tabs and a centre «+»; read-only offline Today; Share and icon shortcuts in; Focus mode out.
 - Still to do: the Cafe Bazaar developer account; the Android package name, fixed for good (it cannot change after the first release).
 - Check, with a real account: Expo account creation and EAS Build from the owner's location; if blocked, prove a local Android build (`expo prebuild` + Gradle) on the owner's machine.
-- A staging host or a separate database, reachable from an Iranian mobile network. Development never writes to the pilot database.
+- A test Android phone (Android 10+) with USB debugging on, on the same Wi-Fi as the development machine. Until MOB-10 the app talks to the backend on that machine (`http://<LAN IP>:5082`), so development never writes to the pilot database. A separate staging host is a MOB-12 prerequisite, not a MOB-00 one.
 
 **Out of scope:** Any app code, any backend change.
 
@@ -38,13 +38,13 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 - [x] Owner decisions recorded (Discussion 030, 2026-10-25).
 - [ ] Cafe Bazaar developer account created; package name recorded here.
 - [ ] EAS or local build check run.
-- [ ] Staging deployed; `/health/ready` called from a phone on mobile data.
+- [ ] Test phone ready with USB debugging.
 
-**Verification:** Decisions linked from this step; build check log; staging health response captured from a phone.
+**Verification:** Decisions linked from this step; build check log (which path worked, errors seen).
 
 **Completion criteria:** All decisions recorded and both technical checks pass, or status `BLOCKED` naming the failed check.
 
-**Status:** `IN_PROGRESS` — decisions recorded 2026-10-25; account, package name, build check and staging remain.
+**Status:** `IN_PROGRESS` — decisions recorded 2026-10-25; account, package name, build check and test phone remain. Owner's to-do list: <https://claude.ai/artifact/MqoqbuN7AwhJVtB9GLaNEK>.
 
 **Evidence:** [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md).
 
@@ -154,7 +154,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Required Mind Map context:** [auth spec](../../mindmap/04-Specs/auth-phase-1.md), [day-0 onboarding](../../mindmap/04-Specs/day-0-onboarding.md), [Discussion 027](../../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md), [Discussion 028](../../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md) §4.
 
-**Dependencies:** MOB-03 `DONE`; staging reachable (MOB-00).
+**Dependencies:** MOB-03 `DONE`.
 
 **Implementation checklist:** Reuse the web Zod phone/OTP schemas; error copy from the same codes (rate limit, expired, wrong code); welcome-seen flag stored on the device only.
 
@@ -354,7 +354,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Goal:** A signed Android build users can install and keep updated, with the compatibility rule enforced.
 
-**Scope:** Signing key generated and backed up outside the repo; release build (EAS or local); the Cafe Bazaar listing; privacy text consistent with `/pilot/notice`; `GET /api/v1/client/requirements` (minimum app version) and the update-required screen; crash reporting through a service reachable from Iran, with no token, phone number or user text in reports; update path decided (store only, or self-hosted Expo update manifest); feature-parity checklist against the web phone screens.
+**Scope:** A staging host separate from the pilot server (own VPS, fresh secrets, AI providers `mock`), reachable from an Iranian mobile network; signing key generated and backed up outside the repo; release build (EAS or local); the Cafe Bazaar listing; privacy text consistent with `/pilot/notice`; `GET /api/v1/client/requirements` (minimum app version) and the update-required screen; crash reporting through a service reachable from Iran, with no token, phone number or user text in reports; update path decided (store only, or self-hosted Expo update manifest); feature-parity checklist against the web phone screens.
 
 **Out of scope:** iOS release (until an account exists), marketing.
 
