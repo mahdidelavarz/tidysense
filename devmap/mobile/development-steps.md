@@ -54,7 +54,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Goal:** Let a native client sign in and write through `/api/v1` without weakening the browser's cookie and Origin protection.
 
-**Scope:** [ADR-008](../decisions/ADR-008-native-client-authentication.md): bearer header in `JwtCookieEvents`, `client: "native"` on OTP verify returning `accessToken`/`expiresAt` without a cookie, Origin/Referer check skipped only for bearer-without-cookie requests, OpenAPI regenerated, web types regenerated. The user's first native sign-in instant is stored (`Users.FirstNativeSignInAt`, set once, never changed) so pilot analysis can split before and after the app (030 §6).
+**Scope:** [ADR-008](../decisions/ADR-008-native-client-authentication.md): the `X-TidySense-Client: native` header, bearer header in `JwtCookieEvents`, `POST /auth/otp/verify-native` returning `NativeSessionDto` without a cookie, Origin/Referer check skipped only for native-header-without-cookie requests, OpenAPI regenerated, web types regenerated. The user's first native sign-in instant is stored (`Users.FirstNativeSignInAt`, set once, never changed) so pilot analysis can split before and after the app (030 §6).
 
 **Out of scope:** Refresh tokens, device registry, token lifetime change, any mobile code.
 
@@ -62,7 +62,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Required Mind Map context:** [auth spec](../../mindmap/04-Specs/auth-phase-1.md).
 
-**Dependencies:** MOB-00 `DONE`.
+**Dependencies:** MOB-00 `DONE`. Started on 2026-10-28 at the owner's request while MOB-00's account, package name, build check and phone were still open: none of them touches this backend change.
 
 **Implementation checklist:**
 - `OnMessageReceived`: cookie first, then `Authorization: Bearer`.
@@ -77,9 +77,13 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Completion criteria:** All tests pass, the web login is byte-for-byte unchanged in behaviour, ADR-008 accepted.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE` — verified on 2026-10-28 on Linux. Still owed: `./dev.ps1 check` and `./auth-e2e.ps1` on Windows.
 
-**Evidence:** None.
+**Evidence:**
+- [`NativeClientAuthTests`](../../backend.Tests/NativeClientAuthTests.cs): 8 tests, the ADR-008 cases plus the attempt limit and `FirstNativeSignInAt`.
+- Backend suite on PostgreSQL 16: 315 passed, 2 skipped. `AuthenticationCompletionTests` unchanged and passing (web sign-in, cookie flags, Origin refusal).
+- Migration `NativeClientSignIn` (nullable `Users.FirstNativeSignInAt`); OpenAPI and `frontend/src/shared/api/generated.ts` regenerated; frontend typecheck clean.
+- ADR-008 accepted; security note in [security review](../quality/security-review-2026-10-09.md), "Native client (2026-10-28)".
 
 ---
 

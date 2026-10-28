@@ -4921,6 +4921,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/otp/verify-native": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VerifyOtpDto"];
+                    "text/json": components["schemas"]["VerifyOtpDto"];
+                    "application/*+json": components["schemas"]["VerifyOtpDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["NativeSessionDto"];
+                        "application/json": components["schemas"]["NativeSessionDto"];
+                        "text/json": components["schemas"]["NativeSessionDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/logout": {
         parameters: {
             query?: never;
@@ -5357,6 +5400,12 @@ export interface components {
             numerator: number | string;
             /** Format: int64 */
             denominator: number | string;
+        };
+        NativeSessionDto: {
+            user: components["schemas"]["CurrentUserDto"];
+            accessToken: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         NewTaskSequencePreviewRequest: {
             /** Format: uuid */

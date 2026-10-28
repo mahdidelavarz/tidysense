@@ -14,7 +14,12 @@ public static class JwtCookieEvents
         OnMessageReceived = context =>
         {
             var options = context.HttpContext.RequestServices.GetRequiredService<IOptions<JwtOptions>>().Value;
-            context.Token = context.Request.Cookies[options.CookieName];
+            // The browser's cookie first; the native app's bearer header only when no cookie is present (ADR-008).
+            var cookie = context.Request.Cookies[options.CookieName];
+            var authorization = context.Request.Headers.Authorization.ToString();
+            context.Token = !string.IsNullOrEmpty(cookie) ? cookie
+                : authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? authorization[7..].Trim()
+                : null;
             return Task.CompletedTask;
         },
         OnTokenValidated = async context =>

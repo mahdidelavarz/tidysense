@@ -30,6 +30,17 @@ public sealed class AuthController(AuthService auth, IOptions<JwtOptions> jwtOpt
         return Ok(result.User);
     }
 
+    // The Android app's sign-in (ADR-008): the token comes back in the body and no cookie is written.
+    [AllowAnonymous]
+    [HttpPost("otp/verify-native")]
+    public async Task<ActionResult<NativeSessionDto>> VerifyNativeOtp(VerifyOtpDto dto, CancellationToken cancellationToken)
+    {
+        if (!ApiRequestSecurityMiddleware.IsNativeClient(Request))
+            throw new ArgumentException($"The {AuthConstants.ClientHeader} header is required.");
+        return Ok(await auth.VerifyNativeOtpAsync(dto.PhoneNumber, dto.Code,
+            HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", cancellationToken));
+    }
+
     [Authorize]
     [HttpPost("logout")]
     public IActionResult Logout()

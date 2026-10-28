@@ -46,3 +46,12 @@ Read: authentication (`OtpService`, `JwtTokenService`, `JwtCookieEvents`, `AuthC
 - The content security policy against every screen: on 2026-10-09 the login and privacy pages were loaded in Chrome from the locally run stack with no violation, after Zod's `eval` probe was switched off; the signed-in screens were not walked under the policy.
 - Denial of service beyond the limits named above.
 - Anything a second reviewer would have seen differently: this review was written by the same agent that wrote most of the code.
+
+## Native client (2026-10-28)
+
+Reviewed with MOB-01 ([ADR-008](../decisions/ADR-008-native-client-authentication.md)).
+
+- **Forgery.** The Origin/Referer exemption needs `X-TidySense-Client: native` and no auth cookie. A cross-site browser request cannot add the header without a preflight that only allowed origins pass; a request carrying the cookie is always checked as a browser request (test: cookie write with the header and no Origin → 403).
+- **Token exposure.** The bearer token is the same JWT, with the same lifetime and `sessionEpoch` revocation. It is returned only by `otp/verify-native`, which needs the header and shares the OTP attempt and rate limits.
+- **Login forgery.** `otp/verify-native` writes no cookie, so it cannot sign a browser into another account.
+- **Residual risk.** A token copied from an unlocked phone works for up to 14 days or until `logout-all`. The app keeps it only in the Android Keystore (ADR-008 §6), which MOB-02 must verify.

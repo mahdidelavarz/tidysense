@@ -1,6 +1,6 @@
 # ADR-008: Native Client Authentication
 
-- Status: Proposed (2026-10-22). Becomes Accepted when MOB-01 is approved by the owner.
+- Status: Accepted (2026-10-28) — implemented in MOB-01; the owner's approval is the merge of its PR.
 - Date: 2026-10-22
 
 ## Context
@@ -15,12 +15,16 @@ So "the backend stays unchanged" is not true for a mobile client. The change mus
 
 ## Decision
 
-1. The native app sends the same JWT as `Authorization: Bearer <token>`. `JwtCookieEvents.OnMessageReceived` takes the cookie first and the header only when no cookie is present. Validation is unchanged: same signing key, same `sessionEpoch` check, same lifetime (`Jwt:LifetimeMinutes`, 14 days today).
-2. `POST /api/v1/auth/otp/verify` accepts an optional `client: "native"` field. With it, the response body also carries `accessToken` and `expiresAt`, and no cookie is written. Without it, behaviour is exactly as now.
-3. `ApiRequestSecurityMiddleware` skips the Origin/Referer check only for a request that carries a bearer header and no auth cookie. The `application/json` requirement stays for every client.
-4. The app stores the token only in `expo-secure-store` (Android Keystore / iOS Keychain), never in AsyncStorage, logs or crash reports.
-5. Logout on the device deletes the stored token and calls `POST /auth/logout`. `logout-all` keeps working through `sessionEpoch`, which now also ends native sessions.
-6. Still no refresh tokens, per-device sessions or session lists (ADR-001 holds). After 14 days the user signs in again by OTP.
+1. The Android app sends `X-TidySense-Client: native` on every request. A browser page on another origin cannot add this header without a CORS preflight, and only the allowed origins pass it.
+2. It signs in through `POST /api/v1/auth/otp/verify-native` (same request and limits as `otp/verify`, same header required, `400 VALIDATION_FAILED` without it). The response is `NativeSessionDto { user, accessToken, expiresAt }` and no cookie is written. `otp/verify` is unchanged.
+3. Afterwards it sends the same JWT as `Authorization: Bearer <token>`. `JwtCookieEvents.OnMessageReceived` takes the cookie first and the bearer header only when no cookie is present. Validation is unchanged: same signing key, same `sessionEpoch` check, same lifetime (`Jwt:LifetimeMinutes`, 14 days).
+4. `ApiRequestSecurityMiddleware` skips the Origin/Referer check only for a request with the native header **and** no auth cookie. A bearer token alone does not skip it. The `application/json` requirement stays for every client.
+5. The first native sign-in stamps `Users.FirstNativeSignInAt` once, so pilot analysis can split before and after the app (Discussion 030 §6). Erasure deletes the user row, so nothing more is needed there.
+6. The app stores the token only in `expo-secure-store` (Android Keystore), never in AsyncStorage, logs or crash reports.
+7. Logout on the device deletes the stored token and calls `POST /auth/logout`. `logout-all` keeps working through `sessionEpoch`, which also ends native sessions.
+8. Still no refresh tokens, per-device sessions or session lists (ADR-001 holds). After 14 days the user signs in again by OTP.
+
+Why a header and not the bearer token for the Origin exemption: the app must also call `otp/request` and `otp/verify-native` before it has a token. Why a separate route and not a flag on `otp/verify`: one response type per route keeps the generated types honest and the web response untouched.
 
 ## Alternatives rejected
 
@@ -32,7 +36,7 @@ So "the backend stays unchanged" is not true for a mobile client. The change mus
 
 - Kavenegar SMS cost rises slightly: every native user signs in again at least every 14 days. Raising the lifetime is a separate decision.
 - A stolen device with an unlocked app holds a 14-day token; `logout-all` from the web ends it.
-- Tests: a native login receives a token and no cookie; a bearer write without Origin succeeds; a cookie write without Origin is still refused; a bearer token from before `logout-all` is refused; a request with both a cookie and a bearer uses the cookie.
+- Tests (`backend.Tests/NativeClientAuthTests.cs`): a native sign-in receives a token and no cookie and stamps `FirstNativeSignInAt` once; a bearer write with the native header and no Origin succeeds; a bearer write without the header is refused; a cookie write without Origin is refused even with the header; a token from before `logout-all` is refused; a cookie wins over a bearer; `verify-native` needs the header and shares the attempt limit.
 
 ## Related
 
