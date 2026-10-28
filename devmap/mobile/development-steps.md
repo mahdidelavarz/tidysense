@@ -22,7 +22,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Scope:**
 - Owner decisions, recorded on 2026-10-25 in [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md): Android only; Cafe Bazaar only; the pilot runs on the web and the app waits for the end of the observation window; `CUT-06` lifted for three local reminders; dock with four tabs and a centre «+»; read-only offline Today; Share and icon shortcuts in; Focus mode out.
-- Still to do: the Cafe Bazaar developer account; the Android package name, fixed for good (it cannot change after the first release).
+- Still to do: the Cafe Bazaar developer account; the Android package name, fixed for good (it cannot change after the first release). MOB-02 uses `com.tidysense.app` until the owner confirms it.
 - Check, with a real account: Expo account creation and EAS Build from the owner's location; if blocked, prove a local Android build (`expo prebuild` + Gradle) on the owner's machine.
 - A test Android phone (Android 10+) with USB debugging on, on the same Wi-Fi as the development machine. Until MOB-10 the app talks to the backend on that machine (`http://<LAN IP>:5082`), so development never writes to the pilot database. A separate staging host is a MOB-12 prerequisite, not a MOB-00 one.
 
@@ -89,7 +89,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 ## MOB-02 — Mobile Workspace and Client Foundation
 
-**Goal:** A running Expo app in `/mobile` that signs in against staging and reads `/auth/me`, with every cross-cutting convention in place before any screen.
+**Goal:** A running Expo app in `/mobile` that signs in against the development backend and reads `/users/me`, with every cross-cutting convention in place before any screen.
 
 **Scope:**
 - Expo app (TypeScript strict, Expo Router, Hermes), Biome, Jest + RNTL, Maestro.
@@ -97,8 +97,8 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 - `shared/lib`: secure session (`expo-secure-store`), online state (NetInfo), theme setting (light/dark/system, persisted), Jalali date helpers copied from the web with source comments.
 - Forced RTL from first launch; Vazirmatn and Noto Naskh Arabic loaded before first render.
 - Styling spike (NativeWind vs token module) decided and recorded in the README.
-- `dev.ps1` gains `mobile` commands (`generate`, `test`, `lint`, `start`); `/mobile/README.md` explains device setup.
-- One placeholder screen: login by OTP against staging, then shows `/auth/me`.
+- `dev.ps1` gains `mobile-backend` (backend on the LAN, login code readable), `mobile` (Metro) and `mobile-check` (typecheck, lint, Jest); `/mobile/README.md` explains device setup.
+- One placeholder screen: login by OTP against the development backend, then shows `/users/me`.
 
 **Out of scope:** Real screens and design, notifications, store builds.
 
@@ -112,9 +112,16 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Verification:** `mobile` lint, typecheck and Jest pass; a Maestro flow signs in with the loopback test session or a test number and sees the user id; screenshots of RTL text, Persian digits and dark mode on a device.
 
-**Completion criteria:** Sign-in works end to end on a device against staging; styling decision recorded.
+**Completion criteria:** Sign-in works end to end on a device against the development backend; styling decision recorded.
 
-**Status:** `NOT_STARTED`
+**Status:** `IN_PROGRESS` — code done 2026-10-28 (PR #19); the device checks below remain, and only a phone can do them.
+
+**Evidence (2026-10-28, cloud):**
+- `mobile/`: Expo SDK 58, package `com.tidysense.app` (provisional until MOB-00 fixes it), routes in `src/app`, features and shared layer as in the README folder layout.
+- `npm run typecheck`, `npm run lint`, `npm test` pass: 14 Jest tests (bearer header and native header, 401 clears the session but a wrong code does not, `toApiError`, idempotency key, keystore session and expiry, Jalali dates, login screen: invalid number, full sign-in with the development code, wrong code). The login test caught a countdown that started one second high; fixed.
+- `expo export --platform android` bundles to Hermes bytecode; `expo prebuild` produces `applicationId com.tidysense.app`, `supportsRtl` with `forcesRTL`, and cleartext HTTP in debug builds only.
+- The phone's backend path, run from a non-loopback address: `otp/request` 202 → `dev/otp/latest` → `otp/verify-native` → `GET /users/me` 200 with the bearer → `logout` 204; no HTTPS redirect on the `http` profile.
+- Not done (needs the phone): first `npx expo run:android`, Maestro `maestro/login.yaml`, screenshots of RTL text, Persian digits and dark mode.
 
 **Evidence:** None.
 

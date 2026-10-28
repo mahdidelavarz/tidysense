@@ -1,0 +1,31 @@
+# MOB-02 smoke flow on a phone or emulator with a development build and the local backend
+# (`./dev.ps1 mobile-backend`, which shows the login code). Run: maestro test maestro/login.yaml
+appId: com.tidysense.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "ورود یا ثبت‌نام"
+- tapOn:
+    id: "phone-input"
+- inputText: "09120000001"
+- tapOn:
+    id: "phone-submit"
+- assertVisible: "کد را وارد کنید"
+- copyTextFrom:
+    id: "dev-otp"
+- tapOn:
+    id: "code-input"
+- pasteText
+- tapOn:
+    id: "code-submit"
+- assertVisible:
+    id: "signed-in-phone"
+- assertVisible: "\\+989120000001"
+# The session survives a restart: the token is in the keystore.
+- stopApp
+- launchApp
+- assertVisible:
+    id: "signed-in-phone"
+- tapOn:
+    id: "logout"
+- assertVisible: "ورود یا ثبت‌نام"

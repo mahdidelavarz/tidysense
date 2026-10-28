@@ -27,15 +27,15 @@ Decided by the owner on 2026-10-25 in [Discussion 030](../../mindmap/01-Closed-D
 
 | Concern | Choice | Note |
 |---|---|---|
-| Runtime | Expo (managed, latest stable SDK at MOB-02, pinned), Hermes | `expo prebuild` stays possible for local builds |
+| Runtime | Expo SDK 58 (React Native 0.88, React 19.3), Hermes; a development build, not Expo Go | `expo prebuild` stays possible for local builds; `android/` is generated and never committed |
 | Language | TypeScript strict | same `tsconfig` strictness as `/frontend` |
-| Navigation | Expo Router (file routes under `mobile/app/`) | mirrors `frontend/src/routes` names |
+| Navigation | Expo Router (file routes under `mobile/src/app/`) | mirrors `frontend/src/routes` names |
 | Server state | TanStack Query v5 | same query-key factories and hook shapes as the web features |
 | Forms | React Hook Form + Zod | Zod schemas taken from the web feature `types/` |
 | Client state | Zustand, only where the web uses it (`ui-store`) | |
 | HTTP | Axios instance with bearer interceptor | [ADR-008](../decisions/ADR-008-native-client-authentication.md) |
 | Secure storage | `expo-secure-store` | token only |
-| Styling | NativeWind, pinned; fallback a typed token module + `StyleSheet` | MOB-02 spike decides (see below) |
+| Styling | Typed token module (`shared/ui/tokens.ts`) + `StyleSheet` | decided in MOB-02 (see below) |
 | Sheets | `@gorhom/bottom-sheet` | create/edit stay in sheets (design system rule) |
 | Gradient (moonstone) | `expo-linear-gradient` | AI is always the moonstone, never a button colour |
 | Icons | Solar set rendered with `react-native-svg`, one `shared/ui/icons` module | same names as the web module |
@@ -49,14 +49,14 @@ Decided by the owner on 2026-10-25 in [Discussion 030](../../mindmap/01-Closed-D
 | Tests | Jest (`jest-expo`) + React Native Testing Library; Maestro for device flows | Maestro flows mirror `frontend/e2e/*.spec.ts` |
 | Lint/format | Biome, same config as `/frontend` | |
 
-**NativeWind caveat.** The web is on Tailwind 4. NativeWind's stable line has targeted Tailwind 3, so class names will mostly but not entirely match. The MOB-02 spike must prove, on a real Android device: logical spacing (`ms-`/`me-`, `start-`/`end-`) under forced RTL, the `dark:` variant driven by our own theme setting (not only the system), and CSS-variable tokens. If any of the three fails, use a typed token module and `StyleSheet` instead and record it here. Do not run both.
+**Styling decision (MOB-02, 2026-10-28): no NativeWind.** The web is on Tailwind 4 and NativeWind's stable line targets Tailwind 3, so the class names would only mostly match, and the three things that matter (logical spacing under forced RTL, `dark:` driven by our own theme setting, CSS-variable tokens) could not be proven on a device when the scaffold was made. A typed token module copied from `frontend/src/index.css` plus `StyleSheet` has none of those risks, and one source of colour per theme (`usePalette()`). Cost: no class-name sharing with the web; every screen is written once for the phone anyway. Text always goes through `shared/ui/AppText` (font per weight, since Android does not pick a weight from one family). Revisit only if a later step finds `StyleSheet` slowing screen work down.
 
 ## Folder
 
 ```text
 mobile/
-  app/                      # Expo Router routes only; thin, compose features
   src/
+    app/                    # Expo Router routes only; thin, compose features
     features/<feature>/     # same four parts as the web: types/, services/, hooks/, components/
     shared/
       api/                  # http.ts (bearer, 401, ApiError), generated.ts
