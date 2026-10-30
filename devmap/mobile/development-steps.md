@@ -22,7 +22,8 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Scope:**
 - Owner decisions, recorded on 2026-10-25 in [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md): Android only; Cafe Bazaar only; the pilot runs on the web and the app waits for the end of the observation window; `CUT-06` lifted for three local reminders; dock with four tabs and a centre «+»; read-only offline Today; Share and icon shortcuts in; Focus mode out.
-- Still to do: the Cafe Bazaar developer account; the Android package name, fixed for good (it cannot change after the first release). MOB-02 uses `com.tidysense.app` until the owner confirms it.
+- Still to do: the Cafe Bazaar developer account.
+- Android package name, fixed 2026-10-30: `ir.tidysense.app`, from the owner's domain `tidysense.ir`. It cannot change after the first release. The app reaches the API on the same domain as the web (`https://tidysense.ir/api/v1`); no subdomain is needed.
 - Check, with a real account: Expo account creation and EAS Build from the owner's location; if blocked, prove a local Android build (`expo prebuild` + Gradle) on the owner's machine.
 - A test Android phone (Android 10+) with USB debugging on, on the same Wi-Fi as the development machine. Until MOB-10 the app talks to the backend on that machine (`http://<LAN IP>:5082`), so development never writes to the pilot database. A separate staging host is a MOB-12 prerequisite, not a MOB-00 one.
 
@@ -36,7 +37,8 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Implementation checklist:**
 - [x] Owner decisions recorded (Discussion 030, 2026-10-25).
-- [ ] Cafe Bazaar developer account created; package name recorded here.
+- [ ] Cafe Bazaar developer account created.
+- [x] Package name recorded here (`ir.tidysense.app`, 2026-10-30).
 - [ ] EAS or local build check run.
 - [ ] Test phone ready with USB debugging.
 
@@ -44,7 +46,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Completion criteria:** All decisions recorded and both technical checks pass, or status `BLOCKED` naming the failed check.
 
-**Status:** `IN_PROGRESS` — decisions recorded 2026-10-25; account, package name, build check and test phone remain. Owner's to-do list: <https://claude.ai/artifact/MqoqbuN7AwhJVtB9GLaNEK>.
+**Status:** `IN_PROGRESS` — decisions recorded 2026-10-25; package name fixed 2026-10-30; account, build check and test phone remain. Owner's to-do list: <https://claude.ai/artifact/MqoqbuN7AwhJVtB9GLaNEK>.
 
 **Evidence:** [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md).
 
@@ -117,9 +119,9 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 **Status:** `IN_PROGRESS` — code done 2026-10-28 (PR #19); the device checks below remain, and only a phone can do them.
 
 **Evidence (2026-10-28, cloud):**
-- `mobile/`: Expo SDK 58, package `com.tidysense.app` (provisional until MOB-00 fixes it), routes in `src/app`, features and shared layer as in the README folder layout.
+- `mobile/`: Expo SDK 58, package `ir.tidysense.app`, routes in `src/app`, features and shared layer as in the README folder layout.
 - `npm run typecheck`, `npm run lint`, `npm test` pass: 14 Jest tests (bearer header and native header, 401 clears the session but a wrong code does not, `toApiError`, idempotency key, keystore session and expiry, Jalali dates, login screen: invalid number, full sign-in with the development code, wrong code). The login test caught a countdown that started one second high; fixed.
-- `expo export --platform android` bundles to Hermes bytecode; `expo prebuild` produces `applicationId com.tidysense.app`, `supportsRtl` with `forcesRTL`, and cleartext HTTP in debug builds only.
+- `expo export --platform android` bundles to Hermes bytecode; `expo prebuild` produces `applicationId ir.tidysense.app` (renamed from the provisional `com.tidysense.app` on 2026-10-30), `supportsRtl` with `forcesRTL`, and cleartext HTTP in debug builds only.
 - The phone's backend path, run from a non-loopback address: `otp/request` 202 → `dev/otp/latest` → `otp/verify-native` → `GET /users/me` 200 with the bearer → `logout` 204; no HTTPS redirect on the `http` profile.
 - Not done (needs the phone): first `npx expo run:android`, Maestro `maestro/login.yaml`, screenshots of RTL text, Persian digits and dark mode.
 

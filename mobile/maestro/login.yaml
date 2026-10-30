@@ -1,6 +1,6 @@
 # MOB-02 smoke flow on a phone or emulator with a development build and the local backend
 # (`./dev.ps1 mobile-backend`, which shows the login code). Run: maestro test maestro/login.yaml
-appId: com.tidysense.app
+appId: ir.tidysense.app
 ---
 - launchApp:
     clearState: true

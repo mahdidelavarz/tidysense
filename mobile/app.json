@@ -14,7 +14,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.tidysense.app"
+      "package": "ir.tidysense.app"
     },
     "plugins": [
       "expo-router",
