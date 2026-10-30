@@ -12,7 +12,7 @@ Plan → Execute → Adapt
 
 1. [[02-Decisions/accepted-decision-inventory-001-021]] — consolidated Discussions 001–029
 2. [[04-Specs/ai-native-mvp-baseline]] — current scope and model
-3. [[01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context]] through [[01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences]] — latest product amendments
+3. [[01-Closed-Discussions/023-persistent-planning-facts-and-rolling-execution-context]] through [[01-Closed-Discussions/030-native-android-app-scope-and-local-reminders]] — latest product amendments
 4. [[01-Closed-Discussions/022-updated-mvp-implementation-plan]] — consolidated implementation sequence/status
 5. [[05-Implementation/backend-domain-package/README]] — canonical schema projection
 6. [[../devmap/README]] and [[../devmap/decisions/README]] — development architecture and technical decisions

@@ -1,0 +1,58 @@
+{
+  "name": "tidysense-mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@expo-google-fonts/noto-naskh-arabic": "^0.4.5",
+    "@expo-google-fonts/vazirmatn": "^0.4.1",
+    "@hookform/resolvers": "^5.9.2",
+    "@react-native-community/netinfo": "12.0.1",
+    "@tanstack/react-query": "^5.105.0",
+    "axios": "^1.21.0",
+    "date-fns-jalali": "^4.4.0-0",
+    "expo": "~58.0.20",
+    "expo-constants": "~58.0.13",
+    "expo-crypto": "~58.0.7",
+    "expo-font": "~58.0.10",
+    "expo-linking": "~58.0.14",
+    "expo-localization": "~58.0.5",
+    "expo-router": "~58.0.27",
+    "expo-secure-store": "~58.0.2",
+    "expo-splash-screen": "~58.0.11",
+    "expo-status-bar": "~58.0.4",
+    "expo-system-ui": "~58.0.6",
+    "react": "19.3.0",
+    "react-dom": "^19.3.0",
+    "react-hook-form": "^7.91.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "zod": "^4.6.7",
+    "zustand": "^5.0.16"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@react-native/jest-preset": "^0.88.1",
+    "@testing-library/react-native": "^14.1.0",
+    "@types/jest": "^30.0.0",
+    "@types/react": "~19.3.0",
+    "jest": "^30.5.2",
+    "jest-expo": "~58.0.12",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "generate:api": "npx --yes openapi-typescript@7.13.0 ../backend/openapi/TidySense.json -o src/shared/api/generated.ts"
+  },
+  "private": true,
+  "jest": {
+    "preset": "jest-expo",
+    "setupFiles": [
+      "./jest.setup.ts"
+    ]
+  }
+}

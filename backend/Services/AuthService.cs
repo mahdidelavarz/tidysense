@@ -25,6 +25,17 @@ public sealed class AuthService(
         return (ToDto(user), tokens.Create(user));
     }
 
+    public async Task<NativeSessionDto> VerifyNativeOtpAsync(
+        string phoneNumber, string code, string ip, CancellationToken cancellationToken)
+    {
+        var user = await otp.VerifyAsync(phoneNumber, code, ip, cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        await dbContext.Users.Where(x => x.Id == user.Id && x.FirstNativeSignInAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.FirstNativeSignInAt, now), cancellationToken);
+        var (token, expiresAt) = tokens.CreateWithExpiry(user);
+        return new NativeSessionDto(ToDto(user), token, expiresAt);
+    }
+
     public async Task<CurrentUserDto> GetCurrentAsync(CancellationToken cancellationToken)
     {
         var user = await users.GetByIdAsync(currentUser.UserId, cancellationToken);
