@@ -1,10 +1,5 @@
-# The pilot deployment: one server, one of each container (DEC-011, resolved 2026-10-09).
-# Run from this directory with a filled-in .env:  docker compose up --detach --build
-# Procedures are in devmap/operations/deployment.md.
 name: tidysense
 
-# Container output goes to the host journal, which is limited to 30 days on the server
-# (deployment.md, "Logs"). LOG_DRIVER exists so the stack can also be started where journald is absent.
 x-logging: &logging
   driver: ${LOG_DRIVER:-journald}
 
@@ -14,16 +9,15 @@ x-backend: &backend
     dockerfile: deploy/backend.Dockerfile
   image: tidysense-backend
   environment:
-    ConnectionStrings__DefaultConnection: Host=db;Database=tidysense;Username=tidysense;Password=${POSTGRES_PASSWORD:?}
+    # اتصال به دیتابیس مرکزی
+    ConnectionStrings__DefaultConnection: Host=main-postgres;Database=tidysense;Username=tidysense;Password=${POSTGRES_PASSWORD:?}
     Jwt__SigningKey: ${JWT_SIGNING_KEY:?}
     Otp__HashingKey: ${OTP_HASHING_KEY:?}
     Kavenegar__ApiKey: ${KAVENEGAR_API_KEY:?}
-    # The login code goes out through Kavenegar's Verify Lookup with this approved template.
     Kavenegar__Template: ${KAVENEGAR_VERIFY_TEMPLATE:?}
     Kavenegar__Sender: ${KAVENEGAR_SENDER:-}
     AllowedHosts: ${SITE_HOST:?}
     Security__AllowedOrigins__0: https://${SITE_HOST:?}
-    # Only the proxy's address is trusted for X-Forwarded-For and X-Forwarded-Proto.
     Security__KnownProxies__0: 172.30.0.10
     Ai__Planning__Provider: ${AI_PLANNING_PROVIDER:-mock}
     Ai__Reconcile__Provider: ${AI_RECONCILE_PROVIDER:-mock}
@@ -40,39 +34,18 @@ x-backend: &backend
     Pilot__SupportContact: ${SUPPORT_CONTACT:?}
   networks:
     - internal
+    - shared-network # اتصال به شبکه دیتابیس
   logging: *logging
 
 services:
-  db:
-    image: postgres:18
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: tidysense
-      POSTGRES_USER: tidysense
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
-    volumes:
-      - pgdata:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready --username tidysense --dbname tidysense"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-    networks:
-      - internal
-    logging: *logging
+  # کانتینر دیتابیس داخلی حذف شد
 
-  # The explicit migration step: it applies pending migrations and exits. The backend starts
-  # only after it succeeded. Take a backup first when a release carries a migration.
   migrate:
     <<: *backend
     command: ["migrate"]
     restart: "no"
-    depends_on:
-      db:
-        condition: service_healthy
+    # وابستگی به db داخلی حذف شد، زیرا main-postgres از قبل روشن است
 
-  # Exactly one instance: the provider circuit, the spend latch, the concurrency limit, the
-  # planning queue and the daily digest all live in this one process. Do not scale this service.
   backend:
     <<: *backend
     restart: unless-stopped
@@ -87,9 +60,7 @@ services:
     image: tidysense-web
     restart: unless-stopped
     environment:
-      # The host name gets a certificate from Caddy. Override only when TLS ends in front of this server.
       SITE_ADDRESS: ${SITE_ADDRESS:-${SITE_HOST:?}}
-    # On a server that already has a proxy on these ports, add docker-compose.shared-proxy.yml.
     ports:
       - "80:80"
       - "443:443"
@@ -103,14 +74,13 @@ services:
         ipv4_address: 172.30.0.10
     logging: *logging
 
-  # One dump a day, kept 30 days (the erasure limit). Dumps hold personal data: the volume
-  # is under the same access rule as the database.
   backup:
     image: postgres:18
     restart: unless-stopped
     entrypoint: ["/bin/sh", "/backup.sh"]
     environment:
-      PGHOST: db
+      # اتصال کانتینر بکاپ‌گیر به دیتابیس مرکزی
+      PGHOST: main-postgres
       PGDATABASE: tidysense
       PGUSER: tidysense
       PGPASSWORD: ${POSTGRES_PASSWORD:?}
@@ -118,15 +88,12 @@ services:
     volumes:
       - backups:/backups
       - ./backup.sh:/backup.sh:ro
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - internal
+      - shared-network # دسترسی به دیتابیس مرکزی
     logging: *logging
 
 volumes:
-  pgdata:
   backups:
   caddy_data:
   caddy_config:
@@ -136,3 +103,5 @@ networks:
     ipam:
       config:
         - subnet: 172.30.0.0/24
+  shared-network:
+    external: true
