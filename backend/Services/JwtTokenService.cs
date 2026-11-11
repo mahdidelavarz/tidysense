@@ -10,9 +10,12 @@ namespace TidySense.Services;
 
 public sealed class JwtTokenService(IOptions<JwtOptions> options)
 {
-    public string Create(User user)
+    public string Create(User user) => CreateWithExpiry(user).Token;
+
+    public (string Token, DateTimeOffset ExpiresAt) CreateWithExpiry(User user)
     {
         var settings = options.Value;
+        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(settings.LifetimeMinutes);
         var claims = new[]
         {
             new Claim(AuthConstants.UserIdClaim, user.Id.ToString()),
@@ -25,9 +28,9 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.SigningKey)),
             SecurityAlgorithms.HmacSha256);
-        return new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
+        return (new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
             settings.Issuer, settings.Audience, claims,
-            expires: DateTime.UtcNow.AddMinutes(settings.LifetimeMinutes),
-            signingCredentials: credentials));
+            expires: expiresAt.UtcDateTime,
+            signingCredentials: credentials)), expiresAt);
     }
 }

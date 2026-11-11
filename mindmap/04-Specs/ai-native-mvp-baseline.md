@@ -74,7 +74,7 @@ Implementation scaffolding exists, but milestone gates remain unverified until t
 - true `EVERY_N_HOURS` and broader recurrence;
 - automatic cross-provider AI fallback and model tool calling;
 - per-user IANA timezone selection;
-- PWA/offline-first, calendar integration, reminders/time blocks;
+- PWA/offline-first, calendar integration, reminders/time blocks (exceptions in the Android app: read-only offline Today and three local reminders, Discussion 030);
 - permanent deletion/archive UX and advanced recovery;
 - full local/CI/deployment orchestration decision (`DEC-011`).
 

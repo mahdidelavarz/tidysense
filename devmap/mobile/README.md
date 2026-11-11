@@ -11,27 +11,31 @@ The technical HOW for the native TidySense app. Added on 2026-10-22 when the own
 
 ## What the app is, and is not
 
-| In | Out (stays web-only or post-pilot) |
+Decided by the owner on 2026-10-25 in [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md). Rules, copy, AI behaviour, confirmations and events are identical to the web (030 §2); only interaction differs.
+
+| In | Out |
 |---|---|
-| Phone layouts of every user screen: welcome, login, first entry, Today, Tasks, Routines, Goals, Projects, Capture, Reconcile, Planning (four steps, redo, continuation), privacy, account | Desktop layouts (STEP-21) |
-| The same `/api/v1`, the same rules, the same copy | The operator page (`/operations`) |
-| Light and dark from one token set, RTL, Jalali, Persian digits | Offline writes or a mutation queue (no accepted decision; Mind Map lists PWA/offline-first as out) |
-| Local reminders for Routine slots, **only after** a product decision lifts `CUT-06` for them | Push from the server, widgets, calendar sync |
-| Android first | iOS until an Apple developer account is actually available (see risks) |
+| Phone layouts of every user screen: welcome, login, first entry, Today, Tasks, Routines, Goals, Projects, Capture, Reconcile, Planning (four steps, redo, continuation), privacy, account | Desktop layouts (STEP-21) and the operator page (`/operations`) |
+| One dock: four tabs and a centre «+» (the phone web app adopts it too); 220 px Today hero | Offline writes or a mutation queue |
+| Swipe on a Task row (shortcut only), draggable sheets, pull to refresh, Android back, haptic on done, OTP autofill | Focus mode (030 §5) |
+| Read-only offline Today from the device cache | Server push, home-screen widget (after the first release), biometric lock, voice input |
+| Share from another app into quick capture; long-press icon shortcuts | Task or Reconcile reminders |
+| Three local reminders: Routine slot, next-week offer, optional morning summary (030 §4) | iOS |
+| Android only, published on Cafe Bazaar only | Other stores |
 
 ## Stack
 
 | Concern | Choice | Note |
 |---|---|---|
-| Runtime | Expo (managed, latest stable SDK at MOB-02, pinned), Hermes | `expo prebuild` stays possible for local builds |
+| Runtime | Expo SDK 58 (React Native 0.88, React 19.3), Hermes; a development build, not Expo Go | `expo prebuild` stays possible for local builds; `android/` is generated and never committed |
 | Language | TypeScript strict | same `tsconfig` strictness as `/frontend` |
-| Navigation | Expo Router (file routes under `mobile/app/`) | mirrors `frontend/src/routes` names |
+| Navigation | Expo Router (file routes under `mobile/src/app/`) | mirrors `frontend/src/routes` names |
 | Server state | TanStack Query v5 | same query-key factories and hook shapes as the web features |
 | Forms | React Hook Form + Zod | Zod schemas taken from the web feature `types/` |
 | Client state | Zustand, only where the web uses it (`ui-store`) | |
 | HTTP | Axios instance with bearer interceptor | [ADR-008](../decisions/ADR-008-native-client-authentication.md) |
 | Secure storage | `expo-secure-store` | token only |
-| Styling | NativeWind, pinned; fallback a typed token module + `StyleSheet` | MOB-02 spike decides (see below) |
+| Styling | Typed token module (`shared/ui/tokens.ts`) + `StyleSheet` | decided in MOB-02 (see below) |
 | Sheets | `@gorhom/bottom-sheet` | create/edit stay in sheets (design system rule) |
 | Gradient (moonstone) | `expo-linear-gradient` | AI is always the moonstone, never a button colour |
 | Icons | Solar set rendered with `react-native-svg`, one `shared/ui/icons` module | same names as the web module |
@@ -39,18 +43,20 @@ The technical HOW for the native TidySense app. Added on 2026-10-22 when the own
 | Dates | `date-fns-jalali`, same helpers as `frontend/src/shared/lib/date.ts` | |
 | Ids | `expo-crypto` `randomUUID()` for `Idempotency-Key` | Hermes has no `crypto.randomUUID` |
 | Network state | `@react-native-community/netinfo` | replaces `use-online.ts` |
-| Notifications | `expo-notifications`, **local schedules only** | MOB-11, gated |
+| Notifications | `expo-notifications`, **local schedules only** | MOB-11 |
+| Offline read cache | TanStack Query persister on device storage, Today only | read-only, labelled with its time |
+| Share target and icon shortcuts | an Expo config plugin for the Android share intent; `expo-quick-actions` | needs a development build, not Expo Go |
 | Tests | Jest (`jest-expo`) + React Native Testing Library; Maestro for device flows | Maestro flows mirror `frontend/e2e/*.spec.ts` |
 | Lint/format | Biome, same config as `/frontend` | |
 
-**NativeWind caveat.** The web is on Tailwind 4. NativeWind's stable line has targeted Tailwind 3, so class names will mostly but not entirely match. The MOB-02 spike must prove, on a real Android device: logical spacing (`ms-`/`me-`, `start-`/`end-`) under forced RTL, the `dark:` variant driven by our own theme setting (not only the system), and CSS-variable tokens. If any of the three fails, use a typed token module and `StyleSheet` instead and record it here. Do not run both.
+**Styling decision (MOB-02, 2026-10-28): no NativeWind.** The web is on Tailwind 4 and NativeWind's stable line targets Tailwind 3, so the class names would only mostly match, and the three things that matter (logical spacing under forced RTL, `dark:` driven by our own theme setting, CSS-variable tokens) could not be proven on a device when the scaffold was made. A typed token module copied from `frontend/src/index.css` plus `StyleSheet` has none of those risks, and one source of colour per theme (`usePalette()`). Cost: no class-name sharing with the web; every screen is written once for the phone anyway. Text always goes through `shared/ui/AppText` (font per weight, since Android does not pick a weight from one family). Revisit only if a later step finds `StyleSheet` slowing screen work down.
 
 ## Folder
 
 ```text
 mobile/
-  app/                      # Expo Router routes only; thin, compose features
   src/
+    app/                    # Expo Router routes only; thin, compose features
     features/<feature>/     # same four parts as the web: types/, services/, hooks/, components/
     shared/
       api/                  # http.ts (bearer, 401, ApiError), generated.ts
@@ -91,10 +97,10 @@ A web deploy replaces every client at once; an installed app does not. From the 
 
 | Risk | Why it is real | What the steps do about it |
 |---|---|---|
-| The core is not stable yet | «فشرده‌تر» still bloats small goals, PR #17 is not merged, STEP-12 has not started. Every planning change now lands twice. | Planning (MOB-10) is the last feature step. MOB-00 recommends the pilot runs on the web first. |
-| No public API yet | `deploy/` has run only on a developer machine; a phone needs a reachable HTTPS host. | MOB-00 requires a deployed staging host before MOB-04. |
+| The core is still moving | The pilot runs on the web (since before 2026-10-25); planning changes found in it land twice. | Planning (MOB-10) is the last feature step. The app reaches the pilot cohort only after the observation window (030 §6). |
+| Testing against the pilot server | The pilot server is live; development must not create test data in the pilot's database. | Until MOB-10 the app uses the backend on the development machine over LAN; a separate staging VPS is part of MOB-12. |
 | iOS distribution from Iran | Apple's developer program is generally not available to residents of sanctioned countries. | Android first. iOS only when an account exists; the code stays cross-platform. |
 | Expo cloud services from Iran | EAS Build/Update/Push are US services; availability for an Iranian account must be checked, not assumed. | MOB-00 checks it. Fallback: local builds (`expo prebuild` + Gradle), self-hosted update manifest or store updates only, local notifications only. |
-| Push delivery in Iran | FCM is unreliable on many Iranian networks and devices without Google services. | No server push. Reminders, if approved, are local schedules computed on the device. |
+| Push delivery in Iran | FCM is unreliable on many Iranian networks and devices without Google services. | No server push. The three approved reminders (030 §4) are local schedules computed on the device. |
 | Doubling UI work | ~15,600 lines of web components; every future screen change is two changes. | Feature parity gate in MOB-12; the web stays the reference implementation. |
 | 14-day sign-in | ADR-001 has no refresh token; native users re-enter an OTP every 14 days. | Accepted for the pilot (ADR-008). |

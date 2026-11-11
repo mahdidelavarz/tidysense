@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'backend', 'frontend', 'build', 'test', 'db', 'check', 'openapi')]
+    [ValidateSet('all', 'backend', 'frontend', 'build', 'test', 'db', 'check', 'openapi', 'mobile-backend', 'mobile', 'mobile-check')]
     [string] $Command = 'all',
     [switch] $Quick
 )
@@ -15,6 +15,7 @@ $env:DOTNET_CLI_HOME = Join-Path $repoRoot '.dotnet_home'
 $backendProject = Join-Path $repoRoot 'backend\TidySense.csproj'
 $backendTests = Join-Path $repoRoot 'backend.Tests\TidySense.Backend.Tests.csproj'
 $frontendDirectory = Join-Path $repoRoot 'frontend'
+$mobileDirectory = Join-Path $repoRoot 'mobile'
 
 function Write-Step([string] $Message) {
     Write-Host "`n==> $Message" -ForegroundColor Cyan
@@ -134,6 +135,14 @@ function Test-Backend {
     Write-Pass 'Backend PostgreSQL integration tests completed'
 }
 
+function Ensure-MobileDependencies {
+    if (-not (Test-Path -LiteralPath (Join-Path $mobileDirectory 'node_modules\.bin\expo.cmd'))) {
+        Write-Step 'Installing mobile dependencies with npm ci'
+        & npm.cmd --prefix $mobileDirectory ci
+        Assert-ExitCode 'Mobile dependency installation'
+    }
+}
+
 function Test-Frontend {
     Ensure-FrontendDependencies
     Write-Step 'Running frontend tests'
@@ -149,6 +158,31 @@ switch ($Command) {
         $env:Database__MigrateOnStart = 'true'
         & $dotnet run --project $backendProject --launch-profile https
         Assert-ExitCode 'Backend server'
+    }
+    'mobile-backend' {
+        # The phone reaches this machine over Wi-Fi, so listen on every interface, over plain HTTP (a debug
+        # build allows it; a release build does not). The login code is readable for testing (no SMS).
+        Write-Host 'Backend for the phone: http://<this PC LAN IP>:5082/api/v1 (set EXPO_PUBLIC_API_URL in mobile/.env.local)' -ForegroundColor Green
+        $env:ASPNETCORE_ENVIRONMENT = 'Development'
+        $env:Database__MigrateOnStart = 'true'
+        $env:Development__ShowLoginCode = 'true'
+        & $dotnet run --project $backendProject --launch-profile http -- --urls http://0.0.0.0:5082
+        Assert-ExitCode 'Backend server'
+    }
+    'mobile' {
+        Ensure-MobileDependencies
+        Write-Host 'Metro for the development build on the phone. First time, or after a native change: npm --prefix mobile run android' -ForegroundColor Green
+        & npm.cmd --prefix $mobileDirectory run start
+        Assert-ExitCode 'Metro server'
+    }
+    'mobile-check' {
+        Ensure-MobileDependencies
+        foreach ($script in 'typecheck', 'lint', 'test') {
+            Write-Step "Mobile $script"
+            & npm.cmd --prefix $mobileDirectory run $script
+            Assert-ExitCode "Mobile $script"
+        }
+        Write-Pass 'Mobile typecheck, lint and tests completed'
     }
     'frontend' {
         Ensure-FrontendDependencies

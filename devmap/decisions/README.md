@@ -10,9 +10,7 @@ None. Documentation conflicts `CON-001` through `CON-013` are resolved. Prototyp
 
 ## Open / deferred decisions
 
-- `DEC-016` — native client authentication. Proposed in [ADR-008](ADR-008-native-client-authentication.md) (bearer header for the app, browser cookie and Origin check unchanged); accepted or replaced in MOB-01.
-
-`DEC-011` was resolved on 2026-10-09 (see "Resolved decisions").
+None. `DEC-011` was resolved on 2026-10-09 (see "Resolved decisions").
 
 ## Resolved conflicts
 
@@ -56,6 +54,7 @@ None. Documentation conflicts `CON-001` through `CON-013` are resolved. Prototyp
 | ID | Status | Outcome | ADR |
 |---|---|---|---|
 | `DEC-015` | `SUPERSEDED` | SQL Server was temporarily active because PostgreSQL was unavailable. PostgreSQL became available before further domain expansion, so Npgsql/PostgreSQL is canonical again and all temporary SQL Server infrastructure was removed. | [ADR-006](ADR-006-temporary-sql-server-provider.md) |
+| `DEC-016` | Native client authentication: the Android app sends `X-TidySense-Client: native`, signs in through `otp/verify-native` for a bearer JWT, and is exempt from the Origin/Referer check only without the auth cookie; browser cookie path unchanged. | [auth/security](../backend/auth-security-transactions.md) | [ADR-008](ADR-008-native-client-authentication.md) |
 
 ## ADR policy
 

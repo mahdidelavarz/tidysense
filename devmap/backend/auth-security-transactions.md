@@ -28,3 +28,7 @@ Successful canonical writes, `CommandResult`, a versioned `DomainEvent`, and its
 - [Authentication specification](../../mindmap/04-Specs/auth-phase-1.md) — OTP, JWT, session, CSRF and auth transaction behavior.
 - [Retained authentication/API decisions](../../mindmap/01-Closed-Discussions/001-008-legacy-surviving-decisions.md) — surviving canonical auth and current-user rules.
 - [Transactions, concurrency and idempotency](../../mindmap/01-Closed-Discussions/019b-transactions-concurrency-and-idempotency.md) — consequential command guarantees.
+
+## Native client (ADR-008)
+
+The Android app sends `X-TidySense-Client: native`, signs in through `POST /api/v1/auth/otp/verify-native` (token in the body, no cookie) and then sends the same JWT as `Authorization: Bearer`. The cookie wins when both are present. `ApiRequestSecurityMiddleware` skips the Origin/Referer check only for a request with that header and no auth cookie; the JSON content-type rule applies to every client. See [ADR-008](../decisions/ADR-008-native-client-authentication.md).

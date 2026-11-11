@@ -10,6 +10,8 @@ public sealed class User
     public bool SetupComplete { get; set; }
     // The AI provider and notice version the user agreed to send their planning text to. Null: not agreed, or withdrawn.
     public DateTimeOffset CreatedAt { get; set; }
+    // The first sign-in from the Android app (ADR-008, Discussion 030 §6). Set once, never changed.
+    public DateTimeOffset? FirstNativeSignInAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
     public ICollection<Goal> Goals { get; set; } = [];
     public ICollection<Project> Projects { get; set; } = [];

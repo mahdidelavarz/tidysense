@@ -13,7 +13,7 @@ No cut is approved by this register. It classifies the maximum safe response to 
 | `CUT-03` | broader onboarding copy variants | 1 | `SAFE_TO_CUT` | required consent and safe degraded-state copy remain |
 | `CUT-04` | multiple Routine slots/broader recurrence | 2 | `ALREADY_POST_PILOT` | separate named Routines and accepted daily semantics remain |
 | `CUT-05` | provider fallback | 2 | `ALREADY_POST_PILOT` | manual path and provider failure state remain |
-| `CUT-06` | calendar/time blocks/reminders/dependencies | 2 | `ALREADY_POST_PILOT` | no accepted MVP dependency |
+| `CUT-06` | calendar/time blocks/reminders/dependencies | 2 | `ALREADY_POST_PILOT` | no accepted MVP dependency. Exception (2026-10-25, [[01-Closed-Discussions/030-native-android-app-scope-and-local-reminders]] §4): three local reminders in the Android app — Routine slot, next-week offer, optional morning summary |
 | `CUT-07` | advanced deletion/archive/recovery UX | 2 | `CONDITIONAL` | accepted history, restore/correction and privacy deletion remain |
 | `CUT-08` | AI Planning breadth | 3 | `CONDITIONAL` | narrow supported intention types, but retain useful non-trivial H1 path |
 | `CUT-09` | AI Reconcile recommendation breadth | 3 | `CONDITIONAL` | reduce rule catalog, but retain bounded H2 path over deterministic facts |

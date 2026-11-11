@@ -4,13 +4,13 @@ The execution roadmap for the React Native app. Added on 2026-10-22. Stack, fold
 
 These steps use their own `MOB-` IDs so the canonical roadmap ([`../development-steps.md`](../development-steps.md)) keeps its numbering. The same execution protocol applies: **Start / Continue / Review MOB-N** stays inside one step, verifies its dependencies, updates evidence only after verification, and never advances on its own. Status values are the same: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `DONE`.
 
-**Relation to the pilot.** No MOB step is a dependency of STEP-12, and STEP-12 is not a dependency of the MOB steps. The recommended order is to run the pilot on the web app and build the mobile app beside it; MOB-00 records whether the owner agrees.
+**Relation to the pilot.** No MOB step is a dependency of STEP-12, and STEP-12 is not a dependency of the MOB steps. The pilot runs on the web app on the server; the app is built beside it and reaches the pilot cohort only after the observation window ([Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md) §6).
 
 **Reference implementation.** For every screen, the web feature of the same name is the reference for behaviour, copy and API use, and the boards named in STEP-15 to STEP-20 plus the design source below are the visual reference. Where the mobile design spec and an accepted decision disagree, the decision wins and the gap is reported.
 
-**Design source.** The mobile design spec delivered on 2026-10-21 (project files, `design/tidysense-mobile-design-spec.md`) and [`../frontend/design-system.md`](../frontend/design-system.md). The spec's dock change (four tabs and a centre «+») is a recommendation, not a decision; MOB-05 asks for it.
+**Design source.** The mobile design spec delivered on 2026-10-21 (project files, `design/tidysense-mobile-design-spec.md`) and [`../frontend/design-system.md`](../frontend/design-system.md). The spec's dock (four tabs and a centre «+») was decided by the owner on 2026-10-25 (030 §3).
 
-Order: MOB-00 → MOB-01 → MOB-02 → MOB-03 → MOB-04 → MOB-05, then MOB-06 to MOB-09 in any order their dependencies allow, then MOB-10, then MOB-11 (only if approved) and MOB-12.
+Order: MOB-00 → MOB-01 → MOB-02 → MOB-03 → MOB-04 → MOB-05, then MOB-06 to MOB-09 in any order their dependencies allow, then MOB-10, then MOB-11 and MOB-12.
 
 Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to four weeks, MOB-06 to MOB-10 five to seven weeks, MOB-11 and MOB-12 one to two weeks. Planning (MOB-10) is the largest single step.
 
@@ -21,12 +21,11 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 **Goal:** Decide, with evidence, that a native app is worth starting now and that it can be built, delivered and reached from where its users are.
 
 **Scope:**
-- Owner decision recorded in the Mind Map: TidySense gets a native Android app; its scope is the phone web app, nothing more (see [README](README.md), "What the app is").
-- Owner decision on the pilot order: pilot on the web first (recommended) or wait for the app.
-- Owner decision on reminders: keep `CUT-06` post-pilot for the app too, or lift it for Routine-slot reminders only (decides whether MOB-11 exists).
-- Distribution channels chosen: Cafe Bazaar, Myket, direct APK, Google Play; which ones and whose account.
+- Owner decisions, recorded on 2026-10-25 in [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md): Android only; Cafe Bazaar only; the pilot runs on the web and the app waits for the end of the observation window; `CUT-06` lifted for three local reminders; dock with four tabs and a centre «+»; read-only offline Today; Share and icon shortcuts in; Focus mode out.
+- Still to do: the Cafe Bazaar developer account.
+- Android package name, fixed 2026-10-30: `ir.tidysense.app`, from the owner's domain `tidysense.ir`. It cannot change after the first release. The app reaches the API on the same domain as the web (`https://tidysense.ir/api/v1`); no subdomain is needed.
 - Check, with a real account: Expo account creation and EAS Build from the owner's location; if blocked, prove a local Android build (`expo prebuild` + Gradle) on the owner's machine.
-- A public HTTPS staging host running the `deploy/` stack, reachable from an Iranian mobile network.
+- A test Android phone (Android 10+) with USB debugging on, on the same Wi-Fi as the development machine. Until MOB-10 the app talks to the backend on that machine (`http://<LAN IP>:5082`), so development never writes to the pilot database. A separate staging host is a MOB-12 prerequisite, not a MOB-00 one.
 
 **Out of scope:** Any app code, any backend change.
 
@@ -36,15 +35,20 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Dependencies:** None.
 
-**Implementation checklist:** Record the three owner decisions in the Mind Map; record channels and accounts here; run the EAS or local build check; deploy staging and call `/health/ready` from a phone on mobile data.
+**Implementation checklist:**
+- [x] Owner decisions recorded (Discussion 030, 2026-10-25).
+- [ ] Cafe Bazaar developer account created.
+- [x] Package name recorded here (`ir.tidysense.app`, 2026-10-30).
+- [ ] EAS or local build check run.
+- [ ] Test phone ready with USB debugging.
 
-**Verification:** Decisions linked from this step; build check log; staging health response captured from a phone.
+**Verification:** Decisions linked from this step; build check log (which path worked, errors seen).
 
 **Completion criteria:** All decisions recorded and both technical checks pass, or status `BLOCKED` naming the failed check.
 
-**Status:** `NOT_STARTED`
+**Status:** `IN_PROGRESS` — decisions recorded 2026-10-25; package name fixed 2026-10-30; account, build check and test phone remain. Owner's to-do list: <https://claude.ai/artifact/MqoqbuN7AwhJVtB9GLaNEK>.
 
-**Evidence:** None.
+**Evidence:** [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md).
 
 ---
 
@@ -52,7 +56,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Goal:** Let a native client sign in and write through `/api/v1` without weakening the browser's cookie and Origin protection.
 
-**Scope:** [ADR-008](../decisions/ADR-008-native-client-authentication.md): bearer header in `JwtCookieEvents`, `client: "native"` on OTP verify returning `accessToken`/`expiresAt` without a cookie, Origin/Referer check skipped only for bearer-without-cookie requests, OpenAPI regenerated, web types regenerated.
+**Scope:** [ADR-008](../decisions/ADR-008-native-client-authentication.md): the `X-TidySense-Client: native` header, bearer header in `JwtCookieEvents`, `POST /auth/otp/verify-native` returning `NativeSessionDto` without a cookie, Origin/Referer check skipped only for native-header-without-cookie requests, OpenAPI regenerated, web types regenerated. The user's first native sign-in instant is stored (`Users.FirstNativeSignInAt`, set once, never changed) so pilot analysis can split before and after the app (030 §6).
 
 **Out of scope:** Refresh tokens, device registry, token lifetime change, any mobile code.
 
@@ -60,13 +64,14 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Required Mind Map context:** [auth spec](../../mindmap/04-Specs/auth-phase-1.md).
 
-**Dependencies:** MOB-00 `DONE`.
+**Dependencies:** MOB-00 `DONE`. Started on 2026-10-28 at the owner's request while MOB-00's account, package name, build check and phone were still open: none of them touches this backend change.
 
 **Implementation checklist:**
 - `OnMessageReceived`: cookie first, then `Authorization: Bearer`.
 - OTP verify request gains optional `client`; the response DTO gains optional `accessToken`, `expiresAt`.
 - `ApiRequestSecurityMiddleware`: the exemption, with a comment naming ADR-008.
 - Integration tests for the five cases listed in ADR-008, plus: OTP rate limits apply identically to native verify.
+- `FirstNativeSignInAt`: migration per the [schema workflow](../workflows/schema-change.md); set on the first native verify only; a later native or web sign-in leaves it unchanged; erasure handles it like the other user columns.
 - Security review note appended to [security review](../quality/security-review-2026-10-09.md) or a new dated file.
 - ADR-008 status → Accepted after owner approval.
 
@@ -74,15 +79,19 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Completion criteria:** All tests pass, the web login is byte-for-byte unchanged in behaviour, ADR-008 accepted.
 
-**Status:** `NOT_STARTED`
+**Status:** `DONE` — verified on 2026-10-28 on Linux. Still owed: `./dev.ps1 check` and `./auth-e2e.ps1` on Windows.
 
-**Evidence:** None.
+**Evidence:**
+- [`NativeClientAuthTests`](../../backend.Tests/NativeClientAuthTests.cs): 8 tests, the ADR-008 cases plus the attempt limit and `FirstNativeSignInAt`.
+- Backend suite on PostgreSQL 16: 315 passed, 2 skipped. `AuthenticationCompletionTests` unchanged and passing (web sign-in, cookie flags, Origin refusal).
+- Migration `NativeClientSignIn` (nullable `Users.FirstNativeSignInAt`); OpenAPI and `frontend/src/shared/api/generated.ts` regenerated; frontend typecheck clean.
+- ADR-008 accepted; security note in [security review](../quality/security-review-2026-10-09.md), "Native client (2026-10-28)".
 
 ---
 
 ## MOB-02 — Mobile Workspace and Client Foundation
 
-**Goal:** A running Expo app in `/mobile` that signs in against staging and reads `/auth/me`, with every cross-cutting convention in place before any screen.
+**Goal:** A running Expo app in `/mobile` that signs in against the development backend and reads `/users/me`, with every cross-cutting convention in place before any screen.
 
 **Scope:**
 - Expo app (TypeScript strict, Expo Router, Hermes), Biome, Jest + RNTL, Maestro.
@@ -90,8 +99,8 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 - `shared/lib`: secure session (`expo-secure-store`), online state (NetInfo), theme setting (light/dark/system, persisted), Jalali date helpers copied from the web with source comments.
 - Forced RTL from first launch; Vazirmatn and Noto Naskh Arabic loaded before first render.
 - Styling spike (NativeWind vs token module) decided and recorded in the README.
-- `dev.ps1` gains `mobile` commands (`generate`, `test`, `lint`, `start`); `/mobile/README.md` explains device setup.
-- One placeholder screen: login by OTP against staging, then shows `/auth/me`.
+- `dev.ps1` gains `mobile-backend` (backend on the LAN, login code readable), `mobile` (Metro) and `mobile-check` (typecheck, lint, Jest); `/mobile/README.md` explains device setup.
+- One placeholder screen: login by OTP against the development backend, then shows `/users/me`.
 
 **Out of scope:** Real screens and design, notifications, store builds.
 
@@ -105,9 +114,16 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Verification:** `mobile` lint, typecheck and Jest pass; a Maestro flow signs in with the loopback test session or a test number and sees the user id; screenshots of RTL text, Persian digits and dark mode on a device.
 
-**Completion criteria:** Sign-in works end to end on a device against staging; styling decision recorded.
+**Completion criteria:** Sign-in works end to end on a device against the development backend; styling decision recorded.
 
-**Status:** `NOT_STARTED`
+**Status:** `IN_PROGRESS` — code done 2026-10-28 (PR #19); the device checks below remain, and only a phone can do them.
+
+**Evidence (2026-10-28, cloud):**
+- `mobile/`: Expo SDK 58, package `ir.tidysense.app`, routes in `src/app`, features and shared layer as in the README folder layout.
+- `npm run typecheck`, `npm run lint`, `npm test` pass: 14 Jest tests (bearer header and native header, 401 clears the session but a wrong code does not, `toApiError`, idempotency key, keystore session and expiry, Jalali dates, login screen: invalid number, full sign-in with the development code, wrong code). The login test caught a countdown that started one second high; fixed.
+- `expo export --platform android` bundles to Hermes bytecode; `expo prebuild` produces `applicationId ir.tidysense.app` (renamed from the provisional `com.tidysense.app` on 2026-10-30), `supportsRtl` with `forcesRTL`, and cleartext HTTP in debug builds only.
+- The phone's backend path, run from a non-loopback address: `otp/request` 202 → `dev/otp/latest` → `otp/verify-native` → `GET /users/me` 200 with the bearer → `logout` 204; no HTTPS redirect on the `http` profile.
+- Not done (needs the phone): first `npx expo run:android`, Maestro `maestro/login.yaml`, screenshots of RTL text, Persian digits and dark mode.
 
 **Evidence:** None.
 
@@ -151,7 +167,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Required Mind Map context:** [auth spec](../../mindmap/04-Specs/auth-phase-1.md), [day-0 onboarding](../../mindmap/04-Specs/day-0-onboarding.md), [Discussion 027](../../mindmap/01-Closed-Discussions/027-ai-disclosure-response-feedback-and-product-insights.md), [Discussion 028](../../mindmap/01-Closed-Discussions/028-clarification-quick-replies-first-run-guides-and-desktop.md) §4.
 
-**Dependencies:** MOB-03 `DONE`; staging reachable (MOB-00).
+**Dependencies:** MOB-03 `DONE`.
 
 **Implementation checklist:** Reuse the web Zod phone/OTP schemas; error copy from the same codes (rate limit, expired, wrong code); welcome-seen flag stored on the device only.
 
@@ -169,21 +185,21 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Goal:** The app frame: tabs, create flow, account entry, offline banner, deep links.
 
-**Scope:** The tab bar per the owner's dock decision (current five places with Planning as the moonstone, or the spec's four tabs plus centre «+»); create sheet; offline banner; Android back behaviour (sheet → page → tab → exit); deep links `tidysense://today`, `…/tasks/{id}`, `…/planning`.
+**Scope:** The dock decided in 030 §3 (امروز · کارها · [+] · روتین‌ها · هدف‌ها; the create sheet's first card is the moonstone planning entry); the same dock and the 220 px Today hero on the phone web app, with its tests and `layout-and-navigation.md` updated in the same change; create sheet; offline banner; Android back behaviour (sheet → page → tab → exit); deep links `tidysense://today`, `…/tasks/{id}`, `…/planning`; long-press icon shortcuts «کار جدید», «یادداشت سریع», «برنامه‌ریزی».
 
 **Out of scope:** Feature content behind the tabs (placeholders until their steps).
 
 **Required DevMap context:** [layout and navigation](../frontend/layout-and-navigation.md), [design system](../frontend/design-system.md).
 
-**Required Mind Map context:** None, unless the dock decision changes where Planning lives; then the owner records it in the Mind Map and `layout-and-navigation.md`.
+**Required Mind Map context:** [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md) §3.
 
-**Dependencies:** MOB-04 `DONE`; dock decision recorded.
+**Dependencies:** MOB-04 `DONE`.
 
 **Implementation checklist:** Tabs, create sheet, back handling, deep link table, offline banner using NetInfo.
 
 **Verification:** Maestro: every tab reachable, back closes a sheet before leaving a page, a deep link opens the right screen after sign-in; offline toggle shows the banner.
 
-**Completion criteria:** Navigation matches the decision; one floating primary action, not two.
+**Completion criteria:** App and phone web show the same dock; one floating primary action, not two; each icon shortcut opens its sheet.
 
 **Status:** `NOT_STARTED`
 
@@ -195,7 +211,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Goal:** Daily execution on the phone: Today, Tasks list, Task detail, create and edit, move to another day, done with undo, sequences.
 
-**Scope:** Phone parity with STEP-16 and STEP-23 screens: Today list and its Reconcile entry card, Task sheets, «فردا/روز دیگر» move sheet, done tick with `UNDO_COMPLETE_TASK` on the same tick, sequence actions (`CHANGE_TASK_SEQUENCE`, follow on create with `sequence-preview`), optimistic version handling (`CONFLICT_STALE_VERSION` → refetch and say so).
+**Scope:** Phone parity with STEP-16 and STEP-23 screens: Today list and its Reconcile entry card, Task sheets, «فردا/روز دیگر» move sheet, done tick with `UNDO_COMPLETE_TASK` on the same tick, sequence actions (`CHANGE_TASK_SEQUENCE`, follow on create with `sequence-preview`), optimistic version handling (`CONFLICT_STALE_VERSION` → refetch and say so). Native interaction (030 §3): swipe on a Task row for «انجام شد» and «فردا» as a shortcut beside the buttons, with the same undo toast; pull to refresh; haptic on done; read-only offline Today from the persisted query cache, labelled «آخرین به‌روزرسانی …», with every action disabled offline.
 
 **Out of scope:** Desktop tiles; search; task times.
 
@@ -207,7 +223,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Implementation checklist:** Copy the `tasks` and `today` feature `types/` and hook shapes; screens; tests.
 
-**Verification:** Jest for hooks' cache updates; Maestro mirroring `undo-tick.spec.ts`, `sequence.spec.ts` and the Today parts of `responsive.spec.ts`.
+**Verification:** Jest for hooks' cache updates and the offline cache (written only from a successful read, never shown as fresh); Maestro mirroring `undo-tick.spec.ts`, `sequence.spec.ts` and the Today parts of `responsive.spec.ts`; swipe-then-undo; airplane mode shows the cached Today and refuses a tick.
 
 **Completion criteria:** Every Task action available on the phone web is available in the app with the same result on the server.
 
@@ -273,7 +289,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Goal:** Quick capture and the full Reconcile session, one-tap actions with undo included.
 
-**Scope:** Parity with STEP-07, STEP-10 and STEP-19: capture, Reconcile session, one-tap «انجام شد» and «امروز» with undo, review and apply via `ActionConfirmation`, AI recommendation as a moonstone prefill only, feedback on AI responses (STEP-14).
+**Scope:** Parity with STEP-07, STEP-10 and STEP-19: capture, Reconcile session, one-tap «انجام شد» and «امروز» with undo, review and apply via `ActionConfirmation`, AI recommendation as a moonstone prefill only, feedback on AI responses (STEP-14). Android share target: text shared from another app opens quick capture prefilled; the user still taps to save (030 §3).
 
 **Out of scope:** New rules or actions.
 
@@ -285,7 +301,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Implementation checklist:** Feature port (`captures`, `reconcile`, `feedback`); the app derives nothing (no client-side severity or carry count).
 
-**Verification:** Jest; Maestro mirroring `reconcile.spec.ts`.
+**Verification:** Jest; Maestro mirroring `reconcile.spec.ts`; share text from another app, save, and see it in captures.
 
 **Completion criteria:** Parity; apply refuses a stale preview exactly as the web does.
 
@@ -321,27 +337,27 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 ---
 
-## MOB-11 — Routine Reminders (gated)
+## MOB-11 — Local Reminders
 
-**Goal:** A local notification at each pending Routine slot time, if and only if the owner lifted `CUT-06` for this in MOB-00.
+**Goal:** The three local reminders of [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md) §4: Routine slot, next-week offer, optional morning summary.
 
-**Scope:** `expo-notifications` local schedules only; computed on the device from the Routines and today's slots the app already reads; rescheduled on app start, foreground, sign-in, and after any Routine or slot change; cleared on logout; one on/off setting in the account sheet; Android 13+ notification permission asked at the first Routine creation, not at launch.
+**Scope:** `expo-notifications` local schedules only, computed on the device from the Routines, today's slots and the continuation offers the app already reads; rescheduled on app start, foreground, sign-in, and after any Routine, slot or continuation change; all cleared on logout; one switch per kind in the account sheet (slot and next-week on, morning off; the morning time chosen by the user); notification permission asked at the first Routine creation or the first switch turned on, never at launch. Tapping a reminder opens Today, or the planning continuation for the next-week offer.
 
-**Out of scope:** Server push, Task reminders (Tasks have no time), snooze, a server-side reminder setting.
+**Out of scope:** Server push, Task and Reconcile reminders, snooze, any server-side setting.
 
-**Required DevMap context:** [mobile README](README.md), [data types and dates](../shared/data-types-and-datetime.md).
+**Required DevMap context:** [mobile README](README.md), [data types and dates](../shared/data-types-and-datetime.md), [step-24 in the roadmap](../development-steps.md) (continuation offer dates).
 
-**Required Mind Map context:** The decision recorded in MOB-00; [Discussion 024](../../mindmap/01-Closed-Discussions/024-multi-time-daily-routine-scheduling-and-occurrence-semantics.md).
+**Required Mind Map context:** [Discussion 030](../../mindmap/01-Closed-Discussions/030-native-android-app-scope-and-local-reminders.md) §4, [Discussion 024](../../mindmap/01-Closed-Discussions/024-multi-time-daily-routine-scheduling-and-occurrence-semantics.md), [Discussion 029](../../mindmap/01-Closed-Discussions/029-planning-quality-rolling-horizon-and-sequences.md) §3.
 
-**Dependencies:** MOB-07 `DONE`; MOB-00 decision = lift for Routine slots.
+**Dependencies:** MOB-07 and MOB-10 `DONE`.
 
-**Implementation checklist:** Pure scheduling function (slots × times × timezone → triggers for the next 7 days, under the OS limit) with unit tests; scheduler glue; setting.
+**Implementation checklist:** One pure scheduling function (slots, times, timezone, offers and settings → triggers for the next 7 days, under the Android limit) with unit tests; scheduler glue; account-sheet switches; morning text without counts.
 
-**Verification:** Unit tests including a DST-free `Asia/Tehran` day boundary and a device in another timezone; on device: a slot at now+2 minutes notifies, done before its time cancels it, stopping the Routine cancels all.
+**Verification:** Unit tests: an `Asia/Tehran` day boundary, a device in another timezone, a done slot, a stopped Routine, a decided week, all switches off. On a device: a slot at now+2 minutes notifies; done before its time cancels it; stopping the Routine cancels all; logout clears all; the next-week reminder opens the continuation.
 
-**Completion criteria:** No notification for a done, stopped or deleted slot; none after logout.
+**Completion criteria:** No reminder for a done slot, a stopped Routine, a decided week, a switched-off kind, or after logout.
 
-**Status:** `NOT_STARTED` (does not exist unless MOB-00 approves it)
+**Status:** `NOT_STARTED`
 
 **Evidence:** None.
 
@@ -351,7 +367,7 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Goal:** A signed Android build users can install and keep updated, with the compatibility rule enforced.
 
-**Scope:** Signing key generated and backed up outside the repo; release build (EAS or local); store listings for the chosen channels; privacy text consistent with `/pilot/notice`; `GET /api/v1/client/requirements` (minimum app version) and the update-required screen; crash reporting through a service reachable from Iran, with no token, phone number or user text in reports; update path decided (store only, or self-hosted Expo update manifest); feature-parity checklist against the web phone screens.
+**Scope:** A staging host separate from the pilot server (own VPS, fresh secrets, AI providers `mock`), reachable from an Iranian mobile network; signing key generated and backed up outside the repo; release build (EAS or local); the Cafe Bazaar listing; privacy text consistent with `/pilot/notice`; `GET /api/v1/client/requirements` (minimum app version) and the update-required screen; crash reporting through a service reachable from Iran, with no token, phone number or user text in reports; update path decided (store only, or self-hosted Expo update manifest); feature-parity checklist against the web phone screens.
 
 **Out of scope:** iOS release (until an account exists), marketing.
 
@@ -359,13 +375,13 @@ Rough size for one developer, honest and unmeasured: MOB-00 to MOB-05 three to f
 
 **Required Mind Map context:** [release checklist](../../mindmap/05-Implementation/release-readiness-checklist.md).
 
-**Dependencies:** MOB-04 to MOB-10 `DONE`; MOB-11 `DONE` or not approved.
+**Dependencies:** MOB-04 to MOB-11 `DONE`.
 
 **Implementation checklist:** Requirements endpoint + test; update-required screen; release pipeline; parity checklist filled screen by screen; a fresh install on two low-end Android devices.
 
 **Verification:** Full Maestro suite on a release build against staging; cold start under 3 s on the low-end device; APK size recorded; parity checklist with no open row.
 
-**Completion criteria:** A signed release passes the suite and the parity checklist, and the owner approves publishing.
+**Completion criteria:** A signed release passes the suite and the parity checklist, and the owner approves publishing. It reaches the pilot cohort only after the observation window, or on a date written into the pilot protocol first (030 §6).
 
 **Status:** `NOT_STARTED`
 
